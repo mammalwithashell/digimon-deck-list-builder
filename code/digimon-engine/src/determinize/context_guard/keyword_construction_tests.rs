@@ -15,7 +15,7 @@ use crate::{
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 fn keywords(exhaustive: bool) -> Vec<Keyword> {
-    let mut out = vec![Keyword::Blocker, Keyword::Rush, Keyword::Jamming, Keyword::Piercing, Keyword::Reboot, Keyword::Blitz, Keyword::Raid, Keyword::Alliance, Keyword::BlastDigivolve, Keyword::Save, Keyword::Fortitude, Keyword::Overclock, Keyword::Barrier, Keyword::Partition, Keyword::Vortex, Keyword::Collision, Keyword::Evade, Keyword::Decode, Keyword::ArmorPurge, Keyword::Progress, Keyword::Retaliation, Keyword::Scapegoat, Keyword::Execute, Keyword::Engage, Keyword::Guard, Keyword::Iceclad, Keyword::MindLink, Keyword::Training, Keyword::ArtsDigivolve, Keyword::Ascension];
+    let mut out = vec![Keyword::Blocker, Keyword::Rush, Keyword::Jamming, Keyword::Piercing, Keyword::Reboot, Keyword::Blitz, Keyword::Raid, Keyword::Alliance, Keyword::BlastDigivolve, Keyword::Save, Keyword::Fortitude, Keyword::Overclock, Keyword::Barrier, Keyword::Partition, Keyword::Vortex, Keyword::Collision, Keyword::Evade, Keyword::Decode, Keyword::ArmorPurge, Keyword::Progress, Keyword::Retaliation, Keyword::Scapegoat, Keyword::Execute, Keyword::Engage, Keyword::Guard, Keyword::Iceclad, Keyword::MindLink, Keyword::Training, Keyword::ArtsDigivolve, Keyword::Ascension, Keyword::ArtsDnaDigivolve];
     if exhaustive { out.extend((i8::MIN..=i8::MAX).map(Keyword::SecurityAttackPlus)); } else { out.extend([i8::MIN, 1, i8::MAX].into_iter().map(Keyword::SecurityAttackPlus)); }
     if exhaustive { out.extend((i8::MIN..=i8::MAX).map(Keyword::SecurityAttackMinus)); } else { out.extend([i8::MIN, 1, i8::MAX].into_iter().map(Keyword::SecurityAttackMinus)); }
     if exhaustive { out.extend((u8::MIN..=u8::MAX).map(Keyword::DeDigivolve)); } else { out.extend([u8::MIN, 1, u8::MAX].into_iter().map(Keyword::DeDigivolve)); }
@@ -32,7 +32,7 @@ fn expected_count(keyword: Keyword) -> usize {
     match keyword {
         Keyword::Execute => 2,
         Keyword::Alliance | Keyword::ArmorPurge | Keyword::Ascension | Keyword::Barrier | Keyword::BlastDigivolve | Keyword::Blitz | Keyword::Decoy(_) | Keyword::Engage | Keyword::Evade | Keyword::Fortitude | Keyword::Fragment(_) | Keyword::Guard | Keyword::MaterialSave(_) | Keyword::MindLink | Keyword::Overclock | Keyword::Partition | Keyword::Piercing | Keyword::Raid | Keyword::Retaliation | Keyword::Save | Keyword::Scapegoat | Keyword::Training | Keyword::Vortex => 1,
-        Keyword::Blocker | Keyword::SecurityAttackPlus(_) | Keyword::SecurityAttackMinus(_) | Keyword::Rush | Keyword::Jamming | Keyword::Reboot | Keyword::DeDigivolve(_) | Keyword::DrawX(_) | Keyword::DigiBurst(_) | Keyword::Digisorption(_) | Keyword::Collision | Keyword::Decode | Keyword::Progress | Keyword::Iceclad | Keyword::ArtsDigivolve => 0,
+        Keyword::Blocker | Keyword::SecurityAttackPlus(_) | Keyword::SecurityAttackMinus(_) | Keyword::Rush | Keyword::Jamming | Keyword::Reboot | Keyword::DeDigivolve(_) | Keyword::DrawX(_) | Keyword::DigiBurst(_) | Keyword::Digisorption(_) | Keyword::Collision | Keyword::Decode | Keyword::Progress | Keyword::Iceclad | Keyword::ArtsDigivolve | Keyword::ArtsDnaDigivolve => 0,
     }
 }
 fn callback_shape(e: &Effect) -> [bool; 17] {

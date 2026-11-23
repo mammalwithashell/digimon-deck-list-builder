@@ -93,6 +93,7 @@
       "suspend",
       "trash_all_sources",
       "trash_breeding_permanent",
+      "trash_field_option",
       "unsuspend",
       "delete_all_permanents",
       "delete_permanents"

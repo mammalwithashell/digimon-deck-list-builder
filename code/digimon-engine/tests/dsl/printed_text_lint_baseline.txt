@@ -859,6 +859,8 @@ BT26-103 missing_text 2
 BT26-103 missing_text 3
 BT26-103 missing_text 4
 BT26-103 missing_text 5
+BT27-034 optional_without_may 5
+BT27-034 optional_without_may 6
 BT3-002 optional_without_may 0
 BT3-103 may_without_optional 0
 BT3-105 missing_text 0

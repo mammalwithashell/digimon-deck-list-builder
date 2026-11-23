@@ -1,0 +1,37 @@
+card: BT27-099
+name: Surtr Brander
+kind: option
+color: [yellow]
+cost: 3
+traits: [X Antibody, Royal Knight]
+effects:
+  - text: "[Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, add your top security card to the hand and place this card as the top security card."
+    when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Give 1 opponent Digimon -6000 DP for the turn"
+      - add_dp_modifier: { target: victim, value: -6000, expiry: end_of_turn }
+      - add_top_security_to_hand: { of: you }
+      - place_on_security: { source: self_option, position: top, face_up: false }
+  - text: "[Security] Place 1 of your opponent's Digimon with the lowest DP as their top security card."
+    when: on_security
+    scope: inherited
+    process: &security_body
+      - select_opponent_permanent:
+          optional: false
+          bind_as: lowest
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "Place 1 opponent Digimon with the lowest DP as their top security card"
+      - place_on_security:
+          source: { permanent: lowest }
+          of: opponent
+          position: top
+          face_up: false
+  - text: "When effects trash this card from the security stack, activate its [Security] effects."
+    when: on_discard_security
+    scope: security
+    process: *security_body

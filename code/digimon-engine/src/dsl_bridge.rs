@@ -124,6 +124,13 @@ pub fn enrich_card_data_with_dsl_alt_paths(
         card.ace_overflow = compiled.ace_overflow;
         card.digixros_aliases = compiled.digixros_aliases.clone();
         card.also_treated_as = compiled.also_treated_as.clone();
+        if let (Some(dual), Some(compiled_dual)) = (&mut card.dual, &compiled.dual) {
+            if compiled_dual.option.keywords.iter().any(|kw| kw == "ArtsDnaDigivolve")
+                && !dual.option.keywords.contains(&crate::enums::Keyword::ArtsDnaDigivolve)
+            {
+                dual.option.keywords.push(crate::enums::Keyword::ArtsDnaDigivolve);
+            }
+        }
         for dna_cost in compiled_dna_costs(compiled) {
             if !card.dna_costs.contains(&dna_cost) {
                 card.dna_costs.push(dna_cost);

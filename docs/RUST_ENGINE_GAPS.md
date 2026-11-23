@@ -1,3 +1,11 @@
+## Arts Digivolve with DNA materials — resolved
+
+`G-ARTS-DNA-MATERIALS`: BT27-103 specifies that two Digimon may DNA digivolve
+into the pending DUAL Option after its main effect resolves. The
+`ArtsDnaDigivolve` Option keyword opens two optional field selections using
+the card's DNA recipes. Accepting both commits a standard DNA digivolution
+from the pending Option; declining either discards the used Option.
+
 ## Player-directed forced attacks — resolved 2026-11-09
 
 `force_attack.affects_player: true` implements an instruction to the selected

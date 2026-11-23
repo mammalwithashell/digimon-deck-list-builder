@@ -171,6 +171,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::TrashFieldOption { target } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                if ctx.can_affect_permanent(h) {
+                    ctx.game.trash_field_option(h, crate::option_lifecycle::OptionTrashCause::Effect);
+                }
+            }
+            true
+        }
         CompiledStep::TrashBreedingPermanent { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {

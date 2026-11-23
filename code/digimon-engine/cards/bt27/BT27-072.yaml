@@ -1,0 +1,44 @@
+card: BT27-072
+name: "PrinceMamemon (X Antibody)"
+kind: digimon
+level: 6
+dp: 12000
+cost: 12
+color: [black]
+traits: [Mutant, X Antibody]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      level_eq: 6
+      name_contains: Mamemon
+      not: { trait_has: X Antibody }
+    cost: 1
+
+effects:
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] Activate 1 [On Deletion] effect on 1 Digimon card with [Mamemon] in its name in this Digimon's digivolution cards as this Digimon's effect."
+    when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    process:
+      - select_material:
+          of_permanent: source
+          optional: false
+          bind_as: selected
+          filter: { kind: digimon, name_contains: Mamemon, has_on_deletion_effect: true }
+          prompt: "Choose a [Mamemon] Digimon source with an On Deletion effect"
+      - refire_card_effect: { card: selected, timing: on_deletion }
+  - text: &mamemon_keywords "[All Turns] All of your Digimon with [Mamemon] in their names gain ＜Alliance＞, ＜Reboot＞ and ＜Blocker＞."
+    kind: aura
+    target: { of: you, kind: digimon, name_contains: Mamemon }
+    grant_keyword: { keyword: Alliance }
+  - text: *mamemon_keywords
+    kind: aura
+    target: { of: you, kind: digimon, name_contains: Mamemon }
+    grant_keyword: { keyword: Reboot }
+  - text: *mamemon_keywords
+    kind: aura
+    target: { of: you, kind: digimon, name_contains: Mamemon }
+    grant_keyword: { keyword: Blocker }

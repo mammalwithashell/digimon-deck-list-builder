@@ -141,15 +141,12 @@ impl<'a> EffectContext<'a> {
             };
             source_card
         } else {
-            if let Some(pending) = self.game.pending_security.take() {
-                if pending.played
-                    || pending.card.handle() != self.source_card
-                    || pending.card.card_kind(&self.game.card_data) != CardKind::Option
-                {
-                    self.game.pending_security = Some(pending);
-                    return;
-                }
-                pending.card
+            if self.game.pending_security.as_ref().is_some_and(|pending| {
+                !pending.played
+                    && pending.card.handle() == self.source_card
+                    && pending.card.card_kind(&self.game.card_data) == CardKind::Option
+            }) {
+                self.game.pending_security.take().unwrap().card
             } else if let Some(pending) = self.game.pending_option.take() {
                 // Real Option-play lifecycle: play_option_core moved the Option
                 // into the single-occupancy `pending_option` slot BEFORE running

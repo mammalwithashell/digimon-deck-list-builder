@@ -1,0 +1,68 @@
+card: BT27-013
+name: Hisyaryumon
+kind: digimon
+level: 5
+color: [red, black]
+cost: 7
+dp: 7000
+traits: [Beast Dragon, X Antibody, Chronicle]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      any_of:
+        - { name_is: Ginryumon }
+        - { level_eq: 4, trait_has: Chronicle }
+    cost: 3
+
+effects:
+  - text: "[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if during an attack, delete 1 of your opponent's Digimon with as much DP as this Digimon or less."
+    when: [on_play, when_digivolving]
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: devolve
+          filter: { kind: digimon }
+          prompt: "De-Digivolve 1 opponent Digimon"
+      - de_digivolve: { target: devolve, amount: 1, stop_at_level: 3 }
+      - if:
+          condition: { during_attack: true }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter: { kind: digimon, dp_lte: { formula: { source_dp: {} } } }
+                prompt: "Delete 1 opponent Digimon with DP equal to or below this Digimon's"
+            - delete_permanent: { target: victim }
+  - text: "[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [Chronicle] trait Digimon card in the hand or trash."
+    when: on_opponent_security_removed
+    active_when: { your_turn: true }
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: evolution
+          optional: true
+          filter: { kind: digimon, trait_has: Chronicle, can_digivolve_from_source: true }
+          prompt: "Digivolve into a [Chronicle] Digimon in your hand or trash"
+      - effect_initiated_digivolve: { target: source, source: evolution, cost: printed }
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to 1 of your [Chronicle] trait Digimon."
+    scope: inherited
+    when: on_opponent_attack
+    active_when: { opponents_turn: true }
+    once_per_turn: true
+    process:
+      - select_own_permanent:
+          bind_as: defender
+          optional: true
+          filter: { kind: digimon, trait_has: Chronicle }
+          prompt: "Change the attack target to 1 of your [Chronicle] Digimon"
+      - if:
+          condition: { binding_present: defender }
+          then:
+            - redirect_attack_target: { optional: false, new_target: defender }
+          else:
+            - refund_opt: {}

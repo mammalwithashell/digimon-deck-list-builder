@@ -1,0 +1,121 @@
+card: BT27-034
+name: "Examon (X Antibody)"
+kind: dual
+level: 7
+dp: 16000
+cost: 6
+color: [blue, red, green]
+traits: [Holy Warrior, X Antibody, Royal Knight]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, name_is: Examon }
+    cost: 2
+
+dual:
+  digimon:
+    level: 7
+    dp: 16000
+    colors: [blue, red, green]
+    traits: [Holy Warrior, X Antibody, Royal Knight]
+    effects:
+      - { text: "＜Raid＞", kind: grant_keyword, keyword: Raid }
+      - { text: "＜Piercing＞", kind: grant_keyword, keyword: Piercing }
+      - { text: "＜Blocker＞", kind: grant_keyword, keyword: Blocker }
+      - { text: "＜Evade＞", kind: grant_keyword, keyword: Evade }
+      - text: "＜Security A.+1＞"
+        kind: aura
+        target: {}
+        security_attack: 1
+      - text: "＜Decode (Green Lv.5)＞"
+        kind: replacement
+        trigger: when_would_leave_battle_area
+        optional: true
+        active_when:
+          none_of: [{ replacement_cause: battle }]
+        process:
+          - select_material:
+              optional: false
+              of_permanent: replacement_subject
+              bind_as: decode_pick
+              filter: { kind: digimon, color_is: green, level_eq: 5 }
+              prompt: "Play a green level 5 digivolution card"
+          - play_from_materials: { target: replacement_subject, source_index: decode_pick, cost_delta: free }
+      - text: "＜Decode (Blue Lv.5)＞"
+        kind: replacement
+        trigger: when_would_leave_battle_area
+        optional: true
+        active_when:
+          none_of: [{ replacement_cause: battle }]
+        process:
+          - select_material:
+              optional: false
+              of_permanent: replacement_subject
+              bind_as: decode_pick
+              filter: { kind: digimon, color_is: blue, level_eq: 5 }
+              prompt: "Play a blue level 5 digivolution card"
+          - play_from_materials: { target: replacement_subject, source_index: decode_pick, cost_delta: free }
+      - text: "[When Digivolving] [When Attacking] [Counter] [Once Per Turn] You may suspend up to 3 Digimon or Tamers. Then, by trashing 1 [Examon] or [X Antibody] from this Digimon's digivolution cards, activate 1 [Main] effect on this card's Option side."
+        when: [when_digivolving, when_attacking, counter]
+        once_per_turn: true
+        process:
+          - select_count_capped_multi:
+              of: any
+              zone: battle_area
+              max: 3
+              optional_zero: true
+              bind_as: suspended
+              filter: { is_unsuspended: true, any_of: [{ kind: digimon }, { kind: tamer }] }
+              prompt: "Suspend up to 3 Digimon or Tamers"
+          - per_selected:
+              selection: suspended
+              bind_as: target
+              body:
+                - suspend: { target: target }
+          - select_own_sources:
+              target: source
+              bind_as: payment
+              min: 0
+              max: 1
+              filter: { any_of: [{ name_is: Examon }, { name_is: X Antibody }] }
+              prompt: "Trash a [Examon] or [X Antibody] digivolution card"
+          - trash_selected_sources_as_cost: { source_refs: payment, min_count: 1 }
+          - if:
+              condition: { not: { binding_present: payment } }
+              then:
+                - refund_opt: {}
+          - refire_effect: { source: source, timing: option_main, optional: false }
+  option:
+    use_cost: 6
+    colors: [red]
+    arts_digivolve: true
+    effect_text: "[Main] Delete up to 9000 DP's total worth of your opponent's Digimon. For each of their Digimon and Tamers, add 3000 to this effect's DP maximum. If this effect didn't delete, trash 1 of their Option cards in the battle area."
+    effects:
+      - text: "[Main] Delete up to 9000 DP's total worth of your opponent's Digimon. For each of their Digimon and Tamers, add 3000 to this effect's DP maximum. If this effect didn't delete, trash 1 of their Option cards in the battle area."
+        when: main
+        process:
+          - select_opponent_dp_budget:
+              dp_budget:
+                base: 9000
+                per:
+                  card_count_in_zone:
+                    of: opponent
+                    zone: battle_area
+                    filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+                delta: 3000
+              filter: { kind: digimon }
+              bind_as: victims
+              prompt: "Delete opponent Digimon within the DP budget"
+              then:
+                - delete_bound_permanents: { binding: victims }
+          - if:
+              condition: { effect_deleted_any_opponent_digimon: false }
+              then:
+                - select_opponent_permanent:
+                    optional: false
+                    bind_as: option
+                    filter: { kind: option }
+                    prompt: "Trash 1 opponent Option in the battle area"
+                - trash_field_option: { target: option }

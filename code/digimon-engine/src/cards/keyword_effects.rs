@@ -2848,7 +2848,8 @@ fn keyword_to_auto_effect_inner(keyword: Keyword, card: CardHandle) -> Vec<Effec
         | Keyword::Collision
         | Keyword::Progress
         | Keyword::Iceclad
-        | Keyword::ArtsDigivolve => Vec::new(),
+        | Keyword::ArtsDigivolve
+        | Keyword::ArtsDnaDigivolve => Vec::new(),
     }
 }
 

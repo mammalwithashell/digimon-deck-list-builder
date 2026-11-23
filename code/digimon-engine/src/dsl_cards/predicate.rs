@@ -3666,6 +3666,19 @@ fn eval_card_fields(
         Some(d) => d,
         None => return false,
     };
+    if formula_target.is_none() {
+        if let Some(want) = pred.has_on_deletion_effect {
+            let has_effect = rctx.game.effects_for_card(&data.card_id, card).is_some_and(|effects| {
+                effects.iter().any(|effect| {
+                    effect.timing == crate::enums::EffectTiming::OnDeletion
+                        && effect.can_be_refired()
+                })
+            });
+            if has_effect != want {
+                return false;
+            }
+        }
+    }
     // §4-6-3: a DUAL card placed on the field -- the TOP card of a battle-area
     // or breeding-area permanent, i.e. the permanent itself -- is treated as a
     // Digimon and can't be referenced as an Option card, whatever the caller

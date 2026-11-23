@@ -714,6 +714,9 @@ pub enum Keyword {
     /// rescued from trash to the TOP of the owner's security stack
     /// (`AddSecurityCard(card, toTop: true)`). BT25-034, BT25-040.
     Ascension,
+
+    /// Arts Digivolve whose printed replacement uses a DNA recipe.
+    ArtsDnaDigivolve,
 }
 
 impl Keyword {

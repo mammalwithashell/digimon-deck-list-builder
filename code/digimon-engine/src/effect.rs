@@ -183,6 +183,7 @@ pub struct ReFireableEffect {
 pub enum TimingFilter {
     OnPlay,
     WhenDigivolving,
+    OnDeletion,
     OptionMain,
     Either,
 }
@@ -202,6 +203,7 @@ impl TimingFilter {
         match key {
             "on_play" => Some(Self::OnPlay),
             "when_digivolving" => Some(Self::WhenDigivolving),
+            "on_deletion" => Some(Self::OnDeletion),
             "option_main" => Some(Self::OptionMain),
             _ => None,
         }
@@ -211,6 +213,7 @@ impl TimingFilter {
         match self {
             Self::OnPlay => &["on_play"],
             Self::WhenDigivolving => &["when_digivolving"],
+            Self::OnDeletion => &["on_deletion"],
             Self::OptionMain => &["option_main"],
             Self::Either => &["on_play", "when_digivolving"],
         }
@@ -659,6 +662,7 @@ impl Effect {
         let eligible = match self.timing {
             EffectTiming::OnPlay => self.on_play,
             EffectTiming::WhenDigivolving => self.when_digivolving,
+            EffectTiming::OnDeletion => self.on_deletion,
             EffectTiming::OptionMain => self.option_main,
             _ => false,
         };

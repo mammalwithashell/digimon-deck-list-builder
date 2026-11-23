@@ -1889,6 +1889,7 @@ fn compiled_dual_to_engine(
                     "ArtsDigivolve" | "Arts Digivolve" | "arts_digivolve" => {
                         Some(Keyword::ArtsDigivolve)
                     }
+                    "ArtsDnaDigivolve" => Some(Keyword::ArtsDnaDigivolve),
                     _ => None,
                 })
                 .collect(),

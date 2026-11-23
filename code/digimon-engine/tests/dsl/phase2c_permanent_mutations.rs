@@ -45,6 +45,41 @@ fn delete_permanent_via_named_binding_removes_from_battle_area() {
 }
 
 #[test]
+fn trash_field_option_only_removes_the_standalone_option() {
+    use digimon_engine::enums::CardKind;
+
+    let mut option = make_test_card("T-OPT", "Option");
+    option.card_kind = CardKind::Option;
+    option.dp = None;
+    let mut runner = DebugRunner::builder()
+        .add_card(option)
+        .add_card(make_test_card("T-CARRIER", "Carrier"))
+        .hand(1, &["T-OPT"])
+        .build();
+    let digimon = runner.place_on_field(1, "T-CARRIER", None);
+    let card = runner.game.players[1].hand.remove(0);
+    let option = runner.game.install_field_option_as_delay(card, 1, 1);
+    let source_card = runner.game.players[1].battle_area[0].top_card().handle();
+    let step = CompiledStep::TrashFieldOption {
+        target: CompiledBindingRef::Named("target".into()),
+    };
+    let mut bindings = Bindings::new();
+    for target in [digimon, option] {
+        bindings.insert_permanent("target", target);
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(runner.battle_area_size(1), 1);
+    assert_eq!(
+        runner.game.players[1].battle_area[0].top_card().card_id(&runner.game.card_data),
+        "T-CARRIER",
+    );
+    assert_eq!(runner.trash_size(1), 1);
+    assert_eq!(runner.game.players[1].trash[0].card_id(&runner.game.card_data), "T-OPT");
+}
+
+#[test]
 fn return_to_hand_moves_permanent_to_owner_hand() {
     let card = make_test_card("T-RTH", "T-RTH");
     let mut runner = DebugRunner::builder()

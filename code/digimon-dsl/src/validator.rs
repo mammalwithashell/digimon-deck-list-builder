@@ -1045,6 +1045,9 @@ fn validate_step(
 ) {
     validate_scoped_step_modes(step, prefix, card_id, errors);
     match step {
+        StepSpec::TrashFieldOption(args) => {
+            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+        }
         StepSpec::PlaceAsBottomSource(args) => {
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
             validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
@@ -1116,13 +1119,13 @@ fn validate_step(
             validate_binding_ref(&args.card, &format!("{prefix}.card"), card_id, errors);
             if !matches!(
                 args.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "on_deletion"
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
                     path: format!("{prefix}.timing"),
                     message: format!(
-                        "refire_card_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        "unsupported refire_card_effect timing: {}",
                         args.timing
                     ),
                 });

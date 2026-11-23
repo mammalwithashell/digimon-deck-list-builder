@@ -1,0 +1,75 @@
+card: BT27-103
+name: "Alphamon: Ouryuken"
+kind: dual
+level: 7
+color: [black, yellow, red]
+cost: 6
+dp: 16000
+traits: [NO DATA, X Antibody, Royal Knight, Chronicle]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { name_is: Alphamon }
+      - { name_is: Ouryumon }
+    cost: 0
+    stacks_unsuspended: true
+
+dual:
+  digimon:
+    level: 7
+    dp: 16000
+    colors: [black, yellow, red]
+    traits: [NO DATA, X Antibody, Royal Knight, Chronicle]
+    effects:
+      - { text: "＜Raid＞", kind: grant_keyword, keyword: Raid }
+      - { text: "＜Piercing＞", kind: grant_keyword, keyword: Piercing }
+      - { text: "＜Blocker＞", kind: grant_keyword, keyword: Blocker }
+      - text: "＜Partition ([Alphamon] & [Ouryumon])＞"
+        kind: partition
+        sources:
+          - { name_is: Alphamon }
+          - { name_is: Ouryumon }
+        exclude_cause: [own_effect, battle]
+      - text: "[When Digivolving] ＜Recovery +1＞. Then, if DNA digivolving, none of your opponent's play cost 7 or higher Digimon can attack until their turn ends."
+        when: when_digivolving
+        process:
+          - recover: { of: you, count: 1 }
+          - if:
+              condition: { dna_origin: true }
+              then:
+                - add_modifier:
+                    continuous: true
+                    target: { of: opponent, zone: [battle_area], kind: digimon, play_cost_gte: 7 }
+                    modifier: CannotAttack
+                    value: 1
+                    expiry: end_of_opponents_turn
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may activate 1 [Main] effect on this card's Option side."
+        when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        optional: true
+        process:
+          - refire_effect: { source: source, timing: option_main, optional: false }
+  option:
+    use_cost: 6
+    colors: [black]
+    keywords: [ArtsDnaDigivolve]
+    effect_text: "[Main] If during an attack, delete all of your opponent's lowest DP Digimon. Then, delete 1 of their Digimon."
+    effects:
+      - text: "[Main] If during an attack, delete all of your opponent's lowest DP Digimon. Then, delete 1 of their Digimon."
+        when: main
+        process:
+          - if:
+              condition: { during_attack: true }
+              then:
+                - delete_all_permanents:
+                    over: { of: opponent, zone: [battle_area], kind: digimon }
+                    selector: lowest_dp
+          - select_opponent_permanent:
+              optional: false
+              bind_as: victim
+              filter: { kind: digimon }
+              prompt: "Delete 1 opponent Digimon"
+          - delete_permanent: { target: victim }

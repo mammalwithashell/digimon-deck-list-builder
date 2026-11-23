@@ -17121,6 +17121,19 @@
       "notes": "inherited [When Attacking][OPT] [NSo] carrier trashes 1 card to delete a level 3 Digimon; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
       "integration_verification": "limited"
     },
+    "BT27-103": {
+      "card_name": "Alphamon: Ouryuken",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Alphamon / Chronicle",
+      "report": "bt27-alphamon-xantibody",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_103.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "Local card-text tests cover two-material Arts acceptance, both decline points, no matching pair, ordinary DNA Recovery and attack restriction, both Option Main branches, continuation after source removal, and specified Partition materials. Live integration and exhaustive interaction coverage were not verified."
+    },
     "EX11-001": {
       "card_name": "Koromon",
       "status": "IMPLEMENTED",
