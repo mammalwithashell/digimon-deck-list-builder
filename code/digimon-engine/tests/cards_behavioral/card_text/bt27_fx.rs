@@ -217,3 +217,16 @@ pub fn pay_tamer_stock(r: &mut DebugRunner) {
         r.execute_action(0, v.valid_action_ids[0]).unwrap();
     }
 }
+
+/// Player `by`'s effect from `src` returns `target` to its owner's hand.
+pub fn effect_bounce(r: &mut DebugRunner, by: u8, src: PermanentHandle, target: PermanentHandle) {
+    use digimon_engine::effect_context::EffectContext;
+    let card = r.top_card(src);
+    r.game.set_effect_source_player_for_test(Some(by));
+    {
+        let mut ctx = EffectContext::new(&mut r.game, card, Some(src), by);
+        let _ = ctx.return_to_hand(target);
+    }
+    r.game.set_effect_source_player_for_test(None);
+    r.game.drain_effect_queue();
+}

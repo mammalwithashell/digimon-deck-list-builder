@@ -1,0 +1,81 @@
+# Official EN image/category 522040, checked 2026-11-22; Q7661–7663.
+# Q7661: resolve the Then tail even if an immediate effect removes this card.
+# Q7662/63: exactly two bottom face-down cards; distribution across Tamers allowed.
+card: BT27-030
+name: MachGaogamon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Cyborg, DATA SQUAD]
+form: Ultimate
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, level_eq: 4, trait_has: DATA SQUAD }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "May bounce an opposing level 4 or lower Digimon; then trash 2 bottom face-down Tamer cards to play/use a cost 5 or lower DATA SQUAD hand card free"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounced
+          optional: true
+          continue_on_decline: true
+          filter: { kind: digimon, level_lte: 4 }
+          prompt: "Return 1 opposing level 4 or lower Digimon to the hand?"
+      - if:
+          condition: { binding_present: bounced }
+          then:
+            - return_to_hand: { target: bounced }
+      # The independent Then cost is optional and may be paid even without a
+      # playable hand card. Never gate it on successfully bouncing a target.
+      - if:
+          condition: { face_down_sources_under_tamers_gte: 2 }
+          then:
+            - select_effect_choice:
+                bind_as: pay_trash
+                labels: ["Trash 2 face-down cards", "Don't"]
+                prompt: "Trash 2 bottom face-down cards from under your Tamers?"
+            - if:
+                condition: { equals: [pay_trash, 0] }
+                then:
+                  - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+                  - select_hand:
+                      of: you
+                      bind_as: squad
+                      optional: true
+                      filter:
+                        all_of:
+                          - trait_has: DATA SQUAD
+                          - play_or_use_cost_lte: 5
+                          - can_play_or_use_from_effect: true
+                      prompt: "Play or use a cost 5 or lower DATA SQUAD card without paying the cost?"
+                  - if:
+                      condition: { binding_present: squad }
+                      then:
+                        - play_or_use_from_hand:
+                            of: you
+                            hand_index: squad
+                            cost_delta: free
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - replacement_subject_is_mine: true
+        - face_down_sources_under_tamers_gte: 1
+        - any_of:
+            - source_name_contains: Gaogamon
+            - source_permanent_trait_has: DATA SQUAD
+    summary: "[Inherited][All Turns][Once Per Turn] By trashing a bottom face-down card under your Tamers, the Gaogamon-name/DATA SQUAD carrier does not leave"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: false }
+      - cancel_replacement: {}
