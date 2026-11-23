@@ -12699,7 +12699,7 @@
   },
   "BT24-037": {
    "behaviourally_covered": true,
-   "clause_count": 6,
+   "clause_count": 8,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:grant_keyword",
@@ -12722,11 +12722,14 @@
     "timing:when_digivolving",
     "keyword:SecurityAttackPlus"
    ],
-   "effect_clause_count": 2,
+   "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
-   "protection_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "trigger:when_would_leave_battle_area"
+   ],
    "untested_constructs": []
   },
   "BT24-040": {
@@ -12926,7 +12929,7 @@
   },
   "BT24-047": {
    "behaviourally_covered": true,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
     "verb:if",
     "verb:may_attack_now",
@@ -12946,7 +12949,7 @@
     "timing:on_play",
     "timing:when_digivolving"
    ],
-   "effect_clause_count": 1,
+   "effect_clause_count": 2,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -13778,7 +13781,7 @@
   },
   "BT24-095": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 6,
    "constructs": [
     "verb:add_modifier",
     "verb:link_to_own_digimon",
@@ -13794,7 +13797,7 @@
     "timing:main_from_hand",
     "timing:on_security"
    ],
-   "effect_clause_count": 4,
+   "effect_clause_count": 6,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -23760,7 +23763,7 @@
   },
   "EX11-071": {
    "behaviourally_covered": true,
-   "clause_count": 2,
+   "clause_count": 3,
    "constructs": [
     "verb:activation_cost",
     "verb:add_to_hand_from_reveal",
@@ -23779,7 +23782,7 @@
     "timing:main_on_field",
     "timing:on_play"
    ],
-   "effect_clause_count": 2,
+   "effect_clause_count": 3,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -31542,7 +31545,7 @@
   },
   "EX9-013": {
    "behaviourally_covered": true,
-   "clause_count": 9,
+   "clause_count": 10,
    "constructs": [
     "verb:de_digivolve",
     "verb:effect_initiated_dna_digivolve",
@@ -31571,9 +31574,10 @@
     "timing:when_digivolving",
     "keyword:Alliance",
     "keyword:BlastDigivolve",
-    "keyword:Blocker"
+    "keyword:Blocker",
+    "keyword:SecurityAttackPlus"
    ],
-   "effect_clause_count": 5,
+   "effect_clause_count": 6,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -36880,7 +36884,7 @@
   },
   "ST22-11": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 6,
    "constructs": [
     "verb:add_dp_modifier",
     "verb:add_this_option_to_hand",
@@ -36898,9 +36902,10 @@
     "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security",
+    "keyword:Blocker",
     "keyword:Reboot"
    ],
-   "effect_clause_count": 4,
+   "effect_clause_count": 6,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
