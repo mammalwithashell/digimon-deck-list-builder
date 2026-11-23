@@ -32881,7 +32881,7 @@
     "predicate:binding_card_kind",
     "predicate:binding_count_eq",
     "predicate:binding_present",
-    "predicate:can_play_from_effect_without_cost",
+    "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:in_text_contains",
     "predicate:kind",
@@ -44982,12 +44982,6 @@
     ],
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies": [
      "yaml_key"
-    ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered": [
-     "yaml_key"
-    ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered": [
-     "yaml_key"
     ]
    },
    "tested": true,
@@ -45002,9 +44996,7 @@
     "dsl::constructs/play_candidate_origin_zone.rs::the_commit_refuses_the_locked_trash_copy_the_filter_now_drops",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_drops_the_trash_copy_under_cannot_play_from_trash",
     "dsl::constructs/play_candidate_origin_zone.rs::union_play_offers_hand_and_trash_copies_without_the_lock",
-    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered"
+    "dsl::constructs/play_candidate_origin_zone.rs::union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies"
    ]
   },
   "predicate:can_play_or_use_from_effect": {
@@ -45038,6 +45030,12 @@
     ],
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
      "yaml_key"
+    ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
+     "yaml_key"
+    ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -45051,7 +45049,9 @@
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
-    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option"
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered"
    ]
   },
   "predicate:can_play_to_breeding_from_hand": {
@@ -51350,10 +51350,10 @@
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered": [
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
      "yaml_key"
     ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered": [
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
      "yaml_key"
     ],
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources": [
@@ -52497,8 +52497,8 @@
     "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::play_cost_budget.rs::play_cost_budget_filter_excludes_non_matching_kind",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_false_offers_only_tamer_without_stash",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash",
@@ -65515,10 +65515,10 @@
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered": [
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
      "yaml_key"
     ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered": [
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
      "yaml_key"
     ],
     "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source": [
@@ -66272,8 +66272,8 @@
     "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered",
     "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source",
     "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
@@ -80994,10 +80994,10 @@
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered": [
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
      "yaml_key"
     ],
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered": [
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
      "yaml_key"
     ],
     "dsl::predicate_leaves_ii.rs::play_cost_eq_binding_compiles_from_yaml": [
@@ -81257,8 +81257,8 @@
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
     "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_met_colour_requirement_is_offered",
-    "dsl::predicate_can_play_option_from_effect.rs::option_with_unmet_colour_requirement_is_not_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered",
     "dsl::predicate_leaves_ii.rs::play_cost_eq_binding_compiles_from_yaml",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_option_by_use_cost",
