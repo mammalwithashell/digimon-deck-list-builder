@@ -406,6 +406,8 @@ pub struct Effect {
     /// effect is active. Takes a read-only context because the reduction
     /// calculation must be pure (called during cost inspection and masking).
     pub cost_reduction_fn: Option<CostReductionFn>,
+    /// Receipt-backed credit visible to play declaration but not booked until payment.
+    pub(crate) known_payment_reduction: i32,
     /// Custom cost-payment logic — invoked in place of the default memory
     /// deduction when this effect fires. Returns `true` if the cost was
     /// successfully paid, `false` to abort the action. Takes a mutable context
@@ -1036,6 +1038,7 @@ impl EffectBuilder {
                 replacement_condition: None,
                 process: None,
                 cost_reduction_fn: None,
+                known_payment_reduction: 0,
                 pay_cost_fn: None,
                 activation_cost_fn: None,
                 activation_cost_kind: None,

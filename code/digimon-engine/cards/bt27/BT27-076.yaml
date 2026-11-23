@@ -10,6 +10,18 @@ form: Champion
 attribute: Unknown
 
 effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    optional: true
+    text: "When this card would be played, by deleting 1 of your level 3 Digimon, reduce the cost by 4."
+    pay_cost:
+      - select_own_permanent:
+          optional: false
+          bind_as: payment
+          filter: { kind: digimon, level_eq: 3 }
+          prompt: "Choose 1 of your level 3 Digimon to delete"
+      - delete_for_cost_reduction: { target: payment, fixed_amount: 4 }
+
   - when: on_play
     text: "[On Play] You may play 1 [Akihiro Kurata] from your hand without paying the cost."
     process:

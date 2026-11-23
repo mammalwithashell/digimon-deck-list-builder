@@ -55,7 +55,8 @@ use std::collections::BTreeSet;
 // Rebuild packs; bincode layouts differ.
 // 0.36.0 adds the `event_batch_card_trait_has` compiled predicate leaf (any card of
 // the event's moved-card batch has the trait). Rebuild packs; bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.36.0";
+// 0.37.0 adds optional fixed credit to deletion cost reducers. Rebuild packs.
+pub const PACK_FORMAT_VERSION: &str = "0.37.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

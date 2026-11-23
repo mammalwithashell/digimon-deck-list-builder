@@ -202,7 +202,7 @@ impl Game {
                     cost_delta,
                     accumulated_reduction,
                     &processed,
-                    &key,
+                    &candidate,
                 );
             let source_kind = self.effect_source_kind_for_handle(key.source_card);
             let accept_key = key.clone();
@@ -1395,7 +1395,7 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         accumulated: crate::game_actions::PlayCostAdjustments,
         processed: &[CostReductionKey],
-        key: &CostReductionKey,
+        candidate: &CostReductionCandidate,
     ) -> bool {
         if matches!(cost_delta, crate::enums::CostDelta::Free) {
             return false;
@@ -1410,7 +1410,7 @@ impl Game {
             .map(|transaction| transaction.final_cost() as i32)
             .unwrap_or(base);
         let mut done = processed.to_vec();
-        done.push(key.clone());
+        done.push(candidate.key.clone());
         let others: i32 = self
             .collect_before_pay_cost_reducers(player_id, Some(target), &done, CostReductionKind::Play)
             .iter()
@@ -1422,10 +1422,7 @@ impl Game {
         if self.payer_can_pay(payer, cost.max(0)) {
             return false;
         }
-        let own = self
-            .inspect_cost_reduction_candidate(key, Some(target))
-            .unwrap_or(0);
-        self.payer_can_pay(payer, (cost - own).max(0))
+        self.payer_can_pay(payer, (cost - candidate.amount).max(0))
     }
 
     /// The Option-use sibling of [`Self::play_cost_reducer_needed`]: the
@@ -1533,6 +1530,11 @@ impl Game {
             };
             let Some(effect) = effects.get(key.effect_slot as usize) else {
                 continue;
+            };
+            let amount = if cost_kind == CostReductionKind::Play {
+                amount + effect.known_payment_reduction
+            } else {
+                amount
             };
             // CR 4.3 7-1-1 vs 9-1-1: a "would be played" reducer never
             // answers an Option use, a "would use" reducer never a play.

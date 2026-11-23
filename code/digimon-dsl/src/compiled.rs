@@ -1972,6 +1972,7 @@ pub enum CompiledStep {
     /// credit. `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
     DeleteForCostReduction {
         target: CompiledBindingRef,
+        fixed_amount: Option<u16>,
     },
     DeleteBoundPermanents {
         binding: String,
@@ -3644,6 +3645,16 @@ mod tests {
         let bytes = bincode::serialize(&original).expect("bincode serialize");
         let reparsed: CompiledCard = bincode::deserialize(&bytes).expect("bincode deserialize");
         assert_eq!(original, reparsed);
+    }
+
+    #[test]
+    fn variable_and_fixed_deletion_credit_round_trip_through_bincode() {
+        let steps = [None, Some(4)].map(|fixed_amount| CompiledStep::DeleteForCostReduction {
+            target: CompiledBindingRef::Named("payment".into()),
+            fixed_amount,
+        });
+        let bytes = bincode::serialize(&steps).unwrap();
+        assert_eq!(steps, bincode::deserialize::<[CompiledStep; 2]>(&bytes).unwrap());
     }
 
     #[test]

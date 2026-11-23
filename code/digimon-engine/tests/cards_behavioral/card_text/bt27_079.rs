@@ -44,7 +44,6 @@ fn retaliation_deletes_the_digimon_that_won_the_battle() {
 }
 
 #[test]
-#[ignore = "G-DSL-FIXED-DELETION-COST-RECEIPT"]
 fn level_four_in_battle_area_pays_fixed_reduction() {
     fixed_play_cost_payment(CARD, 4, 9, 6);
 }

@@ -10,6 +10,18 @@ form: Ultimate
 attribute: Unknown
 
 effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    optional: true
+    text: "When this card would be played, by deleting 1 of your level 4 Digimon, reduce the cost by 6."
+    pay_cost:
+      - select_own_permanent:
+          optional: false
+          bind_as: payment
+          filter: { kind: digimon, level_eq: 4 }
+          prompt: "Choose 1 of your level 4 Digimon to delete"
+      - delete_for_cost_reduction: { target: payment, fixed_amount: 6 }
+
   - kind: grant_keyword
     keyword: Blocker
     text: "＜Blocker＞"

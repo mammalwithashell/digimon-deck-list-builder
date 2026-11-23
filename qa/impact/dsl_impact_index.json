@@ -17215,6 +17215,7 @@
         "count_gte",
         "is_source_permanent",
         "kind",
+        "level_eq",
         "name_contains",
         "name_is",
         "owner",
@@ -17225,11 +17226,13 @@
         "on_play"
       ],
       "verbs": [
+        "delete_for_cost_reduction",
         "play_from_hand_free",
         "play_from_trash_free",
         "return_trash_list_to_deck_bottom",
         "select_count_capped_multi",
         "select_hand",
+        "select_own_permanent",
         "select_trash"
       ]
     },
@@ -17238,6 +17241,8 @@
       "predicates": [
         "can_play_from_effect_without_cost",
         "is_source_permanent",
+        "kind",
+        "level_eq",
         "play_cost_lte",
         "trait_has"
       ],
@@ -17245,7 +17250,9 @@
         "on_deletion"
       ],
       "verbs": [
+        "delete_for_cost_reduction",
         "play_union_bound_free",
+        "select_own_permanent",
         "select_union_zone"
       ]
     },
@@ -39851,6 +39858,7 @@
       "BT27-071",
       "BT27-075",
       "BT27-076",
+      "BT27-079",
       "BT27-092",
       "BT27-098",
       "BT27-102",
@@ -40816,6 +40824,8 @@
       "BT27-048",
       "BT27-055",
       "BT27-071",
+      "BT27-076",
+      "BT27-079",
       "BT3-054",
       "BT3-077",
       "BT4-011",
@@ -49498,7 +49508,9 @@
       "P-094"
     ],
     "delete_for_cost_reduction": [
-      "BT13-103"
+      "BT13-103",
+      "BT27-076",
+      "BT27-079"
     ],
     "delete_one_per_opponent_color": [
       "EX9-074"
@@ -54206,6 +54218,8 @@
       "BT27-026",
       "BT27-038",
       "BT27-048",
+      "BT27-076",
+      "BT27-079",
       "BT27-092",
       "BT3-105",
       "BT3-109",

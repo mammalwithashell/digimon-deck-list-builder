@@ -2187,6 +2187,13 @@ impl Walk for digimon_dsl::step::TargetArg {
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
     }
 }
+impl Walk for digimon_dsl::step::DeleteForCostReductionArgs {
+    fn walk(&self, c: &mut Collector, path: &str, _role: &str) {
+        c.node(path, "digimon_dsl::step::DeleteForCostReductionArgs", "COMPOSITE", serde_json::Value::Null);
+        self.target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
+        self.fixed_amount.walk(c, &format!("{}.fixed_amount", path), "UNCLASSIFIED_STRING");
+    }
+}
 impl Walk for digimon_dsl::step::TrashBottomSourcesArgs {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(
@@ -5607,7 +5614,7 @@ digimon_dsl::compiled::CompiledStep::RevealSearch{of,count,buckets,remainder} =>
 digimon_dsl::compiled::CompiledStep::ChooseFromReveal{of,filter,destination,bind_as,prompt,prompt_key,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ChooseFromReveal"));of.walk(c, &format!("{}.of", &format!("{}@ChooseFromReveal",path)), "UNCLASSIFIED_STRING");filter.walk(c, &format!("{}.filter", &format!("{}@ChooseFromReveal",path)), "UNCLASSIFIED_STRING");destination.walk(c, &format!("{}.destination", &format!("{}@ChooseFromReveal",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@ChooseFromReveal",path)), "EXISTING_INSTANCE_BINDING");prompt.walk(c, &format!("{}.prompt", &format!("{}@ChooseFromReveal",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@ChooseFromReveal",path)), "METADATA_NO_EXECUTABLE_REFERENCE");optional.walk(c, &format!("{}.optional", &format!("{}@ChooseFromReveal",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::OrderRemainder{of,destinations,prompt,prompt_key} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("OrderRemainder"));of.walk(c, &format!("{}.of", &format!("{}@OrderRemainder",path)), "UNCLASSIFIED_STRING");destinations.walk(c, &format!("{}.destinations", &format!("{}@OrderRemainder",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@OrderRemainder",path)), "METADATA_NO_EXECUTABLE_REFERENCE");prompt_key.walk(c, &format!("{}.prompt_key", &format!("{}@OrderRemainder",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::DeletePermanent{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeletePermanent"));target.walk(c, &format!("{}.target", &format!("{}@DeletePermanent",path)), "EXISTING_INSTANCE_BINDING");},
-digimon_dsl::compiled::CompiledStep::DeleteForCostReduction{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeleteForCostReduction"));target.walk(c, &format!("{}.target", &format!("{}@DeleteForCostReduction",path)), "EXISTING_INSTANCE_BINDING");},
+digimon_dsl::compiled::CompiledStep::DeleteForCostReduction{target,fixed_amount} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeleteForCostReduction"));target.walk(c, &format!("{}.target", &format!("{}@DeleteForCostReduction",path)), "EXISTING_INSTANCE_BINDING");fixed_amount.walk(c, &format!("{}.fixed_amount", &format!("{}@DeleteForCostReduction",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::DeleteBoundPermanents{binding} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeleteBoundPermanents"));binding.walk(c, &format!("{}.binding", &format!("{}@DeleteBoundPermanents",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::DeletePermanents{targets} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeletePermanents"));targets.walk(c, &format!("{}.targets", &format!("{}@DeletePermanents",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::DeleteAllPermanents{over,selector} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeleteAllPermanents"));over.walk(c, &format!("{}.over", &format!("{}@DeleteAllPermanents",path)), "UNCLASSIFIED_STRING");selector.walk(c, &format!("{}.selector", &format!("{}@DeleteAllPermanents",path)), "UNCLASSIFIED_STRING");},

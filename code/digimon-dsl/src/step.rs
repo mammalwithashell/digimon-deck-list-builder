@@ -156,9 +156,10 @@ pub enum StepSpec {
     // Field / permanent
     DeletePermanent(TargetArg),
     /// `delete_for_cost_reduction: { target: <binding> }` — delete AS A COST and
-    /// reduce the in-flight cost by the deleted permanent's printed play cost.
+    /// reduce the in-flight cost by a fixed amount or the deleted permanent's
+    /// printed play cost.
     /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
-    DeleteForCostReduction(TargetArg),
+    DeleteForCostReduction(DeleteForCostReductionArgs),
     PaySourcePrefix(PaySourcePrefixArgs),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
     /// `delete_permanents: { targets: [<binding>, ...] }` — delete several
@@ -1874,6 +1875,15 @@ fn is_zero_u8(n: &u8) -> bool {
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeleteForCostReductionArgs {
+    pub target: BindingRef,
+    /// Fixed reduction, credited only after deletion. Omit to use the target's play cost.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fixed_amount: Option<u16>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

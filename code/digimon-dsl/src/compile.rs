@@ -3279,6 +3279,7 @@ fn compile_step(
         }
         S::DeleteForCostReduction(a) => CompiledStep::DeleteForCostReduction {
             target: compile_binding_ref(&a.target),
+            fixed_amount: a.fixed_amount,
         },
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),

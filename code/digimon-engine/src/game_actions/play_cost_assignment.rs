@@ -136,6 +136,8 @@ impl Game {
                 *total += amount;
                 if self.pending_selection.is_some() {
                     total.pending_reduction = Some(amount);
+                } else if let Some(extra) = self.pending_cost_reduction_amount_override.take() {
+                    *total += extra;
                 }
             }
             return;

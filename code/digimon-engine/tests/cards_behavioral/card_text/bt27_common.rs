@@ -149,41 +149,68 @@ pub(super) fn gizmon_recycles_two_to_play_from_trash(card: &str, reward: &str) {
 }
 
 pub(super) fn fixed_play_cost_payment(card: &str, level: u8, full: i16, reduction: i16) {
+    use digimon_engine::enums::Expiry;
+
     const COST: &str = "TEXT-KURATA-COST";
-    for accept in [false, true] {
+    for (accept, evade) in [(false, false), (true, false), (true, true)] {
         let mut payment = make_test_card(COST, "Cost candidate");
         payment.level = Some(level);
         payment.play_cost = 1;
         let mut decoy = make_test_card("TEXT-COST-DECOY", "Wrong level");
         decoy.level = Some(level + 1);
+        decoy.play_cost = 1;
         let mut r = start(
             builder(card)
                 .add_card(payment)
                 .add_card(decoy)
-                .hand(0, &[card]),
+                .hand(0, &[card, "TEXT-COST-DECOY"]),
         );
-        r.place_on_field(0, COST, Some(0));
+        let payer = r.place_on_field(0, COST, Some(0));
         r.place_on_field(0, "TEXT-COST-DECOY", Some(0));
         r.place_on_field(1, COST, Some(0));
+        if evade {
+            r.game
+                .modifiers
+                .grant_keyword(payer, Keyword::Evade, Expiry::Permanent, 0);
+            r.game.tick_declarative_effects();
+        }
         let before = r.memory();
         action(&mut r, 0, PLAY_HAND_START);
-        r.assert_prompt(SelectionKind::Replacement, true, 0);
+        r.assert_prompt(SelectionKind::EffectChoice, true, 0);
+        assert_eq!(
+            r.pending_selection()
+                .unwrap()
+                .effect_choices
+                .as_ref()
+                .unwrap()[0]
+                .label,
+            format!("Cost reduction (-{reduction})")
+        );
         if accept {
-            r.accept_optional_trigger().unwrap();
+            r.execute_branch(0).unwrap();
             r.assert_prompt(SelectionKind::OwnField, false, 0);
             assert_eq!(candidates(&r), [COST]);
             r.choose_prompt_card(COST, None).unwrap();
-            assert_eq!(ids(&r, &r.game.players[0].trash), [COST]);
+            if evade {
+                r.assert_prompt(SelectionKind::Replacement, true, 0);
+                r.accept_optional_trigger().unwrap();
+                assert!(r.game.players[0].battle_area[payer.index as usize].is_suspended);
+            }
         } else {
-            r.decline_optional_trigger().unwrap();
-            assert_eq!(r.trash_size(0), 0);
+            r.decline_prompt().unwrap();
         }
+        let paid = accept && !evade;
+        let trash = ids(&r, &r.game.players[0].trash);
+        assert_eq!(trash, if paid { &[COST][..] } else { &[] });
         assert_eq!(
             before - r.memory(),
-            if accept { full - reduction } else { full }
+            if paid { full - reduction } else { full }
         );
         assert_eq!(r.game.players[1].battle_area.len(), 1);
         assert!(r.pending_selection().is_none());
+        let before_next_play = r.memory();
+        action(&mut r, 0, PLAY_HAND_START);
+        assert_eq!(before_next_play - r.memory(), 1);
     }
 }
 

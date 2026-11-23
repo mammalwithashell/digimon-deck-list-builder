@@ -44,7 +44,6 @@ fn may_play_akihiro_kurata_from_hand_for_free_or_decline() {
 }
 
 #[test]
-#[ignore = "G-DSL-FIXED-DELETION-COST-RECEIPT"]
 fn level_three_in_battle_area_pays_fixed_reduction() {
     fixed_play_cost_payment(CARD, 3, 6, 4);
 }
