@@ -24,10 +24,11 @@ alt_paths:
       any_of: [{color_is: purple}, {color_is: yellow}]
     cost: 3
 effects:
-  - text: "[Hand]"
+  - text: "＜Jamming＞"
     kind: grant_keyword
     keyword: Jamming
-  - when: main_from_hand
+  - text: "[Hand] [Main] By placing 1 [Loweemon] and 1 [KaiserLeomon] from your trash under 1 of your purple or yellow Tamers, digivolve it into this card for a digivolution cost of 3, ignoring digivolution requirements."
+    when: main_from_hand
     condition:
       all_of:
         - count_gte:

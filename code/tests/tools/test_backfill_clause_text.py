@@ -54,9 +54,26 @@ def test_backfill_keeps_embedded_keywords_with_their_effect():
     ]
 
 
+@pytest.mark.parametrize('hand,keyword', [('[Hand]', 'Jamming'), ('{Hand}', 'Overclock ([Puppet] Trait)')])
+def test_backfill_standalone_keyword_after_hand_main(hand, keyword):
+    raw = spec(f'  - when: main_from_hand\n  - kind: grant_keyword\n    keyword: {keyword.split()[0]}\n')
+    main = f'{hand} [Main] By placing 1 card, draw 1.'
+    printed = f'{main} ＜{keyword}＞'
+    assert [s.text for s in printed_spans(section(printed))] == [main, f'＜{keyword}＞']
+    updated, count, _ = annotate(raw, section(printed))
+    assert count == 2
+    assert f'text: "{main}"' in updated
+    assert f'text: "＜{keyword}＞"' in updated
+
+
 def test_backfill_invalid_yaml_is_an_error():
     with pytest.raises(Exception):
         annotate('effects: [', [])
+
+
+def test_backfill_keeps_keyword_effect_choice_bullets():
+    text = '[When Digivolving] Activate 1 effect. ・ ＜De-Digivolve 1＞ 3 Digimon. ・ Draw 1.'
+    assert [s.text for s in printed_spans(section(text))] == [text]
 
 
 def test_backfill_repeated_compound_markers_keep_their_own_bodies():

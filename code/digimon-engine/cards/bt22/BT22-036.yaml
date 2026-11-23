@@ -13,7 +13,7 @@ alt_paths:
     cost: 3
 
 effects:
-  - text: "{Hand}"
+  - text: "＜Overclock ([Puppet] Trait)＞"
     kind: grant_keyword
     keyword: Overclock
     overclock_cost_filter:
@@ -33,7 +33,8 @@ effects:
   # field, and a [ShoeShoemon] card exists in trash (the placement cost must
   # be payable). `name_is` is exact-match so "ShoeShoemon" never satisfies a
   # "Shoemon" gate and vice versa.
-  - when: main_from_hand
+  - text: "{Hand} [Main] If you have [Arisa Kinosaki], by placing 1 [ShoeShoemon] from your trash as any of your [Shoemon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
+    when: main_from_hand
     summary: "[Hand][Main] Place a ShoeShoemon from trash under a Shoemon, then digivolve into this card for cost 3 ignoring requirements"
     condition:
       all_of:

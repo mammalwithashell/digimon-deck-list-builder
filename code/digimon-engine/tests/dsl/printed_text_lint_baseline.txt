@@ -181,7 +181,7 @@ BT18-067 missing_text 1
 BT18-073 missing_text 1
 BT18-073 missing_text 3
 BT18-076 missing_text 0
-BT18-081 missing_text 1
+BT18-081 may_without_optional 1
 BT18-087 missing_text 0
 BT18-087 missing_text 1
 BT18-098 missing_text 0
@@ -372,7 +372,7 @@ BT22-015 missing_text 1
 BT22-015 missing_text 2
 BT22-026 missing_text 0
 BT22-034 missing_text 1
-BT22-036 missing_text 1
+BT22-036 may_without_optional 1
 BT22-040 missing_text 0
 BT22-040 missing_text 1
 BT22-040 missing_text 2
@@ -1468,7 +1468,6 @@ P-186 missing_text 1
 P-186 missing_text 2
 P-186 optional_without_may 3
 P-187 missing_text 0
-P-189 missing_text 1
 P-193 missing_text 0
 P-193 missing_text 1
 P-193 optional_without_may 2
@@ -1543,7 +1542,6 @@ ST17-07 missing_text 0
 ST17-13 missing_text 0
 ST17-13 missing_text 1
 ST17-13 missing_text 3
-ST19-08 missing_text 0
 ST2-13 missing_text 0
 ST2-14 missing_text 0
 ST2-15 missing_text 0

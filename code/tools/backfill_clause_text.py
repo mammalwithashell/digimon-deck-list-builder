@@ -100,12 +100,18 @@ def printed_spans(sections):
                     break
                 cursor = start + len(span.text)
             located.append((start, span))
-        # Keywords within a tagged effect belong to that effect's whole span.
         groups = []
-        for start, span in located:
-            if groups and span.kind == "keyword" and groups[-1][1].kind == "timing":
+        hand_start = None
+        for i, (start, span) in enumerate(located):
+            end = located[i + 1][0] if i + 1 < len(located) else len(raw)
+            if (normalized(raw[start:end]) in {"[hand]", "{hand}"}
+                    and i + 1 < len(located) and "Main" in located[i + 1][1].timings):
+                hand_start = start
                 continue
-            groups.append((start, span))
+            if groups and span.kind == "keyword" and re.search(r"[・•]\s*$", raw[:start]):
+                continue
+            groups.append((hand_start if hand_start is not None else start, span))
+            hand_start = None
         for i, (start, span) in enumerate(groups):
             end = groups[i + 1][0] if i + 1 < len(groups) else len(raw)
             text = raw[start:end].split("(Rule)", 1)[0].strip()
