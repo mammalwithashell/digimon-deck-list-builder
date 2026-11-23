@@ -1,0 +1,54 @@
+{
+  "index": 4527,
+  "norm_id": 0.22635,
+  "card_id": "BT27-040",
+  "card_index": 40,
+  "card_name_eng": "Etemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_040",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Overclock ([Chuumon]/[Sukamon] in name)＞ (At the end of your turn, by deleting 1 of your Tokens or other specified Digimon, this Digimon attacks a player without suspending.)\r\n[Security] [On Play] [When Digivolving] To 1 of your opponent's Digimon, give -3000 DP for the turn for each of your Digimon with [Chuumon], [Sukamon] or [Etemon] in their names.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your other Digimon with [Chuumon], [Sukamon] or [Etemon] in their names are played, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Sukamon] in name: Cost 3\r\nAssembly Requirements [Assembly -3] Lv.4 Digimon card w/[Sukamon] in name\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+  "digixros_costs": [
+    {
+      "different_card_numbers": false,
+      "different_names": false,
+      "elements": [],
+      "has_text": "",
+      "max_materials": 0,
+      "reduce_cost_per_card": 3,
+      "source_zones": [
+        "trash"
+      ]
+    }
+  ]
+}

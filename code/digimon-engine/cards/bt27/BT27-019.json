@@ -1,0 +1,36 @@
+{
+  "index": 4506,
+  "norm_id": 0.2253,
+  "card_id": "BT27-019",
+  "card_index": 19,
+  "card_name_eng": "Gaomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_019",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beast",
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] By placing 1 card from your hand face down under any of your [Thomas H. Norstein]s, both players ＜Draw 1＞.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Both players ＜Draw 1＞.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Wanyamon]/Lv.2 w/[DATA SQUAD] trait: Cost 0"
+}

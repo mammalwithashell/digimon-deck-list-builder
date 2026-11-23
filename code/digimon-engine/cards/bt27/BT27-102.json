@@ -1,0 +1,27 @@
+{
+  "index": 4589,
+  "norm_id": 0.22945,
+  "card_id": "BT27-102",
+  "card_index": 102,
+  "card_name_eng": "Bio Hybrid Digivolution",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_102",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Kurata's Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Kurata's Army] trait Tamer card from your hand or trash without paying the cost. Then, place this card in the battle area. [All Turns] When any Digimon on the field are deleted, ＜Delay＞. ・1 of your Tamers may digivolve into a [Kurata's Army] trait Digimon card in the hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] You may play 1 play cost 5 or lower [Kurata's Army] trait card from your hand or trash without paying the cost.",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,29 @@
+{
+  "index": 4563,
+  "norm_id": 0.22815,
+  "card_id": "BT27-076",
+  "card_index": 76,
+  "card_name_eng": "Gizmon: AT",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_076",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Kurata's Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "When this card would be played, by deleting 1 of your level 3 Digimon, reduce the cost by 4.\r\n[On Play] You may play 1 [Akihiro Kurata] from your hand without paying the cost.\r\n[All Turns] This Digimon can't digivolve.\r\n[On Deletion] By returning 2 cards with [Gizmon] in their names from your trash to the bottom of the deck, you may play 1 [Gizmon: XT] from your trash without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

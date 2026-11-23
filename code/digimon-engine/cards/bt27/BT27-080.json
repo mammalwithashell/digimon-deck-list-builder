@@ -1,0 +1,37 @@
+{
+  "index": 4567,
+  "norm_id": 0.22835,
+  "card_id": "BT27-080",
+  "card_index": 80,
+  "card_name_eng": "ScourgeChiropmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_080",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Machine",
+    "Glowing Dawn",
+    "BEATBREAK"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "{Hand} [Main] If you have a Tamer with [Makoto Kuonji] in its name, by placing 1 [NightChiropmon] from your trash as any of your [Chiropmon]'s bottom digivolution card, that Digimon digivolves into this card, ignoring level. [On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. Then, by trashing the bottom face-down card from under any of your Tamers, this Digimon gains ＜Rush＞ and ＜Piercing＞ for the turn.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 play cost 5 or lower [Glowing Dawn] trait card from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Glowing Dawn] trait: Cost 3"
+}

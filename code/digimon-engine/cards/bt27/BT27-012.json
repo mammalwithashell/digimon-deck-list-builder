@@ -1,0 +1,41 @@
+{
+  "index": 4499,
+  "norm_id": 0.22495,
+  "card_id": "BT27-012",
+  "card_index": 12,
+  "card_name_eng": "SkullMeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_012",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Flame"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Main] [Once Per Turn] By paying 1 cost, you may activate 1 of this Digimon's [On Deletion] effects.\r\n[On Deletion] Delete 1 of your opponent's Digimon with the lowest level.",
+  "inherited_effect_description_eng": "[On Deletion] Trash your opponent's top security card.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Flame] trait: Cost 3"
+}

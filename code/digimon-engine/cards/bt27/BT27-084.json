@@ -1,0 +1,87 @@
+{
+  "index": 4571,
+  "norm_id": 0.22855,
+  "card_id": "BT27-084",
+  "card_index": 84,
+  "card_name_eng": "LordKnightmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_084",
+  "play_cost": 5,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 4,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "X Antibody",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Alliance＞ ＜Collision＞ ＜Piercing＞ ＜Blocker＞ [When Digivolving] You may play up to 8 play cost's total worth of cards with [Knightmon] in their texts from your hand without paying the cost. [All Turns] [Once Per Turn] When any of your other Digimon are played or deleted, by trashing 1 [LordKnightmon] or [X Antibody] from this Digimon's digivolution cards, activate 1 [Main] effect on this card's Option side.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [LordKnightmon]: Cost 2",
+  "dual": {
+    "digimon": {
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "dp": 12000,
+      "effect_text": "＜Alliance＞ ＜Collision＞ ＜Piercing＞ ＜Blocker＞ [When Digivolving] You may play up to 8 play cost's total worth of cards with [Knightmon] in their texts from your hand without paying the cost. [All Turns] [Once Per Turn] When any of your other Digimon are played or deleted, by trashing 1 [LordKnightmon] or [X Antibody] from this Digimon's digivolution cards, activate 1 [Main] effect on this card's Option side.",
+      "evo_costs": [
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "level": 6,
+      "traits": [
+        "Holy Warrior",
+        "X Antibody",
+        "Royal Knight"
+      ]
+    },
+    "option": {
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "effect_text": "[Main] Delete 1 of your opponent's lowest level Digimon. If this effect didn't delete, until your turn ends, all of your Digimon with [Knightmon] in their texts gain ＜Blocker＞, your opponent's Digimon effects don't affect them and they get +3000 DP.",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "security_text": "",
+      "use_cost": 5
+    }
+  }
+}
