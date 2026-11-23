@@ -217,6 +217,57 @@ fn dual_main_may_attack_immediately_even_with_digimon_played_this_turn() {
 }
 
 #[test]
+fn dual_immediate_attack_can_digivolve_and_use_another_option() {
+    let mut option = make_test_card("TEXT-OPTION", "Fixture Option");
+    option.card_kind = digimon_engine::enums::CardKind::Option;
+    option.level = None;
+    option.dp = None;
+    option.play_cost = 5;
+    option.colors = vec![CardColor::Green];
+    option.traits = vec!["Glowing Dawn".into()];
+    let mut r = start(
+        builder(CARD)
+            .dsl_card("ST23-01")
+            .unwrap()
+            .dsl_card("ST23-08")
+            .unwrap()
+            .add_card(option)
+            .hand(0, &[CARD, "ST23-08", "TEXT-OPTION"]),
+    );
+    let attacker = r.place_stack(0, &["ST23-01", "TEXT-4"]);
+    stocked_tamer(&mut r, "TEXT-TAMER");
+    action(&mut r, 0, PLAY_HAND_START);
+    r.assert_prompt(SelectionKind::OwnField, false, 0);
+    r.choose_prompt_card("TEXT-4", None).unwrap();
+    r.assert_prompt(SelectionKind::Target, true, 0);
+    action(&mut r, 0, encode_attack(attacker.index as u16, 14));
+    r.assert_prompt(SelectionKind::OwnField, true, 0);
+    r.decline_prompt().unwrap();
+    assert!(r.game.pending_option.is_none());
+    r.assert_prompt(SelectionKind::Replacement, true, 0);
+    r.accept_optional_trigger().unwrap();
+    r.assert_prompt(SelectionKind::OwnField, false, 0);
+    r.choose_prompt_card("TEXT-TAMER", None).unwrap();
+    r.assert_prompt(SelectionKind::Hand, true, 0);
+    r.choose_prompt_card("ST23-08", None).unwrap();
+    r.assert_prompt(SelectionKind::OwnField, true, 0);
+    r.choose_prompt_card("TEXT-TAMER", None).unwrap();
+    r.assert_prompt(SelectionKind::Hand, true, 0);
+    r.choose_prompt_card("TEXT-OPTION", None).unwrap();
+    assert!(r.pending_selection().is_none());
+    assert_eq!(r.memory(), 3);
+    assert_eq!(r.security_count(1), 3);
+    assert!(r.game.players[0].battle_area[attacker.index as usize].is_suspended);
+    assert_eq!(
+        r.game.players[0].battle_area[attacker.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "ST23-08"
+    );
+    assert!(ids(&r, &r.game.players[0].trash).contains(&"TEXT-OPTION".into()));
+}
+
+#[test]
 fn arts_digivolve_may_evolve_a_legal_host_for_free_or_decline_to_trash_the_used_option() {
     for accept in [false, true] {
         let mut r = start(builder(CARD).hand(0, &[CARD]));
