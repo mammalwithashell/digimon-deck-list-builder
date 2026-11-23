@@ -184,6 +184,9 @@ fn p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_
     runner.push_source(kotone, "XH-LV4");
 
     runner.game.enter_main_phase();
+    runner
+        .decline_optional_trigger()
+        .expect("optional [Start of Your Main Phase] placement prompt");
     let activation = FIELD_EFFECT_START
         + kotone.index as u16 * EFFECTS_PER_PERMANENT
         + FIELD_EFFECT_SLOT_FOR_MAIN;

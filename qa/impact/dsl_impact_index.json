@@ -2058,7 +2058,6 @@
         "event_target_owner",
         "kind",
         "level_eq",
-        "name_contains",
         "name_is"
       ],
       "timings": [
@@ -2104,7 +2103,6 @@
         "event_target_owner",
         "kind",
         "level_eq",
-        "name_contains",
         "name_is",
         "your_turn"
       ],
@@ -3794,6 +3792,7 @@
         "kind",
         "level_eq",
         "name_contains",
+        "name_is",
         "owner",
         "source_name_contains",
         "zone"
@@ -4706,7 +4705,7 @@
       "path": "bt18/BT18-092.yaml",
       "predicates": [
         "kind",
-        "name_contains",
+        "name_is",
         "source_is_unsuspended",
         "your_turn"
       ],
@@ -7342,7 +7341,6 @@
         "event_target_owner",
         "kind",
         "level_eq",
-        "name_contains",
         "name_is",
         "owner",
         "zone"
@@ -9113,7 +9111,6 @@
         "in_text_contains",
         "kind",
         "level_eq",
-        "name_contains",
         "name_is",
         "other",
         "owner",
@@ -18162,7 +18159,7 @@
         "level_eq",
         "owner",
         "stack_size_gte",
-        "trait_has",
+        "trait_contains",
         "zone"
       ],
       "timings": [
@@ -18367,7 +18364,7 @@
         "kind",
         "not",
         "owner",
-        "trait_has",
+        "trait_contains",
         "zone"
       ],
       "timings": [
@@ -24860,14 +24857,15 @@
         "all_of",
         "all_turns",
         "any_of",
+        "binding_count_eq",
         "color_is",
-        "equals",
         "is_source",
         "kind",
         "level_eq",
         "name_contains",
         "name_is",
         "none_of",
+        "not",
         "replacement_cause",
         "source_name_contains"
       ],
@@ -24883,7 +24881,6 @@
         "return_trash_list_to_deck_bottom",
         "reveal_top_deck",
         "select_count_capped_multi",
-        "select_effect_choice",
         "select_hand",
         "select_reveal_buckets",
         "trash_from_hand_by_index"
@@ -29920,7 +29917,7 @@
       "predicates": [
         "any_of",
         "name_contains",
-        "trait_has"
+        "trait_contains"
       ],
       "timings": [
         "main_from_hand",
@@ -35429,6 +35426,7 @@
       "EX12-077",
       "EX13-035",
       "EX4-073",
+      "EX5-015",
       "EX7-073"
     ],
     "binding_exists": [
@@ -37717,7 +37715,6 @@
       "EX3-008",
       "EX4-051",
       "EX4-061",
-      "EX5-015",
       "EX5-054",
       "EX7-030",
       "EX9-021",
@@ -41247,9 +41244,7 @@
       "BT12-092",
       "BT13-008",
       "BT13-012",
-      "BT13-015",
       "BT13-019",
-      "BT13-020",
       "BT13-065",
       "BT13-083",
       "BT13-087",
@@ -41276,7 +41271,6 @@
       "BT18-015",
       "BT18-060",
       "BT18-073",
-      "BT18-092",
       "BT19-008",
       "BT19-014",
       "BT19-033",
@@ -41293,7 +41287,6 @@
       "BT20-093",
       "BT20-100",
       "BT21-042",
-      "BT21-044",
       "BT21-061",
       "BT21-064",
       "BT21-067",
@@ -41309,7 +41302,6 @@
       "BT22-022",
       "BT22-026",
       "BT22-042",
-      "BT22-057",
       "BT22-084",
       "BT22-085",
       "BT23-006",
@@ -41502,6 +41494,7 @@
       "BT17-007",
       "BT17-012",
       "BT17-023",
+      "BT17-027",
       "BT17-053",
       "BT17-080",
       "BT18-007",
@@ -41517,6 +41510,7 @@
       "BT18-076",
       "BT18-077",
       "BT18-081",
+      "BT18-092",
       "BT18-097",
       "BT18-102",
       "BT19-012",
@@ -41950,6 +41944,7 @@
       "EX13-034",
       "EX13-051",
       "EX2-007",
+      "EX5-015",
       "EX5-070",
       "EX7-002",
       "EX7-051",
@@ -43491,6 +43486,8 @@
       "BT26-065",
       "BT26-076",
       "BT26-091",
+      "BT8-110",
+      "BT9-104",
       "EX11-018",
       "EX12-031",
       "EX12-036",
@@ -43498,7 +43495,8 @@
       "EX13-042",
       "EX3-014",
       "P-166",
-      "P-207"
+      "P-207",
+      "ST12-15"
     ],
     "trait_has": [
       "AD1-001",
@@ -43952,10 +43950,8 @@
       "BT7-081",
       "BT7-090",
       "BT8-095",
-      "BT8-110",
       "BT9-092",
       "BT9-098",
-      "BT9-104",
       "BT9-109",
       "EX10-003",
       "EX10-025",
@@ -44189,7 +44185,6 @@
       "P-250",
       "ST12-12",
       "ST12-13",
-      "ST12-15",
       "ST19-03",
       "ST19-04",
       "ST19-05",
@@ -52583,7 +52578,6 @@
       "EX3-008",
       "EX4-051",
       "EX4-061",
-      "EX5-015",
       "EX5-054",
       "EX7-030",
       "EX9-021",
