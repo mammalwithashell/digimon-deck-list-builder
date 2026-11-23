@@ -89,3 +89,6 @@ wandb/
 # Meta coverage report: regenerated in ~1s by `python -m tools.meta_coverage`; latest.md + history.jsonl are committed.
 qa/qa-reports/meta-coverage/latest.json
 qa/qa-reports/meta-coverage/dashboard.html
+
+# Generated watch queues (code/tools/build_watch_queue.py) - built from local runs/
+code/frontend/public/watch/
