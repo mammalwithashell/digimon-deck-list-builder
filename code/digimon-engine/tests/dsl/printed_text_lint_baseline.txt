@@ -157,7 +157,6 @@ BT16-102 missing_text 1
 BT16-102 missing_text 2
 BT16-102 missing_text 3
 BT17-012 missing_text 0
-BT17-015 may_without_optional 1
 BT17-023 missing_text 0
 BT17-023 missing_text 1
 BT17-027 may_without_optional 1

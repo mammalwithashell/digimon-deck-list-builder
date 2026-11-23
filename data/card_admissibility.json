@@ -46994,9 +46994,9 @@
     "untested_card": 17,
     "untested_lowering": 3210
   },
-  "generated_at": "2026-11-22T16:11:29+00:00",
+  "generated_at": "2026-11-23T04:23:41+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "7ce1cb566db59854601bda0482e4e220ef7aab8ae3d37f4e18db8df67618099f",
+    "behavioral_test_modules_sha256": "6d8e11f07033955b5dc122b816124012e4cfbaeebdd8208babc5dc81df7089e2",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
     "lowering_coverage_sha256": "783bc0dc40e6008313838a6f047401c2e1750e3c2c9140460793edf3294d4ae4",

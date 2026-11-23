@@ -1280,7 +1280,7 @@ Complete, enum-derived index of every authoring primitive: **189 step verbs**, *
 | `binding_absent` | `str?` | 27 |  | `ad1/AD1-024.yaml` |  |
 | `binding_card_kind` | `BindingCardKindPredicate?` | 4 |  | `bt26/BT26-084.yaml` | True when the card bound to `binding` has the given card category. Resolves the named card binding (e.g. from `reveal_top_deck { bind_as }`) and compares its printed kind. Used by LM-020 Quantumon to test whether the revealed opponent deck-top matches the declared category. |
 | `binding_count_eq` | `BindingCountPredicate?` | 11 |  | `bt12/BT12-031.yaml` | True when the named list-typed binding (a `source_refs`, permanent-list or card-list binding produced by a multi-select / `select_own_sources` step) holds exactly `n` entries. Used by EX4-073 clause C's "if you trashed 3 cards" tail. A scalar / single binding counts as 1; a missing binding counts as 0. G-DSL-BINDING-COUNT-EQ. |
-| `binding_exists` | `str?` | 15 |  | `ad1/AD1-024.yaml` |  |
+| `binding_exists` | `str?` | 16 |  | `ad1/AD1-024.yaml` |  |
 | `binding_owner` | `BindingOwnerPredicate?` | 2 | rare | `ex7/EX7-010.yaml` |  |
 | `binding_present` | `str?` | 241 |  | `ad1/AD1-002.yaml` |  |
 | `cost_target` | `PredicateSpec?` | 24 |  | `bt11/BT11-061.yaml` | BeforePayCost target card predicate. When present, the inner predicate is evaluated against the card whose cost is currently being computed (`cost_target_card` on the effect read context), treated as a `Card` subject. Fails when no cost target is active (i.e., outside `BeforePayCost` cost-calc dispatch). Use the full card-shape vocabulary inside: `trait_has`, `color_is`, `name_contains`, `level_eq`/`_lte`/`_gte`, `kind`, etc. Example: a cost-reduction clause that fires only when the card being digivolved into has the [Free] trait: ```yaml active_when: your_turn: true cost_target: { trait_has: Free } ``` G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure). |
@@ -1550,7 +1550,7 @@ Complete, enum-derived index of every authoring primitive: **189 step verbs**, *
 | `end_of_attack` | 26 |  |
 | `end_of_battle` | 1 | "[All Turns] At the end of a battle, …" -- the end of the battle timing (§14-2-5): after every effect triggered by the battle (the loser's [On Deletion], `on_ally_won_battle`) has resolved. Lowers to `EffectTiming::EndOfBattle`. |
 | `end_of_opponents_next_turn` | 13 |  |
-| `end_of_opponents_turn` | 203 |  |
+| `end_of_opponents_turn` | 204 |  |
 | `end_of_your_next_turn` | 11 |  |
 | `end_of_your_turn` | 63 |  |
 | `main` | 54 |  |

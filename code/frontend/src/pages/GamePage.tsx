@@ -72,6 +72,8 @@ import {
 import { useUiStore } from '@/stores/uiStore';
 import { BotSpeedControl } from '@/components/game/BotSpeedControl';
 import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
+import { useWatchReplay } from '@/hooks/useWatchReplay';
+import { WatchOverlay } from '@/components/game/WatchOverlay';
 import { formatEvents } from '@/utils/gameLogFormat';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
@@ -96,6 +98,13 @@ export function GamePage() {
   // WebSocket is used for both PvP and vs-AI-online: the server streams
   // state and runs the AI turn internally for the 'vsai' mode.
   const useWebSocket = isPvpMode || isVsAiOnline || isSpectator;
+  // Watch mode: a recorded model-vs-model game replayed on a two-human local
+  // game (see useWatchReplay). Manual input is blocked while it is active.
+  const watchQueue = useWebSocket ? null : searchParams.get('watch');
+  const watchPosition = Number(searchParams.get('pos') ?? '0') || 0;
+  const watchFilter = searchParams.get('filter') ?? '';
+  const watchStartAt = Number(searchParams.get('at') ?? '0') || 0;
+  const isWatching = Boolean(watchQueue);
 
 
   const store = useGameStore();
@@ -108,7 +117,9 @@ export function GamePage() {
   const paced = !useWebSocket && botSpeed !== 'instant';
   // While the bot's beats are draining, all mask-derived affordances are
   // locked — the in-flight mask belongs to the agent, not the human.
-  const parsedMask = useActionMask(store.agentPending ? EMPTY_MASK : store.actionMask);
+  const parsedMask = useActionMask(
+    store.agentPending || isWatching ? EMPTY_MASK : store.actionMask,
+  );
   const actionPendingRef = useRef(false);
 
   // WebSocket connection (active for PvP, vs-AI-online, and spectator modes)
@@ -178,6 +189,8 @@ export function GamePage() {
         return;
       }
       if (!store.gameId || actionPendingRef.current) return;
+      // Watch mode replays recorded moves; the viewer cannot act.
+      if (isWatching) return;
       // Paced bot sequence draining — the human has no legal input until
       // the beats finish (mask is locked too; this is a belt-and-braces
       // guard against queued clicks).
@@ -211,8 +224,17 @@ export function GamePage() {
         actionPendingRef.current = false;
       }
     },
-    [applyGameResponse, paced, store, useWebSocket, ws],
+    [applyGameResponse, isWatching, paced, store, useWebSocket, ws],
   );
+
+  const watchReplay = useWatchReplay({
+    queue: watchQueue,
+    position: watchPosition,
+    filter: watchFilter,
+    startAt: watchStartAt,
+    urlGameId,
+    applyGameResponse,
+  });
 
   // Pacing driver: while the bot has actions left, request the next beat
   // after the configured delay; retry-once + stall-with-Continue on
@@ -1244,6 +1266,7 @@ export function GamePage() {
     // preset) instead of the fixed canvas (1080px), causing ~360px of
     // dead space below the hand at desktop's minimum preset.
     <div className="h-full flex flex-col">
+      {isWatching && watchQueue && <WatchOverlay replay={watchReplay} queue={watchQueue} />}
       {/* Full-width board area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-0">
         <div className="px-3 py-1 flex items-center justify-between">

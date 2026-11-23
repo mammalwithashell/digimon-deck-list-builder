@@ -25,27 +25,17 @@
 #   T5 p0 (mem 3): SOMP (BT25-049 face down, +1) -> 4. USE "Final Judgment"
 #      (BT25-057's Option face, Use 4) -> 0, targeting Cougarmon: Rush,
 #      <Security A. +1>, +5000 (4000 -> 9000).
-#   Arts Digivolve declined; Cougarmon attacks security as a main-phase attack
-#   (see finding). Then p0 passes and the line stops at p1's T6 breeding.
+#   Cougarmon declares the immediate attack; Arts Digivolve and ST23-01's
+#   inherited effect are declined. The line stops at p1's T6 breeding.
 #
-# ENGINE/DATA FINDING (duration): the official Bandai DB prints "until your
-# opponent's turn ends"; our YAML authors expiry end_of_turn (its header
-# quotes the card image / DCGO "UntilEachTurnEnd" as "for the turn"). The
-# at:21 block asserts OUR behaviour -- 4000 DP on p1's turn 6 -- which
-# contradicts the official text (should still be 9000). Expected to AGREE with
-# DCGO if DCGO is UntilEachTurnEnd; flag for printed-data triage.
+# The printed "until your opponent's turn ends" keeps Cougarmon at 9000 DP
+# on p1's turn 6.
 #
 # PROMPT SHAPE (card YAML DCGO crosscheck: Option [Main] = SelectPermanentEffect
 # over YOUR Digimon -> GainRush + SAttack+1 + DP+5000 -> "then may attack"
 # = SelectAttackEffect; Arts Digivolve = CardEffectFactory.ArtsDigivolveEffect):
 #   * Use from hand: no face-choice prompt (the Digimon face has no play cost).
-#   * ENGINE FINDING (expected oracle divergence -- "Then, it may attack"):
-#     our DSL lowers `may_attack_now ... windowed: true` to an end-of-turn
-#     MayAttack MODIFIER instead of an attack inside the effect. So ours asks
-#     NO SelectAttackEffect during the [Main]; the Arts Digivolve prompt comes
-#     first and the attack is a later ordinary main-phase attack. DCGO asks
-#     SelectAttackEffect immediately, before the Arts/trash decision. The
-#     printed "Then, it may attack" is an attack DURING the effect.
+#   * The immediate SelectAttackEffect precedes the Arts/trash decision.
 #   * The Arts Digivolve prompt (ours: OwnField "Choose a card for Arts
 #     Digivolve, or pass to trash this Option") has no DCGO prompt kind pinned
 #     here; its shape on the wire is unverified.
@@ -117,10 +107,10 @@ steps:
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   - actor: 0
-    do: { select: { decline: true } }
+    do: { select: { targets: [opp.security] } }
+    expect: { prompt: SelectAttackEffect }
   - actor: 0
-    do: { attack: { attacker: field.1, target: security } }
-    expect: { prompt: main_phase }
+    do: { select: { decline: true } }
   - actor: 0
     do: { select: { decline: true } }
   - actor: 0
@@ -153,6 +143,6 @@ assert:
           suspended: false
           sources: [BT25-049, ST23-06]
         - card_id: ST23-03
-          dp: 4000
+          dp: 9000
           suspended: true
           sources: [BT25-032, ST23-01]

@@ -35,13 +35,7 @@
 # over YOUR Digimon -> GainRush + SAttack+1 + DP+5000 -> "then may attack"
 # = SelectAttackEffect; Arts Digivolve = CardEffectFactory.ArtsDigivolveEffect):
 #   * Use from hand: no face-choice prompt (the Digimon face has no play cost).
-#   * ENGINE FINDING (expected oracle divergence -- "Then, it may attack"):
-#     our DSL lowers `may_attack_now ... windowed: true` to an end-of-turn
-#     MayAttack MODIFIER instead of an attack inside the effect. So ours asks
-#     NO SelectAttackEffect during the [Main]; the Arts Digivolve prompt comes
-#     first and the attack is a later ordinary main-phase attack. DCGO asks
-#     SelectAttackEffect immediately, before the Arts/trash decision. The
-#     printed "Then, it may attack" is an attack DURING the effect.
+#   * The immediate SelectAttackEffect precedes the Arts/trash decision.
 #   * The Arts Digivolve prompt (ours: OwnField "Choose a card for Arts
 #     Digivolve, or pass to trash this Option") has no DCGO prompt kind pinned
 #     here; its shape on the wire is unverified.
@@ -113,6 +107,9 @@ steps:
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
   - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
     do: { select: { targets: [own.field.1] } }
   - actor: 0
     do: { select: { cards: [BT25-057], ordinal: 0 } }
@@ -141,7 +138,7 @@ steps:
     do: { pass: {} }
     expect: { prompt: main_phase }
 assert:
-  - at: 23
+  - at: 24
     that:
       turn: 5
       p0.memory: 0
