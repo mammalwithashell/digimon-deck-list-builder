@@ -61,6 +61,7 @@ effects:
       - select_own_permanent:
           optional: true
           bind_as: host
+          prompt: Choose a Tamer to digivolve
           filter:
             kind: tamer
             has_digivolve_candidate:
@@ -75,6 +76,7 @@ effects:
                 zones: [hand, trash]
                 optional: true
                 bind_as: result
+                prompt: Choose a Digimon to digivolve into
                 filter:
                   kind: digimon
                   trait_has: "Kurata's Army"
