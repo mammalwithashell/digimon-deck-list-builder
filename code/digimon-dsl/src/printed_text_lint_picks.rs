@@ -88,6 +88,7 @@ fn kind_bounds(filter: &Value) -> (u8, u8) {
 
 fn kind_mismatch(filter: &Value, preceding: &[&str], tail: &[&str]) -> bool {
     let action_kinds = match preceding.first() {
+        Some(&"play" | &"use") if preceding.get(1) == Some(&"or") => ALL_KINDS,
         Some(&"play") => PLAYABLE,
         Some(&"use") => OPTION,
         _ => ALL_KINDS,
@@ -176,7 +177,7 @@ pub(super) fn check(value: &Value, text: &str) -> Vec<&'static str> {
         .map(|(i, _)| i)
         .collect();
     if let [i] = nouns.as_slice() {
-        let start = words[..*i]
+        let mut start = words[..*i]
             .iter()
             .rposition(|word| {
                 matches!(
@@ -185,8 +186,14 @@ pub(super) fn check(value: &Value, text: &str) -> Vec<&'static str> {
                 )
             })
             .unwrap_or(0);
+        let combined_action = start >= 2
+            && matches!(&words[start - 2..=start], ["play", "or", "use"] | ["use", "or", "play"]);
+        if combined_action {
+            start -= 2;
+        }
         let preceding = &words[start..*i];
-        if !preceding.iter().any(|w| {
+        let qualifiers = if combined_action { &preceding[3..] } else { preceding };
+        if !qualifiers.iter().any(|w| {
             matches!(
                 *w,
                 "or" | "and" | "except" | "digivolution" | "this" | "that"
