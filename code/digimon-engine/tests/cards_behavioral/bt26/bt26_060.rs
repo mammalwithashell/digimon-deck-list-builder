@@ -203,43 +203,63 @@ fn bt26_060_own_deck_add_offers_the_optional_delete_once_per_turn() {
     };
 }
 
+/// Run the [On Play]/[When Digivolving] return over two fresh 2-card stacks,
+/// answering the target and order picks, and stop at whatever comes next.
+fn return_two_stacks(r: &mut DebugRunner, me: PermanentHandle, timing: EffectTiming, ids: [&str; 4]) {
+    r.place_stack(1, &[ids[0], ids[1]]);
+    r.place_stack(1, &[ids[2], ids[3]]);
+    fire(r, timing, me);
+    pick_all_targets(r);
+    while matches!(
+        pending_kind(r),
+        Some(SelectionKind::OrderedPermutation { .. })
+    ) {
+        let x = non_pass(r)[0];
+        r.execute_action(0, x).unwrap();
+    }
+}
+
+/// CR 4.3 15-14-1-4: "When a player chooses to activate an [X Per Turn]
+/// effect, it will count toward 1 use of [X Per Turn], even if the effect's
+/// processing can't be executed." Accepting the outer "you may delete" prompt
+/// is that choice: passing the delete pick afterwards still uses the
+/// [Once Per Turn], and a second own-effect deck add this turn offers nothing.
+/// DCGO BT26_060.cs RemoveUse()s here; the rules text decides.
 #[test]
-fn bt26_060_declined_delete_refunds_the_once_per_turn() {
+fn bt26_060_accepted_then_declined_delete_spends_the_once_per_turn() {
     let mut r = setup();
     let me = r.place_on_field(0, CARD_ID, Some(0));
-    r.place_stack(1, &["B1", "B2"]);
-    r.place_stack(1, &["A1", "A2"]);
-    fire(&mut r, EffectTiming::OnPlay, me);
-    pick_all_targets(&mut r);
-    // The order pick for the two returned cards, then the outer prompt.
-    while matches!(
-        pending_kind(&r),
-        Some(SelectionKind::OrderedPermutation { .. })
-    ) {
-        let x = non_pass(&r)[0];
-        r.execute_action(0, x).unwrap();
-    }
+    return_two_stacks(&mut r, me, EffectTiming::OnPlay, ["B1", "B2", "A1", "A2"]);
     let accept = non_pass(&r)[0];
     r.execute_action(0, accept).unwrap();
-    // Decline the pick itself → RemoveUse.
+    // Pass the pick itself after accepting.
     r.execute_action(0, PASS).unwrap();
     let _ = r.auto_resolve();
-    // A second own-effect deck add this turn (fresh stacks to return from)
-    // offers the delete again.
-    r.place_stack(1, &["A3", "A4"]);
-    r.place_stack(1, &["A5", "A6"]);
-    fire(&mut r, EffectTiming::WhenDigivolving, me);
-    pick_all_targets(&mut r);
-    while matches!(
-        pending_kind(&r),
-        Some(SelectionKind::OrderedPermutation { .. })
-    ) {
-        let x = non_pass(&r)[0];
-        r.execute_action(0, x).unwrap();
-    }
+    return_two_stacks(&mut r, me, EffectTiming::WhenDigivolving, ["A3", "A4", "A5", "A6"]);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the accepted activation used the [Once Per Turn]: no second offer this turn"
+    );
+}
+
+/// The other side (official Q1818, "You may delete that Digimon ... If you
+/// choose not to, the effect's [Once Per Turn] requirement won't be used up"):
+/// declining the outer prompt keeps the use for the next deck add this turn.
+#[test]
+fn bt26_060_declined_activation_keeps_the_once_per_turn() {
+    let mut r = setup();
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    return_two_stacks(&mut r, me, EffectTiming::OnPlay, ["B1", "B2", "A1", "A2"]);
     assert!(
         r.pending_selection_view().is_some_and(|v| v.is_optional),
-        "the refunded once-per-turn is available again"
+        "the outer \"you may delete\" prompt"
+    );
+    r.execute_action(0, PASS).unwrap();
+    let _ = r.auto_resolve();
+    return_two_stacks(&mut r, me, EffectTiming::WhenDigivolving, ["A3", "A4", "A5", "A6"]);
+    assert!(
+        r.pending_selection_view().is_some_and(|v| v.is_optional),
+        "the declined [Once Per Turn] is offered again"
     );
 }
 
