@@ -136,3 +136,25 @@ def test_committed_index_lists_ad1_001_trigger_if_predicate():
     assert "AD1-001" in index["predicates"]["event_target_owner"]
     committed = json.loads(DEFAULT_OUT.read_text(encoding="utf-8"))
     assert "event_target_owner" in committed["cards"]["AD1-001"]["predicates"]
+
+
+def test_authoring_metadata_does_not_change_gameplay_constructs(tmp_path):
+    cards = tmp_path / "cards"
+    original = """card: BT99-001
+alt_paths:
+  - kind: digivolve
+    from: {level_eq: 3}
+effects:
+  - when: on_play
+    process:
+      - select_hand: {of: you, filter: {color_is: red}}
+"""
+    path = write_card(cards, "bt99", "BT99-001", original)
+    before = build_impact_index(cards)
+    path.write_text(original.replace("level_eq: 3", "any_color: true, level_eq: 3")
+                    .replace("- when:", "- text: '[On Play] Choose 1 card.'\n    when:")
+                    .replace("of: you", "optional: false, of: you"))
+    assert build_impact_index(cards) == before
+    assert "any_color" not in before["predicates"]
+    path.write_text(original.replace("color_is: red", "name_is: Agumon"))
+    assert build_impact_index(cards) != before
