@@ -163463,7 +163463,8 @@
       0
     ],
     "type_eng": [
-      "Machine"
+      "Machine",
+      "Flame"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -163873,7 +163874,9 @@
       "Royal Knight"
     ],
     "form_eng": [],
-    "attribute_eng": [],
+    "attribute_eng": [
+      "Data"
+    ],
     "effect_description_eng": "＜Progress＞＜Piercing＞ ＜Engage＞ (At the end of your turn, this Digimon may attack.) [When Digivolving] [When Attacking] [Once Per Turn] This Digimon gets +6000 DP until your opponent's turn ends. Then, by returning 1 of your other Digimon or 1 [Jesmon] or [X Antibody] from this Digimon's digivolution cards to the bottom of the deck, activate 1 [Main] effect on this card's Option side.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
@@ -164110,7 +164113,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "DATA SQUAD"
+      "DATA SQUAD",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -164236,7 +164240,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Data"
     ],
     "effect_description_eng": "[When Moving] [On Play] 1 of your Digimon with [Gammamon] in its text or the [VB] trait can't be deleted in battle for the turn.\r\n[When Attacking] [Once Per Turn] 1 of your opponent's level 5 or lower Digimon can't suspend until their turn ends.",
     "inherited_effect_description_eng": "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
@@ -164309,7 +164313,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "DATA SQUAD"
+      "DATA SQUAD",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -164427,7 +164432,8 @@
     ],
     "type_eng": [
       "Wizard",
-      "DATA SQUAD"
+      "DATA SQUAD",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -164536,7 +164542,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "DATA SQUAD"
+      "DATA SQUAD",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -165476,7 +165483,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Data"
     ],
     "effect_description_eng": "[When Moving] [On Play] Suspend 1 of your opponent's Digimon.\r\n[When Attacking] [Once Per Turn] This Digimon gets +5000 DP for the turn.",
     "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)",
@@ -165515,7 +165522,8 @@
     "type_eng": [
       "Stegosaur",
       "Kurata's Army",
-      "Bio"
+      "Bio",
+      "Dinosaur"
     ],
     "form_eng": [
       "Armor Form"
@@ -165629,7 +165637,7 @@
     "card_effect_class_name": "BT27_051",
     "play_cost": 7,
     "dp": 7000,
-    "level": 4,
+    "level": 5,
     "card_kind": 0,
     "rarity": 1,
     "card_colors": [
@@ -165638,7 +165646,8 @@
     ],
     "type_eng": [
       "Machine",
-      "ACCEL"
+      "ACCEL",
+      "Holy Beast"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -166408,7 +166417,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Data"
     ],
     "effect_description_eng": "＜Collision＞ ＜Reboot＞ ＜Blocker＞ [All Turns] When this Digimon would leave the battle area, by returning 1 of your other Digimon or 1 [Gankoomon] or [X Antibody] from this Digimon's digivolution cards to the bottom of the deck, it doesn't leave. [All Turns] [Once Per Turn] When any of your Digimon leave the battle area, you may activate 1 [Main] effect on this card's Option side.",
     "inherited_effect_description_eng": "",
@@ -167047,7 +167056,9 @@
       "BEATBREAK"
     ],
     "form_eng": [],
-    "attribute_eng": [],
+    "attribute_eng": [
+      "Virus"
+    ],
     "effect_description_eng": "＜Execute＞ ＜Ascension＞ (When this Digimon is deleted, you may place this card as the top security card.) [Security] [On Deletion] Delete 1 of your opponent's Digimon with the lowest level. If this effect didn't delete, trash their top security card. [When Digivolving] [When Attacking] [Once Per Turn] By trashing 2 bottom face-down cards from under any of your Tamers, activate 1 [Main] effect on this card's Option side.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
@@ -167117,7 +167128,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "DATA SQUAD"
+      "DATA SQUAD",
+      "Birdkin"
     ],
     "form_eng": [],
     "attribute_eng": [

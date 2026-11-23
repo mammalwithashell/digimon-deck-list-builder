@@ -21,7 +21,9 @@
     "BEATBREAK"
   ],
   "form_eng": [],
-  "attribute_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
   "effect_description_eng": "＜Execute＞ ＜Ascension＞ (When this Digimon is deleted, you may place this card as the top security card.) [Security] [On Deletion] Delete 1 of your opponent's Digimon with the lowest level. If this effect didn't delete, trash their top security card. [When Digivolving] [When Attacking] [Once Per Turn] By trashing 2 bottom face-down cards from under any of your Tamers, activate 1 [Main] effect on this card's Option side.",
   "inherited_effect_description_eng": "",
   "security_effect_description_eng": "",
