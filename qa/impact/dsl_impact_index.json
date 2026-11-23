@@ -17413,7 +17413,7 @@
       ],
       "verbs": [
         "if",
-        "place_as_bottom_source",
+        "place_deck_top_under",
         "play_from_security",
         "select_effect_choice",
         "select_hand",
@@ -17445,7 +17445,7 @@
       ],
       "verbs": [
         "if",
-        "place_as_bottom_source",
+        "place_deck_top_under",
         "play_from_security",
         "select_effect_choice",
         "set_memory",
@@ -51632,8 +51632,6 @@
       "BT27-064",
       "BT27-080",
       "BT27-091",
-      "BT27-094",
-      "BT27-097",
       "BT7-058",
       "BT8-084",
       "BT9-104",
@@ -51699,6 +51697,10 @@
     ],
     "place_cards_as_top_sources": [
       "EX12-018"
+    ],
+    "place_deck_top_under": [
+      "BT27-094",
+      "BT27-097"
     ],
     "place_on_security": [
       "BT13-015",

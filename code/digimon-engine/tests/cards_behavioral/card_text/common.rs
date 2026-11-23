@@ -405,11 +405,14 @@ pub fn hand_main_stacks_the_named_material_and_ignores_the_rookies_level(
 }
 
 pub fn reina_and_makoto_can_stash_two_or_suspend_without_stashing(card: &str) {
-    for branch in 0..3 {
-        let mut r = start(builder(card));
-        let tamer = r.place_on_field(0, card, Some(0));
+    let deck_cards = ["TEXT-3", "TEXT-4", "TEXT-5"];
+    for (branch, deck_size) in [(0, 3), (0, 1), (0, 0), (1, 3), (2, 3)] {
+        let mut r = start(builder(card).deck(0, &deck_cards[..deck_size]));
+        let tamer = r.place_stack(0, &["TEXT-BOTTOM", card]);
         let attacker = r.place_on_field(0, "TEXT-3", Some(0));
         let deck = r.game.players[0].deck.len();
+        assert_eq!(deck, deck_size);
+        let deck_before: Vec<_> = r.game.players[0].deck.iter().map(|c| c.handle()).collect();
         action(
             &mut r,
             0,
@@ -419,8 +422,31 @@ pub fn reina_and_makoto_can_stash_two_or_suspend_without_stashing(card: &str) {
         r.execute_branch(branch).unwrap();
         let permanent = &r.game.players[0].battle_area[tamer.index as usize];
         assert_eq!(permanent.is_suspended, branch != 2);
-        let stashed = if branch == 0 { 2 } else { 0 };
+        let stashed = if branch == 0 { deck_size.min(2) } else { 0 };
         assert_eq!(permanent.face_down_source_indices().count(), stashed);
         assert_eq!(r.game.players[0].deck.len(), deck - stashed);
+        let (remaining, placed) = deck_before.split_at(deck - stashed);
+        assert!(permanent.card_sources[..stashed]
+            .iter()
+            .all(|c| c.face_down));
+        assert_eq!(
+            permanent.card_sources[..stashed]
+                .iter()
+                .map(|c| c.handle())
+                .collect::<Vec<_>>(),
+            placed
+        );
+        assert_eq!(
+            ids(&r, &permanent.card_sources[stashed..]),
+            ["TEXT-BOTTOM", card]
+        );
+        assert_eq!(
+            r.game.players[0]
+                .deck
+                .iter()
+                .map(|c| c.handle())
+                .collect::<Vec<_>>(),
+            remaining
+        );
     }
 }

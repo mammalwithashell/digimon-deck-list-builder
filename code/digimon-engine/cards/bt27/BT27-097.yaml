@@ -26,8 +26,7 @@ effects:
             - if:
                 condition: { equals: [choice, 0], source_is_unsuspended: false }
                 then:
-                  - place_as_bottom_source: { source: { deck_top: you }, target: source, face_down: true }
-                  - place_as_bottom_source: { source: { deck_top: you }, target: source, face_down: true }
+                  - place_deck_top_under: { of: you, count: 2, target: source, face_down: true }
             - if:
                 condition: { your_turn: true, face_down_sources_under_tamers_gte: 4, source_is_unsuspended: false }
                 then:
