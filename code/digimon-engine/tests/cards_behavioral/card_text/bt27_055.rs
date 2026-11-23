@@ -37,7 +37,6 @@ fn both_printed_standard_digivolution_routes_grant_keywords() {
 }
 
 #[test]
-#[ignore = "G-ENGINE-TAMER-BASE-AS-TAMER"]
 fn tamer_evolution_does_not_trigger_when_digivolving() {
     tamer_evolution(
         "BT27-055",

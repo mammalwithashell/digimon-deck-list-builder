@@ -16,8 +16,26 @@
 
 use super::bt27_common::*;
 use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
+use digimon_engine::count_choice::CountChoiceOperation;
 use digimon_engine::enums::{CardColor, Keyword};
 use digimon_engine::selection::SelectionKind;
+
+fn declare_two(r: &mut digimon_engine::debug_runner::DebugRunner) {
+    let pending = r.pending_selection().unwrap();
+    assert!(!pending.is_optional);
+    let action_id = pending
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .find(|entry| {
+            matches!(entry.count_choice.map(|v| v.operation),
+            Some(CountChoiceOperation::Commit(v)) if v.declared == 2)
+        })
+        .unwrap()
+        .action_id;
+    action(r, 0, action_id);
+}
 
 #[test]
 fn armor_purge_can_save_the_base_or_be_declined() {
@@ -36,7 +54,6 @@ fn both_printed_standard_digivolution_routes_grant_keywords() {
 }
 
 #[test]
-#[ignore = "G-ENGINE-TAMER-BASE-AS-TAMER"]
 fn tamer_evolution_does_not_trigger_when_digivolving() {
     tamer_evolution(
         "BT27-071",
@@ -58,6 +75,7 @@ fn when_attacking_de_digivolves_an_opposing_stack_to_level_three() {
     r.assert_prompt(SelectionKind::OppField, false, 0);
     assert_eq!(candidates(&r), [EVOLUTION]);
     r.choose_prompt_card(EVOLUTION, None).unwrap();
+    declare_two(&mut r);
     let stack = &r.game.players[1].battle_area[opponent.index as usize];
     assert_eq!(stack.card_sources.len(), 1);
     assert_eq!(stack.top_card().card_id(&r.game.card_data), BOUNDARY);
@@ -123,6 +141,7 @@ fn field_counter_de_digivolves_two_before_the_blocker_decision() {
     r.assert_prompt(SelectionKind::OppField, false, 0);
     assert_eq!(candidates(&r), [EVOLUTION, GIZMON]);
     r.choose_prompt_card(EVOLUTION, None).unwrap();
+    declare_two(&mut r);
     assert_eq!(
         ids(
             &r,

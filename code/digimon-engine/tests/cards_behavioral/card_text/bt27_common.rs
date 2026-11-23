@@ -64,9 +64,9 @@ fn delete_suspended_target_in_battle(
     r: &mut DebugRunner,
     target: digimon_engine::permanent::PermanentHandle,
 ) {
-    r.game.players[0].battle_area[target.index as usize].is_suspended = true;
     let attacker = r.place_on_field(1, HIGH, Some(0));
     next_turn(r);
+    r.game.players[0].battle_area[target.index as usize].is_suspended = true;
     action(
         r,
         1,
@@ -79,6 +79,15 @@ pub(super) fn armor_purge_in_battle(card: &str) {
         let mut r = start(builder(card));
         let host = r.place_stack(0, &[BOUNDARY, card]);
         delete_suspended_target_in_battle(&mut r, host);
+        if card == "BT27-055" {
+            r.assert_prompt(SelectionKind::Replacement, true, 0);
+            assert!(r
+                .pending_selection()
+                .unwrap()
+                .prompt
+                .contains("triggered effect"));
+            r.decline_optional_trigger().unwrap();
+        }
         if r.current_phase() == digimon_engine::enums::GamePhase::CounterTiming {
             r.assert_prompt(SelectionKind::Hand, true, 0);
             r.decline_prompt().unwrap();
@@ -283,7 +292,15 @@ pub(super) fn standard_routes(
         let mut base = make_test_card("TEXT-BT27-STD-BASE", "Standard base");
         base.colors = vec![color];
         base.level = Some(level);
-        let (r, host) = evolving(card, base, cost);
+        let (mut r, host) = evolving(card, base, cost);
+        if card == "BT27-048" {
+            r.assert_prompt(SelectionKind::AnyField, true, 0);
+            r.decline_prompt().unwrap();
+        }
+        if level == 3 {
+            r.assert_prompt(SelectionKind::OwnField, true, 0);
+            r.decline_prompt().unwrap();
+        }
         for &kw in keywords {
             assert!(r.game.has_keyword(host, kw), "{card} lacks {kw:?}");
         }

@@ -20,6 +20,11 @@ alt_paths:
     from: { name_is: "Stegomon", trait_has: Bio }
     cost: 5
 
+  - kind: digivolve
+    from: { kind: tamer, trait_has: "Kurata's Army" }
+    source_treated_as: tamer
+    cost: 7
+
 effects:
   - kind: grant_keyword
     keyword: SecurityAttackPlus

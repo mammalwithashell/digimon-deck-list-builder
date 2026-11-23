@@ -30,7 +30,6 @@ fn both_printed_standard_digivolution_routes_grant_keywords() {
 }
 
 #[test]
-#[ignore = "G-ENGINE-TAMER-BASE-AS-TAMER"]
 fn tamer_evolution_costs_two_and_does_not_trigger() {
     tamer_evolution("BT27-038", 2, &[Keyword::ArmorPurge]);
 }

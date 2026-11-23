@@ -20,6 +20,11 @@ alt_paths:
     from: { name_is: "Thunderbirdmon", trait_has: Bio }
     cost: 5
 
+  - kind: digivolve
+    from: { kind: tamer, trait_has: "Kurata's Army" }
+    source_treated_as: tamer
+    cost: 7
+
 effects:
   - kind: grant_keyword
     keyword: Reboot

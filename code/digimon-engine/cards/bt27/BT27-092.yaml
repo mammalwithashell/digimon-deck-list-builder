@@ -30,6 +30,27 @@ effects:
                   - draw: { of: you, count: 1 }
                   - gain_memory: 1
 
+  - when: main_on_field
+    once_per_turn: true
+    condition: { face_down_sources_under_tamers_gte: 2 }
+    text: "[Main] [Once Per Turn] By trashing 2 bottom face-down cards from under any of your Tamers, this Tamer may digivolve into a [Kurata's Army] trait Digimon card in the hand or trash with the cost reduced by 2."
+    process:
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: evolution
+          optional: true
+          filter:
+            kind: digimon
+            trait_has: "Kurata's Army"
+            can_digivolve_onto_with_cost: { target: source, cost: { reduce: 2 } }
+          prompt: "You may digivolve this Tamer into a [Kurata's Army] Digimon for 2 less"
+      - effect_initiated_digivolve:
+          target: source
+          source: evolution
+          cost: { reduce: 2 }
+
   - when: end_of_attack
     scope: inherited
     once_per_turn: true

@@ -98,7 +98,6 @@ fn security_may_play_cost_five_or_less_from_hand_or_trash() {
 }
 
 #[test]
-#[ignore = "G-ENGINE-TAMER-BASE-AS-TAMER"]
 fn delay_may_digivolve_a_tamer_for_free_after_a_later_battle_deletion() {
     let mut r = start(
         builder(CARD)
@@ -109,10 +108,10 @@ fn delay_may_digivolve_a_tamer_for_free_after_a_later_battle_deletion() {
     let tamer = r.place_on_field(0, TAMER, Some(0));
     action(&mut r, 0, PLAY_HAND_START);
     let victim = r.place_on_field(1, BOUNDARY, Some(0));
-    r.game.players[1].battle_area[victim.index as usize].is_suspended = true;
     let attacker = r.place_on_field(0, HIGH, Some(0));
     next_turn(&mut r);
     next_turn(&mut r);
+    r.game.players[1].battle_area[victim.index as usize].is_suspended = true;
     let before = r.memory();
     action(
         &mut r,

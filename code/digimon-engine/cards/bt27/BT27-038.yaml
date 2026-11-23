@@ -17,6 +17,11 @@ alt_paths:
     from: { level_eq: 3, color_is: purple }
     cost: 3
 
+  - kind: digivolve
+    from: { kind: tamer, trait_has: "Kurata's Army" }
+    source_treated_as: tamer
+    cost: 2
+
 effects:
   - kind: grant_keyword
     keyword: ArmorPurge

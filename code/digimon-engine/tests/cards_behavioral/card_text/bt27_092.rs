@@ -28,7 +28,7 @@ fn security_plays_tamer_for_free() {
 #[test]
 fn start_of_main_stashes_at_the_bottom_then_draws_and_gains_memory() {
     for accept in [false, true] {
-        let mut r = builder(CARD).hand(0, &[TAMER, HIGH]).start();
+        let mut r = builder(CARD).hand(0, &[TAMER, HIGH]).memory(5).start();
         let host = r.place_stack(0, &[BOUNDARY, CARD]);
         let memory = r.memory();
         let deck_size = r.game.players[0].deck.len();
@@ -95,7 +95,6 @@ fn inherited_end_of_attack_can_delete_a_chosen_ally_and_dp_bounded_enemy() {
 }
 
 #[test]
-#[ignore = "G-ENGINE-TAMER-BASE-AS-TAMER"]
 fn main_may_pay_two_bottom_sources_to_digivolve_the_tamer() {
     use digimon_engine::action::space::{FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START};
     let mut r = start(

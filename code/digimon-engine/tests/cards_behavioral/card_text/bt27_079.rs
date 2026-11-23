@@ -18,6 +18,20 @@ use digimon_engine::selection::SelectionKind;
 
 const CARD: &str = "BT27-079";
 
+fn resolve_retaliation_first(r: &mut digimon_engine::debug_runner::DebugRunner) {
+    r.assert_prompt(SelectionKind::TriggerOrder, false, 0);
+    let retaliation = r
+        .pending_selection()
+        .unwrap()
+        .effect_choices
+        .as_ref()
+        .unwrap()
+        .iter()
+        .position(|entry| entry.label == "<Retaliation>")
+        .unwrap();
+    r.execute_branch(retaliation).unwrap();
+}
+
 #[test]
 fn playing_without_a_level_four_costs_nine_and_grants_both_keywords() {
     let mut r = start(builder("BT27-079").hand(0, &["BT27-079"]));
@@ -38,6 +52,7 @@ fn playing_without_a_level_four_costs_nine_and_grants_both_keywords() {
 fn retaliation_deletes_the_digimon_that_won_the_battle() {
     let mut r = start(builder(CARD));
     delete_in_battle(&mut r, CARD);
+    resolve_retaliation_first(&mut r);
     assert!(r.game.players[1].battle_area.is_empty());
     assert_eq!(ids(&r, &r.game.players[1].trash), [HIGH]);
     assert!(r.pending_selection().is_none());
@@ -54,6 +69,7 @@ fn deletion_offers_kuratas_army_from_hand_or_trash_at_cost_five_or_less() {
         let mut r = start(builder(CARD).hand(0, &[TAMER, BOUNDARY, CARD]));
         r.inject_trash(0, KURATA);
         delete_in_battle(&mut r, CARD);
+        resolve_retaliation_first(&mut r);
         let kind = r.pending_selection().unwrap().kind.clone();
         assert!(matches!(kind, SelectionKind::UnionZone { .. }));
         r.assert_prompt(kind, true, 0);

@@ -120,7 +120,6 @@ fn suspended_spinomon_blocks_player_attacks_only_on_the_opponents_turn() {
 }
 
 #[test]
-#[ignore = "G-ENGINE-TAMER-BASE-AS-TAMER"]
 fn tamer_evolution_does_not_trigger_when_digivolving() {
     tamer_evolution(
         CARD,
