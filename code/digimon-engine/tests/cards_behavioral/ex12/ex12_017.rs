@@ -519,3 +519,53 @@ mod counter_runtime {
         );
     }
 }
+
+/// WarGreymon (EX12-017) "[Counter] [Once Per Turn] 2 of your Digimon may DNA
+/// digivolve ... Then, you may change the attack target to 1 of your Digimon."
+/// [Counter] is a timing for activation-type effects (CR 4.3 15-16-14-1): the
+/// player activates it by declaring it in the counter timing (11-3), and
+/// CR 4.3 15-14-1-4 counts that as the [Once Per Turn] use "even if the
+/// effect's processing can't be executed". Passing both picks afterwards still
+/// uses it. DCGO EX12_017.cs `if (!isUsed) activateClass.RemoveUse()`
+/// refunds it; the rules text decides.
+#[test]
+fn ex12_017_counter_declared_then_nothing_done_spends_the_once_per_turn() {
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-017 YAML loads")
+        .start();
+    let wargreymon = runner.place_on_field(0, CARD_ID, Some(0));
+    let fire = |runner: &mut DebugRunner| {
+        runner
+            .game
+            .enqueue_triggered(EffectTiming::CounterEffect, TriggerSource::Permanent(wargreymon));
+        runner.game.drain_effect_queue();
+    };
+
+    fire(&mut runner);
+    // No DNA result card in hand; pass every remaining (optional) pick.
+    for _ in 0..4 {
+        let Some(player) = runner.pending_selection().map(|s| s.selecting_player) else {
+            break;
+        };
+        runner.execute_action(player, PASS).expect("pass the optional pick");
+    }
+    assert!(runner.pending_selection().is_none());
+    assert!(
+        runner.game.players[0].battle_area[wargreymon.index as usize]
+            .effect_activations
+            .values()
+            .any(|n| *n == 1),
+        "the declared [Counter] used the [Once Per Turn]"
+    );
+
+    fire(&mut runner);
+    assert!(
+        runner.pending_selection().is_none(),
+        "a used [Once Per Turn] [Counter] does not activate again this turn"
+    );
+}
