@@ -254,7 +254,7 @@ fn lm_063_main_off_color_not_offered_and_bottomed() {
     runner
         .execute_action(0, reveal.valid_action_ids[0])
         .expect("pick");
-    let _ = runner.auto_resolve();
+    order_remaining_to_bottom(&mut runner);
     let hand = hand_ids(&runner, 0);
     assert!(hand.iter().any(|id| id == "A-OPT"));
     assert!(!hand.iter().any(|id| id == "OFF-DIGI"));
@@ -279,7 +279,7 @@ fn lm_063_playing_main_places_it_as_delayed_option() {
         runner.game.play_option_from_hand(0, 0),
         OptionPlayResult::Pending
     );
-    runner.auto_resolve().expect("resolve");
+    order_remaining_to_bottom(&mut runner);
     assert!(delayed_self_in_battle_area(&runner, 0));
     assert_eq!(runner.trash_size(0), 0);
 }
@@ -306,7 +306,7 @@ fn lm_063_security_adds_matching_card_and_places_self() {
     runner
         .execute_action(reveal.selecting_player, reveal.valid_action_ids[0])
         .expect("pick");
-    runner.auto_resolve().expect("resolve");
+    order_remaining_to_bottom(&mut runner);
     assert!(hand_ids(&runner, 1).iter().any(|id| id == "B-DIGI"));
     assert_eq!(runner.trash_size(1), 0);
     assert!(delayed_self_in_battle_area(&runner, 1));
@@ -411,4 +411,14 @@ fn lm_063_delay_target_excludes_digimon_with_only_off_color_candidate() {
         None,
         "no Digimon has a legal red/purple result card → no target prompt"
     );
+}
+
+fn order_remaining_to_bottom(runner: &mut DebugRunner) {
+    while let Some(SelectionKind::OrderedPermutation { .. }) = runner.pending_kind() {
+        let view = runner.pending_selection_view().expect("order prompt");
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("order the remaining revealed cards");
+    }
+    assert_eq!(runner.pending_kind(), None, "no further prompt");
 }

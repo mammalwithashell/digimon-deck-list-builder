@@ -27,7 +27,8 @@ effects:
   # `PlaceDelayOptionCards`. The option pipeline parks this card as a Delay
   # permanent after resolving a main_from_hand body when a `kind: delay`
   # clause is present.
-  - when: main_from_hand
+  - text: "[Main] Reveal the top 2 cards of your deck. Add 1 Black or Green card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area."
+    when: main_from_hand
     optional: false
     summary: "[Main] Reveal top 2; add 1 black or green card; place rest bottom; place self in battle area"
     process:
@@ -59,7 +60,8 @@ effects:
   # payCost, reduceCost 2)` whose hand pick is `canNoSelect: isOptional`
   # (default true) and filtered by `CanPlayCardTargetFrame` →
   # `can_digivolve_onto: target`.
-  - kind: delay
+  - text: "[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.) ・1 of your Digimon may digivolve into a Black or Green Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2."
+    kind: delay
     trigger: delayed
     summary: "[Main]<Delay> 1 of your Digimon may digivolve into a black or green Digimon in hand, cost -2"
     process:
@@ -102,7 +104,8 @@ effects:
   # deck. Then, place this card in the battle area.
   # DCGO `AddActivateMainOptionSecurityEffect` runs the [Main] body, including
   # `PlaceDelayOptionCards` → `place_self_as_delay_option`.
-  - scope: inherited
+  - text: "[Security] Reveal the top 2 cards of your deck. Add 1 Black or Green card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Reveal top 2; add 1 black or green card; bottom rest; place self in battle area"
