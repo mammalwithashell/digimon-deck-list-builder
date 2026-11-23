@@ -41,6 +41,7 @@ TIMINGS = {
 }
 GATES = {"your turn": "your_turn", "opponent's turn": "opponents_turn", "all turns": "all_turns"}
 MARKER = re.compile(r"\[([^\[\]]+)\]|[<＜]([^<>＜＞]+)[>＞]")
+COLOR_REQUIREMENT = re.compile(r"\bwhile\b[^.]*\bignore\b[^.]*\bcolou?r requirements\.", re.IGNORECASE)
 
 
 def normalized(text):
@@ -108,6 +109,9 @@ def printed_spans(sections):
         for i, (start, span) in enumerate(groups):
             end = groups[i + 1][0] if i + 1 < len(groups) else len(raw)
             text = raw[start:end].split("(Rule)", 1)[0].strip()
+            requirement = COLOR_REQUIREMENT.search(text)
+            if not span.timings and not span.keyword and requirement:
+                text = requirement.group()
             span_zone = "security" if "security" in [normalized(t) for t in span.timings] else zone
             if text and (span.text or span.kind == "keyword"):
                 result.append(Span(text, span_zone, face, [normalized(t) for t in span.timings], span.keyword))
@@ -127,11 +131,22 @@ def compatible(clause, face, span):
     zone = "security" if "on_security" in when else ("inherited" if clause.get("scope") == "inherited" else "effect")
     if zone != span.zone:
         return False
+    if any(tag not in TIMINGS and tag not in GATES and tag not in {"once per turn", "delay"}
+           for tag in span.tags):
+        return False
     events = {TIMINGS[t] for t in span.tags if t in TIMINGS}
     if span.zone == "security" and not events:
         events = {"on_security"}
+    if "delay" in span.tags:
+        return clause.get("kind") == "delay" and clause.get("trigger") == "delayed" and events == {"main"}
+    if clause.get("kind") == "delay":
+        return False
+    if "main_from_hand" in when:
+        when = (when - {"main_from_hand"}) | {"main"}
     if events and events != when:
         return False
+    if not events and COLOR_REQUIREMENT.search(span.text):
+        return clause.get("kind") == "flood_gate" and clause.get("modifier") == "IgnoreColorRequirement"
     for tag in span.tags:
         if tag not in GATES:
             continue
@@ -198,6 +213,7 @@ def main():
     parser.add_argument("--root", type=Path, default=ROOT)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--write", action="store_true")
+    parser.add_argument("--cards", nargs="+", help="Limit annotation to these card IDs")
     args = parser.parse_args()
     root, output = args.root.resolve(), args.output_dir.resolve()
     output.mkdir(parents=True, exist_ok=False)
@@ -208,6 +224,8 @@ def main():
             continue
         raw = path.read_bytes().decode("utf-8")
         card = yaml.safe_load(raw)["card"]
+        if args.cards and card not in args.cards:
+            continue
         updated, count, clauses_count = annotate(raw, official.get(card, {}).get("text_sections", []))
         assigned += count
         total += clauses_count

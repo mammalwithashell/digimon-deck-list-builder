@@ -58,7 +58,7 @@ effects:
           cost: { reduce: 1 }
           ignore_requirements: false
 
-  - text: "＜Use Req. ([Shambala] trait)＞ (Specified cards let you ignore color requirements.) {Security}"
+  - text: "[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 [Shambala] trait card from your hand with the cost reduced by 3."
     when: main_from_hand
     summary: "[Main] Add bottom security to hand, place this card face up as bottom security, then may play 1 [Shambala] card from hand with cost reduced by 3"
     process:

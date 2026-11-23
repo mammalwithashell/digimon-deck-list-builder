@@ -164,10 +164,19 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
         let mapped: Vec<_> = tags.iter().filter_map(|tag| timing(tag)).collect();
         let timing_matches = match clause {
             ClauseSpec::Triggered(c) => mapped.iter().any(|t| match &c.when {
-                TimingSet::Single(when) => when == t,
-                TimingSet::Multi(when) => when.contains(t),
+                TimingSet::Single(when) => {
+                    when == t || (*t == Timing::Main && *when == Timing::MainFromHand)
+                }
+                TimingSet::Multi(when) => {
+                    when.contains(t) || (*t == Timing::Main && when.contains(&Timing::MainFromHand))
+                }
             }),
-            ClauseSpec::Declarative(_) => false,
+            ClauseSpec::Declarative(c) => {
+                c.kind == DeclarativeKind::Delay
+                    && value["trigger"] == "delayed"
+                    && mapped == [Timing::Main]
+                    && (text.contains("＜delay＞") || text.contains("<delay>"))
+            }
         };
         let turn_mismatch = tags.iter().any(|tag| {
             let key = match *tag {

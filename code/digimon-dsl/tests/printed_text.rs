@@ -128,3 +128,22 @@ fn printed_text_may_requires_word_boundaries() {
     )
     .is_empty());
 }
+
+#[test]
+fn printed_text_option_main_and_delay_timings() {
+    let text = "[Main] Draw 1.";
+    assert!(check(&format!("- when: main_from_hand\n  text: '{text}'"), text).is_empty());
+    let text = "[Main] ＜Delay＞ Gain 2 memory.";
+    assert!(check(
+        &format!("- kind: delay\n  trigger: delayed\n  text: '{text}'"),
+        text
+    )
+    .is_empty());
+    assert_eq!(
+        check(
+            "- when: on_play\n  text: '[Main] Draw 1.'",
+            "[Main] Draw 1."
+        ),
+        vec!["timing_tag_mismatch"]
+    );
+}

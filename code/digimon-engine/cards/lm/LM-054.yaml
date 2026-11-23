@@ -19,7 +19,8 @@ effects:
   # [Main] Reveal the top 2 cards of your deck. Add 1 yellow or black card
   # among them to the hand. Return the rest to the bottom of deck. Then, place
   # this card in the battle area.
-  - when: main_from_hand
+  - text: "[Main] Reveal the top 2 cards of your deck. Add 1 yellow or black card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area."
+    when: main_from_hand
     optional: false
     summary: "[Main] Reveal top 2; add 1 yellow or black card; place rest bottom; place self in battle area"
     process:
@@ -45,7 +46,7 @@ effects:
   # the controller trashes the parked Option to activate the body on a later
   # main phase; the body never auto-fires (RULES_CONTEXT 16-16; processing
   # optional, never the placing turn).
-  - text: "While you don't have [Treadmill Training] in the battle area, you can ignore this card's color requirements."
+  - text: "[Main] ＜Delay＞ ・1 of your Digimon may digivolve into a yellow or black Digimon card in the hand with the digivolution cost reduced by 2."
     kind: delay
     trigger: delayed
     summary: "[Main]<Delay> 1 of your Digimon may digivolve into a yellow or black Digimon in hand, cost -2"

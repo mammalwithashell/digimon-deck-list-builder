@@ -117,7 +117,7 @@ effects:
   # HasMatchConditionOwnersPermanent(Queen Device); CardCondition scopes the
   # bypass to THIS card (cardSource == card). Mirror of BT22-099 Clause 0 with
   # `any_permanent` swapped for `no_permanent` + name_is "Queen Device".
-  - text: "While you don't have [Queen Device] in the battle area, you may ignore this card's color requirements. When this card is trashed from the battle area, until the end of your opponent's turn, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP."
+  - text: "While you don't have [Queen Device] in the battle area, you may ignore this card's color requirements."
     kind: flood_gate
     active_when:
       no_permanent:
@@ -144,7 +144,8 @@ effects:
   # G-OPTION-PERSIST-AS-FIELD-CARRIER. `place_self_as_delay_option` would seat
   # it as an auto-trashing Delayed option, which is unfaithful (DCGO
   # PlaceDelayOptionCards persists). The debuff body is fully faithful.
-  - when: main_from_hand
+  - text: "[Main] Until the end of your opponent's turn, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP. Then, place this card in the battle area."
+    when: main_from_hand
     optional: false
     summary: "[Main] -3000 DP + can't activate [When Digivolving] on 1 opp Digimon until opp turn end (place-self STUBBED: G-OPTION-PERSIST-AS-FIELD-CARRIER)"
     process:

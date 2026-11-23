@@ -72,3 +72,29 @@ def test_backfill_security_tag_in_effect_box_and_rule_suffix():
     updated, count, _ = annotate(raw, section('[Security] Play this card. (Rule) Name: Also treated as [X].'))
     assert count == 1
     assert 'text: "[Security] Play this card."' in updated
+
+
+def test_backfill_option_main_does_not_take_use_requirement():
+    raw = spec('  - when: main_from_hand\n').replace('kind: digimon', 'kind: option')
+    updated, count, _ = annotate(raw, section('＜Use Req. ([Seven Code] trait)＞ (Ignore color requirements.) [Main] Draw 1.'))
+    assert count == 1
+    assert 'text: "[Main] Draw 1."' in updated
+    assert annotate(raw, section('＜Use Req. ([Seven Code] trait)＞ (Ignore color requirements.)')) == (raw, 0, 1)
+
+
+def test_backfill_delay_and_main_do_not_take_plain_requirements():
+    raw = spec('  - when: main_from_hand\n  - kind: delay\n    trigger: delayed\n')
+    updated, count, _ = annotate(raw, section("While you have a Tamer, ignore this card's color requirements. [Main] Draw 1. [Main] ＜Delay＞ Gain 2 memory."))
+    assert count == 2
+    assert 'text: "[Main] Draw 1."' in updated
+    assert 'text: "[Main] ＜Delay＞ Gain 2 memory."' in updated
+
+
+def test_backfill_color_requirement_only_matches_its_modifier():
+    text = "When this card is trashed, draw 1. While you have a Tamer, ignore this card's color requirements."
+    raw = spec('  - kind: flood_gate\n    modifier: IgnoreColorRequirement\n')
+    updated, count, _ = annotate(raw, section(text))
+    assert count == 1
+    assert 'text: "While you have a Tamer, ignore this card\'s color requirements."' in updated
+    raw = spec('  - kind: delay\n    trigger: delayed\n')
+    assert annotate(raw, section(text)) == (raw, 0, 1)
