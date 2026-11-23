@@ -135,7 +135,8 @@ effects:
   # the delete filter reuses dp_lte source_dp (the carrier's effective DP). With
   # no eligible opponent Digimon the mandatory pick has no candidates and the
   # body does nothing.
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon with [Greymon] or [Omnimon] in its name."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][OPT] (mandatory) If this Digimon has Greymon/Omnimon in its name, delete 1 opp Digimon with DP <= this Digimon"

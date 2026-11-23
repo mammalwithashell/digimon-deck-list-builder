@@ -42,7 +42,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with the [ADVENTURE] trait from your hand without paying the cost."
+    when: when_digivolving
     summary: "[When Digivolving] If you have 1 or fewer Tamers, may play 1 [ADVENTURE] Tamer from hand for free"
     condition:
       count_lte:
@@ -70,7 +71,8 @@ effects:
           prompt: "Play 1 [ADVENTURE] Tamer card from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: adv_tamer }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][Once Per Turn] 1 opponent Digimon gets -2000 DP for the turn"

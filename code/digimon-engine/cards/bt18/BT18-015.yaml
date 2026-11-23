@@ -158,7 +158,8 @@ effects:
   # rest of the clause — the default `continue_on_decline: false` — matching
   # DCGO's cost-then-effect pairing (a declined `SelectPermanentEffect` never
   # reaches the delete step).
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] By deleting 1 of your Digimon, delete 1 of your opponent's Digimon with the lowest DP."
+    when: [when_digivolving, when_attacking]
     summary: "[When Digivolving][When Attacking] By deleting 1 of your Digimon, delete 1 opponent's lowest-DP Digimon"
     process:
       - select_own_permanent:
@@ -221,7 +222,8 @@ effects:
   # `ignore_requirements: false` lets the engine reject a
   # non-recipe-satisfying pairing (defensive — in practice the name filters
   # already constrain to the sole recipe).
-  - when: on_deletion
+  - text: "[On Deletion] 1 of your [Machinedramon] and 1 [Kimeramon] in the trash may DNA digivolve into [Millenniummon] in the hand."
+    when: on_deletion
     optional: true
     condition:
       all_of:

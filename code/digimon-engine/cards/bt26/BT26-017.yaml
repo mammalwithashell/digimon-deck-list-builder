@@ -70,16 +70,19 @@ alt_paths:
     cost: 4
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
-  - kind: grant_keyword
+  - text: "＜Retaliation＞"
+    kind: grant_keyword
     keyword: Retaliation
     summary: "<Retaliation>"
 
   # ─── [On Play][When Digivolving] 1 [Shambala] Digimon gains <Security A. +1>
   #     and <Progress> for the turn ─────────────────────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your Digimon with the [Shambala] trait gains ＜Security A. +1＞ and ＜Progress＞ for the turn."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 of your Digimon with the [Shambala] trait gains <Security A. +1> and <Progress> for the turn"
     process:
       - select_own_permanent:
@@ -101,7 +104,8 @@ effects:
 
   # ─── [On Deletion] may play 1 [Shambala]/[TS] card (play cost ≤ 5) from
   #     trash without paying the cost ──────────────────────────────────────
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Shambala] or [TS] trait card with a play cost of 5 or less from your trash without paying the cost."
+    when: on_deletion
     summary: "[On Deletion] You may play 1 [Shambala] or [TS] trait card with a play cost of 5 or less from your trash without paying the cost"
     process:
       - select_trash:

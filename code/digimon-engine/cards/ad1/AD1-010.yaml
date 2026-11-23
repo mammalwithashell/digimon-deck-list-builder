@@ -127,6 +127,7 @@ effects:
   #
   # DCGO: JammingSelfStaticEffect(isInheritedEffect: true).
   # DSL: BT24-011 idiom — `scope: inherited / kind: grant_keyword / keyword: Jamming`.
-  - scope: inherited
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Jamming

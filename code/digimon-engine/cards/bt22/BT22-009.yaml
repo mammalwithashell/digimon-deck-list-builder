@@ -21,12 +21,14 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with 4000 DP or less"
     condition:
       any_permanent:

@@ -126,7 +126,8 @@ effects:
   # "[Hand] [Counter] <Blast Digivolve>
   #  (Your Digimon may digivolve into this card without paying the cost.)"
   # DCGO: BlastDigivolveEffect at OnCounterTiming.
-  - kind: grant_keyword
+  - text: "{Hand}"
+    kind: grant_keyword
     keyword: BlastDigivolve
 
   # ─── Clause 2 — [On Play][When Digivolving] return ≤-digi-card opp ────────────
@@ -137,7 +138,8 @@ effects:
   # this Digimon's digivolution-card count at runtime and keeps only opponent
   # Digimon whose own digivolution-card count is <= that value. Mandatory pick
   # (printed text has no "may"); silently no-ops when no legal target exists.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Return 1 opp Digimon with <= this Digimon's digivolution cards to bottom of deck"
     process:
       - select_opponent_permanent:
@@ -158,7 +160,8 @@ effects:
   # "[End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if
   #  [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards,
   #  return 1 of your opponent's suspended Digimon to the bottom of the deck."
-  - when: end_of_attack
+  - text: "[End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards, return 1 of your opponent's suspended Digimon to the bottom of the deck."
+    when: end_of_attack
     once_per_turn: true
     summary: "[End of Attack][OPT] Unsuspend self; if Dragon Mode in digi-cards, return 1 opp suspended Digimon to bottom"
     process:

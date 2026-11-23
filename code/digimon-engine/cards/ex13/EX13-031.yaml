@@ -80,7 +80,8 @@ alt_paths:
     cost: 4
 
 effects:
-  - when: [on_play, when_digivolving, on_deletion]
+  - text: "[On Play] [When Digivolving] [On Deletion] By trashing 1 card with [Chuumon] or [Sukamon] in its name from your hand or your Digimon's digivolution cards, you may change the base name, color and DP of 1 of your opponent’s Digimon to [Sukamon], white and 3000 until their turn ends."
+    when: [on_play, when_digivolving, on_deletion]
     summary: "[On Play][When Digivolving][On Deletion] By trashing 1 [Chuumon]/[Sukamon] card from hand or your Digimon's sources, 1 opponent Digimon becomes base [Sukamon]/white/3000 DP until their turn ends"
     process:
       - select_union_zone:
@@ -123,7 +124,8 @@ effects:
                       payload: { dp: 3000 }
                       expiry: end_of_opponents_turn
 
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When any other Digimon with [Sukamon] in their names are deleted, reveal the top 3 cards of your deck. You may play 1 play cost 3 or lower Digimon card with [Chuumon] or [Sukamon] in its name among them without paying the cost. Trash the rest."
+    scope: inherited
     when: on_any_deletion
     active_when: { all_turns: true }
     once_per_turn: true

@@ -15,7 +15,8 @@ alt_paths:
     from: {level_eq: 3, color_is: black}
     cost: 2
 effects:
-  - when: when_attacking
+  - text: "[When Attacking] By placing 1 of your [DeadlyAxemon] as this Digimon's bottom digivolution card, it may digivolve into [DarkKnightmon] in the hand without paying the cost."
+    when: when_attacking
     process:
       - select_own_permanent:
           filter: {kind: digimon, name_is: DeadlyAxemon, is_source_permanent: false}
@@ -39,7 +40,8 @@ effects:
                 target: source
                 from_hand: evolution
                 cost: free
-  - kind: grant_keyword
+  - text: "[Your Turn] This Digimon with [Knightmon] or [Bagramon] in its name gains ＜Security A. +1＞."
+    kind: grant_keyword
     scope: inherited
     active_when:
       all_of:

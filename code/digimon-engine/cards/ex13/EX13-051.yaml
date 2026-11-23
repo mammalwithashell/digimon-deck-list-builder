@@ -64,7 +64,8 @@ effects:
               - other: true
               - has_keyword: Blocker
 
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When any of your Digimon suspend, this Digimon may unsuspend."
+    scope: inherited
     when: on_suspend
     once_per_turn: true
     optional: true

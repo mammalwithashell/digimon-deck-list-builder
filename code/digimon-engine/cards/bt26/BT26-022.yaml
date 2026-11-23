@@ -47,7 +47,8 @@ alt_paths:
 
 effects:
   # ─── [On Play][When Digivolving] top security → hand; <Recovery +1> ───────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Add your top security card to the hand and ＜Recovery +1＞."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Add your top security card to the hand and <Recovery +1>"
     process:
       - add_top_security_to_hand: { of: you }
@@ -56,7 +57,8 @@ effects:
   # ─── [End of Your Turn] with a red/purple Digimon, place this Digimon as the
   #     bottom security card → may play 1 blue/red [Iliad] Digimon from hand
   #     at -4 ─────────────────────────────────────────────────────────────────
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] If you have a red or purple Digimon, by placing this Digimon as the bottom security card, you may play 1 blue or red [Iliad] trait Digimon card from your hand with the cost reduced by 4."
+    when: end_of_your_turn
     optional: true
     condition:
       any_field_permanent:
@@ -95,6 +97,7 @@ effects:
           cost_delta: { reduce: 4 }
 
   # ─── Inherited <Barrier> ───────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier

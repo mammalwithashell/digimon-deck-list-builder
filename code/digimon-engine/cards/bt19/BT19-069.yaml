@@ -123,7 +123,8 @@ effects:
   #
   # Printed: "By trashing 1 card in your hand, delete 1 of your opponent's
   # level 4 or lower Digimon."
-  - when: [on_play, when_digivolving, on_deletion]
+  - text: "[On Play] [When Digivolving] [On Deletion] By trashing 1 card in your hand, delete 1 of your opponent's level 4 or lower Digimon."
+    when: [on_play, when_digivolving, on_deletion]
     summary: "[OP][WD][OD] By trashing 1 hand card, delete 1 opponent Digimon lvl 4 or lower"
     process:
       # "By trashing 1 card in your hand, ..." — optional cost (DCGO

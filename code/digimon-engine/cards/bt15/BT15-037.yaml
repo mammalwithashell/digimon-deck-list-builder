@@ -81,7 +81,8 @@ effects:
       - gain_memory: 1
 
   # ─── Inherited <Barrier> ─────────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier
     summary: "Inherited <Barrier>"

@@ -84,7 +84,8 @@ alt_paths:
 
 effects:
   # ─── [OP][WD] place a TM Option under this Digimon → delete opp Digimon ≤6000 DP
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By placing 1 Option card with the [Three Musketeers] trait from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with 6000 DP or less."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] By placing 1 [Three Musketeers] Option from hand or trash as this Digimon's bottom digivolution card, delete 1 opponent Digimon with 6000 DP or less"
     condition:
@@ -131,7 +132,8 @@ effects:
             - delete_permanent: { target: victim }
 
   # ─── Inherited <Piercing> ───────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Piercing
     summary: "Inherited <Piercing>"

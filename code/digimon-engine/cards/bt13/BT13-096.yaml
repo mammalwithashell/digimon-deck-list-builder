@@ -52,6 +52,7 @@ effects:
                 bind_as: tucked
                 prompt: "Place a blue level 4 or lower Digimon under the played Digimon"
             - place_as_bottom_source: { source: tucked, target: event_target }
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     process:
       - play_from_security: {}

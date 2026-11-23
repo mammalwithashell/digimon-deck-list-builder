@@ -74,7 +74,8 @@ effects:
             any_of: [{ kind: digimon }, { kind: tamer }]
           prompt: "Delete 1 suspended opponent Digimon or Tamer"
       - delete_permanent: { target: target }
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers."
+    scope: inherited
     when: on_ally_won_battle
     once_per_turn: true
     trigger_if:

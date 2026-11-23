@@ -75,7 +75,8 @@ alt_paths:
 
 effects:
   # ─── <Barrier> (own) ─────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "<Barrier>"
 
@@ -86,7 +87,8 @@ effects:
   # security card to hand) then applies -5000 DP to a chosen opp Digimon.
   # DCGO gates the outer activation on having a security card to add
   # (AdditionCanActivate → SecurityCards.Any()).
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By adding your top security card to the hand, 1 of your opponent's Digimon gets -5000 DP for the turn."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[OP][WD] By adding top security to hand, 1 opp Digimon gets -5000 DP for the turn"
     condition:
@@ -103,7 +105,8 @@ effects:
           expiry: end_of_turn
 
   # ─── Inherited <Barrier> ─────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    kind: grant_keyword
     keyword: Barrier
     scope: inherited
     summary: "[Inherited] <Barrier>"

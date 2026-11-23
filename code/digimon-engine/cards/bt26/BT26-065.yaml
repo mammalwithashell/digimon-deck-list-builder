@@ -44,7 +44,8 @@ alt_paths:
 effects:
   # ─── [On Play] reveal 3: add 1 Keenan/[DATA SQUAD] + 1 purple Ravemon/Avian/
   #     Bird card; rest to the bottom ─────────────────────────────────────────
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Keenan Crier] or card with the [DATA SQUAD] trait and 1 purple card with [Ravemon] in its name or [Avian] or [Bird] in any of its traits among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Keenan Crier]/[DATA SQUAD] card and 1 purple [Ravemon]/[Avian]/[Bird] card to hand; rest to deck bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

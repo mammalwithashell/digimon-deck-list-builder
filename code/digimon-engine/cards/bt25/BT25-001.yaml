@@ -34,7 +34,8 @@ traits: [Lesser, Iliad, TS]
 
 effects:
   # ─── Inherited [When Attacking][OPT] If carrier has [TS], Draw 1 ────────────
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If this Digimon has the [TS] trait, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:

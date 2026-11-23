@@ -45,7 +45,8 @@ cost: 4
 traits: [CS]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       any_permanent:
         of: opponent
@@ -55,7 +56,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_digivolve
+  - text: "[Your Turn] When any of your Digimon digivolve, if you have 1 or fewer Digimon, by suspending this Tamer, you may play 1 [Gabumon] if that Digimon has [Greymon] in its name or 1 [Agumon] if it has [Garurumon] in its name from your hand or trash without paying the cost."
+    when: on_digivolve
     active_when: { your_turn: true }
     optional: true
     condition:
@@ -127,7 +129,8 @@ effects:
       - play_union_bound_free:
           binding: partner
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

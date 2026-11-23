@@ -10,7 +10,8 @@ use_requirement:
     name_is: "Sprint Dash Training"
 
 effects:
-  - when: main_from_hand
+  - text: "[Main] Reveal the top 2 cards of your deck. Add 1 green or red card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area."
+    when: main_from_hand
     optional: false
     summary: "[Main] Reveal top 2; add 1 green or red card; bottom the rest; place self in battle area"
     process:
@@ -30,7 +31,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
       - place_self_as_delay_option: {}
 
-  - kind: delay
+  - text: "[Main] ＜Delay＞ ・1 of your Digimon may digivolve into a green or red Digimon card in the hand with the digivolution cost reduced by 2."
+    kind: delay
     # TRIGGER CORRECTION (2026-08-24): was `on_play`, which the old lowering's
     # `_` catch-all turned into a turn-scheduled auto-fire. The printed timing
     # is "[Main] <Delay>", so this is the standard player-activated Delay:
@@ -74,7 +76,8 @@ effects:
           cost: { reduce: 2 }
           ignore_requirements: false
 
-  - scope: inherited
+  - text: "[Security] Reveal the top 2 cards of your deck. Add 1 green or red card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Reveal top 2; add 1 green or red card; bottom the rest; place self in battle area"

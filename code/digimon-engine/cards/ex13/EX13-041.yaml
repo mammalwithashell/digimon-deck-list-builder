@@ -105,7 +105,8 @@ effects:
       name: Breakdramon
     summary: "[All Turns] This Digimon is also treated as Lv.6 [Breakdramon] for [Examon]'s DNA digivolution"
 
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, trash their top security card."
+    scope: inherited
     when: on_ally_won_battle
     once_per_turn: true
     trigger_if:

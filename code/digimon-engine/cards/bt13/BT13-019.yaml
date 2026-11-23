@@ -19,7 +19,8 @@ alt_paths:
     cost: 5
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
   # [On Play][When Digivolving] Without paying the cost, you may play 1 Digimon
@@ -36,7 +37,8 @@ effects:
   # (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY). DCGO BT13_019.cs splits this into a
   # zone sub-choice then a card pick; we expose the full candidate union directly
   # so the RL action space sees every option (no-approximations, CLAUDE.md §17).
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] Without paying the cost, you may play 1 Digimon card with [Sistermon] in its name from your trash or 1 Digimon card with the [Royal Knight] trait from the digivolution cards of your Digimon in the breeding area. This effect can't play [Omnimon] or [Gankoomon]."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play/Digivolving] Play 1 [Sistermon] from trash or 1 [Royal Knight] from breeding sources, free; not Omnimon/Gankoomon"
     process:

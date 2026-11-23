@@ -93,7 +93,8 @@ effects:
   # running even when the player declines (min:0). Eligible cards: Digimon OR
   # Tamer with the [TS] trait and play cost <= 7. The picked card is played for
   # free and then SUSPENDED.
-  - when: on_deletion
+  - text: "[On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost 7 or lower [TS] trait card suspended among them without paying the cost. Trash the rest."
+    when: on_deletion
     summary: "[On Deletion] Reveal top 3; you may play 1 [TS] cost<=7 card suspended free; trash rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -134,7 +135,8 @@ effects:
   # realizable game state the placement of a selected valid permanent succeeds,
   # so the unsuspend follows it (DCGO's DigivolutionCards.Contains gate is a
   # post-success safety check that holds here).
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] By placing 1 of your other Digimon as this Digimon's bottom digivolution card, it unsuspends."
+    scope: inherited
     when: when_attacking
     optional: true
     once_per_turn: true

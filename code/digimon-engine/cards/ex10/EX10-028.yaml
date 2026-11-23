@@ -93,7 +93,8 @@ effects:
   # (`SelectOwnSources { min, .. } => *min == 0`), so the explicit outer
   # accept/decline confirm is what carries the player's choice — mirroring
   # DCGO's own always-shown Yes/No.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing any 1 card with the [Mineral] or [Rock] trait from your Digimon's digivolution cards, 1 of your Digimon with the [Mineral] or [Rock] trait gains ＜Reboot＞, ＜Blocker＞ and +3000 DP until your opponent's turn ends."
+    when: [on_play, when_digivolving]
     optional: true
     outer_prompt: true
     summary: "[On Play][When Digivolving] MAY trash 1 Mineral/Rock source → 1 Mineral/Rock Digimon gains Reboot+Blocker+3000 DP until EoOT"

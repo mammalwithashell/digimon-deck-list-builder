@@ -99,7 +99,8 @@ effects:
 
   # ─── [On Play][When Attacking][Once Per Turn] by trashing 1 hand card,
   #     suspend 1 of your opponent's Digimon; it can't unsuspend in their next unsuspend phase ─────
-  - when: [on_play, when_attacking]
+  - text: "[On Play] [When Attacking] [Once Per Turn] By trashing 1 card in your hand, suspend 1 of your opponent's Digimon. It can't unsuspend in their next unsuspend phase."
+    when: [on_play, when_attacking]
     once_per_turn: true
     condition:
       count_gte:
@@ -129,7 +130,8 @@ effects:
   # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Demon] or
   #     [Titan] Digimon may digivolve into [Titamon] / a [Titan] trash card,
   #     cost -1 ────────────────────────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1."
+    scope: inherited
     when: on_discard_hand
     once_per_turn: true
     active_when:

@@ -12,7 +12,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost."
+    when: on_deletion
     optional: true
     summary: "You may play 1 level 3 Puppet Digimon from hand without paying the cost"
     process:
@@ -35,7 +36,8 @@ effects:
           prompt: "Play 1 level 3 Puppet Digimon from hand"
       - play_from_hand_free: { of: you, hand_index: pick }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][OPT] 1 opponent Digimon gets -2000 DP for the turn"

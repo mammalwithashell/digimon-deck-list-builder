@@ -30,7 +30,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -1＞ and -3000 DP until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 opponent Digimon gets Security Attack -1 and -3000 DP until their turn ends"
     process:
       - select_opponent_permanent:
@@ -47,7 +48,8 @@ effects:
           value: -3000
           expiry: end_of_opponents_turn
 
-  - when: on_opponent_security_removed
+  - text: "[Your Turn] When your opponent's security stack is removed from, this Digimon may digivolve into a [TB] trait Digimon card in the hand with the cost reduced by 2."
+    when: on_opponent_security_removed
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When opponent security is removed, this Digimon may digivolve into a [TB] Digimon in hand with cost reduced by 2"
@@ -72,7 +74,8 @@ effects:
           cost: { reduce: 2 }
           ignore_requirements: false
 
-  - scope: inherited
+  - text: "[End of Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+    scope: inherited
     when: end_of_attack
     once_per_turn: true
     optional: true

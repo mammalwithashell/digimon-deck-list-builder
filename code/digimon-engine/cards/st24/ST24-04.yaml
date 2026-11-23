@@ -123,7 +123,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Inherited [Your Turn] +2000 DP ──────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

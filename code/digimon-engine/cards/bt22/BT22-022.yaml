@@ -18,7 +18,8 @@ alt_paths:
     from: { level_eq: 3, trait_has: CS }
     cost: 2
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with [Veedramon] in its text from your hand without paying the cost."
+    when: when_digivolving
     summary: "If you have 1 or fewer Tamers, you may play 1 Veedramon-text Tamer from hand without paying the cost."
     condition:
       count_lte:
@@ -37,7 +38,8 @@ effects:
           condition: { binding_present: tamer }
           then:
             - play_from_hand_free: { of: you, hand_index: tamer }
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name would leave the battle area by your opponent's effects, by suspending this Digimon, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

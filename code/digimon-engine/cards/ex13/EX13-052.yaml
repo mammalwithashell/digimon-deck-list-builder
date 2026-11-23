@@ -33,7 +33,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)"
+    kind: grant_keyword
     keyword: Guard
 
   - when: [on_play, on_deletion]
@@ -48,7 +49,8 @@ effects:
           amount: 1
           stop_at_level: 3
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your other Digimon with [Knightmon] in its text, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

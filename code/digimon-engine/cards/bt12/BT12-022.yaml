@@ -64,7 +64,8 @@ effects:
   #   - `dna_origin: true` is set during DNA cost-calc dispatch so the
   #     observer fires only on DNA paths.
   #
-  - when: before_pay_cost_observe
+  - text: "[Your Turn] When this Digimon would DNA digivolve into a green Digimon card, gain 1 memory."
+    when: before_pay_cost_observe
     active_when:
       all_of:
         - your_turn: true
@@ -91,7 +92,8 @@ effects:
   #   digivolution sources — over-granting Jamming when an [Imperialdramon] card
   #   sits as a buried source beneath a non-Imperialdramon top card. The [Free]
   #   trait check (`source_permanent_trait_has`) was already top-only and faithful.
-  - scope: inherited
+  - text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

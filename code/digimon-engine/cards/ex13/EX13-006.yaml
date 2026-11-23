@@ -27,7 +27,8 @@ traits: [Lesser, X Antibody, Chronicle]
 form: In-Training
 
 effects:
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] By paying 1 cost, 1 of your Digimon with the [X Antibody] or [Chronicle] trait may unsuspend."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     once_per_turn: true

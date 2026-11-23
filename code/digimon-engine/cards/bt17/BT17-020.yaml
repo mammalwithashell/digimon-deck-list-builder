@@ -20,7 +20,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card with inherited effects among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "Reveal 3; add one Hybrid/Ten Warriors and one inherited-effect Tamer"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -47,7 +48,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: tamer_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] You may play 1 Tamer card with inherited effects from your hand with the play cost reduced by 2."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true

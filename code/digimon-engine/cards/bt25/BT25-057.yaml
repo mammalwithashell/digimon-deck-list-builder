@@ -94,7 +94,8 @@ dual:
       # (Comprehensive Rules Ver. 4.3 §15-7-1), so the clause is `optional: true`:
       # the player may decline even when a face-down card exists, and with none
       # it is not offered (§15-7-4).
-      - when: [when_digivolving, when_attacking]
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom face-down card under any of your Tamers, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        when: [when_digivolving, when_attacking]
         once_per_turn: true
         optional: true
         summary: "[WD][WA][OPT] By trashing the bottom face-down card under a Tamer, <De-Digivolve 1> 1 opponent Digimon"
@@ -107,7 +108,8 @@ dual:
           - de_digivolve: { target: degen_target, amount: 1 }
 
       # [WD] this Digimon may battle 1 opponent Digimon (optional; a battle, not an attack).
-      - when: when_digivolving
+      - text: "[When Digivolving] This Digimon may battle 1 of your opponent's Digimon."
+        when: when_digivolving
         optional: true
         summary: "[WD] This Digimon may battle 1 opponent Digimon"
         process:

@@ -12,7 +12,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may attack a player without suspending.)"
+    kind: grant_keyword
     keyword: Overclock
     overclock_cost_filter:
       any_of:
@@ -21,10 +22,12 @@ effects:
             - kind: digimon
             - trait_has: Puppet
 
-  - kind: grant_keyword
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
     keyword: Blocker
 
-  - when: when_digivolving
+  - text: "[When Digivolving] You may play 2 [Familiar] Tokens. (Digimon/Yellow/3000 DP/\""
+    when: when_digivolving
     optional: true
     summary: "You may play 2 Familiar Tokens"
     process:

@@ -79,7 +79,8 @@ alt_paths:
 
 effects:
   # ─── <Vortex> ────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Vortex＞"
+    kind: grant_keyword
     keyword: Vortex
     summary: "<Vortex>"
 
@@ -106,7 +107,8 @@ effects:
           cost_delta: free
 
   # ─── [On Play][When Digivolving] suspend+freeze opp; sec-gated self buff ──
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend until their turn ends. Then, if you have 3 or fewer security cards, this Digimon gains ＜Piercing＞ and +5000 DP for the turn."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Suspend 1 opp Digimon/Tamer (can't unsuspend until their turn ends); if <=3 sec, this gains Piercing +5000 DP"
     condition:
       any_permanent:
@@ -142,7 +144,8 @@ effects:
                 expiry: end_of_turn
 
   # ─── Inherited [All Turns][OPT] sec removed → may suspend 1 opp ───────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your security stack is removed from, you may suspend 1 of your opponent's Digimon or Tamers."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     optional: true

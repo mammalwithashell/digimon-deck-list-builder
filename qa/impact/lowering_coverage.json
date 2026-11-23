@@ -85976,6 +85976,7 @@
    "tests/dsl/phase4_retirement_guard.rs",
    "tests/dsl/play_from_hand_free_suspended.rs",
    "tests/dsl/pretty.rs",
+   "tests/dsl/printed_text_lint.rs",
    "tests/dsl/raw_rust_registry.rs",
    "tests/dsl/real_cards_json.rs",
    "tests/dsl/replacement.rs",
@@ -86003,8 +86004,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 423,
-  "scanned_tests": 2732,
+  "scanned_files": 424,
+  "scanned_tests": 2733,
   "top_untested": [
    {
     "cards_blocked": 3,

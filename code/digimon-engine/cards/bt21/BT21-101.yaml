@@ -108,7 +108,8 @@ alt_paths:
 
 effects:
   # ─── Clause (a): <Blocker> ────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
   # ─── Clause (b): <Link +1> ────────────────────────────────────────────────────
@@ -126,7 +127,8 @@ effects:
   # from: [hand, digivolution_sources] — mirrors DCGO's hasInHand + hasInSources.
   # to: chosen_own_digimon — DCGO SelectPermanentEffect over own battle-area Digimon.
   # cost: 0 — free link.
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to 1 of your Digimon without paying the cost."
+    when: [when_digivolving, when_attacking]
     once_per_turn: false
     optional: true
     summary: "[WD][WA] You may link 1 [Appmon] Digimon from hand or digivolution cards to 1 of your Digimon free"
@@ -147,7 +149,8 @@ effects:
   # AND Gaiamon is currently suspended (source_is_unsuspended: false).
   # If the outer prompt is accepted the body unsuspends Gaiamon then trashes the
   # opponent's top security card.
-  - when: on_any_link
+  - text: "[Your Turn] [Once Per Turn] When your Digimon get linked, by unsuspending this Digimon, trash your opponent's top security card."
+    when: on_any_link
     once_per_turn: true
     optional: true
     active_when:

@@ -92,7 +92,8 @@ alt_paths:
 effects:
   # ─── [OP][WD] reveal 4 → place 1 TM Option under self → rest top/bottom →
   #     if placed, delete 1 opp Digimon/Tamer with play cost 3 or less ───────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Reveal the top 4 cards of your deck. Place 1 Option card with the [Three Musketeers] trait among them as this Digimon's bottom digivolution card. Return the rest to the top or bottom of the deck. If this effect placed, delete 1 of your opponent's Digimon or Tamers with a play cost of 3 or less."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal top 4; place 1 [Three Musketeers] Option among them as this Digimon's bottom digivolution card; return the rest to top or bottom; if placed, delete 1 opponent Digimon or Tamer with play cost 3 or less"
     process:
       - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
@@ -142,7 +143,8 @@ effects:
             - delete_permanent: { target: victim }
 
   # ─── Inherited <Collision> ──────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Collision＞ (During this Digimon's attack, give all of your opponent's Digimon ＜Blocker＞, and the opponent blocks if able.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Collision
     summary: "Inherited <Collision>"

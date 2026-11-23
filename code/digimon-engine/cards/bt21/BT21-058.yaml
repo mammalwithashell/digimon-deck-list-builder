@@ -129,7 +129,8 @@ attribute: Unknown
 effects:
   # ─── Clause 1: [On Play][When Digivolving] reveal-3 hand-1 trash-rest,
   #      then optionally place up to 2 trash Vemmon as 1 Digimon's source ──
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with [Vemmon] in its text among them to the hand. Trash the rest. Then, you may place up to 2 [Vemmon] from your trash as 1 of your Digimon's bottom digivolution cards."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal top 3; add 1 [Vemmon]-in-text card to hand; trash the rest. Then you may place up to 2 [Vemmon] from trash as 1 Digimon's bottom digivolution cards"
     process:
       - reveal_search:
@@ -196,7 +197,8 @@ effects:
 
   # ─── Clause 2: Inherited [All Turns][Once Per Turn] delete on Vemmon
   #      returned to deck bottom from this Digimon's digivolution cards ────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When any [Vemmon] are returned to the bottom of the deck from this Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less."
+    scope: inherited
     when: on_source_returned_to_deck_bottom
     once_per_turn: true
     active_when: { all_turns: true }

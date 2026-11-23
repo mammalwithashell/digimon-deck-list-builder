@@ -117,7 +117,8 @@ effects:
     dp_modifier: 1000
 
   # ─── Clause 4: [Security] play self without paying the cost ───────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

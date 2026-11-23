@@ -55,12 +55,14 @@ alt_paths:
 
 effects:
   # ─── <Reboot> ──────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Reboot＞"
+    kind: grant_keyword
     keyword: Reboot
     summary: "<Reboot>"
 
   # ─── <Blocker> ─────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -69,7 +71,8 @@ effects:
   # Mandatory (no printed "may"). Highest-DP target gate via the dp_gte
   # aggregate idiom (EX4-065). Outer condition gates on the opponent having any
   # Digimon so the mandatory select never installs an empty prompt.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's highest DP Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 of your opponent's highest DP Digimon"
     condition:
       any_permanent:
@@ -96,7 +99,8 @@ effects:
   # turn; "they have 5 or less" ⇔ gauge at -5 or higher (memory_gte: -5). At
   # exactly 5 (gauge = -5) both fire, granting immunity to BOTH Digimon and
   # Option effects. Immunity lasts until the opponent's turn ends.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] If your opponent has 5 or more memory, their Digimon effects don't affect this Digimon until their turn ends. Then, if they have 5 or less, their Option effects don't affect this Digimon until their turn ends."
+    when: end_of_your_turn
     once_per_turn: true
     summary: "[End of Your Turn][OPT] If opp >=5 memory ignore their Digimon effects; then if opp <=5 memory ignore their Option effects, until their turn ends"
     process:

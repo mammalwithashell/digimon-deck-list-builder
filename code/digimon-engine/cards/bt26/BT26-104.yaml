@@ -34,13 +34,15 @@ traits: [Shambala, SW, TB, TS]
 
 effects:
   # ─── [Start of Your Main Phase] Gain 1 memory ──────────────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] Gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] Gain 1 memory"
     process:
       - gain_memory: 1
 
   # ─── [On Play] By trashing 1 [Shambala] hand card, <Draw 2> ────────────────
-  - when: on_play
+  - text: "[On Play] By trashing 1 [Shambala] trait card from your hand, ＜Draw 2＞."
+    when: on_play
     condition:
       count_gte:
         filter:
@@ -65,7 +67,8 @@ effects:
 
   # ─── [End of Your Turn] with a [Tentei Hachibushu] Digimon, suspend this
   #     Tamer → may use 1 [Shambala] Option from hand for free ────────────────
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] If you have a Digimon with the [Tentei Hachibushu] trait, by suspending this Tamer, you may use 1 Option card with the [Shambala] trait from your hand without paying the cost."
+    when: end_of_your_turn
     optional: true
     condition:
       all_of:
@@ -86,7 +89,8 @@ effects:
               - trait_has: "Shambala"
           prompt: "You may use 1 [Shambala] trait Option card from your hand without paying the cost"
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

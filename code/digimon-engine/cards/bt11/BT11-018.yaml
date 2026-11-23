@@ -155,7 +155,8 @@ effects:
   # Each sub-pool is wrapped in its own `if: <candidates exist>` guard so a
   # missing target in ONE pool never silently drops the other (see header
   # note on select_opponent_permanent's empty-candidates short-circuit).
-  - when: on_play
+  - text: "[On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. 1 of your opponent's Digimon can't attack until the end of their turn."
+    when: on_play
     summary: "[On Play] Delete 1 opp Digimon with DP<=8000; independently, 1 opp Digimon can't attack until end of their turn"
     process:
       # Sub-pool 1: delete 1 opponent Digimon with DP <= 8000.
@@ -203,7 +204,8 @@ effects:
   # `optional: true` clause with a non-declinable first step
   # (`delete_permanent`) automatically installs the outer accept/decline
   # confirm (lower_triggered.rs needs_outer_optional), matching DCGO exactly.
-  - when: end_of_attack
+  - text: "[End of Attack] By deleting this Digimon, gain 1 memory."
+    when: end_of_attack
     optional: true
     summary: "[End of Attack] By deleting this Digimon, gain 1 memory"
     process:

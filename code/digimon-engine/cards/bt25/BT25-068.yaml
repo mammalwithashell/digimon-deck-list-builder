@@ -75,7 +75,8 @@ effects:
           stop_at_level: 3
 
   # ─── Inherited [All Turns] +1000 DP ────────────────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true }

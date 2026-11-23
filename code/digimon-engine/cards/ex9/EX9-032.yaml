@@ -41,7 +41,8 @@ effects:
   # the effect only fires when a legal cost body — a Token or *other* Puppet
   # Digimon, i.e. not Karakurumon itself — is on the field. Without it the
   # clause would present an empty (PASS-only) prompt.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a Digimon card with the [Puppet] trait in the hand without paying the cost."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[OnPlay/WhenDigivolving] Delete 1 Token/other Puppet, free-digivolve into a Puppet hand card"
     condition:
@@ -83,7 +84,8 @@ effects:
           cost: 0
           ignore_requirements: true
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

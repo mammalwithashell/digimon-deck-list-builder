@@ -45,7 +45,8 @@ form: Appmon
 
 effects:
   # ─── Inherited [Your Turn][OPT] When this Digimon gets linked, Draw 1 ───────
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜Draw 1＞."
+    scope: inherited
     when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }

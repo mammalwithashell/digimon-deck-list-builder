@@ -158,7 +158,8 @@ effects:
   # player choice when several tie). Replaces the former raw_rust auto-pick
   # (ex8_070_delete_lowest_cost_digimon) which deleted the lowest battle-area
   # index — a rule-17 violation. (fix-dsl-substrate-rot-and-bugs)
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent’s Digimon with the lowest play cost."
+    when: on_security
     summary: "[Security] Delete 1 of your opponent's Digimon with the lowest play cost"
     process:
       - select_opponent_permanent:

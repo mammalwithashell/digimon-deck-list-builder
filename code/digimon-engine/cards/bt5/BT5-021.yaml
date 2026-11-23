@@ -13,7 +13,8 @@ attribute: Virus
 # DCGO (BT5_021.cs): CannotReduceCostClass, opponent player condition,
 # IsOpponentTurn -- identical shape to BT5-008 clause 2 / BT5-033.
 effects:
-  - kind: flood_gate
+  - text: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
+    kind: flood_gate
     summary: "[Opponent's Turn] Opponent can't reduce digivolution costs"
     active_when: { opponents_turn: true }
     target_player: opponent

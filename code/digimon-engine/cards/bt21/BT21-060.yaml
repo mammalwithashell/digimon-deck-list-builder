@@ -195,7 +195,8 @@ effects:
   #   deck, then end the attack.
   # scope: inherited so it lives on the digivolution card beneath a later evo.
   # active_when opponents_turn = DCGO IsOpponentTurn. EX10-003 nested-then idiom.
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack."
+    scope: inherited
     when: on_opponent_attack
     optional: true
     once_per_turn: true

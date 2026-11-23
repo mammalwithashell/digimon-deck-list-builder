@@ -26,7 +26,8 @@ alt_paths:
             - trait_has: Chronicle
     cost: 3
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may play 1 [Dorumon] or [Ryudamon] from your hand to your empty breeding area without paying the cost. Then, if during an attack, until the end of your opponent's turn, 1 of your Digimon gains ＜Security A.+1＞ and gets +5000 DP."
+    when: [on_play, when_digivolving]
     process:
       - select_hand:
           of: you
@@ -57,7 +58,8 @@ effects:
                 target: boosted
                 value: 5000
                 expiry: end_of_opponents_turn
-  - kind: aura
+  - text: "[Your Turn] This Digimon doesn't activate [Security] effects on Option cards it checks."
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     target: {}

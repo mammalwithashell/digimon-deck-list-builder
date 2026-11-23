@@ -75,7 +75,8 @@ alt_paths:
     cost: 5
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] You may play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost."
+    when: when_digivolving
     summary: "[When Digivolving] You may play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost"
     process:
       - select_union_zone:

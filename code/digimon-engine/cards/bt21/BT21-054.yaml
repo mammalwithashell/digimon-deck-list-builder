@@ -94,7 +94,8 @@ effects:
     summary: "[Link] +2000 DP to the linked Digimon"
 
   # ─── [On Play] trash Appmon/TM source from any own Digimon → De-Digivolve 1 ─
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from any of your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    when: on_play
     optional: true
     # DCGO CanActivateCondition: some own Digimon's digivolution cards hold
     # an [Appmon]/[Three Musketeers] card — otherwise the optional gate is

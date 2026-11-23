@@ -31,7 +31,8 @@ cost: 3
 traits: [ADAMAS, TS]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory."
+    when: start_of_your_main_phase
     condition: { memory_lte: 4 }
     summary: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory"
     process:
@@ -39,7 +40,8 @@ effects:
 
   # ─── [End of Your Turn] by suspending this Tamer, may use 1 [TS] Option
   #     from hand; paid cost reduced by 1 per opponent memory ───────────────
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] By suspending this Tamer, you may use 1 Option card with the [TS] trait from your hand. For each memory your opponent has, reduce this effect's paid cost by 1."
+    when: end_of_your_turn
     optional: true
     condition: { source_is_unsuspended: true }
     summary: "[End of Your Turn] By suspending this Tamer, you may use 1 Option card with the [TS] trait from your hand. For each memory your opponent has, reduce this effect's paid cost by 1"
@@ -75,7 +77,8 @@ effects:
               per: { player_memory: { of: opponent } }
               delta: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

@@ -67,7 +67,8 @@ alt_paths:
 
 effects:
   # ─── <Alliance> ────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
     summary: "<Alliance>"
 
@@ -78,7 +79,8 @@ effects:
   # question. The one menu below carries the decline ("Don't pay the cost" =
   # DCGO value 3), so a clause-level outer accept prompt would be a question the
   # recording never contains.
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] If it's your turn, by adding your top security card to the hand or trashing the bottom face-down card under any of your Tamers, you may play or use 1 card with the [Glowing Dawn] trait from your hand with the cost reduced by 3."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[WD][WA][OPT] If your turn, by adding your top security card to the hand or trashing a bottom face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card from hand with the cost reduced by 3"
@@ -176,7 +178,8 @@ effects:
                 cost_delta: { reduce: 3 }
 
   # ─── Inherited [End of Attack][OPT] trash FD under Tamer → unsuspend self ──
-  - scope: inherited
+  - text: "[End of Attack] [Once Per Turn] By trashing the bottom face-down card under any of your Tamers, this Digimon with the [Glowing Dawn] trait unsuspends."
+    scope: inherited
     when: end_of_attack
     once_per_turn: true
     optional: true

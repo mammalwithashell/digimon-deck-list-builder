@@ -87,7 +87,8 @@ effects:
       - cancel_replacement: {}
 
   # ─── Inherited [All Turns][OPT] leave-prevention (Gaogamon-name / DATA SQUAD) ─
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Gaogamon] in its name or the [DATA SQUAD] trait would leave the battle area, by trashing the bottom face-down card from under any of your Tamers, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

@@ -77,7 +77,8 @@ cost: 3
 
 effects:
   # ─── Clause 1 — [On Play] opponent may trash a Tamer/Option; else gain+draw ──
-  - when: on_play
+  - text: "[On Play] Your opponent may trash 1 Tamer card or Option card in their hand. If they don't, gain 1 memory and ＜Draw 1＞."
+    when: on_play
     summary: "[On Play] Opponent may trash 1 Tamer/Option from hand; if they don't, gain 1 memory and Draw 1"
     process:
       - as_selecting_player:
@@ -119,7 +120,8 @@ effects:
       - gain_memory: 1
 
   # ─── Clause 3 — [Security] play this card without paying the cost ────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

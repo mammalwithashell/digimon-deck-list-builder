@@ -144,7 +144,8 @@ effects:
           cost_delta: free
 
   # ─── [When Digivolving] -5000 DP; then if <=3 security, delete <=7000 DP ──
-  - when: when_digivolving
+  - text: "[When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, if you have 3 or fewer security cards, delete 1 of your opponent's Digimon with 7000 DP or less."
+    when: when_digivolving
     summary: "[When Digivolving] 1 opp Digimon gets -5000 DP for the turn; then if you have 3 or fewer security cards, delete 1 opp Digimon with 7000 DP or less"
     process:
       - select_opponent_permanent:

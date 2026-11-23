@@ -67,12 +67,14 @@ alt_paths:
 effects:
   # ─── Clause 1 — ＜Alliance＞ keyword grant ──────────────────────────────────
   # DCGO: AllianceSelfEffect on EffectTiming.OnAllyAttack.
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
 
   # ─── Clause 2 — ＜Evade＞ keyword grant ─────────────────────────────────────
   # DCGO: EvadeSelfEffect on EffectTiming.WhenPermanentWouldBeDeleted.
-  - kind: grant_keyword
+  - text: "＜Evade＞"
+    kind: grant_keyword
     keyword: Evade
 
   # ─── Clause 3 — Shared [On Play][When Digivolving][When Attacking][OPT] ────
@@ -100,7 +102,8 @@ effects:
   #     optional (DCGO canNoSelect: false guarded by HasMatchConditionOwnersPermanent;
   #     when no eligible Greymon exists, the select prompt simply doesn't install)
   #   - unsuspend the picked Greymon
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may return 1 of your opponent's lowest level Digimon to the hand. Then, this Digimon and 1 of your Digimon with [Greymon] in its name may unsuspend."
+    when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     optional: true
     summary: "Return opp lowest-level Digimon to hand; then may unsuspend self + 1 Greymon"
@@ -167,7 +170,8 @@ effects:
   # `CanPlayJogress(true)`), the pair picks offer only Digimon that meet that
   # card's DNA requirement (`dna_field_pair`), and the pair pick is skipped
   # when the hand pick was declined (it used to appear regardless).
-  - when: on_opponent_attack
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, 2 of your Digimon may DNA digivolve into [Omnimon Alter-S] in the hand. Then, you may change the attack target to 1 of your Digimon."
+    when: on_opponent_attack
     active_when: { opponents_turn: true }
     once_per_turn: true
     optional: true
@@ -228,7 +232,8 @@ effects:
   # DCGO uses `CanNotSwitchAttackTargetClass` with PermanentCondition
   # `permanent == card.PermanentOfThisCard()` — i.e. only protects this
   # specific Digimon (the source carrying the inherited effect).
-  - scope: inherited
+  - text: "[Your Turn] This Digimon's attack target can't change."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

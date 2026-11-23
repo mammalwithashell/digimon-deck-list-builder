@@ -78,7 +78,8 @@ effects:
   # lowering to an omitted target (both compile to the default predicate,
   # which `lower_aura.rs` treats as self); stated explicitly for the
   # validator's "aura requires target or target_player" intent check.
-  - scope: inherited
+  - text: "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true, rules_text_contains: "[Pulsemon]" }

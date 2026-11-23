@@ -70,7 +70,8 @@ effects:
   #
   # flood_gate installs a player-scoped IgnoreColorRequirement modifier whenever
   # the controller has any Tamer in play. Target restricts bypass to THIS card only.
-  - kind: flood_gate
+  - text: "While you have a Tamer, you can ignore this card's color requirements."
+    kind: flood_gate
     active_when:
       any_permanent:
         of: you

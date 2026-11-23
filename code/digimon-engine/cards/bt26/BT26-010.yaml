@@ -59,7 +59,8 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [When Attacking] By trashing 1 [Game]/[Open]/[Seven Code] card, <Draw 2>
-  - when: when_attacking
+  - text: "[When Attacking] By trashing 1 [Game], [Open] or [Seven Code] trait card from your hand, ＜Draw 2＞."
+    when: when_attacking
     condition:
       count_gte:
         filter:

@@ -12,7 +12,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Arisa Kinosaki] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     summary: "If you have 1 or fewer Tamers, you may play Arisa Kinosaki from hand free"
     condition:
@@ -37,7 +38,8 @@ effects:
   # `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
   # under the attacker's stack and surfaces during the security battle's
   # `attacker_security_dp_adjustment`.
-  - kind: aura
+  - text: "[Your Turn] All of your opponent's Security Digimon get -3000 DP."
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     dp_modifier: -3000

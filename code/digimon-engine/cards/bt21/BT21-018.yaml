@@ -77,13 +77,15 @@ alt_paths:
 effects:
   # ─── <Rush> (non-inherited, printed keyword on main card text) ───────────────
   # DCGO: RushSelfStaticEffect(isInheritedEffect: false, card: card, condition: null)
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
 
   # ─── <Raid> (non-inherited, printed keyword on main card text) ───────────────
   # DCGO: RaidSelfEffect(isInheritedEffect: false, card: card, condition: null)
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
@@ -109,7 +111,8 @@ effects:
   # DCGO: WhenLinked (NOT SetIsLinkedEffect), CanActivateCondition: IsOwnerTurn,
   #   SetHashString("WhenLinked_BT21_018"), SetUpActivateClass(count: 1, skippable: true).
   # source_permanent = DoGatchmon (the host). may_attack_now { attacker: source } = DoGatchmon attacks.
-  - when: when_card_linked_to_this
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, it may attack."
+    when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }
     optional: true

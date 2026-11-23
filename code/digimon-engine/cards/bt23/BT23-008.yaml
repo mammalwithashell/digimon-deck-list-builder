@@ -112,7 +112,8 @@ effects:
   #  your opponent's unsuspended Digimon with the highest DP."
   # DCGO: RaidSelfEffect at OnAllyAttack timing, isInheritedEffect: false.
   # Mirrors BT17-078 Clause 1 pattern.
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
 
   # ─── Clause 2 — [Main][OPT] place-top-as-bottom + play Gabumon/Nokia ─────────
@@ -173,7 +174,8 @@ effects:
   # The DSL self-aura (empty target `{}`) with `scope: inherited` sets the
   # static `dp_modifier` field on the Effect. `Game::source_dp_contribution`
   # reads this field for tensor-layer DP computation, gated by `active_when`.
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

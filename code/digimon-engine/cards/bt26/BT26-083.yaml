@@ -69,13 +69,16 @@ alt_paths:
     cost: 4
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
-  - kind: grant_keyword
+  - text: "＜Execute＞"
+    kind: grant_keyword
     keyword: Execute
     summary: "<Execute>"
 
@@ -107,7 +110,8 @@ effects:
 
   # ─── [On Play][When Digivolving] trash all security; delete 1 opp Digimon
   #     per card trashed; then <Recovery +3> ─────────────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Trash all of your security cards. For each card this effect trashed, delete 1 of your opponent's Digimon. Then, ＜Recovery +3＞."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash all of your security cards. For each card this effect trashed, delete 1 of your opponent's Digimon. Then, <Recovery +3>"
     process:
       - trash_top_security:
@@ -131,7 +135,8 @@ effects:
       - recover: { of: you, count: 3 }
 
   # ─── [On Deletion] all opp Digimon <Security A. -1> until their turn ends ──
-  - when: on_deletion
+  - text: "[On Deletion] Give all of your opponent's Digimon ＜Security A. -1＞ until their turn ends."
+    when: on_deletion
     summary: "[On Deletion] Give all of your opponent's Digimon <Security A. -1> until their turn ends"
     process:
       - add_modifier:

@@ -29,7 +29,8 @@ effects:
   # DCGO: PlaySelfDigimonAfterBattleSecurityEffect.
   # Same pattern as BT21-015 (Cyclonemon) and BT25-036 (Craftmon):
   #   when: on_security → play_from_security: {}
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card for free at end of battle"
     process:
       - play_from_security: {}
@@ -46,7 +47,8 @@ effects:
   #   the effect resolves silently if there is nothing to return. We map both
   #   CanTriggerOnPlay and CanTriggerWhenDigivolving to when: [on_play, when_digivolving]
   #   with optional: true.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand"
     process:

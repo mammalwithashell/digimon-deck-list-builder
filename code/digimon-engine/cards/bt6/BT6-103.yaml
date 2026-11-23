@@ -59,7 +59,8 @@ effects:
             delta: 1
 
   # ─── [Security] Suspend 1 of your opponent's Digimon ───────────────────────
-  - scope: inherited
+  - text: "[Security] Suspend 1 of your opponent's Digimon."
+    scope: inherited
     when: on_security
     summary: "[Security] Suspend 1 of your opponent's Digimon"
     process:

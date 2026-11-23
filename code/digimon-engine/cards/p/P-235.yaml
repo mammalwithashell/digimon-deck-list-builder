@@ -83,7 +83,8 @@ effects:
       - gain_memory: 2
 
   # ─── Clause 2: [Security] (inherited) place self in battle area ──────────────
-  - scope: inherited
+  - text: "[Security] Place this card in the battle area."
+    scope: inherited
     when: on_security
     summary: "[Security] Place this card in the battle area"
     process:

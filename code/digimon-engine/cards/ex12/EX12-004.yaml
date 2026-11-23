@@ -8,7 +8,8 @@ cost: 0
 traits: [Ghost, Shambala, TB]
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] This Digimon with the [TB] trait gains ＜Execute＞."
+    scope: inherited
     kind: aura
     target: {}
     grant_keyword: { keyword: Execute }

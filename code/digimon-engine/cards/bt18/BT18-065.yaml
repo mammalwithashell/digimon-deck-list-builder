@@ -151,7 +151,8 @@ alt_paths:
 
 effects:
   # ─── Clause 1: [When Digivolving] up to 2 [Vemmon] from trash as bottom sources ──
-  - when: when_digivolving
+  - text: "[When Digivolving] You may place up to 2 [Vemmon] from your trash as this Digimon's bottom digivolution cards."
+    when: when_digivolving
     summary: "[When Digivolving] You may place up to 2 [Vemmon] from your trash as this Digimon's bottom digivolution cards"
     process:
       - select_count_capped_multi:
@@ -171,7 +172,8 @@ effects:
                 target: source
 
   # ─── Clause 2: [End of Your Turn] digivolve into a Vemmon-text hand card ────
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] If this Digimon has 4 or more digivolution cards, it may digivolve into a Digimon card with [Vemmon] in its text in the hand."
+    when: end_of_your_turn
     summary: "[End of Your Turn] If this Digimon has 4+ digivolution cards, it may digivolve into a Digimon card with [Vemmon] in its text in the hand, paying the cost"
     condition:
       self_source_count:
@@ -197,7 +199,8 @@ effects:
           cost: printed
 
   # ─── Inherited ESS — [All Turns][OPT] Vemmon returned to deck bottom -> unsuspend + Blocker ──
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When any [Vemmon] return to the bottom of the deck from this Digimon's digivolution cards, this Digimon unsuspends and gains ＜Blocker＞ until the end of your opponent's turn."
+    scope: inherited
     when: on_source_returned_to_deck_bottom
     once_per_turn: true
     active_when: { all_turns: true }

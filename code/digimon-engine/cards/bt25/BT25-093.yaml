@@ -66,7 +66,8 @@ effects:
           filter: { kind: digimon, trait_has: TS }
 
   # [Security] Activate this card's [Main] effects.
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     summary: "[Security] Activate [Main]: delete opponent's lowest-DP Digimon; if none, trash an opponent Option; then optionally link"
     process:

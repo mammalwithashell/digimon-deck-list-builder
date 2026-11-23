@@ -52,7 +52,8 @@ effects:
   # effect rather than pay the cost).
   # condition mirrors DCGO CanActivateCondition (ST24_12.cs:49-53): an owned
   # Tamer with a face-down source must exist, else the effect is not offered.
-  - when: on_play
+  - text: "[On Play] By trashing the bottom face-down card from under any of your Tamers, you may return 1 Digimon card with the [DATA SQUAD] trait from your trash to the hand."
+    when: on_play
     optional: true
     condition:
       face_down_sources_under_tamers_gte: 1
@@ -74,7 +75,8 @@ effects:
       - add_to_hand_from_trash: { of: you, card: pick }
 
   # ─── Inherited [When Attacking][OPT] delete 1 opp Lv.3 Digimon (mandatory) ──
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Delete 1 of your opponent's level 3 Digimon."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "Inherited [When Attacking][OPT] Delete 1 of your opponent's level 3 Digimon"

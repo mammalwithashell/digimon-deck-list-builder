@@ -68,6 +68,7 @@ effects:
                 bind_as: source_pick
                 prompt: "Place 1 [Three Musketeers] trait card as this Digimon's bottom digivolution card"
       - place_remainder_on_deck: { of: you, position: bottom }
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation

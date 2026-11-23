@@ -15,11 +15,13 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞ (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead.)"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
-  - when: when_attacking
+  - text: "[When Attacking] Lose 2 memory."
+    when: when_attacking
     summary: "[When Attacking] Lose 2 memory"
     process:
       - lose_memory: 2

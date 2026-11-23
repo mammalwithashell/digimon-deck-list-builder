@@ -38,7 +38,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Knightmon] in its text and 1 card with [Knightmon] in its name among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Knightmon]-text card and 1 [Knightmon]-named card to hand; rest to deck bottom"
     process:
       - reveal_search:
@@ -55,7 +56,8 @@ effects:
               prompt: "Add 1 card with [Knightmon] in its name to the hand"
           remainder: bottom
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your other Digimon with [Knightmon] in its text, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

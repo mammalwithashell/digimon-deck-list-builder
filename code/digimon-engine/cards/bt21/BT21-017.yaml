@@ -22,7 +22,8 @@ effects:
   # optional: true — "you may" makes this player-optional.
   # condition: count_lte with tamer kind in battle_area ≤ 1 gates activation.
   # process: select_hand filtered to Owen Dreadnought tamers → play_from_hand_free.
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Owen Dreadnought] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     summary: "If ≤1 Tamer, you may play Owen Dreadnought from hand free"
     condition:
@@ -49,7 +50,8 @@ effects:
   # stack is removed from, gain 1 memory.
   #
   # Identical shape to BT21-008 / BT24-008 inherited clause.
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     active_when: { your_turn: true }

@@ -5,7 +5,8 @@ color: [green]
 cost: 2
 
 effects:
-  - when: on_suspend
+  - text: "[Your Turn] When one of your opponent's Digimon becomes suspended, you may suspend this Tamer to gain 1 memory."
+    when: on_suspend
     optional: true
     active_when: { your_turn: true }
     condition:
@@ -19,7 +20,8 @@ effects:
       - activation_cost: { suspend_self: true }
       - gain_memory: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

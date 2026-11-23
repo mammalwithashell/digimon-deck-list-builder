@@ -68,7 +68,8 @@ alt_paths:
 effects:
   # ─── [Trash][Your Turn] own [Chronomon]-text / [Titan] Digimon played, opp
   #     ≥5 memory → bottom-deck this card → it gains <Rush> + <Execute> ──────
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your [Chronomon] text or [Titan] trait Digimon are played, if your opponent has 5 or more memory, by returning this card to the bottom of the deck, 1 of them gains ＜Rush＞ and ＜Execute＞ for the turn."
+    when: on_ally_played
     scope: trash
     optional: true
     active_when: { your_turn: true }
@@ -100,7 +101,8 @@ effects:
 
   # ─── [On Play][When Digivolving] by deleting this Digimon, may play 1 cost
   #     ≤12 [Chronomon]-text / [Titan] card from trash free ─────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By deleting this Digimon, you may play 1 play cost 12 or lower [Chronomon] text or [Titan] trait card from your trash without paying the cost."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] By deleting this Digimon, you may play 1 play cost 12 or lower [Chronomon] text or [Titan] trait card from your trash without paying the cost"
     process:

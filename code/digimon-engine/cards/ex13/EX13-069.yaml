@@ -33,7 +33,8 @@ cost: 3
 traits: [CS]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have a Digimon with [Veemon] or [Veedramon] in its name, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       any_permanent:
         of: you
@@ -46,7 +47,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_unsuspend
+  - text: "[Your Turn] When any of your Digimon unsuspend, by suspending this Tamer, ＜Draw 1＞. After, 1 of your Digimon may digivolve into a Digimon card with [Veedramon] in its name in the hand with the cost reduced by 2."
+    when: on_unsuspend
     active_when: { your_turn: true }
     optional: true
     condition:
@@ -92,7 +94,8 @@ effects:
                 cost: { reduce: 2 }
                 ignore_requirements: false
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

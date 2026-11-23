@@ -144,7 +144,8 @@ effects:
   #  the cost.)"
   # DCGO: BlastDigivolveEffect at OnCounterTiming.
   # Face-up declarative keyword grant per BT17-018 canonical pattern.
-  - kind: grant_keyword
+  - text: "[Hand]"
+    kind: grant_keyword
     keyword: BlastDigivolve
 
   # ─── Clause 1 — [On Play][When Digivolving] mass trash + return trash + memory ─
@@ -164,7 +165,8 @@ effects:
   # inspects the cards this effect actually returned to the deck. After the
   # chosen trash is bottom-decked, the rider gains 3 memory iff a white Lv.7
   # card was among the returned cards.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] Trash all digivolution cards of all of your opponent's Digimon. Then, return all cards in your or your opponent's trash to the bottom of the deck. If this effect returned level 7 white cards, gain 3 memory."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash all opp digi sources; choose a trash to bottom-deck; +3 memory if a returned card is white Lv.7"
     process:
       - for_each:
@@ -218,7 +220,8 @@ effects:
   # Condition: at least 1 eligible opponent Digimon must exist to present the
   #   choice. CanActivateCondition in DCGO checks HasMatchConditionPermanent
   #   before offering the selection.
-  - when: when_attacking
+  - text: "[When Attacking] By returning 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck, unsuspend this Digimon."
+    when: when_attacking
     optional: true
     summary: "[When Attacking] By returning 1 opp Digimon (no digi cards) to deck bottom, unsuspend self"
     condition:

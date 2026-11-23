@@ -40,7 +40,8 @@ alt_paths:
 
 effects:
   # ─── [On Play][When Digivolving] trash 2N opponent digivolution cards ───────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] For each of your Digimon with the [Royal Knight] trait and each of your blue Tamers, trash the top 2 digivolution cards of 1 of your opponent's Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash top 2N sources of 1 opp Digimon, N = own Royal Knights + blue Tamers"
     condition:
       any_permanent:
@@ -76,7 +77,8 @@ effects:
                         - color_is: blue
 
   # ─── [Your Turn][OPT] bounce 1 no-source opp Digimon on RK/blue-Tamer play ──
-  - when: on_enter_field_anyone
+  - text: "[Your Turn][Once Per Turn] When you play a Digimon with the [Royal Knight] trait or a blue Tamer, return 1 of your opponent's Digimon with no digivolution cards to the hand."
+    when: on_enter_field_anyone
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][OPT] On own [Royal Knight]/blue-Tamer play, return 1 opp Digimon with no sources to hand"

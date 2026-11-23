@@ -63,7 +63,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Trash the top 3 cards of your deck."
+    when: when_digivolving
     summary: "[When Digivolving] Trash the top 3 cards of your deck"
     process:
       - trash_from_top: { of: you, count: 3 }

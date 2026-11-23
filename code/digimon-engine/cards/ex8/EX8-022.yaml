@@ -122,7 +122,8 @@ effects:
   # (Game::resolve_battle): when either combatant has it, the battle compares
   # `card_sources.len()` instead of effective DP. Security battles route
   # through resolve_player_security_loop and are unaffected.
-  - kind: grant_keyword
+  - text: "＜Iceclad＞ (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.)"
+    kind: grant_keyword
     keyword: Iceclad
     summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
 
@@ -139,7 +140,8 @@ effects:
   # skipped but the (vacuously true) memory check still grants 1. The DSL's
   # empty mandatory select drops its captured tail, so the memory leg is
   # duplicated into an explicit else arm — same observable behavior.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, gain 1 memory."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash the bottom 2 digivolution cards from 1 opponent Digimon; then if the opponent has no Digimon with digivolution cards, gain 1 memory"
     process:
       - if:
@@ -186,7 +188,8 @@ effects:
   # CanActivateCondition gate). "Until the end of their turn" = DCGO
   # EffectDuration.UntilOpponentTurnEnd = expiry: end_of_opponents_turn.
   # Same shape as EX8-019's inherited clause.
-  - scope: inherited
+  - text: "[When Attacking] Give 1 of your opponent's Digimon ＜Security A. -1＞ until the end of their turn."
+    scope: inherited
     when: when_attacking
     summary: "[Inherited][When Attacking] Give 1 opponent Digimon Security A. -1 until the end of their turn"
     process:

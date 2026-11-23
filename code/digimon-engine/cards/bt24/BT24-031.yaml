@@ -23,7 +23,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add one Iliad and one TS card"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -44,7 +45,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: ts_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[When Attacking] Add top security to hand; if you have 0 security, Recovery +1"

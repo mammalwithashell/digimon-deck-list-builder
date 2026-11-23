@@ -21,16 +21,19 @@ alt_paths:
       source_count: {filter: {trait_has: Hybrid}, at_least: 2}
     cost: 3
 effects:
-  - kind: grant_keyword
+  - text: "＜Jamming＞"
+    kind: grant_keyword
     keyword: Jamming
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn."
+    when: [when_digivolving, when_attacking]
     process:
       - select_opponent_permanent:
           filter: {kind: digimon}
           bind_as: victim
           prompt: Give 1 opponent Digimon -4000 DP for the turn
       - add_dp_modifier: {target: victim, value: -4000, expiry: end_of_turn}
-  - when: [end_of_attack, on_deletion]
+  - text: "[End of Attack] [On Deletion] You may play 1 yellow, black or purple Tamer card with inherited effects from your hand or trash without paying the cost. Then, by placing 1 [Hybrid] or [Ten Warriors] trait card from your hand under this Digimon or your Tamers, ＜Draw 2＞."
+    when: [end_of_attack, on_deletion]
     process:
       - select_zone_cards:
           zones: [hand, trash]
@@ -73,7 +76,8 @@ effects:
                       condition: {binding_present: placed}
                       then:
                         - draw: {of: you, count: 2}
-  - scope: inherited
+  - text: "[When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn."
+    scope: inherited
     when: when_attacking
     process:
       - select_opponent_permanent:

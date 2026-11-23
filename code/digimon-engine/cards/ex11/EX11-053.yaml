@@ -13,7 +13,8 @@ attribute: Data
 also_treated_as: [X Antibody]
 
 effects:
-  - when: on_play
+  - text: "[On Play] By placing 1 [Royal Knight] trait Digimon card from your hand as the bottom digivolution card of any of your [King Drasil_7D6]s on the field, ＜Draw 1＞."
+    when: on_play
     summary: "[On Play] Place 1 Royal Knight from hand under fielded King Drasil_7D6 to Draw 1"
     condition:
       all_of:
@@ -66,7 +67,8 @@ effects:
   # Digimon's bottom digivolution source. DCGO EX11_053.cs splits this into a
   # hand/field/decline int prompt then a card pick; we expose the full candidate
   # union directly so the RL action space sees every option (CLAUDE.md §17).
-  - when: on_deletion
+  - text: "[On Deletion] If you have 1 or fewer security cards, you may play 1 [Omnimon (X Antibody)] from your hand or under your [King Drasil_7D6]s on the field without paying the cost. Then, place this card as the played Digimon's bottom digivolution card."
+    when: on_deletion
     optional: true
     condition: { security_count_lte: 1 }
     summary: "[On Deletion] At <=1 security, may free-play [Omnimon (X Antibody)] from hand or under a fielded King Drasil_7D6, then attach this card under it"

@@ -125,7 +125,8 @@ effects:
           ignore_requirements: true
 
   # ─── Clause C — Inherited [All Turns][OPT] win battle → trash top security ──
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, trash their top security card."
+    scope: inherited
     when: [on_any_deletion]
     once_per_turn: true
     active_when: { all_turns: true }

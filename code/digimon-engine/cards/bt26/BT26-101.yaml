@@ -123,7 +123,8 @@ effects:
                 prompt: "1 of your [TS] trait Digimon unsuspends"
             - unsuspend: { target: woken }
 
-  - when: on_security
+  - text: "[Security] You may play 1 play cost 4 or lower [TS] trait card from your hand or trash without paying the cost."
+    when: on_security
     summary: "[Security] You may play 1 play cost 4 or lower [TS] trait card from your hand or trash without paying the cost"
     process:
       - select_union_zone:

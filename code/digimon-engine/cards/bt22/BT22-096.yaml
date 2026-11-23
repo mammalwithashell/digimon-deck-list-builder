@@ -70,7 +70,8 @@ effects:
       - place_self_as_delay_option: {}
 
   # ─── Clause 2: [Your Turn] [Yao Qinglan] suspends -> <Delay> digivolve -3 ────
-  - kind: delay
+  - text: "[Your Turn] When any of your [Yao Qinglan] suspend, ＜Delay＞. ・1 of your Digimon with [Aqua] or [Sea Animal] in any of its traits may digivolve into an [Aquatic] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3."
+    kind: delay
     trigger: on_suspend
     active_when:
       all_of:
@@ -119,7 +120,8 @@ effects:
                 ignore_requirements: false
 
   # ─── Clause 3: [Security] activate this card's [Main] effects ────────────────
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Activate this card's [Main] effects: may play 1 [Sangomon]/[Yao Qinglan] from hand or trash free; place this card in the battle area"

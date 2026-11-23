@@ -9,7 +9,8 @@ cost: 0
 traits: [Lesser, DS]
 form: In-Training
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If you have 0 memory, gain 1 memory."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:

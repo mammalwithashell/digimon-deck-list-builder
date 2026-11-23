@@ -45,7 +45,8 @@ traits: [Lesser, DATA SQUAD]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a Digimon card with [Kentaurosmon] in its name or the [Holy Beast] trait in the hand with the cost reduced by 1."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     active_when: { your_turn: true }

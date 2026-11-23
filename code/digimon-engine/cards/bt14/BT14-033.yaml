@@ -86,7 +86,8 @@ attribute: Data
 effects:
   # ─── [Start of Your Main Phase] search + digivolve-from-security + shuffle +
   #     conditional hand-to-bottom-security follow-up ────────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] Search your security stack. This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them without paying the cost. Then, shuffle your security stack. If digivolved by this effect, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack."
+    when: start_of_your_main_phase
     summary: "[SoMP] Search security; may digivolve into a yellow [Vaccine] Digimon among them without paying the cost; then shuffle; if digivolved, may place 1 yellow [Vaccine] hand card at the bottom of security"
     process:
       - search_own_security_stack:
@@ -117,7 +118,6 @@ effects:
                 optional: true
                 filter:
                   all_of:
-                    - kind: digimon
                     - color_is: yellow
                     - trait_has: Vaccine
                 prompt: "If digivolved by this effect, you may place 1 yellow [Vaccine] card from your hand at the bottom of your security stack"
@@ -139,7 +139,8 @@ effects:
   # printed [Your Turn] gate (DCGO IsOwnerTurn). No `optional:` — the inherited
   # text has no "may" (unlike BT8-090's suspend-cost sibling); mandatory
   # `gain_memory: 1` (BT8-090 / BT25-038 idiom, minus the cost gate).
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When a card is added to your security stack, gain 1 memory."
+    scope: inherited
     when: on_added_to_security
     active_when: { your_turn: true }
     once_per_turn: true

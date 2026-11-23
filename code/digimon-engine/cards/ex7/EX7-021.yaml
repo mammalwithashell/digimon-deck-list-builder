@@ -110,7 +110,8 @@ effects:
   # (Game::resolve_battle): when either combatant has it, the battle compares
   # `card_sources.len()` instead of effective DP. Security battles route
   # through resolve_player_security_loop and are unaffected.
-  - kind: grant_keyword
+  - text: "＜Iceclad＞ (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.)"
+    kind: grant_keyword
     keyword: Iceclad
     summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
 
@@ -126,7 +127,8 @@ effects:
   # SelectTrashDigivolutionCards. The unsuspend check runs AFTER the trash
   # resolves and ALSO when nothing could be trashed (per-step gates, not a
   # clause-level condition — EX7-020 idiom).
-  - when: when_digivolving
+  - text: "[When Digivolving] Trash any 2 digivolution cards under your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, this Digimon unsuspends."
+    when: when_digivolving
     summary: "[WD] Trash any 2 digivolution cards under opp Digimon; then if opp has no Digimon with digivolution cards, this Digimon unsuspends"
     process:
       # Trash half — availability split encoding DCGO's min(total, 2) cap.
@@ -208,7 +210,8 @@ effects:
   # `security_attack: 1` lowers to ModifierType::SecurityAttackChange +1 and
   # `grant_keyword: Piercing` to a declarative keyword grant; the per-tick
   # declarative rebuild keeps the active_when gate symmetric (on/off).
-  - scope: inherited
+  - text: "[Your Turn] While your opponent has no Digimon with digivolution cards, this Digimon with the [Ice-Snow] trait gains ＜Piercing＞ and ＜Security A. +1＞."
+    scope: inherited
     kind: aura
     target: {}
     active_when:

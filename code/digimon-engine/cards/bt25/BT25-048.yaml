@@ -53,7 +53,8 @@ alt_paths:
 
 effects:
   # ─── Clause 0: [Your Turn] -1 cost when THIS digivolves into a [TS] Digimon ──
-  - kind: cost_reduction
+  - text: "[Your Turn] When this Digimon would digivolve into a green [TS] trait Digimon card, reduce the cost by 1."
+    kind: cost_reduction
     scope: face_up
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
@@ -65,7 +66,8 @@ effects:
     summary: "[Your Turn] When THIS Digimon digivolves into a [TS] Digimon card, reduce the cost by 1"
 
   # ─── Clause 1: Inherited [All Turns][OPT] on winning a battle, draw 1 ────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon wins a battle, ＜Draw 1＞."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     condition: { source_deleted_battle_opponent: true }

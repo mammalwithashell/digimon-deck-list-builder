@@ -64,7 +64,8 @@ effects:
     security_attack: 1
     summary: "<Security A. +1>"
 
-  - kind: grant_keyword
+  - text: "＜Iceclad＞"
+    kind: grant_keyword
     keyword: Iceclad
     summary: "<Iceclad> (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.)"
 
@@ -76,7 +77,8 @@ effects:
     exclude_cause: [own_effect, battle]
 
   # ─── [When Digivolving][When Attacking] bottom-deck 1 opp Digimon ───────────
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck."
+    when: [when_digivolving, when_attacking]
     summary: "[When Digivolving][When Attacking] Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
     process:
       - select_opponent_permanent:
@@ -93,7 +95,8 @@ effects:
           position: bottom
 
   # ─── [When Attacking][Counter][OPT] trash opp sources; may end attack ───────
-  - when: [when_attacking, counter]
+  - text: "[When Attacking] [Counter] [Once Per Turn] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack."
+    when: [when_attacking, counter]
     once_per_turn: true
     summary: "[When Attacking][Counter][OPT] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack"
     process:

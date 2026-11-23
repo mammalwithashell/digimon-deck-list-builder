@@ -59,7 +59,8 @@ effects:
   # DCGO trashes the top 3 digivolution cards from each opponent Digimon, then
   # if the trigger came from Jogress/DNA, selects up to 2 opponent Digimon with
   # no digivolution cards and applies CannotAttack until opponent turn end.
-  - when: when_digivolving
+  - text: "[When Digivolving] Trash the top 3 digivolution cards of all of your opponent's Digimon. Then, if DNA digivolving, 2 of your opponent's Digimon with no digivolution cards can't attack until the end of your opponent's turn."
+    when: when_digivolving
     summary: "[When Digivolving] Trash top 3 opp sources; if DNA, up to 2 no-source opp Digimon can't attack"
     process:
       - trash_top_n_digivolution_cards_of_each:
@@ -111,7 +112,8 @@ effects:
   #     || carrier.TopCard.TypeTexts.Contains(TypeText.Free)
   #   ActivateCoroutine: GainMemory(+1)
   #
-  - scope: inherited
+  - text: "[End of Attack] If this Digimon has [Imperialdramon] in its name or the [Free] trait, gain 1 memory."
+    scope: inherited
     when: end_of_attack
     condition:
       any_of:

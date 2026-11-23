@@ -26,17 +26,20 @@ effects:
   # GAP G-DECLARATIVE-KEYWORD: `EffectTiming::Declarative` is compiled but never
   # enqueued/fired. The grant_keyword modifier is not installed at runtime. Tests
   # for keyword-grant modifier presence were #[ignore]'d on G-DECLARATIVE-KEYWORD (now RESOLVED, qa/resolved-gaps.md).
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
 
   # ─── Clause (b): <Piercing> ───────────────────────────────────────────────
   # Declarative keyword grant. Same G-DECLARATIVE-KEYWORD note as clause (a).
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
 
   # ─── Clause (c): <Blocker> ────────────────────────────────────────────────
   # Declarative keyword grant. Same G-DECLARATIVE-KEYWORD note as clause (a).
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
   # ─── Clause (d): [On Play][When Digivolving] board-wipe + return ──────────
@@ -113,7 +116,8 @@ effects:
   #
   # Same shape as AD1-025 Omnimon clause (d): `for_each` board mutation
   # followed by sequential `select_opponent_permanent` + body steps.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, choose 1 of each player's Digimon and delete all other Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] If Omnimon/X Antibody in digivolution cards → choose 1 to protect per player, delete rest; return 1 opp Digimon to bottom of deck"
     condition:
       any_of:
@@ -175,7 +179,8 @@ effects:
   #   `once_per_turn: true` on triggered clauses compiles to `Effect::max_per_turn=1`
   #   but `run_queued_effect_inner` does not enforce it for triggered effects. The clause
   #   will over-fire until this gap closes.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] 1 of your Digimon may gain ＜Rush＞ for the turn and attack without suspending."
+    when: end_of_your_turn
     once_per_turn: true
     optional: true
     summary: "[EOT][OPT] 1 of your Digimon gains Rush for the turn; attack without suspending"

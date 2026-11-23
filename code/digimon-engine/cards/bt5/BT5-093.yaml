@@ -59,7 +59,8 @@ cost: 4
 
 effects:
   # ─── Clause 1: [Start of Your Turn] +2 memory if opp has Lv.6+ Digimon ────
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If your opponent has a level 6 or higher Digimon in play, gain 2 memory."
+    when: start_of_your_turn
     summary: "[Start of Your Turn] If opponent has a Lv.6+ Digimon in play, gain 2 memory"
     condition:
       any_permanent:
@@ -71,7 +72,8 @@ effects:
       - gain_memory: 2
 
   # ─── Clause 2: [Your Turn] your [Omnimon] gain <Security A. +1> ───────────
-  - kind: aura
+  - text: "[Your Turn] All of your Digimon with [Omnimon] in their names gain ＜Security Attack +1＞. (This Digimon checks 1 additional security card.)"
+    kind: aura
     summary: "[Your Turn] Your [Omnimon] Digimon gain <Security A. +1>"
     active_when: { your_turn: true }
     target:
@@ -82,7 +84,8 @@ effects:
     grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
 
   # ─── Clause 3: [Security] play self without paying the cost ───────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

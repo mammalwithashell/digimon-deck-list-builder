@@ -65,7 +65,8 @@ effects:
       - gain_memory: 1
 
   # ─── Inherited <Retaliation> ───────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation
     summary: "Inherited <Retaliation>"

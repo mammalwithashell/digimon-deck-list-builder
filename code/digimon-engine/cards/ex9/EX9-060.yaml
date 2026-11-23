@@ -119,13 +119,15 @@ alt_paths:
 
 effects:
   # ─── Clause 1 — <Training> (printed keyword, shared substrate) ────────────
-  - kind: grant_keyword
+  - text: "＜Training＞ (In the main phase, by suspending this Digimon, place your deck's top card face down as this Digimon's bottom digivolution card. This effect can also activate in the breeding area.)"
+    kind: grant_keyword
     keyword: Training
 
   # ─── Clause 2 — [When Digivolving][When Attacking][Once Per Turn] ─────────
   # "By placing 1 card in your hand face down as this Digimon's bottom
   #  digivolution card, <Draw 1>."
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] By placing 1 card in your hand face down as this Digimon's bottom digivolution card, ＜Draw 1＞."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[When Digivolving][When Attacking][OPT] By placing 1 hand card face down as bottom source, Draw 1"
     process:
@@ -145,7 +147,8 @@ effects:
 
   # ─── Clause 3 — Inherited [On Deletion] ────────────────────────────────────
   # "Delete 1 of your opponent's level 4 or lower Digimon."
-  - scope: inherited
+  - text: "[On Deletion] Delete 1 of your opponent's level 4 or lower Digimon."
+    scope: inherited
     when: on_deletion
     summary: "[Inherited][On Deletion] Delete 1 of your opponent's level 4 or lower Digimon"
     process:

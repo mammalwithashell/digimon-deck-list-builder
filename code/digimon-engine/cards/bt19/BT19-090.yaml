@@ -61,7 +61,8 @@ effects:
                 targets: player
                 optional: false
 
-  - when: on_security
+  - text: "[Security] You may play 1 [Xros Heart] trait Digimon card with 4000 DP or less from under your Tamers without paying the cost."
+    when: on_security
     summary: "[Security] Play 1 low-DP Xros Heart Digimon from under a Tamer without paying the cost"
     process:
       - select_under_tamer_sources:

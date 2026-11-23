@@ -76,7 +76,8 @@ effects:
             - unsuspend: { target: ally }
           else:
             - refund_opt: {}
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts would leave the battle area other than in battle, by suspending this Digimon, they don't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

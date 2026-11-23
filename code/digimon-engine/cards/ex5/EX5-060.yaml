@@ -119,6 +119,7 @@ effects:
           hand_index: recur_pick
 
   # â”€â”€â”€ Inherited â€” <Piercing> â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  - kind: grant_keyword
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon, it performs any security checks it normally would.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Piercing

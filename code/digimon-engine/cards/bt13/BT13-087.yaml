@@ -15,7 +15,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Lucemon] in their names or the [Royal Knight] trait among them to the hand. Trash the rest."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal top 4; add up to 2 Lucemon/Royal Knight cards; trash the rest"
     process:
       - reveal_top_deck:
@@ -75,7 +76,8 @@ effects:
   # level_lte: 4 rejects None-level cards (predicate excludes cards without a
   # printed level), mirroring DCGO's TopCard.HasLevel guard. The delete is a
   # for_each (no player choice — "delete ALL"), so it installs no selection.
-  - when: on_ally_played
+  - text: "[Your Turn] When you play another Digimon with [Lucemon] in its name or the [Royal Knight] trait, delete all of your opponent's level 4 or lower Digimon."
+    when: on_ally_played
     active_when: { your_turn: true }
     summary: "[Your Turn] When you play another Lucemon/Royal Knight Digimon, delete all opponent level 4 or lower Digimon"
     trigger_if:

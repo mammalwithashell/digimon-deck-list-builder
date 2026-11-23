@@ -185,7 +185,8 @@ effects:
   # ─── Static keyword: <Blocker> ────────────────────────────────────────────
   # DCGO BT22_015.cs:108 — BlockerSelfStaticEffect at None timing,
   # isInheritedEffect: false. Standard face-up declarative.
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
   # ─── <Decode (Red/Black Lv.3)> ─────────────────────────────────────────────
@@ -259,7 +260,8 @@ effects:
   # select prompt offers all opp Digimon rather than only the lowest-DP one.
   # The YAML faithfully encodes the printed filter; the evaluator gap is
   # cross-card.
-  - when: [on_play, when_attacking]
+  - text: "[On Play] [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP."
+    when: [on_play, when_attacking]
     summary: "[On Play][When Attacking] Delete 1 opp Digimon with lowest DP"
     process:
       - select_opponent_permanent:
@@ -290,7 +292,8 @@ effects:
   #      CanAttack(activateClass), SelectAttackEffect with
   #      canAttackPlayerCondition: () => true, defenderCondition: any.
   #
-  - when: when_digivolving
+  - text: "[When Digivolving] For every 2 same-level cards this Digimon's stack has, return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may attack."
+    when: when_digivolving
     summary: "[When Digivolving] Bottom-deck opponent Digimon per same-level pairs; then this Digimon may attack"
     process:
       - select_count_capped_multi:

@@ -104,7 +104,8 @@ effects:
       - delete_permanent: { target: opp_target }
 
   # ─── Clause 2 — [Security] mandatory delete of an unsuspended opp Digimon ──
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's unsuspended Digimon."
+    when: on_security
     summary: "[Security] Delete 1 of your opponent's unsuspended Digimon"
     process:
       - select_opponent_permanent:

@@ -168,7 +168,8 @@ effects:
   # Identical printed body, inherited scope (DCGO duplicate ActivateClass with
   # SetIsInheritedEffect(true), hash "AddSecurity_BT13_015_inherited" —
   # INDEPENDENT OPT counter from Clause C's).
-  - scope: inherited
+  - text: "[All Turns][Once Per Turn] When one of your red or yellow Tamers is deleted, place 1 [Marcus Damon] from your trash on top of your security stack face down."
+    scope: inherited
     when: on_any_deletion
     active_when: { all_turns: true }
     once_per_turn: true

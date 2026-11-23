@@ -75,7 +75,8 @@ form: In-Training
 
 effects:
   # ─── Inherited [All Turns][OPT] battle-delete → gain 1 memory ───────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, if this Digimon has 2 or more colors, gain 1 memory."
+    scope: inherited
     when: [on_any_deletion]
     active_when: { all_turns: true }
     once_per_turn: true

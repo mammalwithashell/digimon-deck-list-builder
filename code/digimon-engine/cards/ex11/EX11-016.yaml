@@ -156,7 +156,8 @@ effects:
   # (Game::resolve_battle): when either combatant has it, the battle compares
   # `card_sources.len()` instead of effective DP. Security battles route
   # through resolve_player_security_loop and are unaffected. EX8-022 idiom.
-  - kind: grant_keyword
+  - text: "＜Iceclad＞"
+    kind: grant_keyword
     keyword: Iceclad
     summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
 
@@ -173,7 +174,8 @@ effects:
   # authoring note. The place select is gated only by its own candidate
   # filter (sourceless opponent Digimon): with no candidate it silently
   # skips, and a Digimon stripped bare by the trash IS a legal target.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon. Then, you may place 1 of their Digimon with no digivolution cards as the top or bottom security card."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash any 2 digivolution cards from the opponent's Digimon; then you may place 1 sourceless opponent Digimon as the top or bottom security card"
     condition:
       any_field_permanent: { of: opponent, kind: digimon }
@@ -265,7 +267,8 @@ effects:
   #   3. no_permanent(opponent, battle_area, digimon, stack >= 2) — "your
   #      opponent has no Digimon with digivolution cards" (stack size
   #      includes the top card, so >= 1 digivolution card ⇔ stack >= 2).
-  - scope: inherited
+  - text: "[Your Turn] While your opponent has no Digimon with digivolution cards, this [Ice-Snow] trait Digimon gains ＜Piercing＞ and ＜Security A. +1＞."
+    scope: inherited
     kind: aura
     target: {}
     active_when:

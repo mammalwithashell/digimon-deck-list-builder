@@ -54,7 +54,8 @@ alt_paths:
 effects:
   # ─── [On Play][When Digivolving] may suspend 1 opp Digimon/Tamer; then 1 opp
   #     Digimon/Tamer can't unsuspend until their turn ends ──────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may suspend 1 opp Digimon/Tamer; then 1 of their Digimon/Tamers can't unsuspend until their turn ends"
     process:
       - select_opponent_permanent:
@@ -86,7 +87,8 @@ effects:
 
   # ─── [Your Turn][OPT] opp Digimon/Tamer suspends OR effects trash from under
   #     your Tamers → this Digimon may digivolve (hand, cost -1) ────────────────
-  - when: [on_suspend, on_digivolution_card_trashed]
+  - text: "[Your Turn] [Once Per Turn] When any of your opponent's Digimon or Tamers suspend, or effects trash cards from under your Tamers, this Digimon may digivolve into a [Vegetation], [Fairy] or [DATA SQUAD] trait Digimon card in the hand with the cost reduced by 1."
+    when: [on_suspend, on_digivolution_card_trashed]
     once_per_turn: true
     active_when: { your_turn: true }
     timing_conditions:
@@ -130,7 +132,8 @@ effects:
 
   # ─── Inherited [All Turns][OPT] Rosemon-name / DATA SQUAD carrier would leave
   #     → trash 1 bottom face-down card under a Tamer → it doesn't leave ───────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Rosemon] in its name or the [DATA SQUAD] trait would leave the battle area, by trashing the bottom face-down card from under any of your Tamers, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

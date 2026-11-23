@@ -149,7 +149,8 @@ effects:
   #
   # DCGO: SecuritySkill, AddThisCardToHand(card) — mandatory, no
   # canNoSelect parameter on the factory.
-  - scope: inherited
+  - text: "[Security] Add this card to the hand."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security][Inherited] Add this card to the hand"

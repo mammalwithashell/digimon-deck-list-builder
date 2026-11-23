@@ -122,7 +122,8 @@ effects:
   # self-contained sub-run (control_flow.rs `run_steps_with_runtime`), so the
   # outer process list correctly evaluates step 2's own gate independently of
   # whether step 1 fired.
-  - when: when_digivolving
+  - text: "[When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, return 1 of their suspended Tamers to the bottom of the deck."
+    when: when_digivolving
     summary: "[When Digivolving] Suspend 1 opp Digimon/Tamer; then return 1 opp suspended Tamer to bottom of deck"
     process:
       # Step 1: suspend 1 opponent Digimon or Tamer (independently gated).

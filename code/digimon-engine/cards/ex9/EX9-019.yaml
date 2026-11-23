@@ -176,7 +176,8 @@ effects:
   # `selectedPermanent.UntilOwnerTurnEndEffects.Add(...)` which keys expiry
   # off the SELECTED PERMANENT'S OWNER (the opponent here). Same pattern as
   # BT17-027 lock branch and BT24-040 / BT15-101.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 opp Digimon/Tamer can't suspend until end of their turn"
     process:
       - select_opponent_permanent:

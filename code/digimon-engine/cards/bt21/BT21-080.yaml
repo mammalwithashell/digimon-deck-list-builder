@@ -32,7 +32,8 @@ cost: 4
 traits: [Hero]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -42,7 +43,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_add_digivolution_cards
+  - text: "[Your Turn] When effects place digivolution cards under any of your Digimon with [Gammamon] in their texts or the [Hero] trait, by suspending this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: on_add_digivolution_cards
     optional: true
     active_when: { your_turn: true }
     trigger_if:
@@ -59,7 +61,8 @@ effects:
       - draw: { of: you, count: 1 }
       - gain_memory: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

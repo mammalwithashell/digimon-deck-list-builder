@@ -152,7 +152,8 @@ effects:
       - gain_memory: 1
 
   # ─── [Security] same triple level-filtered delete, no self-placement ───────
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their level 5 Digimon."
+    when: on_security
     summary: "[Security] Delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon"
     process:
       - select_opponent_permanent:

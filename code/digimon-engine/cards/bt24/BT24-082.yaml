@@ -42,7 +42,8 @@ traits: [LIBERATOR]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] ─────────────────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Owen Dreadnought] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Elizamon] from your trash without paying the cost."
+    when: start_of_your_main_phase
     optional: true
     summary: "[Start of Main Phase] Return self to deck bottom → play Owen from hand free; if no Digimon play Elizamon from trash free"
     process:
@@ -80,7 +81,8 @@ effects:
 
   # ─── Clause 2: [Your Turn] on_digivolve ──────────────────────────────────
   # optional: true — "by suspending this Tamer" is the activation cost.
-  - when: on_digivolve
+  - text: "[Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] trait Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack."
+    when: on_digivolve
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When Digimon digivolves into Reptile/Dragonkin, suspend self → +3000 DP for turn; may attack"
@@ -104,7 +106,8 @@ effects:
           optional: true
 
   # ─── Security clause ────────────────────────────────────────────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

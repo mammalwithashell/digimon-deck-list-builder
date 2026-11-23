@@ -64,7 +64,8 @@ effects:
           body:
             - trash_from_reveal: { of: you, card: rest }
 
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Activate [Main] search effects, then place self in battle area"

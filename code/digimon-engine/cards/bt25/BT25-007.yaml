@@ -68,7 +68,8 @@ effects:
     summary: "[Link] +2000 DP to the linked Digimon"
 
   # ─── [On Play] reveal 3; add 1 Appmon + 1 Social/Tool/Reboot/Creation ──────
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Appmon] trait card and 1 [Social], [Tool], [Reboot] or [Creation] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Appmon] and 1 [Social]/[Tool]/[Reboot]/[Creation]; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

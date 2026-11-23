@@ -150,7 +150,8 @@ effects:
   # whole OptionSkill, ending in PlaceDelayOptionCards, ST23_15.cs:98/106).
   # Deck audit 2026-11-10: the placement was missing, so e-Pulse went to the
   # trash and its [Start of Your Main Phase] never fired.
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
     summary: "[Security] Activate this card's [Main] effects"
     process:
       - select_union_zone:

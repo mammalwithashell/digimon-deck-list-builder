@@ -144,7 +144,8 @@ effects:
   # clause's source carrier (`rctx.source_permanent`). `false` rejects the
   # fire when the digivolving permanent IS Tsunomon's own host carrier,
   # faithfully implementing DCGO `permanent != card.PermanentOfThisCard()`.
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your other Digimon digivolves, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: on_digivolve
     once_per_turn: true
     active_when: { your_turn: true }

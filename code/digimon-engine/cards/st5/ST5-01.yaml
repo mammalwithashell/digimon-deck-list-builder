@@ -8,7 +8,8 @@ traits: [Lesser]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] While this Digimon has ＜Blocker＞, it gets +1000 DP."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

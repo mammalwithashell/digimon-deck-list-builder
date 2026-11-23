@@ -32,7 +32,8 @@ alt_paths:
     from: { level_eq: 3, trait_has: TS }
     cost: 2
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, if there are 2 or more suspended Digimon, 1 of your opponent's Digimon can't unsuspend until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] May suspend 1 Digimon; then if 2+ suspended Digimon, 1 opp Digimon can't unsuspend until their turn ends"
     process:
       - select_any_permanent:
@@ -65,7 +66,8 @@ effects:
                 modifier: CannotUnsuspend
                 value: 1
                 expiry: end_of_opponents_turn
-  - kind: aura
+  - text: "[Your Turn] All of your Digimon get +1000 DP."
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     summary: "Inherited [Your Turn] All of your Digimon get +1000 DP"

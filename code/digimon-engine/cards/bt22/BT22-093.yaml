@@ -50,7 +50,8 @@ cost: 4
 traits: [CS]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       any_permanent:
         of: opponent
@@ -60,7 +61,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_digivolve
+  - text: "[Your Turn] When any of your Digimon digivolve into a Digimon with the [CS] trait, if it has a digivolution card with the same level as the digivolved Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon card with the [CS] trait in the hand without paying the cost."
+    when: on_digivolve
     optional: true
     active_when: { your_turn: true }
     condition: { source_is_unsuspended: true }
@@ -91,7 +93,8 @@ effects:
                 from_hand: cs_evo
                 cost: free
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

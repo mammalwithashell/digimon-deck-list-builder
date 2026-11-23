@@ -31,7 +31,8 @@ alt_paths:
 
 effects:
   # ─── Clause 0 — [Your Turn] digivolve-cost reduction for Mineral/Rock target ─
-  - kind: cost_reduction
+  - text: "[Your Turn] When this Digimon would digivolve into a card with the [Mineral] or [Rock] trait, reduce the digivolution cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when:
       all_of:

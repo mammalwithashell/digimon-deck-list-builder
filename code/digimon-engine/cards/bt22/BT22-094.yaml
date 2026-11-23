@@ -109,7 +109,8 @@ effects:
   # behavior. If no CS card is revealed, the bucket cannot be filled and
   # `select_reveal_buckets` resolves with no pick — the trailing
   # `place_remainder_on_deck` then bottoms all 3.
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [CS] card to hand; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -153,7 +154,8 @@ effects:
   #   - pay_cost: [return_to_deck { target: source, position: bottom }] —
   #       the cost. `target: source` resolves to ctx.source_permanent (this
   #       Tamer's permanent handle), per the BT17-093 / BT24-082 precedent.
-  - kind: cost_reduction
+  - text: "[Your Turn] When any of your Digimon or Tamers with the [CS] trait would be played, by returning this Tamer to the bottom of the deck, reduce the play cost by 2."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
     optional: true
@@ -181,7 +183,8 @@ effects:
   # Standard play_from_security pattern (cf. BT17-093, BT18-087, BT22-084,
   # BT21-015, BT9-092, EX11-054). Mandatory (no [Security] effect is opt-out
   # per the rules manual §16 / RULES_CONTEXT.md).
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

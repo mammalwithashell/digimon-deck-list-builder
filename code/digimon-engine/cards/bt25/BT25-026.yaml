@@ -105,7 +105,8 @@ effects:
   # no eligible target exists. The lock targets an opp Digimon with NO
   # digivolution cards (materials_count_lte: 0); the CannotSuspend expires at the
   # end of the target's (opponent's) turn ("until their turn ends").
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Trash bottom 3 sources of 1 opp Digimon; then 1 opp Digimon with no sources can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
@@ -129,7 +130,8 @@ effects:
           expiry: end_of_opponents_turn
 
   # ─── Clause B — [Your Turn] red played/digivolve → digivolve into Dianamon (trash), cost -2 ─
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When your Digimon are played or digivolve, if any of them are red, this Digimon may digivolve into [Dianamon] in the trash with the cost reduced by 2."
+    when: [on_enter_field_anyone, on_digivolve]
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon are played/digivolve and any are red, this Digimon may digivolve into [Dianamon] in the trash with cost -2"
@@ -153,7 +155,8 @@ effects:
           ignore_requirements: false
 
   # ─── Inherited [Your Turn] attack target can't change ────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon's attack target can't change."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

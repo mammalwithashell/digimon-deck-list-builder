@@ -50,7 +50,8 @@ effects:
           then:
             - draw: { of: you, count: 1 }
 
-  - scope: inherited
+  - text: "[End of Attack] [Once Per Turn] Gain 1 memory."
+    scope: inherited
     when: end_of_attack
     once_per_turn: true
     summary: "[Inherited][End of Attack][Once Per Turn] Gain 1 memory"

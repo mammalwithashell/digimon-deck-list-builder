@@ -52,7 +52,8 @@ cost: 4
 traits: [DATA SQUAD]
 
 effects:
-  - when: [start_of_your_main_phase, on_play]
+  - text: "[Start of Your Main Phase] [On Play] You may place your deck's top card face down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory."
+    when: [start_of_your_main_phase, on_play]
     summary: "[Start of Your Main Phase][On Play] You may place your deck's top card face down under this Tamer; then, if your opponent has a Digimon, gain 1 memory"
     process:
       - if:
@@ -184,7 +185,8 @@ effects:
           cost: { reduce: 1 }
           ignore_level: true
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

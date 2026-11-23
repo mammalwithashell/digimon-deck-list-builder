@@ -176,7 +176,8 @@ alt_paths:
 
 effects:
   # ─── Clause 1: [On Play] reveal top 3 — two-bucket search ───────────────
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Vemmon] in its text to the hand and place 1 [Vemmon] as any of your Digimon's bottom digivolution card. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add 1 [Vemmon]-in-text card to hand and place 1 [Vemmon] as any own Digimon's bottom digivolution card; rest to bottom"
     condition:
       any_permanent:
@@ -241,7 +242,8 @@ effects:
   # `cost_target` keeps the widened `any_of` HasText axes as bucket 1 (see
   # file-header note) so a future Vemmon-named/trait target with no
   # self-referential body text is still recognized.
-  - kind: cost_reduction
+  - text: "[Your Turn] [Once Per Turn] When this Digimon would digivolve into a Digimon card with [Vemmon] in its text, reduce the digivolution cost by 1."
+    kind: cost_reduction
     scope: inherited
     reduction_timing: before_pay_cost
     once_per_turn: true

@@ -15,7 +15,8 @@ alt_paths:
     from: { level_eq: 2, color_is: blue }
     cost: 0
 effects:
-  - scope: inherited
+  - text: "[When Attacking][Once Per Turn] If this Digimon has [Hybrid] or [Ten Warriors] in its form or type, gain 1 memory."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:

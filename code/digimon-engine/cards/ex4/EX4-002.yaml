@@ -30,7 +30,8 @@ traits: [Lesser]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When an effect suspends one of your Digimon, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: on_suspend
     once_per_turn: true
     active_when: { your_turn: true }

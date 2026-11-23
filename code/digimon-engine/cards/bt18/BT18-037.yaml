@@ -33,7 +33,8 @@ alt_paths:
     from: { name_is: KendoGarurumon }
     cost: 0
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Search your security stack. You may add 1 card with the [Hybrid] or [Ten Warriors] trait among it to the hand. If this added, ＜Recovery +1 ≪Deck≫＞. Then, shuffle your security stack."
+    when: when_digivolving
     process:
       - search_own_security_stack:
           bind_as: pick
@@ -50,7 +51,8 @@ effects:
                 then:
                   - recover: { of: you, count: 1 }
       - shuffle_security: { of: you }
-  - scope: inherited
+  - text: "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     condition:
       count_lte:

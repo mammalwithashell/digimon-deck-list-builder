@@ -134,7 +134,8 @@ effects:
 
   # ─── Inherited [All Turns][Once Per Turn] your security removed →
   #     <De-Digivolve 1> 1 opp Digimon ───────────────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your security stack is removed from, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     active_when: { all_turns: true }

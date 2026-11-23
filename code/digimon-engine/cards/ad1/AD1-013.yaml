@@ -41,7 +41,8 @@ effects:
           prompt: "Delete 1 opponent Digimon with the fewest digivolution cards"
       - delete_permanent: { target: target }
 
-  - scope: inherited
+  - text: "[All Turns] For each color in this [Blue Flare] or [Xros Heart] trait Digimon's digivolution cards, it gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when:

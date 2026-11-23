@@ -21,9 +21,11 @@ alt_paths:
     from: { level_eq: 3, name_contains: Dracomon }
     cost: 2
 effects:
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your blue Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into [Groundramon] in the hand with the digivolution cost reduced by 2."
+    when: on_ally_played
     active_when: { your_turn: true }
     trigger_if:
       all_of:
@@ -51,7 +53,8 @@ effects:
                 target: source
                 from_hand: groundramon
                 cost: { reduce: 2 }
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

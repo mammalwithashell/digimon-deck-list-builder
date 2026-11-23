@@ -23,16 +23,19 @@ alt_paths:
 effects:
   # Clause 1 — own Rush (face-up)
   # DCGO: RushSelfStaticEffect(isInheritedEffect: false)
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
 
   # Clause 2 — own Raid (face-up)
   # DCGO: RaidSelfEffect(isInheritedEffect: false)
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
 
   # Clause 3 — inherited Raid
   # DCGO: RaidSelfEffect(isInheritedEffect: true)
-  - scope: inherited
+  - text: "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Raid

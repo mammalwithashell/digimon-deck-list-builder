@@ -34,7 +34,8 @@ effects:
     process:
       - gain_memory: 2
 
-  - scope: inherited
+  - text: "[Security] Place this card in its owner's battle area."
+    scope: inherited
     when: on_security
     summary: "[Security] Place this card in the battle area"
     process:

@@ -29,7 +29,8 @@ effects:
           then:
             - trash_top_security: { of: opponent }
 
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effect."
+    when: on_security
     summary: "[Security] Activate this card's Main effect (delete highest-DP; 13000+-DP deletion trashes opp top security)"
     process:
       - select_opponent_permanent:

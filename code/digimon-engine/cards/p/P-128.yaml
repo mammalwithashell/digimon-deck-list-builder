@@ -5,7 +5,8 @@ color: [black]
 cost: 3
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have a Digimon with the [Free] trait, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       any_permanent:
         of: you
@@ -16,7 +17,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_play
+  - text: "[On Play] Activate 1 of the effects below: ・You may play 1 [Armadillomon] from your hand without paying the cost. ・1 of your Digimon may digivolve into [Ankylomon] in the hand without paying the cost."
+    when: on_play
     summary: "[On Play] Choose: play Armadillomon from hand free, or digivolve one of your Digimon into Ankylomon in hand free"
     process:
       - select_effect_choice:
@@ -71,7 +73,8 @@ effects:
                 cost: 0
                 ignore_requirements: false
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

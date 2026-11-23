@@ -101,7 +101,8 @@ effects:
   #
   # "By deleting 1 of your Digimon, delete 1 of your opponent's level 3
   # Digimon, 1 of their level 4 Digimon, and 1 of their level 5 Digimon."
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] By deleting 1 of your Digimon, delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon"
     process:
@@ -146,7 +147,8 @@ effects:
   #
   # "By deleting 1 of your level 4 or lower purple or red Digimon, you may
   # play 1 [Machinedramon] from your trash without paying the cost."
-  - when: on_deletion
+  - text: "[On Deletion] By deleting 1 of your level 4 or lower purple or red Digimon, you may play 1 [Machinedramon] from your trash without paying the cost."
+    when: on_deletion
     optional: true
     summary: "[On Deletion] By deleting 1 of your level 4 or lower purple or red Digimon, you may play 1 [Machinedramon] from trash free"
     process:

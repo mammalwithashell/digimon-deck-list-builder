@@ -174,7 +174,8 @@ effects:
                 expiry: end_of_opponents_turn
 
   # ─── Inherited: <Blocker> ─────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Blocker
     summary: "Inherited <Blocker>"

@@ -21,7 +21,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with the [Fallen Angel] or [TS] trait in the hand without paying the cost."
+    when: start_of_your_main_phase
     optional: true
     condition: { memory_lte: 4 }
     summary: "[Start of Your Main Phase] If memory <= 4, may free-digivolve this Digimon into a Fallen Angel/TS hand Digimon"

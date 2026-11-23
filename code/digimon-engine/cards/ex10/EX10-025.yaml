@@ -28,7 +28,8 @@ effects:
   #   3. The picked cards go under it as bottom digivolution cards.
   # `select_zone_cards` bounds are constants, so the "min(2, eligible)" is a
   # branch on the eligible count.
-  - when: on_play
+  - text: "[On Play] You may place 2 cards with the [Mineral] or [Rock] trait from your trash as 1 of your [Mineral] or [Rock] trait Digimon's bottom digivolution cards."
+    when: on_play
     summary: "[On Play] You may place 2 [Mineral]/[Rock] cards from trash as a [Mineral]/[Rock] Digimon's bottom digivolution cards"
     condition:
       all_of:

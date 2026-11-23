@@ -54,7 +54,8 @@ alt_paths:
 effects:
   # ─── [When Digivolving] delete 1 opp Lv.<=4; then by trashing a Tamer's bottom
   #     face-down card, the opponent trashes 1 hand card ─────────────────────
-  - when: when_digivolving
+  - text: "[When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. Then, by trashing the bottom face-down card from under any of your Tamers, they trash 1 card in their hand."
+    when: when_digivolving
     summary: "[When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. Then, by trashing a bottom face-down card under a Tamer, they trash 1 card in their hand"
     process:
       - select_opponent_permanent:
@@ -79,7 +80,8 @@ effects:
   # ─── [Your Turn][OPT] opp hand trashed OR effects trash from under your
   #     Tamers → this Digimon may digivolve into [Ravemon]/[DATA SQUAD] from
   #     the trash, cost -1 ────────────────────────────────────────────────────
-  - when: [on_discard_hand, on_digivolution_card_trashed]
+  - text: "[Your Turn] [Once Per Turn] When your opponent's hand is trashed from or effects trash cards from under your Tamers, this Digimon may digivolve into [Ravemon] or a [DATA SQUAD] trait Digimon card in the trash with the cost reduced by 1."
+    when: [on_discard_hand, on_digivolution_card_trashed]
     optional: true
     # DCGO SetUpActivateClass(optional: true) always shows the yes/no first.
     outer_prompt: true
@@ -123,7 +125,8 @@ effects:
 
   # ─── Inherited [On Deletion] may play 1 cost<=5 Avian/Bird/DATA SQUAD card
   #     from trash free ────────────────────────────────────────────────────────
-  - scope: inherited
+  - text: "[On Deletion] You may play 1 play cost 5 or lower card with [Avian] or [Bird] in any of its traits or the [DATA SQUAD] trait from your trash without paying the cost."
+    scope: inherited
     when: on_deletion
     condition:
       count_gte:

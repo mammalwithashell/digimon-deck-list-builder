@@ -8,7 +8,8 @@ traits: [TS]
 effects:
   # [Start of Your Main Phase] By trashing 1 card with [Three Musketeers] in its
   # text or the [TS] trait from your hand, <Draw 1> and gain 1 memory.
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 card with [Three Musketeers] in its text or the [TS] trait from your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     optional: true
     summary: "[Start of Your Main Phase] Trash 1 [Three Musketeers]-text or [TS] card from hand → Draw 1 + gain 1 memory"
     condition:
@@ -155,7 +156,8 @@ effects:
           ignore_requirements: false
 
   # [Security] Play this card without paying the cost.
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

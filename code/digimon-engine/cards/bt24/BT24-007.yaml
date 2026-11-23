@@ -47,7 +47,8 @@ traits: [Lesser, Titan, TS]
 effects:
   # ─── Inherited [Your Turn][OPT] Lv.4+ [Demon]/[Titan] Digimon cards trashed
   #     from your hand → you may play 1 of them with the play cost reduced by 2
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When level 4 or higher Digimon cards with the [Demon] or [Titan] trait are trashed from your hand, you may play 1 of them with the play cost reduced by 2."
+    scope: inherited
     when: on_discard_hand
     once_per_turn: true
     active_when:

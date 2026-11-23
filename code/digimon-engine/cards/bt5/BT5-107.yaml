@@ -65,7 +65,8 @@ effects:
           hand_index: revived
           suppress_on_play: true
 
-  - scope: inherited
+  - text: "[Security] Add this card to the hand."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Add this card to the hand"

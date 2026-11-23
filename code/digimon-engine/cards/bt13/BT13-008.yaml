@@ -153,7 +153,8 @@ effects:
   #   - your_turn: true ([Your Turn] scoping)
   # `dp_lte: 3000` filters the opponent-permanent select; an empty mandatory
   # select is skipped (no useless prompt when the opponent has no Digimon).
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes suspended, you may delete 1 of your opponent's Digimon with 3000 DP or less."
+    scope: inherited
     when: on_suspend
     optional: true
     once_per_turn: true

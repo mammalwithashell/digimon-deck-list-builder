@@ -105,7 +105,8 @@ effects:
       - gain_memory: 2
 
   # ─── Inherited [Security] Place this card in the battle area ───────────────
-  - scope: inherited
+  - text: "[Security] Place this card in the battle area."
+    scope: inherited
     when: on_security
     summary: "[Security] Place this card in the battle area"
     process:

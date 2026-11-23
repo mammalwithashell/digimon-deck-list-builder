@@ -6,12 +6,14 @@ kind: tamer
 color: [white]
 cost: 3
 effects:
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If your opponent has a Digimon in play, gain 1 memory."
+    when: start_of_your_turn
     condition:
       any_permanent: { of: opponent, kind: digimon }
     process:
       - gain_memory: 1
-  - when: on_digivolve
+  - text: "[Your Turn] When one of your Digimon digivolves into a Digimon with [Rock Dragon], [Earth Dragon], [Machine Dragon], or [Sky Dragon] in its traits, by suspending this Digimon, activate 1 of that Digimon's [On Play] effects."
+    when: on_digivolve
     optional: true
     active_when: { your_turn: true }
     condition:
@@ -37,6 +39,7 @@ effects:
             any_permanent: { of: you, is_source: true, is_suspended: true }
           then:
             - refire_effect: { source: event_target, timing: on_play, target_attribution: true }
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     process:
       - play_from_security: {}

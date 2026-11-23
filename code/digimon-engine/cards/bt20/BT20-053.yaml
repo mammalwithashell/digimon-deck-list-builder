@@ -24,7 +24,8 @@ alt_paths:
             - trait_has: Chronicle
     cost: 3
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may play 1 [Dorumon] or [Ryudamon] from your hand to your empty breeding area without paying the cost. Then, if during an attack, until the end of your opponent's turn, 1 of your Digimon isn't affected by your opponent's Digimon's effects and gets +5000 DP."
+    when: [on_play, when_digivolving]
     process:
       - select_hand:
           of: you
@@ -55,7 +56,8 @@ effects:
                 target: boosted
                 value: 5000
                 expiry: end_of_opponents_turn
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
+    scope: inherited
     when: on_opponent_attack
     active_when: { opponents_turn: true }
     optional: true

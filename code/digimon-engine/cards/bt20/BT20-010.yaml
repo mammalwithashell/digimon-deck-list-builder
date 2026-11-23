@@ -23,7 +23,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - kind: cost_reduction
+  - text: "[Your Turn] When this Digimon would digivolve into [Ginryumon] or a Digimon card with the [Chronicle] trait, reduce the digivolution cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when:
       all_of:
@@ -38,7 +39,8 @@ effects:
     amount: 1
     summary: "[Your Turn] When this Digimon would digivolve into Ginryumon or a Chronicle Digimon, reduce the cost by 1"
 
-  - kind: aura
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     target: {}

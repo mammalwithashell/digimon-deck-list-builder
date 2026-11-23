@@ -81,7 +81,8 @@ effects:
                 of: you
                 card: rest
 
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When any of your Digimon suspend, you may play 1 level 5 or lower black Digimon card with ＜Blocker＞ from your hand without paying the cost."
+    scope: inherited
     when: on_suspend
     once_per_turn: true
     active_when: { opponents_turn: true }

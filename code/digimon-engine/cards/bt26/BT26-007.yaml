@@ -36,7 +36,8 @@ traits: [Appmon, Navi, Swipe]
 attribute: Navi
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] You may link 1 [Seven Code] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 2."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][Once Per Turn] You may link 1 [Seven Code] trait Digimon card from your hand or this Digimon's digivolution cards to this Digimon with the cost reduced by 2"

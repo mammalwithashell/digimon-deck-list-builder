@@ -38,7 +38,8 @@ effects:
   # engine's empty-candidate path (G-SELECT-EMPTY-OUTER-TAIL, resolved) skips
   # the select_hand install and runs the body synchronously, so the outer-tail
   # `trash_top_security` step still fires.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] If your opponent has 5 or fewer security cards, they place 1 card from their hand as the bottom security card. Then, trash their top security card."
+    when: [on_play, when_digivolving]
     condition:
       opponent_security_count_lte: 5
     process:
@@ -59,7 +60,8 @@ effects:
 
   # Clause 2: Inherited [Your Turn] This Digimon gets +4000 DP.
   # Standard self-aura scoped to the carrier's controller's turn.
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +4000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

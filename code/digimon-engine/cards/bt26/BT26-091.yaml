@@ -40,7 +40,8 @@ traits: [DATA SQUAD]
 effects:
   # ─── [Start of Your Main Phase] place 1 [DATA SQUAD] hand card face down
   #     under this Tamer → <Draw 1> + 1 memory ─────────────────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By placing 1 [DATA SQUAD] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter:
@@ -68,7 +69,8 @@ effects:
 
   # ─── [Your Turn] opp Digimon/Tamer suspends OR effects trash from under this
   #     Tamer → suspend this Tamer → 1 Digimon may digivolve (cost -1) ─────────
-  - when: [on_suspend, on_digivolution_card_trashed]
+  - text: "[Your Turn] When any of your opponent's Digimon or Tamers suspend, or effects trash cards from under this Tamer, by suspending this Tamer, 1 of your Digimon may digivolve into a [Vegetation], [Fairy] or [DATA SQUAD] trait Digimon card in the hand with the cost reduced by 1."
+    when: [on_suspend, on_digivolution_card_trashed]
     optional: true
     active_when: { your_turn: true }
     timing_conditions:
@@ -120,7 +122,8 @@ effects:
           from_hand: evo
           cost: { reduce: 1 }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

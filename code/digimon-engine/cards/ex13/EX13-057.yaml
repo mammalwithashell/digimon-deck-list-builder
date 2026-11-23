@@ -56,7 +56,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Until your opponent's turn ends, 1 of your [X Antibody] or [Chronicle] trait Digimon gains ＜Reboot＞ and ＜Blocker＞. If during an attack, it also isn't affected by their Digimon effects and gets +5000 DP."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Until your opponent's turn ends, 1 of your [X Antibody]/[Chronicle] Digimon gains Reboot and Blocker; if during an attack, it also isn't affected by their Digimon effects and gets +5000 DP"
     process:
       - select_own_permanent:
@@ -89,7 +90,8 @@ effects:
                 value: 5000
                 expiry: end_of_opponents_turn
 
-  - when: end_of_attack
+  - text: "[End of Attack] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand or trash."
+    when: end_of_attack
     once_per_turn: true
     summary: "[End of Attack][OPT] This Digimon may digivolve into a [Chronicle] trait Digimon card in the hand or trash"
     condition:
@@ -120,7 +122,8 @@ effects:
           cost: printed
           ignore_requirements: false
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When any of your [Chronicle] trait Digimon would leave the battle area, by trashing your top security card, they don't leave."
+    kind: replacement
     scope: inherited
     timing: when_would_leave_battle_area
     optional: true

@@ -56,7 +56,8 @@ traits: [Lesser, Iliad, TS]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your security stack is removed from, this Digimon may digivolve into a [Shaman] trait Digimon card in the hand with the digivolution cost reduced by 1."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     optional: true

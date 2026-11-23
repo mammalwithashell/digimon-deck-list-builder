@@ -23,7 +23,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with the [Sea Beast] or [TS] trait in the hand without paying the cost."
+    when: start_of_your_main_phase
     condition: { memory_lte: 4 }
     summary: "[Start of Your Main Phase] At memory <=4, this Digimon may free-digivolve into Sea Beast or TS in hand"
     process:
@@ -45,7 +46,8 @@ effects:
           cost: 0
           ignore_requirements: false
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:

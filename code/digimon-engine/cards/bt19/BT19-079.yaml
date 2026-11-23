@@ -24,7 +24,8 @@ effects:
       - suspend: { target: source }
       - allow_digixros_material_zone: { zone: material }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this Tamer without paying the cost"
     process:
       - play_from_security: {}

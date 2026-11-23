@@ -48,7 +48,8 @@ effects:
   # "You may" → optional: true. The select_union_zone surfaces hand ∪ trash as a
   # single pick; play_union_bound_free plays the picked card free, preserving the
   # zone it was selected from.
-  - when: on_security
+  - text: "[Security] You may play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from your hand or trash without paying the cost."
+    when: on_security
     optional: true
     summary: "[Security] You may play 1 LIBERATOR (cost ≤ 4) from hand or trash free"
     process:
@@ -84,7 +85,8 @@ effects:
   # Clause 2 — <Progress> (declarative keyword grant, face-up)
   # DCGO: ProgressSelfStaticEffect(false, card, null) — isInheritedEffect=false
   # G-DECLARATIVE-KEYWORD closed: installs at runtime; Game::has_keyword discovers it.
-  - kind: grant_keyword
+  - text: "＜Progress＞ (While attacking, your opponent's effects don't affect this Digimon.)"
+    kind: grant_keyword
     keyword: Progress
 
   # Clause 3 — [Inherited] [Your Turn] [Once Per Turn]
@@ -93,7 +95,8 @@ effects:
   #       IsOwnerTurn, IsExistOnBattleAreaDigimon (must be top of a permanent on field while
   #       this card is inherited).
   # G-INHERITED-DISPATCH closed (Phase 2 Track D); G-OPT-TRIGGERED closed.
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     active_when: { your_turn: true }

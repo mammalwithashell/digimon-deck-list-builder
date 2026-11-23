@@ -135,7 +135,8 @@ effects:
   # (Game::resolve_battle): when either combatant has it, the battle compares
   # `card_sources.len()` instead of effective DP. Security battles route
   # through resolve_player_security_loop and are unaffected. EX8-022 idiom.
-  - kind: grant_keyword
+  - text: "＜Iceclad＞ (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.)"
+    kind: grant_keyword
     keyword: Iceclad
     summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
 
@@ -154,7 +155,8 @@ effects:
   # with no candidate the mandatory select silently skips (DCGO
   # HasMatchConditionPermanent guard), and a Digimon stripped bare by the
   # trash IS a legal target.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon. Then, 1 of your opponent's Digimon with no digivolution cards can't suspend or activate [When Digivolving] effects until the end of their turn."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash any 2 digivolution cards from the opponent's Digimon; then 1 sourceless opponent Digimon can't suspend or activate [When Digivolving] effects until the end of their turn"
     condition:
       any_field_permanent: { of: opponent, kind: digimon }
@@ -226,7 +228,8 @@ effects:
   #   3. no_permanent(opponent, battle_area, digimon, stack >= 2) — "your
   #      opponent has no Digimon with digivolution cards" (stack size
   #      includes the top card, so >= 1 digivolution card ⇔ stack >= 2).
-  - scope: inherited
+  - text: "[Your Turn] While your opponent has no Digimon with digivolution cards, this Digimon with the [Ice-Snow] trait gains ＜Piercing＞ and ＜Security A. +1＞."
+    scope: inherited
     kind: aura
     target: {}
     active_when:

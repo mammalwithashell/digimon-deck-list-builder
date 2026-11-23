@@ -115,7 +115,8 @@ effects:
           then:
             - hatch: { of: you }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

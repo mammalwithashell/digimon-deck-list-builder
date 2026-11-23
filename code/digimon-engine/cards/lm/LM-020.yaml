@@ -19,7 +19,8 @@ alt_paths:
     from: { level_eq: 5, color_is: green }
     cost: 5
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] By placing 1 Digimon as the top security card, reveal all of your opponent's security cards, and place 1 card among them on top of the deck. Shuffle the rest and return them to the security stack."
+    when: when_digivolving
     optional: true
     outer_prompt: true
     summary: "[When Digivolving] By placing 1 Digimon as its owner's top security, reveal all opposing security; place 1 on top of their deck and shuffle the rest"
@@ -48,7 +49,8 @@ effects:
                 card: selected_security
                 position: top
             - shuffle_security: { of: opponent }
-  - when: start_of_opponents_turn
+  - text: "[Start of Opponent's Turn] Declare 1 card category. Then, reveal the top card of your opponent's deck. If it's of that category, this Digimon isn't affected by that category's effects, other than this Digimon's effects, for the turn. Return the revealed cards to the top or bottom of your opponent's deck."
+    when: start_of_opponents_turn
     summary: "[Start of Opponent's Turn] Declare a category; matching opponent deck reveal grants immunity except to this Digimon's own effects for this turn; return top or bottom"
     process:
       - select_effect_choice:

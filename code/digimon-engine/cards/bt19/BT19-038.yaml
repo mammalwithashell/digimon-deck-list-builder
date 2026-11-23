@@ -19,7 +19,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, until the end of their turn, 1 of their Digimon can't activate [When Digivolving] effects or unsuspend."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Suspend 1 opponent Digimon, then lock 1 opponent Digimon"
     process:
       - select_opponent_permanent:
@@ -42,7 +43,8 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
 
-  - when: on_deletion
+  - text: "[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers."
+    when: on_deletion
     summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
     process:
       - select_own_permanent:
@@ -68,7 +70,8 @@ effects:
                 card: stash
                 tamer: tamer
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Piercing＞."
+    scope: inherited
     kind: grant_keyword
     active_when:
       all_of:

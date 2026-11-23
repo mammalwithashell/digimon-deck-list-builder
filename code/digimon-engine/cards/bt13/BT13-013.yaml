@@ -19,7 +19,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_ally_played
+  - text: "[Your Turn] When you play a Digimon with [Sistermon] in its name, this Digimon may digivolve into [SaviorHuckmon] in the hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2."
+    when: on_ally_played
     optional: true
     active_when: { your_turn: true }
     condition:
@@ -43,7 +44,8 @@ effects:
           from_hand: evolution
           cost: { reduce: 2 }
 
-  - when: on_ally_played
+  - text: "[Your Turn][Once Per Turn] When you play a Digimon with [Sistermon] in its name, gain 1 memory."
+    when: on_ally_played
     scope: inherited
     once_per_turn: true
     active_when: { your_turn: true }

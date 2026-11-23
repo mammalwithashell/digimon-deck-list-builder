@@ -38,10 +38,12 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Mon] from your hand without paying the cost."
+    when: [on_play, when_digivolving]
     condition:
       count_lte:
         filter: { of: you, zone: [battle_area], kind: tamer }
@@ -69,7 +71,8 @@ effects:
           then:
             - play_from_hand_free: { of: you, hand_index: mon }
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

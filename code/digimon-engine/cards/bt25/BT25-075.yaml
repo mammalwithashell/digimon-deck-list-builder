@@ -171,7 +171,8 @@ effects:
     summary: "[All Turns] All of your [TS] trait Digimon gain <Rush> and <Link +1>"
 
   # ─── [Your Turn] When your Digimon get linked, one of them may attack ──────
-  - when: on_any_link
+  - text: "[Your Turn] When your Digimon get linked, one of them may attack."
+    when: on_any_link
     optional: true
     active_when:
       your_turn: true

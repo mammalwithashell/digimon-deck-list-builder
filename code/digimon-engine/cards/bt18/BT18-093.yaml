@@ -50,14 +50,16 @@ traits: [LIBERATOR]
 
 effects:
   # ─── Clause 1: [Start of Your Turn] memory gate ────────────────────────────
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     summary: "[Start of Your Turn] If memory <= 2, set it to 3"
     condition: { memory_lte: 2 }
     process:
       - set_memory: 3
 
   # ─── Clause 2: [Start of Your Main Phase] trash Option/[Ghost]/[TM] → Draw 1 ─
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 Option card or 1 card with the [Ghost] or [Three Musketeers] trait in your hand, ＜Draw 1＞."
+    when: start_of_your_main_phase
     optional: true
     summary: "[Start of Your Main Phase] By trashing 1 Option or 1 [Ghost]/[Three Musketeers] card in hand, <Draw 1>"
     condition:
@@ -86,7 +88,8 @@ effects:
       - draw: { of: you, count: 1 }
 
   # ─── Clause 3: [Security] Play this card without paying the cost ───────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

@@ -86,7 +86,8 @@ effects:
   # i.e. every source beneath the top (including the card just placed and
   # any Dark Masters placed at cast time). `source_stack_count` skips the
   # top card, matching exactly.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] By placing 1 level 6 or lower card from your trash as this Digimon's bottom digivolution card, activate 1 [On Play] effect on that card as an effect of this Digimon. Then, trash the top 2 cards of your opponent's deck for each of this Digimon's level 6 digivolution cards."
+    when: end_of_your_turn
     once_per_turn: true
     summary: "[End of Your Turn][OPT] Place 1 lv6-or-lower card from trash as bottom digivolution card, activate 1 of its [On Play] effects as this Digimon's; then trash opponent's top 2 per lv6 digivolution card"
     condition:

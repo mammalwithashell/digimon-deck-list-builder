@@ -268,7 +268,8 @@ effects:
   # Outer `optional` not set — DCGO `SetUpActivateClass(..., false, ...)`,
   # printed text has no "you may". The inner trash-cost choice is the
   # only opt-in surface, modelling DCGO's `added` flag indirectly.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon] or [X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal 4; add up to 2 [Garurumon]/[X Antibody]; bottom rest; if added, trash 1 from hand"
     process:
       - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
@@ -335,7 +336,8 @@ effects:
   # replacement subject (the host this card is stacked under), via
   # `predicate_reads_replacement_subject`. `replacement_cause: battle` gates
   # to battle deletion only.
-  - kind: replacement
+  - text: "[All Turns][Once Per Turn] When this Digimon with [Garurumon] or [Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion."
+    kind: replacement
     scope: inherited
     trigger: when_would_be_deleted
     optional: true

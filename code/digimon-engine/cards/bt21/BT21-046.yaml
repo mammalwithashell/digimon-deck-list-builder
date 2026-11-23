@@ -23,7 +23,8 @@ alt_paths:
     from: {name_is: Dracomon}
     cost: 0
 effects:
-  - when: [start_of_your_main_phase, when_digivolving]
+  - text: "[Start of Your Main Phase] [When Digivolving] This Digimon may digivolve into [Coredramon] in the hand without paying the cost."
+    when: [start_of_your_main_phase, when_digivolving]
     summary: "This Digimon may digivolve into [Coredramon] in hand without paying the cost."
     process:
       - select_hand:
@@ -41,7 +42,8 @@ effects:
           from_hand: evolution
           cost: free
           ignore_requirements: false
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
     scope: inherited
     active_when: {your_turn: true}
     optional: true

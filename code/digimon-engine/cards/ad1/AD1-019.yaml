@@ -73,7 +73,8 @@ traits: [ADVENTURE, Hero]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] gain 1 memory if opp has Digimon
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -106,7 +107,8 @@ effects:
   #   with `cost_delta: { reduce_fn: <formula> }` — the play cost is reduced
   #   by `floor(distinct Tamer colors / 2)` (DCGO
   #   `reduceCost = GetDifferenetColorCardCount(tamerCards) / 2`).
-  - when: on_digivolve
+  - text: "[Your Turn] When any of your Digimon digivolve into an [ADVENTURE] trait Digimon, by suspending this Tamer, you may play 1 [ADVENTURE] trait card from your hand. For every 2 of your Tamers' colors, reduce this effect's play cost by 1."
+    when: on_digivolve
     active_when: { your_turn: true }
     optional: true
     summary: "[Your Turn] When your Digimon digivolves into an [ADVENTURE], by suspending this Tamer you may play 1 [ADVENTURE] card from hand at reduced cost"
@@ -166,7 +168,8 @@ effects:
                 - 2
 
   # ─── Clause 3: [Security] play self without paying the cost ───────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

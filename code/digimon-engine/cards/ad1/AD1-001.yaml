@@ -121,6 +121,7 @@ effects:
   # Declarative grant_keyword. G-DECLARATIVE-KEYWORD RESOLVED (qa/resolved-gaps.md); declarative
   # clauses are compiled but not yet enqueued at runtime, so the modifier
   # is not installed. Documented for future activation.
-  - scope: inherited
+  - text: "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Raid

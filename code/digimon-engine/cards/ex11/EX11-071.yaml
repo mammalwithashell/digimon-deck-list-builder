@@ -13,7 +13,8 @@ traits: [LIBERATOR]
 # selection + reduced-cost play.
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Omekamon] or [Omnimon (X Antibody)] and 1 [Royal Knight] or [LIBERATOR] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add Omekamon/Omnimon X and Royal Knight/LIBERATOR"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

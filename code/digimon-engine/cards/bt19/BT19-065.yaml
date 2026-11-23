@@ -127,7 +127,8 @@ alt_paths:
     cost: 11
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 level 5 or lower Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 level 5 or lower Digimon (any owner)"
     process:
       - select_any_permanent:
@@ -139,7 +140,8 @@ effects:
           prompt: "Delete 1 level 5 or lower Digimon"
       - delete_permanent: { target: target }
 
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 level 5 or lower Digimon card with the [Cyborg] or [Composite] trait from your trash without paying the cost."
+    when: on_deletion
     optional: true
     summary: "[On Deletion] You may play 1 level 5 or lower [Cyborg]/[Composite] Digimon from your trash without paying the cost"
     process:

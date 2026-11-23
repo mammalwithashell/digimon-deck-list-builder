@@ -23,9 +23,11 @@ alt_paths:
         - self_color_count_lte: 3
     cost: 2
 effects:
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
     keyword: ArmorPurge
-  - when: when_digivolving
+  - text: "[When Digivolving] Return 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon to the hand."
+    when: when_digivolving
     summary: "Return 1 opponent level 3, 1 level 4 and 1 level 5 Digimon to hand"
     process:
       - select_opponent_permanent:
@@ -50,7 +52,8 @@ effects:
                   - all_of: [{ binding_exists: lv3 }, { not: { not_in_binding: lv3 } }]
                   - all_of: [{ binding_exists: lv4 }, { not: { not_in_binding: lv4 } }]
                   - all_of: [{ binding_exists: lv5 }, { not: { not_in_binding: lv5 } }]
-  - when: end_of_attack
+  - text: "[End of Attack] By placing this Digimon's top stacked card as the top security card, this Digimon or Tamer unsuspends."
+    when: end_of_attack
     optional: true
     condition:
       all_of:

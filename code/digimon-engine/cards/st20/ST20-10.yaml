@@ -144,7 +144,8 @@ effects:
   # with `scope: inherited` so the keyword grant flows from the digivolution
   # stack to the carrier (resolved via game.has_keyword() stack-walk; same
   # mechanism as ST1-07's inherited <Security A. +1>).
-  - scope: inherited
+  - text: "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Reboot
     summary: "Inherited <Reboot>"

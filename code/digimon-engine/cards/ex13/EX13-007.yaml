@@ -80,7 +80,8 @@ effects:
           prompt: "You may return 1 Digimon card with [Gallantmon] in its name or 1 red Tamer card from your trash to the hand"
       - add_to_hand_from_trash: { of: you, card: recovered }
 
-  - kind: aura
+  - text: "[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums."
+    kind: aura
     scope: inherited
     active_when: { all_turns: true }
     target: {}

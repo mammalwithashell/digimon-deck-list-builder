@@ -68,7 +68,8 @@ effects:
           condition: { effect_deleted_any_opponent_digimon: false }
           then:
             - draw: { of: you, count: 2 }
-  - when: when_attacking
+  - text: "[When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less."
+    when: when_attacking
     scope: inherited
     once_per_turn: true
     summary: "Inherited [When Attacking] Delete 1 opp Digimon with <=4000 DP"

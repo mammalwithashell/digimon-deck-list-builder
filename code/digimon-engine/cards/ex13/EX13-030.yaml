@@ -44,11 +44,13 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "<Barrier>"
 
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, you may play 1 [Richard Sampson] from your hand or trash without paying the cost."
+    when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     optional: true
     outer_prompt: true
@@ -73,7 +75,8 @@ effects:
           prompt: "You may play 1 [Richard Sampson] from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: richard }
 
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier
     summary: "Inherited <Barrier>"

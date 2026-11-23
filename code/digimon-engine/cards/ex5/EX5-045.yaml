@@ -52,7 +52,8 @@ alt_paths:
     cost: 1
 
 effects:
-  - when: on_play
+  - text: "[On Play] If it's your opponent's turn, reveal the top 3 cards of your deck. You may play 1 Digimon card with [Sukamon] in its name among them without paying the cost. Trash the rest."
+    when: on_play
     condition: { opponents_turn: true }
     summary: "[On Play] If it's your opponent's turn, reveal 3; you may play 1 Digimon card with [Sukamon] in its name among them free; trash the rest"
     process:
@@ -76,7 +77,8 @@ effects:
           body:
             - trash_from_reveal: { of: you, card: rest }
 
-  - when: on_deletion
+  - text: "[On Deletion] If this Digimon had [Sukamon] or [Etemon] in its name, you may play 1 [Chuumon] from your trash suspended without paying the cost."
+    when: on_deletion
     scope: inherited
     optional: true
     trigger_if:

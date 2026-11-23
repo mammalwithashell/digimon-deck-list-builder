@@ -60,7 +60,8 @@ traits: ["App Driver", Appmon]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] if opp has a Digimon, gain 1 memory
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter: { of: opponent, zone: [battle_area], kind: digimon }
@@ -86,7 +87,8 @@ effects:
   # add_dp_modifier target: event_target — DCGO: ChangeDigimonDP(permanent, +3000,
   #   UntilOpponentTurnEnd). `event_target` resolves to the OnLink trigger's
   #   `event_permanent` (the link host). expiry: end_of_opponents_turn.
-  - when: on_any_link
+  - text: "[Your Turn] When any of your Digimon get linked, by suspending this Tamer, those Digimon get +3000 DP until your opponent's turn ends. Then, 1 of your Digimon may app fuse into a Digimon card in the hand."
+    when: on_any_link
     optional: true
     active_when:
       your_turn: true
@@ -104,7 +106,8 @@ effects:
       - app_fuse: { from: hand, optional: true }
 
   # ─── Clause 3: [Security] play this card without paying the cost ──────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

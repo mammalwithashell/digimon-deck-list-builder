@@ -10,12 +10,14 @@ traits: [Puppet, CS]
 attribute: Vaccine
 form: Rookie
 effects:
-  - when: on_play
+  - text: "[On Play] Add your top security card to the hand. Then, ＜Recovery +1 ≪Deck≫＞."
+    when: on_play
     summary: "[On Play] Add your top security card to the hand. Then, Recovery +1 (Deck)."
     process:
       - add_top_security_to_hand: { of: you }
       - recover: { of: you, count: 1 }
-  - when: on_suspend
+  - text: "[Your Turn] When this Digimon suspends, 1 of your other Digimon may digivolve into a Digimon card with [Huckmon] in its name or the [Royal Knight] or [CS] trait in the hand or trash with the digivolution cost reduced by 1."
+    when: on_suspend
     active_when: { your_turn: true }
     condition: { event_permanent_is_source: true }
     summary: "[Your Turn] When this Digimon suspends, 1 of your other Digimon may digivolve into a [Huckmon] name or [Royal Knight]/[CS] Digimon in hand or trash, cost reduced by 1."

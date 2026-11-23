@@ -79,7 +79,8 @@ alt_paths:
 
 effects:
   # ─── ＜Raid＞ ───────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
@@ -92,7 +93,8 @@ effects:
   # pick is the LAST step, so its field-select decline simply ends the clause.
   # `can_play_from_effect_without_cost` = DCGO CanPlayAsNewPermanent(payCost
   # false) in the candidate filter, so an unplayable Takato is never offered.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may play 1 [Takato Matsuki] from your hand or trash without paying the cost. Then, you may delete 1 of your opponent's Digimon with 6000 DP or less."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may play 1 [Takato Matsuki] from your hand or trash without paying the cost. Then, you may delete 1 of your opponent's Digimon with 6000 DP or less"
     process:
       - select_union_zone:
@@ -129,7 +131,8 @@ effects:
   # "must play ... whenever possible"); the optional outer prompt is the only
   # decline. The replacement preflight offers the prompt only when at least one
   # named card is playable.
-  - scope: inherited
+  - text: "[All Turns] When this Digimon with [Gallantmon] in its name would leave the battle area other than by your effects, you may play 1 each of [Takato Matsuki] and [Guilmon] from its digivolution cards without paying the cost."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

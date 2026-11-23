@@ -58,7 +58,8 @@ effects:
           cost: { reduce: 1 }
           ignore_requirements: false
 
-  - when: main_from_hand
+  - text: "[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 [Shambala] trait card from your hand with the cost reduced by 3."
+    when: main_from_hand
     summary: "[Main] Add bottom security to hand, place this card face up as bottom security, then may play 1 [Shambala] card from hand with cost reduced by 3"
     process:
       - add_bottom_security_to_hand: { of: you }
@@ -87,7 +88,8 @@ effects:
           hand_index: shambala_play
           cost_delta: { reduce: 3 }
 
-  - scope: inherited
+  - text: "[Security] You may play 1 play cost 5 or lower [Shambala] trait card from your hand or trash without paying the cost."
+    scope: inherited
     when: on_security
     optional: true
     summary: "[Security] You may play 1 play cost 5 or lower [Shambala] card from hand or trash free"

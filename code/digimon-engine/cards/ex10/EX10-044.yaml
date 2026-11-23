@@ -49,7 +49,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] place a [Bagra Army] card under a Tamer → Draw 1 ────────────
-  - when: on_play
+  - text: "[On Play] By placing 1 [Bagra Army] trait Digimon card from your hand or trash under any of your Tamers, ＜Draw 1＞."
+    when: on_play
     optional: true
     summary: "[On Play] By placing 1 [Bagra Army] trait Digimon card from your hand or trash under any of your Tamers, Draw 1"
     process:
@@ -98,7 +99,8 @@ effects:
             - draw: { of: you, count: 1 }
 
   # ─── [On Deletion] play a [Tuwarmon] from under Tamers; then <Save> ────────
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Tuwarmon] with a play cost of 7 or less from under your Tamers without paying the cost. Then, ＜Save＞."
+    when: on_deletion
     optional: true
     summary: "[On Deletion] You may play 1 [Tuwarmon] with a play cost of 7 or less from under your Tamers without paying the cost. Then, Save"
     process:

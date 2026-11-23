@@ -88,10 +88,12 @@ dual:
       [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 Tamer card with a play cost of 5 or less from your hand or trash without paying the cost. Then, 1 of your opponent's Digimon gets -9000 DP for the turn.
     effects:
       # Static printed keywords on the Digimon face.
-      - kind: grant_keyword
+      - text: "＜Raid＞"
+        kind: grant_keyword
         keyword: Raid
         summary: "<Raid>"
-      - kind: grant_keyword
+      - text: "＜Piercing＞"
+        kind: grant_keyword
         keyword: Piercing
         summary: "<Piercing>"
       - kind: grant_keyword
@@ -101,7 +103,8 @@ dual:
 
       # [WD][WA][OPT] may play 1 Tamer (cost<=5) from hand/trash free; then 1 opp
       # Digimon gets -9000 DP for the turn (mandatory, runs after the play).
-      - when: [when_digivolving, when_attacking]
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may play 1 Tamer card with a play cost of 5 or less from your hand or trash without paying the cost. Then, 1 of your opponent's Digimon gets -9000 DP for the turn."
+        when: [when_digivolving, when_attacking]
         once_per_turn: true
         summary: "[WD][WA][OPT] You may play 1 Tamer (cost<=5) from hand/trash free; then 1 opp Digimon gets -9000 DP for the turn"
         process:

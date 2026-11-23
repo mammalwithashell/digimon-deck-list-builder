@@ -54,7 +54,8 @@ traits: [LIBERATOR]
 
 effects:
   # ─── Clause 0: [Start of Your Turn] memory setter ─────────────────────────
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     condition: { memory_lte: 2 }
     summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
     process:
@@ -79,7 +80,8 @@ effects:
   # PendingSelection runs unconditionally — including the suspend cost.
   # Moving the gate-selection before suspend ensures the player can decline
   # before the cost is paid (cf. EX11-065 header notes).
-  - when: on_digivolve
+  - text: "[Your Turn] When any of your Digimon digivolve into a [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place up to 2 cards with the [Mineral] or [Rock] trait from your trash as that Digimon's bottom digivolution cards."
+    when: on_digivolve
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When own Mineral/Rock Digimon digivolves, suspend self to place up to 2 Mineral/Rock from trash as bottom sources"
@@ -137,7 +139,8 @@ effects:
                 target: event_target
 
   # ─── Clause 2: [Security] Play this card without paying the cost ──────────
-  - scope: inherited
+  - text: "[Security] Play this card without paying the cost."
+    scope: inherited
     when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:

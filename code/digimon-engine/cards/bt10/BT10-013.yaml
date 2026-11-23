@@ -28,10 +28,12 @@ alt_paths:
     cost: 10
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
-  - kind: grant_keyword
+  - text: "＜Material Save 3＞ (When this Digimon would be deleted, you may place 3 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)"
+    kind: grant_keyword
     keyword: MaterialSave
     value: 3
 

@@ -18,7 +18,8 @@ alt_paths:
     from: { name_is: Bebydomon }
     cost: 0
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 card with [Dracomon] or [Examon] in its text in your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     active_when: { your_turn: true }
     optional: true
     summary: "By trashing 1 Dracomon/Examon-text card from hand, Draw 1 and gain 1 memory"
@@ -45,7 +46,8 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 1 }
       - gain_memory: 1
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

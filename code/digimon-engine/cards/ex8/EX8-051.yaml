@@ -13,13 +13,16 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Collision＞"
+    kind: grant_keyword
     keyword: Collision
 
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
 
-  - kind: grant_keyword
+  - text: "＜Fragment ≪3≫＞ (When this Digimon would be deleted, by trashing any 3 of its digivolution cards, it isn't deleted.)"
+    kind: grant_keyword
     keyword: Fragment
     value: 3
 

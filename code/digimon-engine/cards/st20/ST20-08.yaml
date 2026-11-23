@@ -42,7 +42,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with the [ADVENTURE] trait from your hand without paying the cost."
+    when: when_digivolving
     summary: "[When Digivolving] If you have 1 or fewer Tamers, may play 1 [ADVENTURE] Tamer from hand for free"
     condition:
       count_lte:
@@ -67,7 +68,8 @@ effects:
           prompt: "Play 1 [ADVENTURE] Tamer card from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: adv_tamer }
 
-  - scope: inherited
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Piercing
     summary: "Inherited <Piercing>"

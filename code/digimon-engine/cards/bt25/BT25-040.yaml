@@ -119,7 +119,8 @@ effects:
   # player chooses Top or Bottom (or declines the whole clause via PASS). On
   # trash, 1 opp Digimon gets -8000 DP until THEIR (opponent's) turn ends.
   # Gated on having at least 1 security card.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing your top or bottom security card, 1 of your opponent's Digimon gets -8000 DP until their turn ends."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[OP][WD] By trashing your top or bottom security card, 1 opp Digimon gets -8000 DP until their turn ends"
     condition:
@@ -149,7 +150,8 @@ effects:
           expiry: end_of_opponents_turn
 
   # ─── Clause C — Inherited [All Turns][OPT] own sec removed → -4000 DP ────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your opponent's Digimon gets -4000 DP for the turn."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     active_when: { all_turns: true }

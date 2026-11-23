@@ -68,7 +68,8 @@ alt_paths:
 
 effects:
   # ─── Fragment (3) ─────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Fragment ≪3≫＞ (When this Digimon would be deleted, by trashing any 3 of its digivolution cards, it isn't deleted.)"
+    kind: grant_keyword
     keyword: Fragment
     value: 3
 
@@ -78,7 +79,8 @@ effects:
   # digivolution stacks. Effect: unsuspend this Digimon + SecurityAttackChange +1
   # until end of turn. Both effects are inside `then:` so they only run if the
   # full cost is paid.
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] By trashing any 3 digivolution cards with the [Mineral] or [Rock] trait from your Digimon, this Digimon unsuspends and gains ＜Security A. +1＞ for the turn."
+    when: [when_digivolving, when_attacking]
     summary: "[WD][WA] Trash 3 Mineral/Rock sources from your Digimon → unsuspend + SecurityA+1 for the turn"
     process:
       - select_own_sources:
@@ -109,7 +111,8 @@ effects:
   #
   # One `select_count_capped_multi` (max 3, optional_zero) + one batched
   # `place_cards_as_bottom_sources`: the player may stop at 0, 1, 2 or 3.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] You may place up to 3 cards with the [Mineral] or [Rock] trait from your trash as this Digimon's bottom digivolution cards."
+    when: end_of_your_turn
     once_per_turn: true
     optional: true
     summary: "[EOT][OPT] Place up to 3 Mineral/Rock cards from trash as this Digimon's bottom sources"

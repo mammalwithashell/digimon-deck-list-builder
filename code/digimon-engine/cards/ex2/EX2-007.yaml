@@ -31,7 +31,8 @@ effects:
           bind_as: searcher
           prompt: Place 1 ADR-02 Searcher from your hand or battle area under this Digimon
       - place_cards_as_bottom_sources: { cards: searcher, target: source }
-  - kind: cost_reduction
+  - text: "[Your Turn][Once Per Turn] When you would play a card with [D-Reaper] in its traits from your hand, you may reduce its play cost by 1 for each of this Digimon's digivolution cards."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     once_per_turn: true
     optional: true

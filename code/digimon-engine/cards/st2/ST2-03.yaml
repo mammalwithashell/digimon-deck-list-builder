@@ -15,7 +15,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon with a level of 5 or less."
+    scope: inherited
     when: when_attacking
     summary: "[Inherited][When Attacking] Trash bottom source of 1 opponent level 5 or lower Digimon"
     process:

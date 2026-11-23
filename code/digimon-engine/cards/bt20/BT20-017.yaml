@@ -15,7 +15,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may play 1 [Atho, René & Por] Token. (Digimon/White/6000 DP/＜Reboot＞＜Blocker＞＜Decoy(Red)/(Black)＞)"
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] You may play 1 [Atho, René & Por] Token"
     process:

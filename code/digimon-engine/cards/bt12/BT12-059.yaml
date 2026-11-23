@@ -53,7 +53,8 @@ effects:
   # The "library has any cards" guard is implicit in `reveal_top_deck` (it
   # reveals up to `count`, capped at deck size), so no explicit DSL condition
   # is needed.
-  - when: on_play
+  - text: "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with [Greymon] or [Omnimon] in its name and 1 Tamer card with [Tai Kamiya] in its name among them to your hand. Place the rest at the bottom of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 4; add one Greymon/Omnimon Digimon and one Tai Kamiya Tamer"
     process:
       - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
@@ -111,7 +112,8 @@ effects:
   #     `self_digivolution_contains_name`, which scanned every card in the
   #     stack and over-granted the +1000.
   #   - `all_turns: true` encodes the [All Turns] scope.
-  - scope: inherited
+  - text: "[All Turns] While this Digimon has [Greymon] or [Omnimon] in its name, it gets +1000 DP."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

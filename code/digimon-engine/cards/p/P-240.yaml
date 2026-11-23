@@ -109,19 +109,23 @@ alt_paths:
     cost: 6
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Collision＞"
+    kind: grant_keyword
     keyword: Collision
     summary: "<Collision>"
 
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 
-  - kind: grant_keyword
+  - text: "＜Reboot＞"
+    kind: grant_keyword
     keyword: Reboot
     summary: "<Reboot>"
 
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -176,7 +180,8 @@ effects:
                             targets: any
                             prompt: "This Digimon attacks"
 
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Proximamon] from your hand or trash without paying the cost."
+    when: on_deletion
     optional: true
     condition:
       count_gte:
@@ -201,7 +206,8 @@ effects:
           prompt: "You may play 1 [Proximamon] from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: proxima }
 
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     optional: true

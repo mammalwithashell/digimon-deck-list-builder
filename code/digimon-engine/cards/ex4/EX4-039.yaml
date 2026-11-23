@@ -115,7 +115,8 @@ traits: [Reptile]
 
 effects:
   # ─── Clause 1 — [On Play] Reveal 3 + two-bucket selection (top of deck) ──
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Garurumon] in its name and 1 Digimon card with [Agumon], [Greymon], or [Omnimon] in its name among them to your hand. Place the rest on top of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 Garurumon-named Digimon and 1 Agumon/Greymon/Omnimon-named Digimon; remainder on top of deck"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -153,7 +154,8 @@ effects:
   # source-permanent (the carrier that hosts EX4-039). The carrier
   # digivolving further therefore does NOT self-trigger. Same primitive in
   # production use by EX9-033.yaml.
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your other Digimon digivolves, gain 1 memory."
+    scope: inherited
     when: on_digivolve
     optional: false
     once_per_turn: true

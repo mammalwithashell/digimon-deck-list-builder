@@ -70,7 +70,8 @@ effects:
           prompt: "You may play 1 [Ten Warriors] Digimon or 1 Tamer with inherited effects with the play cost reduced by 4"
       - play_from_hand: { of: you, hand_index: play_pick, cost_delta: { reduce: 4 } }
 
-  - scope: inherited
+  - text: "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     summary: "[Security] You may play 1 Tamer with inherited effects from hand or trash free. Then, add this card to the hand"
     process:

@@ -30,7 +30,8 @@ form: In-Training
 effects:
   # Inherited [When Attacking] [Once Per Turn]
   # "If you have a green Digimon in play, <Draw 1>"
-  - scope: inherited
+  - text: "[When Attacking][Once Per Turn] If you have a green Digimon in play, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:

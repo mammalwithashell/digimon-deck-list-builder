@@ -96,13 +96,15 @@ alt_paths:
 
 effects:
   # ─── Clause 0: ＜Raid＞ (own-scope, face-up) ────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
   # ─── Clause 1: [On Play][When Digivolving] trash 1 hand card → return 1
   #              [Composite]/[Wicked God] card from trash to hand ───────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, return 1 card with the [Composite] or [Wicked God] trait from your trash to the hand."
+    when: [on_play, when_digivolving]
     summary: "[OnPlay/WhenDigivolving] By trashing 1 hand card, return 1 [Composite]/[Wicked God] card from trash to hand"
     process:
       - select_hand:
@@ -124,7 +126,8 @@ effects:
       - add_to_hand_from_trash: { of: you, card: recover }
 
   # ─── Clause 2: Inherited ＜Retaliation＞ ────────────────────────────────────
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation
     summary: "[Inherited] <Retaliation>"

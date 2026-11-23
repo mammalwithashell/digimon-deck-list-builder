@@ -48,7 +48,8 @@ traits: ["App Driver", Appmon, Hero]
 
 effects:
   # ─── Clause 1: [Start of Your Turn] if memory <= 2, set it to 3 ──────────────
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
     condition: { memory_lte: 2 }
     process:
@@ -68,7 +69,8 @@ effects:
   # activation_cost: { suspend_self: true } — DCGO: SuspendPermanentsClass([self]);
   #   must be first body step (compile-validated, lifts onto EffectBuilder::activation_cost).
   #   BT25-089:45 precedent.
-  - when: on_any_link
+  - text: "[Your Turn] When your Digimon get linked, by suspending this Tamer, ＜Draw 1＞. Then, 1 of your Digimon may app fuse into a Digimon card in the hand."
+    when: on_any_link
     optional: true
     active_when:
       your_turn: true
@@ -83,7 +85,8 @@ effects:
       - app_fuse: { from: hand, optional: true }
 
   # ─── Clause 3: [Security] play this card without paying the cost ──────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

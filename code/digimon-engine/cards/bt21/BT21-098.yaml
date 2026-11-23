@@ -66,7 +66,8 @@ effects:
       - delete_permanent: { target: victim }
       - place_self_as_delay_option: {}
 
-  - kind: delay
+  - text: "[Your Turn] When one of your [Galacticmon] attacks, ＜Delay＞. ・Delete 1 of your opponent’s Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that it has 1 card left."
+    kind: delay
     trigger: on_ally_attack
     active_when:
       all_of:
@@ -93,7 +94,8 @@ effects:
                 of: opponent
                 leave: 1
 
-  - scope: inherited
+  - text: "[Security] You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     summary: "[Security] You may play 1 [Vemmon]-text card with play cost 6 or less from hand or trash free; then add this card to the hand"
     process:

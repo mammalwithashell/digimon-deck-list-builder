@@ -59,7 +59,8 @@ cost: 2
 
 effects:
   # ─── Clause 1: [All Turns] when a player uses an Option → may suspend, +1 ──
-  - when: on_use_option
+  - text: "[All Turns] When a player uses an Option card, you may suspend this Tamer to gain 1 memory."
+    when: on_use_option
     active_when: { all_turns: true }
     optional: true
     summary: "[All Turns] When a player uses an Option card, you may suspend this Tamer to gain 1 memory"
@@ -70,7 +71,8 @@ effects:
       - gain_memory: 1
 
   # ─── Clause 2: [Security] Play this card without paying the cost ───────────
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     summary: "[Security] Play this card without paying its memory cost"
     process:
       - play_from_security: {}

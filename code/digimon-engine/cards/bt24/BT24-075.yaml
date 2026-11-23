@@ -67,7 +67,8 @@ alt_paths:
 effects:
   # ─── [On Play][When Digivolving] by trashing 1 hand card, delete 1 each of
   #     your opponent's level 3 and level 4 Digimon ─────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, delete 1 each of your opponent's level 3 and level 4 Digimon."
+    when: [on_play, when_digivolving]
     condition:
       count_gte:
         filter: { of: you, zone: [hand] }
@@ -95,7 +96,8 @@ effects:
 
   # ─── Inherited [Your Turn] while this Digimon is [Titamon] or has the
   #     [Titan] trait → <Security A. +1> ───────────────────────────────────
-  - kind: grant_keyword
+  - text: "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1＞."
+    kind: grant_keyword
     scope: inherited
     keyword: SecurityAttackPlus
     value: 1

@@ -147,12 +147,14 @@ dual:
     effect_text: |
       <Blocker> [When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost. [When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends.
     effects:
-      - kind: grant_keyword
+      - text: "＜Blocker＞"
+        kind: grant_keyword
         keyword: Blocker
         summary: "<Blocker>"
 
       # ─── [WD][WA][OPT] use 1 TM/TS Option from hand or this Digimon's sources ─
-      - when: [when_digivolving, when_attacking]
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost."
+        when: [when_digivolving, when_attacking]
         once_per_turn: true
         # DCGO additionalActivateCondition: a [Three Musketeers]/[TS] Option in
         # hand OR in THIS Digimon's digivolution cards — otherwise the trigger
@@ -211,7 +213,8 @@ dual:
                 - refund_opt: {}
 
       # ─── [WD][WA][Counter][OPT] trash 1 Option from any own stack/link → unsuspend ─
-      - when: [when_digivolving, when_attacking, counter]
+      - text: "[When Digivolving] [When Attacking] [Counter] [Once Per Turn] By trashing 1 Option card from any of your Digimon's digivolution cards or link cards, this Digimon unsuspends."
+        when: [when_digivolving, when_attacking, counter]
         once_per_turn: true
         optional: true
         # DCGO additionalActivateCondition: some own Digimon's digivolution

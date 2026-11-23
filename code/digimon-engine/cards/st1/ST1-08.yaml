@@ -18,7 +18,8 @@ alt_paths:
 
 effects:
   # [When Digivolving] 1 of your Digimon gets +3000 DP for the turn.
-  - when: when_digivolving
+  - text: "[When Digivolving] 1 of your Digimon gets +3000 DP for the turn."
+    when: when_digivolving
     condition:
       any_permanent:
         of: you

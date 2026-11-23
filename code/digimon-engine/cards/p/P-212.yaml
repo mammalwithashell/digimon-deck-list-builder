@@ -53,7 +53,8 @@ traits: [TS]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] opponent has a Digimon → +1 ──────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -93,7 +94,8 @@ effects:
             - delete_permanent: { target: tgt }
 
   # ─── Clause 3: [Security] Play this card without paying the cost ───────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

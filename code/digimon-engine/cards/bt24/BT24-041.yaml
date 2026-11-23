@@ -40,7 +40,8 @@ effects:
     amount: 5
     summary: "When played while you have an Iliad Digimon or Tamer, reduce play cost by 5"
 
-  - when: [on_play, when_digivolving, on_deletion]
+  - text: "[On Play] [When Digivolving] [On Deletion] You may play 1 play cost 5 or lower [Iliad] trait card from your hand without paying the cost. Then, to 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for each of your Digimon."
+    when: [on_play, when_digivolving, on_deletion]
     summary: "[On Play][When Digivolving][On Deletion] You may play a cost 5 or lower Iliad card from hand; then De-Digivolve 1 per your Digimon"
     process:
       - select_hand:

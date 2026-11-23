@@ -50,7 +50,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, if it's your turn, this Digimon may digivolve into a Digimon card with [Avian] or [Bird] in any of its traits in the hand. For every other suspended Digimon, reduce this effect's digivolution cost by 1."
+    when: [on_play, when_digivolving]
     summary: "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, if it's your turn, this Digimon may digivolve into a Digimon card with [Avian] or [Bird] in any of its traits in the hand. For every other suspended Digimon, reduce this effect's digivolution cost by 1"
     process:
       - select_any_permanent:
@@ -98,7 +99,8 @@ effects:
                           delta: 1
                       ignore_requirements: false
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

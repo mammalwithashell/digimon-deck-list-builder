@@ -45,7 +45,8 @@ effects:
   # the card-level `use_requirement` above (re-evaluated live); this
   # flood_gate additionally covers the battle-area / face-up scope with the
   # SAME live board condition (BT24-090/094/095/097/100/091 idiom).
-  - kind: flood_gate
+  - text: "While you have a [Three Musketeers] trait Digimon, you can ignore this card's color requirements."
+    kind: flood_gate
     scope: face_up
     active_when:
       any_permanent:
@@ -68,7 +69,8 @@ effects:
   # trash via the standard post-[Main] pipeline (no approximation: the
   # engine's own established mandatory-select-with-empty-candidates fizzle
   # contract, identical to every other mandatory `select_own_permanent`).
-  - when: main_from_hand
+  - text: "[Main] Trash your opponent's top security card. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon."
+    when: main_from_hand
     summary: "[Main] Trash opponent's top security; then place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
     process:
       - trash_top_security: { of: opponent }
@@ -88,7 +90,8 @@ effects:
   # highest DP." Mandatory (no "may"); the `highest_dp` aggregate selector
   # scopes to the opponent's battle area (BT18-013 idiom). Fizzles silently
   # if the opponent has no Digimon.
-  - scope: inherited
+  - text: "[Security] Delete 1 of your opponent's Digimon with the highest DP."
+    scope: inherited
     when: on_security
     summary: "[Security] Delete 1 of your opponent's Digimon with the highest DP"
     process:

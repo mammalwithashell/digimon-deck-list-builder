@@ -189,7 +189,8 @@ effects:
       - cancel_replacement: {}
 
   # ─── Inherited [All Turns][OPT] would-leave save ([Kentaurosmon] carrier) ──
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Kentaurosmon] in its name would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

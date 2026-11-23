@@ -164,7 +164,8 @@ effects:
           optional: false
           prompt: "DNA digivolve 2 of your Digimon into [GraceNovamon] in the hand?"
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][WA][OPT] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends"

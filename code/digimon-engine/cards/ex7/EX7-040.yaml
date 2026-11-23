@@ -81,7 +81,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] By trashing 1 [Three Musketeers] card in hand, Draw 2 ────────
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [Three Musketeers] trait in your hand, ＜Draw 2＞."
+    when: on_play
     optional: true
     summary: "[On Play] By trashing 1 [Three Musketeers] trait card from your hand, Draw 2"
     condition:
@@ -104,7 +105,8 @@ effects:
       - draw: { of: you, count: 2 }
 
   # ─── Inherited <Reboot> ─────────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Reboot
     summary: "Inherited <Reboot>"

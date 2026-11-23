@@ -88,7 +88,8 @@ effects:
   # DCGO (EX6_057.cs:415+): OnDestroyedAnyone, max-per-turn 1, opponent's-turn
   # gate, the deleted permanent is a Digimon other than this one; trash the top
   # card of the opponent's security stack.
-  - when: on_any_deletion
+  - text: "[Opponent's Turn] [Once Per Turn] When another Digimon is deleted, trash the top card of your opponent's security stack."
+    when: on_any_deletion
     once_per_turn: true
     active_when: { opponents_turn: true }
     trigger_if:

@@ -75,7 +75,8 @@ effects:
       - place_self_as_delay_option: {}
 
   # ─── Clause 1: [Your Turn] Delay on Owen Dreadnought suspend ──────────────
-  - kind: delay
+  - text: "[Your Turn] When any of your [Owen Dreadnought]s suspend, ＜Delay＞. ・1 of your [Reptile] or [Dragonkin] trait Digimon may digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait and the [LIBERATOR] trait in the hand with the digivolution cost reduced by 3."
+    kind: delay
     trigger: on_suspend
     active_when:
       your_turn: true
@@ -126,7 +127,8 @@ effects:
           ignore_requirements: false
 
   # ─── Clause 2: Inherited [Security] ───────────────────────────────────────
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Activate [Main] effects: play 1 Elizamon or Owen Dreadnought from hand or trash free, then place in battle area"

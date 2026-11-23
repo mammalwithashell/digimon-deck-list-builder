@@ -50,7 +50,8 @@ alt_paths:
 
 effects:
   # ─── <Blocker> ───────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -72,7 +73,8 @@ effects:
   # Host-side trigger (DCGO ActivateClass priority 1, NOT SetIsLinkedEffect).
   # CanUseCondition gates on IsOwnerTurn → active_when: { your_turn: true }.
   # canNoSelect: false → mandatory selection when eligible opponent Digimon exists.
-  - when: when_card_linked_to_this
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, <De-Digivolve 1> 1 of your opponent's Digimon"

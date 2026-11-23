@@ -86,7 +86,8 @@ effects:
                       then:
                         - place_as_bottom_source: { source: material, target: recipient }
 
-  - when: on_security
+  - text: "[Security] You may reveal the top 3 cards of your deck. Add 1 card with [X Antibody] in its traits among them to your hand. Trash the rest."
+    when: on_security
     optional: true
     summary: "You may reveal 3; add 1 X Antibody card among them to hand and trash the rest"
     process:

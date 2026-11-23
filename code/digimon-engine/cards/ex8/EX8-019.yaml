@@ -106,7 +106,8 @@ effects:
   # - cost_target — DCGO cardCondition (EqualsTraits "Ice-Snow"): the card
   #   being digivolved into must be an [Ice-Snow] Digimon.
   # - No [Once Per Turn] printed; DCGO's static effect has no max-count.
-  - kind: cost_reduction
+  - text: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Ice-Snow] trait, reduce the digivolution cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when:
       all_of:
@@ -126,7 +127,8 @@ effects:
   # opponent Digimon the empty mandatory select is silently skipped (DCGO
   # CanActivateCondition gate). "Until the end of their turn" = DCGO
   # EffectDuration.UntilOpponentTurnEnd = expiry: end_of_opponents_turn.
-  - scope: inherited
+  - text: "[When Attacking] Give 1 of your opponent's Digimon ＜Security A. -1＞ until the end of their turn."
+    scope: inherited
     when: when_attacking
     summary: "[Inherited][When Attacking] Give 1 opponent Digimon Security A. -1 until the end of their turn"
     process:

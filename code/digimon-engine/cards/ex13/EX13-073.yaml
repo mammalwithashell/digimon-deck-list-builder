@@ -36,7 +36,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_ally_played
+  - text: "[Your Turn] When your [ADVENTURE] trait Digimon or Tamers are played, by suspending this Tamer, ＜Draw 1＞ and trash 1 card in your hand."
+    when: on_ally_played
     optional: true
     active_when: { your_turn: true }
     condition:
@@ -81,7 +82,8 @@ effects:
     grant_keyword: { keyword: Blocker }
     summary: "[All Turns] All of your Lv.5+ [ADVENTURE] Digimon gain <Blocker>"
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

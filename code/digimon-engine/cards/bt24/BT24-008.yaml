@@ -14,7 +14,8 @@ effects:
   # optional: true — the whole effect is optional (player may decline to pay cost).
   # condition: gates activation when no eligible card in hand (requires Phase 3
   #   count_gte evaluation on hand zone to take effect at runtime).
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [Reptile], [Dragonkin] or [LIBERATOR] trait from your hand, ＜Draw 2＞."
+    when: on_play
     optional: true
     summary: "By trashing a Reptile/Dragonkin/LIBERATOR card from hand, Draw 2"
     condition:
@@ -47,7 +48,8 @@ effects:
 
   # [Your Turn] [Once Per Turn] When your opponent's security stack is removed
   # from, gain 1 memory.
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     active_when: { your_turn: true }
