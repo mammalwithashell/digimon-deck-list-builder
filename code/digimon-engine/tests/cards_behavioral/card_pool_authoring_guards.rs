@@ -16,6 +16,10 @@
 //!    prohibited is never offered (Asuna Shiroki (BT24-088), Yellow Scramble
 //!    (LM-029), Kaguyamon (EX12-065) under Crimson Blaze (BT8-097) / Pomumon
 //!    (BT9-047)).
+//! 3. `printed_duration_lint` -- a printed "until your turn ends" / "until your
+//!    opponent's turn ends" is authored with the matching player-relative
+//!    expiry, not `end_of_turn` (CR 4.3 15-10-1-1-1): Blastmon (EX10-034)
+//!    lost its bonus a turn early when used on the opponent's turn.
 
 use std::path::{Path, PathBuf};
 
@@ -66,5 +70,29 @@ fn pool_guard_every_play_from_trash_pick_checks_play_legality() {
         "select_trash picks that feed a play-from-trash verb without a play-legality leaf \
          (the pick would offer cards the play refuses):\n{}",
         offenders.join("\n")
+    );
+}
+
+#[test]
+fn pool_guard_printed_turn_durations_use_player_relative_expiries() {
+    let official = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/card_official.json");
+    let report = digimon_dsl::printed_duration_lint::check_pool(&cards_root(), &official)
+        .expect("read data/card_official.json");
+    assert!(
+        report.checked > 1000,
+        "only {} specs had printed text -- is card_official.json present?",
+        report.checked
+    );
+    assert!(
+        report.findings.is_empty(),
+        "printed turn durations authored with the wrong expiry:
+{}",
+        report.findings.join("
+")
+    );
+    assert!(
+        report.stale_exemptions.is_empty(),
+        "PRINTED_DURATION_EXEMPT entries no longer needed (remove them): {:?}",
+        report.stale_exemptions
     );
 }

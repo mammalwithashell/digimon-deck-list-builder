@@ -11,7 +11,10 @@
 //! 2. every `select_trash` whose binding feeds a `play_from_trash_free` /
 //!    `play_from_trash` carries a play-legality leaf after compilation
 //!    (`digimon_dsl::play_candidates`), so a card the play verb would refuse
-//!    (effect-play lock, trash-play lock, full battle area) is never offered.
+//!    (effect-play lock, trash-play lock, full battle area) is never offered;
+//! 3. a printed "until your turn ends" / "until your opponent's turn ends" is
+//!    authored with the matching player-relative expiry
+//!    (`digimon_dsl::printed_duration_lint`; Blastmon (EX10-034)).
 
 use std::path::{Path, PathBuf};
 
@@ -54,6 +57,26 @@ fn every_play_from_trash_pick_checks_play_legality_after_compilation() {
         "select_trash picks that feed a play-from-trash verb without a play-legality leaf \
          (the pick would offer cards the play refuses):\n{}",
         offenders.join("\n")
+    );
+}
+
+#[test]
+fn printed_turn_durations_use_player_relative_expiries() {
+    let official = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/card_official.json");
+    let report = digimon_dsl::printed_duration_lint::check_pool(&cards_root(), &official)
+        .expect("read data/card_official.json");
+    assert!(report.checked > 1000, "only {} specs had printed text", report.checked);
+    assert!(
+        report.findings.is_empty(),
+        "printed turn durations authored with the wrong expiry:
+{}",
+        report.findings.join("
+")
+    );
+    assert!(
+        report.stale_exemptions.is_empty(),
+        "PRINTED_DURATION_EXEMPT entries no longer needed: {:?}",
+        report.stale_exemptions
     );
 }
 

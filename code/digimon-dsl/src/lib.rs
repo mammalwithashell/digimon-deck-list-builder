@@ -29,6 +29,7 @@ pub mod loader;
 pub mod pack;
 pub mod play_candidates;
 pub mod predicate;
+pub mod printed_duration_lint;
 pub mod pretty;
 pub mod raw_rust_registry;
 pub mod registry;
