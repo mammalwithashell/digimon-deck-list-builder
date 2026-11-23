@@ -54,16 +54,20 @@ effects:
                 bind_as: base
                 filter: { name_contains: "Gabumon" }
                 prompt: "Choose 1 Gabumon"
-            - select_hand:
-                of: you
-                bind_as: evo
-                filter: { name_contains: "MetalGarurumon" }
-                prompt: "Choose MetalGarurumon in hand"
-            - effect_initiated_digivolve:
-                target: base
-                from_hand: evo
-                cost: 0
-                ignore_requirements: true
+            - if:
+                condition: { binding_exists: base }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: evo
+                      optional: true
+                      filter: { name_contains: "MetalGarurumon" }
+                      prompt: "Choose MetalGarurumon in hand"
+                  - effect_initiated_digivolve:
+                      target: base
+                      from_hand: evo
+                      cost: 0
+                      ignore_requirements: true
 
   - text: "[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, trash the top card of your opponent's security stack."
     scope: inherited
@@ -73,9 +77,3 @@ effects:
     summary: "[Inherited][When Attacking][Once Per Turn] If top is Omnimon, trash opponent top security"
     process:
       - trash_top_security: { of: opponent }
-
-  # Omitted:
-  # The Gabumon branch currently has an ignored test for effect-initiated
-  # digivolve from hand with a permanent target. The inherited source-name
-  # predicate also has an ignored negative test until source_name_contains is
-  # evaluated by the predicate path.

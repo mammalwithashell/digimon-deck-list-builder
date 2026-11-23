@@ -3642,6 +3642,7 @@
       "predicates": [
         "all_of",
         "any_permanent",
+        "binding_exists",
         "dp_lte",
         "equals",
         "kind",
@@ -33047,7 +33048,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "/home/ubuntu/repos/digimon-deck-list-builder/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost": [
       "AD1-019",
@@ -35433,6 +35434,7 @@
     "binding_exists": [
       "AD1-024",
       "BT13-103",
+      "BT17-015",
       "BT20-014",
       "BT21-021",
       "BT24-088",

@@ -34,7 +34,7 @@ For each card, inspect:
 
 - Production YAML: `code/digimon-engine/cards/<set>/<CARD-ID>.yaml`.
 - Example YAML: `code/digimon-engine/cards/_examples/`.
-- Behavioral tests: `code/digimon-engine/tests/cards_behavioral/<set>/`.
+- New behavioral tests: `code/digimon-engine/tests/cards_behavioral/card_text/<id>.rs` (template: `bt17_015.rs`). Read `data/card_bundles/<ID>.md` and rules, write/run independent tests before reading YAML or legacy `<set>/` tests; see the skill's Card-text-first contract.
 - DSL tests: `code/digimon-engine/tests/dsl/`.
 - Raw Rust registry: `code/digimon-engine/src/cards/raw_rust/`.
 - Gap trackers: `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md`, `qa/archetype-qa/engine-gaps.md`.

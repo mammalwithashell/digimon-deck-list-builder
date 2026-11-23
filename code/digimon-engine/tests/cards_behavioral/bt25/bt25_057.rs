@@ -13,8 +13,8 @@
 //!   [When Digivolving] This Digimon may battle 1 of your opponent's Digimon.
 //! OPTION FACE — "Final Judgment", Use 4
 //!   Use Req. [Glowing Dawn] trait (ignore color requirements).
-//!   [Main] 1 of your Digimon gains <Rush>, <Security A. +1> and +5000 DP for
-//!     the turn. Then, it may attack.
+//!   [Main] 1 of your Digimon gains <Rush>, <Security A. +1> and +5000 DP until
+//!     your opponent's turn ends. Then, it may attack.
 //!   <Arts Digivolve>.
 //!
 //! # DCGO C# reference
@@ -225,6 +225,9 @@ fn bt25_057_option_main_grants_rush_secatk_dp_to_chosen_digimon() {
         dp_before + 5000,
         "buffed Digimon gets +5000 DP"
     );
+    r.assert_prompt(SelectionKind::Target, true, 0);
+    r.decline_prompt().expect("decline the immediate attack");
+    assert!(r.pending_selection().is_none());
 }
 
 // ─── Arts Digivolve wiring ───────────────────────────────────────────────────
