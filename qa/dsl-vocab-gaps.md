@@ -1,7 +1,7 @@
 ## G-DSL-REFIRE-CARRIER-ON-DELETION — activate an On Deletion effect without deleting the Digimon
 
 - **Drivers:** BT27-010 and BT27-012. The paid Main effect can choose an On Deletion effect on the carrier, including one contributed by a digivolution card.
-- **Resolution:** `refire_effect` and `has_refireable_effect` accept `on_deletion` for a permanent. The refire lists active face and inherited effects on that permanent, retains physical source identity, and runs the chosen effect without a deletion trigger.
+- **Resolution:** `refire_effect` and `has_refireable_effect` accept `on_deletion` for a permanent. The refire lists active face, inherited, and link effects on that permanent, retains physical source identity, and runs the chosen effect without a deletion trigger.
 - **Acceptance:** Surface the carrier's eligible face and inherited On Deletion effects as distinct candidates and process the chosen effect without deleting the carrier or emitting an actual deletion event. Preserve its physical source, carrier and normal optionality. Test face-only and stacked candidates, declining selection, cost payment, and the Main effect's once-per-turn limit.
 
 ## G-DSL-DIGIVOLVE-CANDIDATE-UNDER-SOURCE-TAMER — qualify a Digimon pick by its legal result cards under this Tamer

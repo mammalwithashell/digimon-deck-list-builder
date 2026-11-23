@@ -1859,10 +1859,19 @@ pub fn enumerate_refireable_effects(
         Vec::new()
     };
     let mut candidates = Vec::new();
-    for (index, card) in perm.card_sources.iter().enumerate().rev() {
-        if !is_deletion && index + 1 != stack_size {
-            break;
-        }
+    let stack_sources = perm
+        .card_sources
+        .iter()
+        .enumerate()
+        .rev()
+        .take(if is_deletion { stack_size } else { 1 })
+        .map(|(index, card)| (Some(index), card));
+    let linked_sources = perm
+        .linked_cards
+        .iter()
+        .filter(|_| is_deletion)
+        .map(|card| (None, card));
+    for (stack_index, card) in stack_sources.chain(linked_sources) {
         let source_card = card.handle();
         let card_id = card.card_id(&game.card_data);
         let Some(effects) = game.effects_for_card(card_id, source_card) else {
@@ -1876,9 +1885,12 @@ pub fn enumerate_refireable_effects(
                 !effect.security
                     && !effect.declarative
                     && !effect.trash_zone
-                    && crate::game::Game::source_effect_is_active(
-                        index, stack_size, adopted.contains(&index), effect,
-                    )
+                    && match stack_index {
+                        Some(index) => crate::game::Game::source_effect_is_active(
+                            index, stack_size, adopted.contains(&index), effect,
+                        ),
+                        None => effect.linked || effect.inherited,
+                    }
             } else {
                 effect.can_be_refired()
             };

@@ -47,6 +47,60 @@ fn declining_after_paying_still_spends_memory_and_the_main_use() {
 }
 
 #[test]
+fn both_paid_main_effects_can_refire_a_linked_deletion_effect() {
+    const LINK: &str = "TEXT-DELETION-LINK";
+    for card in [CARD, "BT27-012"] {
+        let mut r = start(
+            builder(card)
+                .memory(5)
+                .from_dsl_yaml(
+                    r#"
+card: TEXT-DELETION-LINK
+name: Linked Digimon
+kind: digimon
+color: [red]
+level: 4
+dp: 4000
+cost: 4
+effects:
+  - kind: link_requirement
+    scope: inherited
+    cost: 1
+    filter: { kind: digimon }
+  - scope: linked
+    when: on_deletion
+    process:
+      - gain_memory: 2
+  - when: on_deletion
+    process:
+      - gain_memory: 5
+"#,
+                )
+                .unwrap(),
+        );
+        let carrier = r.place_on_field(0, card, Some(0));
+        let top = r.top_card(carrier);
+        let link = r.push_linked_owned(carrier, LINK, 0);
+        action(&mut r, 0, main_action(carrier.index));
+        assert_eq!(r.memory(), 4);
+        r.assert_prompt(SelectionKind::EffectChoice, true, 0);
+        let choices = r.pending_selection_view().unwrap().effect_choices.unwrap();
+        assert_eq!(choices.len(), 2, "the linked card's face effect is not offered");
+        let branch = choices
+            .iter()
+            .position(|choice| choice.source_card == Some(link))
+            .expect("the linked [On Deletion] effect is offered");
+        r.execute_branch(branch).unwrap();
+        assert_eq!(r.memory(), 6);
+        assert_eq!(r.top_card(carrier), top);
+        assert_eq!(
+            r.game.players[0].battle_area[carrier.index as usize].linked_cards[0].handle(),
+            link
+        );
+    }
+}
+
+#[test]
 fn actual_deletion_triggers_both_face_and_inherited_clauses() {
     for inherited in [false, true] {
         let mut r = start(builder(CARD));
