@@ -1049,6 +1049,32 @@ fn validate_step(
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
             validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
         }
+        StepSpec::PlaceDeckTopUnder(args) => {
+            let path = format!("{prefix}.target");
+            validate_binding_ref(&args.target, &path, card_id, errors);
+            let card_only = match &args.target {
+                BindingRef::Named(name) => matches!(name.as_str(), "self" | "event_card"),
+                BindingRef::Structured(reference) => {
+                    reference.top_of.is_some()
+                        || reference.deck_top.is_some()
+                        || reference.security_top.is_some()
+                }
+            };
+            if card_only {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path,
+                    message: "place_deck_top_under target must resolve to a permanent".into(),
+                });
+            }
+            if args.count == 0 {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.count"),
+                    message: "place_deck_top_under count must be positive".into(),
+                });
+            }
+        }
         StepSpec::PaySourcePrefix(args) => {
             validate_predicate(&args.host_filter, prefix, card_id, ctx, errors);
             if args.minimum == 0 || args.minimum > i64::MAX as u64 {
@@ -2325,6 +2351,31 @@ fn validate_step_binding_scope(
                 }
             }
             declare_optional_binding(scope, &args.bind_placed_as);
+        }
+        StepSpec::PlaceDeckTopUnder(args) => {
+            let name = match &args.target {
+                BindingRef::Named(name)
+                    if !matches!(
+                        name.as_str(),
+                        "self" | "this" | "carrier" | "source" | "event_target" | "event_card"
+                    ) => Some(name),
+                BindingRef::Structured(reference) => reference
+                    .permanent
+                    .as_ref()
+                    .or(reference.binding.as_ref())
+                    .or(reference.of_permanent.as_ref())
+                    .or(reference.played_carrier.as_ref()),
+                _ => None,
+            };
+            if let Some(name) = name {
+                report_if_undeclared_binding(
+                    name,
+                    &format!("{prefix}.target"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
         }
         // Same success-only optional binding for a permanent placed into
         // security (BT25-044 "By placing 1 other Digimon as the top security
