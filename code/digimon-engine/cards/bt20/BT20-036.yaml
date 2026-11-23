@@ -19,9 +19,12 @@
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT20/Yellow/BT20_036.cs
 #
 # Modeling notes:
-# - [EoT] "the DNA digivolved Digimon may attack": the windowed attack grant
-#   (`may_attack_now { windowed: true }`) on the merged permanent after the
-#   DNA digivolve resolves.
+# - [EoT] "the DNA digivolved Digimon may attack": an optional attack declared
+#   inside the effect by the merged permanent after the DNA digivolve resolves
+#   (DCGO `OnDNASuccess` runs SelectAttackEffect inline, declinable; official
+#   Q&A: a 2nd copy's [End of Your Turn] can activate before that attack's
+#   counter timing but cannot declare another attack). Was a deferred
+#   `windowed` MayAttack grant (scan finding F02 class audit).
 # - Inherited redirect: the EX10-031/BT19-072 `redirect_attack_target` idiom.
 # Verdict: IMPLEMENTED.
 
@@ -137,7 +140,9 @@ effects:
                       then:
                         - may_attack_now:
                             attacker: source
-                            windowed: true
+                            targets: any
+                            optional: true
+                            prompt: "Have the DNA digivolved Digimon attack now?"
 
   # ─── Inherited — [Opp Turn][OPT] attack redirect ───────────────────────────
   - scope: inherited

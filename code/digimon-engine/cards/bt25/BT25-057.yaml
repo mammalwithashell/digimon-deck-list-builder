@@ -151,9 +151,16 @@ dual:
               value: 1
               expiry: end_of_turn
           - add_dp_modifier: { target: buffed, value: 5000, expiry: end_of_turn }
+          # "Then, it may attack." -- the attack is part of this [Main]
+          # effect, by the chosen Digimon, before the effect resolves and so
+          # before the pending trash / <Arts Digivolve> (CR 4.3 15-1-2, 9-1-5,
+          # 4-20-1/4-20-2). DCGO BT25_057.cs runs SelectAttackEffect inline
+          # right after the buffs (declinable). Official Q&A: the Digimon that
+          # attacked and then Arts digivolved into this card cannot activate
+          # its [When Attacking]. (Was `windowed: true`, which deferred the
+          # attack to the end-of-turn window -- scan finding F02.)
           - may_attack_now:
               attacker: buffed
               targets: any
               optional: true
-              windowed: true
               prompt: "Have the buffed Digimon attack now?"

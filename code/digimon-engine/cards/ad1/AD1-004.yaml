@@ -99,6 +99,12 @@ effects:
         - 3
     summary: "[All Turns] base-inclusive 1 + floor(distinct Tamer colors / 3) security checks"
 
+  # "[End of Your Turn] 1 of your Digimon may attack." The attack is declared
+  # inside this effect (CR 4.3 15-1-2): DCGO AD1_004.cs selects the Digimon
+  # (canNoSelect: true) and runs SelectAttackEffect inline. Other end-of-turn
+  # triggers are ordered against this whole effect by the turn player (CR 4.3
+  # 15-4-2-3). (Was `windowed: true`, a deferred end-of-turn MayAttack grant --
+  # scan finding F02 class audit.)
   - when: end_of_your_turn
     summary: "[End of Your Turn] 1 of your Digimon may attack"
     process:
@@ -111,7 +117,6 @@ effects:
               attacker: attacker
               targets: any
               optional: true
-              windowed: true
               prompt: "Have the selected Digimon attack now?"
 
   # ─── Inherited: [When Attacking][OPT] name-gated delete (Greymon/Omnimon) ────

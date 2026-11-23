@@ -714,6 +714,7 @@ impl Game {
         // callback starts with `draining_deferred > 0`; the body has finished
         // when the drain is back at THIS depth (§9-1-5, see the field).
         self.option_body_outer_deferred = self.draining_deferred;
+        self.option_body_attack_open_at_start = self.pending_attack.is_some();
         self.option_first_main_resolved = false;
         self.enqueue_option_main_from_pending(&card_id, card_handle, player_id, mode.is_link());
         self.drain_effect_queue();

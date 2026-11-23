@@ -56,3 +56,16 @@ fn every_play_from_trash_pick_checks_play_legality_after_compilation() {
         offenders.join("\n")
     );
 }
+
+/// `may_attack_now` has no `windowed` deferral any more: an effect's "may
+/// attack" is declared inside the effect (CR 4.3 15-1-2). Monarchlizamon
+/// (BT25-057) authored `windowed: true` and attacked in the end-of-turn
+/// window, after its own Arts Digivolve (scan finding F02).
+#[test]
+fn may_attack_now_rejects_the_removed_windowed_flag() {
+    let err = serde_yml::from_str::<digimon_dsl::step::StepSpec>(
+        "may_attack_now: { attacker: source, optional: true, windowed: true }",
+    )
+    .expect_err("`windowed` must not parse");
+    assert!(err.to_string().contains("windowed"), "{err}");
+}

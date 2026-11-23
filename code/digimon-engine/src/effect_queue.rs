@@ -7301,8 +7301,14 @@ impl Game {
     /// - `Disposing`: populated by Task 6 (WhenWouldBeTrashed replacement
     ///   window for Option self-trash).
     /// - `Done`: terminal.
-    fn advance_pending_option(&mut self) {
+    pub(crate) fn advance_pending_option(&mut self) {
         if !self.effect_queue.is_empty() {
+            return;
+        }
+        // The body declared an attack that is still running: the body has not
+        // resolved (see `complete_option_body_if_done`). The attack's end
+        // re-enters here.
+        if self.option_body_attack_in_progress() {
             return;
         }
         let Some(pending) = self.pending_option.as_ref() else {
@@ -7435,6 +7441,14 @@ impl Game {
         if !self.option_body_pending || self.pending_selection.is_some() {
             return;
         }
+        // An attack the body declared is still running: the body has not
+        // resolved yet (CR 4.3 15-1-2 / 15-1-4 / 11-1-5). The attack's end
+        // re-enters here (`finish_attack_after_end_of_attack_timing`).
+        // Monarchlizamon (BT25-057): "Then, it may attack." before the
+        // <Arts Digivolve> / trash.
+        if self.option_body_attack_in_progress() {
+            return;
+        }
         let Some(pending) = self.pending_option.as_ref() else {
             // The body CLAIMED the card (placed it under a Digimon, added it
             // to hand, linked it). Nothing to dispose; the observers are
@@ -7480,6 +7494,14 @@ impl Game {
         }
         self.option_body_pending = false;
         self.dispose_option();
+    }
+
+    /// An attack declared by the in-flight Option's `[Main]` body (not one
+    /// already open when the body started) is still in progress.
+    pub(crate) fn option_body_attack_in_progress(&self) -> bool {
+        self.pending_option.is_some()
+            && self.pending_attack.is_some()
+            && !self.option_body_attack_open_at_start
     }
 
     /// Index of the queued `OptionMain` body of the Option currently being
