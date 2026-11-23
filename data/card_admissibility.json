@@ -47016,12 +47016,12 @@
     "untested_card": 17,
     "untested_lowering": 3210
   },
-  "generated_at": "2026-11-23T05:51:34+00:00",
+  "generated_at": "2026-11-23T06:31:31+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "7ce1cb566db59854601bda0482e4e220ef7aab8ae3d37f4e18db8df67618099f",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "360aee3b8f5494dc0a55e75daba5d78482a7b0bd18aadbb1cf19ba804467ca4b",
+    "lowering_coverage_sha256": "38fcf6aa5744b2642f4027e4a89d62c58c0c9a9a6a062861a833397f2a28644b",
     "validated_cards_dsl_sha256": "4eeacbced677eec91375a10efc6e187f76ace4e9a59b03415a7f815e0c80666d",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },

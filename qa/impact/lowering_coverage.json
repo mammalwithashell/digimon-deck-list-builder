@@ -17054,7 +17054,7 @@
   },
   "BT25-103": {
    "behaviourally_covered": true,
-   "clause_count": 9,
+   "clause_count": 10,
    "constructs": [
     "verb:end_attack",
     "verb:if",
@@ -17079,7 +17079,7 @@
     "timing:when_digivolving",
     "keyword:Iceclad"
    ],
-   "effect_clause_count": 5,
+   "effect_clause_count": 6,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -18467,7 +18467,7 @@
   },
   "BT26-055": {
    "behaviourally_covered": false,
-   "clause_count": 4,
+   "clause_count": 5,
    "constructs": [
     "verb:delete_all_permanents",
     "verb:if",
@@ -18497,7 +18497,7 @@
     "timing:when_digivolving",
     "keyword:Fragment"
    ],
-   "effect_clause_count": 3,
+   "effect_clause_count": 4,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [
