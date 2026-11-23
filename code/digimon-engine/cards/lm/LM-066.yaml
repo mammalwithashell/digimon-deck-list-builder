@@ -1,0 +1,179 @@
+card: LM-066
+name: Zephagamon
+kind: dual
+
+level: 6
+color: [green]
+cost: 6
+dp: 13000
+traits: [Magic Knight, Vortex Warriors, LIBERATOR, Bird Dragon]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, play_cost_gte: 11, trait_has: "Vortex Warriors" }
+    cost: 2
+
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [green]
+    traits: [Magic Knight, Vortex Warriors, LIBERATOR, Bird Dragon]
+    effect_text: |
+      ＜Piercing＞ ＜Vortex＞ ＜Blocker＞
+      [When Digivolving] [When Attacking] [Once Per Turn] You may unsuspend 1 Digimon. Then, this Digimon may battle 1 of your opponent's Digimon.
+      [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by suspending 1 Digimon, it doesn't leave.
+      (Rule) Trait: Has [Bird Dragon] Type.
+    effects:
+      - text: "＜Piercing＞"
+        kind: grant_keyword
+        keyword: Piercing
+        summary: "<Piercing>"
+
+      - text: "＜Vortex＞"
+        kind: grant_keyword
+        keyword: Vortex
+        summary: "<Vortex>"
+
+      - text: "＜Blocker＞"
+        kind: grant_keyword
+        keyword: Blocker
+        summary: "<Blocker>"
+
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may unsuspend 1 Digimon. Then, this Digimon may battle 1 of your opponent's Digimon."
+        when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        summary: "[WD][WA][OPT] You may unsuspend 1 Digimon; then this Digimon may battle 1 of your opponent's Digimon"
+        process:
+          - select_any_permanent:
+              optional: true
+              bind_as: wake_target
+              filter:
+                all_of:
+                  - kind: digimon
+                  - is_suspended: true
+              prompt: "You may unsuspend 1 Digimon"
+          - if:
+              condition: { binding_present: wake_target }
+              then:
+                - unsuspend: { target: wake_target }
+          - select_opponent_permanent:
+              optional: true
+              bind_as: battle_target
+              filter: { kind: digimon }
+              prompt: "This Digimon may battle 1 of your opponent's Digimon"
+          - if:
+              condition: { binding_present: battle_target }
+              then:
+                - battle:
+                    attacker: source
+                    defender: battle_target
+
+      - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by suspending 1 Digimon, it doesn't leave."
+        kind: replacement
+        trigger: when_would_leave_battle_area
+        optional: true
+        once_per_turn: true
+        active_when:
+          none_of:
+            - replacement_cause: own_effect
+        summary: "[All Turns][OPT] When this Digimon would leave the battle area other than by your effects, by suspending 1 Digimon, it doesn't leave"
+        process:
+          - select_any_permanent:
+              optional: false
+              bind_as: brace_target
+              filter:
+                all_of:
+                  - kind: digimon
+                  - is_unsuspended: true
+              prompt: "Suspend 1 Digimon to prevent this Digimon from leaving the battle area"
+          - suspend: { target: brace_target }
+          - cancel_replacement: {}
+
+  option:
+    use_cost: 6
+    colors: [green]
+    effect_text: |
+      When this card would be used, by suspending 2 Digimon, reduce the cost by 2.
+      [Main] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. Then, for every 2 suspended Digimon, return 1 of their Digimon to the bottom of the deck.
+    arts_digivolve: true
+    effects:
+      - text: "When this card would be used, by suspending 2 Digimon, reduce the cost by 2."
+        kind: cost_reduction
+        reduction_timing: before_pay_cost
+        when_playing_this: true
+        optional: true
+        condition:
+          count_gte:
+            filter:
+              owner: any
+              zone: [battle_area]
+              kind: digimon
+              is_unsuspended: true
+            n: 2
+        amount: 2
+        summary: "When this card would be used, by suspending 2 Digimon, reduce the use cost by 2"
+        pay_cost:
+          - select_any_permanent:
+              optional: false
+              bind_as: suspend_1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - is_unsuspended: true
+              prompt: "Suspend 1 Digimon (cost 1/2)"
+          - suspend: { target: suspend_1 }
+          - select_any_permanent:
+              optional: false
+              bind_as: suspend_2
+              filter:
+                all_of:
+                  - kind: digimon
+                  - is_unsuspended: true
+              prompt: "Suspend 1 Digimon (cost 2/2)"
+          - suspend: { target: suspend_2 }
+
+      - text: "[Main] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. Then, for every 2 suspended Digimon, return 1 of their Digimon to the bottom of the deck."
+        when: main
+        summary: "[Main] 1 opp Digimon/Tamer can't unsuspend until their turn ends; then for every 2 suspended Digimon, return 1 opp Digimon to the bottom of the deck"
+        process:
+          - select_opponent_permanent:
+              optional: false
+              bind_as: lock_target
+              filter:
+                any_of:
+                  - kind: digimon
+                  - kind: tamer
+              prompt: "1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"
+          - add_modifier:
+              target: lock_target
+              modifier: CannotUnsuspend
+              value: 1
+              expiry: end_of_opponents_turn
+          - select_count_capped_multi:
+              of: opponent
+              zone: battle_area
+              max:
+                formula:
+                  floor_div:
+                    - base: 0
+                      per:
+                        suspended_count: { of: any }
+                      delta: 1
+                    - 2
+              clamp_to_available: true
+              filter: { kind: digimon }
+              bind_as: bounce_targets
+              prompt: "Return 1 of your opponent's Digimon to the bottom of the deck for every 2 suspended Digimon"
+              optional_zero: false
+          - per_selected:
+              selection: bounce_targets
+              bind_as: b
+              body:
+                - return_to_deck:
+                    target: b
+                    position: bottom
