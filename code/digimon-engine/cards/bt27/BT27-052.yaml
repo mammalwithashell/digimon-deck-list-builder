@@ -1,0 +1,78 @@
+card: BT27-052
+name: Atratusmon
+kind: digimon
+level: 6
+color: [green, black]
+cost: 13
+dp: 13000
+traits: [Mutant, Glowing Dawn, BEATBREAK]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { any_color: true, level_eq: 5, trait_has: Glowing Dawn }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, name_is: Atratusmon, kind: dual }
+    cost: 2
+  - kind: assembly
+    cost: 5
+    materials:
+      - filter: { level_eq: 5, trait_has: Glowing Dawn }
+        zones: [trash]
+        stack_under: true
+      - filter: { level_eq: 4, trait_has: Glowing Dawn }
+        zones: [trash]
+        stack_under: true
+      - filter: { level_eq: 3, trait_has: Glowing Dawn }
+        zones: [trash]
+        stack_under: true
+
+effects:
+  - text: "＜Security A. +1＞"
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+  - text: "＜Reboot＞"
+    kind: grant_keyword
+    keyword: Reboot
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    keyword: Blocker
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] This Digimon may battle 1 of your opponent's Digimon."
+    when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    condition: { any_permanent: { of: opponent, zone: [battle_area], kind: digimon } }
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: to_battle
+          filter: { kind: digimon }
+          prompt: Choose 1 opponent's Digimon to battle
+      - battle: { attacker: this, defender: to_battle }
+  - text: "[On Play] [When Digivolving] By trashing 2 bottom face-down cards from under any of your Tamers, you may play or use 1 play or use cost 6 or lower [Glowing Dawn] trait card from your hand or your Digimon's digivolution cards without paying the cost."
+    when: [on_play, when_digivolving]
+    optional: true
+    condition: { face_down_sources_under_tamers_gte: 2 }
+    process:
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          material_carrier_filter: { kind: digimon }
+          filter: { trait_has: Glowing Dawn, play_or_use_cost_lte: 6, can_play_or_use_from_effect: true }
+          bind_as: picked
+          optional: true
+          prompt: You may play or use 1 Glowing Dawn card with play or use cost 6 or less
+      - if:
+          condition: { binding_card_kind: { binding: picked, kind: option } }
+          then:
+            - use_option_bound: { binding: picked, cost: free }
+          else:
+            - play_union_bound_free: { binding: picked }

@@ -1,0 +1,34 @@
+card: BT27-044
+name: Gekkomon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Reptile, Glowing Dawn, BEATBREAK]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  - kind: digivolve
+    from: { any_color: true, level_eq: 2, trait_has: Glowing Dawn }
+    cost: 0
+
+effects:
+  - text: "[Your Turn] When this Digimon would digivolve into a green Digimon card with the [BEATBREAK] trait, reduce the cost by 1."
+    kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - not: { in_breeding: true }
+        - cost_target: { kind: digimon, color_is: green, trait_has: BEATBREAK }
+    amount: 1
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target: { is_source: true }
+    dp_modifier: 2000
