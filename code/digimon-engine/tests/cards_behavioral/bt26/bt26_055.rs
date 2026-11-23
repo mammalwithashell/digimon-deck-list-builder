@@ -105,6 +105,38 @@ fn bt26_055_doing_nothing_refunds_once_per_turn() {
     assert!(field_ids(&r, 0).is_empty());
 }
 
+/// The [Counter] timing of the same printed effect is activation-type (CR 4.3
+/// 15-16-14-1): the player activates it by declaring it in the counter timing
+/// (11-3), and CR 4.3 15-14-1-4 counts that declaration as the use "even if
+/// the effect's processing can't be executed". Placing nothing and answering
+/// "No" afterwards still spends the [Once Per Turn], for every timing of this
+/// one effect. (At [On Play] / [When Digivolving], declining both halves keeps
+/// the use: owner-decided W13, the test above.) DCGO BT26_055.cs RemoveUse()s
+/// at [Counter] too; the rules text decides.
+#[test]
+fn bt26_055_counter_declared_then_nothing_done_spends_once_per_turn() {
+    let mut r = setup();
+    let giro = r.place_on_field(0, CARD_ID, Some(0));
+    r.place_on_field(1, "OPPA", Some(0));
+    push_hand(&mut r, 0, "FILLER");
+    fire(&mut r, EffectTiming::CounterEffect, giro);
+    pass(&mut r, 0); // place nothing
+    r.execute_branch(1).expect("No");
+    let _ = r.auto_resolve();
+    assert_eq!(field_ids(&r, 1), vec!["OPPA".to_string()]);
+    fire(&mut r, EffectTiming::CounterEffect, giro);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the declared [Counter] used the [Once Per Turn]"
+    );
+    fire(&mut r, EffectTiming::OnPlay, giro);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "the [On Play] timing of the same effect shares that use"
+    );
+    assert_eq!(r.hand_size(0), 1, "nothing was placed");
+}
+
 #[test]
 fn bt26_055_counter_timing_fires() {
     let mut r = setup();

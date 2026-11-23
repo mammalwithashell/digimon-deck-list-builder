@@ -1093,6 +1093,15 @@ pub struct Game {
     /// trashed in the step that finishes its body too, before any rule check
     /// (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE residual).
     pub(crate) option_body_outer_deferred: u32,
+    /// Whether an attack was already in progress when the in-flight Option's
+    /// `[Main]` body started. An attack the BODY declares ("Then, it may
+    /// attack." -- Monarchlizamon (BT25-057) "Final Judgment") is one of the
+    /// body's processes: the effect has not resolved until that attack has
+    /// ended (CR 4.3 15-1-2, 15-1-4, 11-1-5), so the Option is not trashed /
+    /// offered for <Arts Digivolve> (9-1-5, 4-20-1) while it runs. An attack
+    /// already open when the body started (an Option used during an attack)
+    /// does not hold the body back.
+    pub(crate) option_body_attack_open_at_start: bool,
     /// §9-1-5 "as soon as the timing when its 1st [Main] effect has been
     /// resolved": set when the in-flight Option's first `OptionMain` entry has
     /// run; an Option with two `[Main]` effects (none in the current pool --

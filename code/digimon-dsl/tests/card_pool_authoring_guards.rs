@@ -13,7 +13,10 @@
 //!    carries a play-legality leaf after compilation
 //!    (`digimon_dsl::play_candidates`), so a card the play verb would refuse
 //!    (effect-play lock, trash-play lock, full battle area, no play cost) is
-//!    never offered.
+//!    never offered;
+//! 3. a printed "until your turn ends" / "until your opponent's turn ends" is
+//!    authored with the matching player-relative expiry
+//!    (`digimon_dsl::printed_duration_lint`; Blastmon (EX10-034)).
 
 use std::path::{Path, PathBuf};
 
@@ -57,4 +60,49 @@ fn every_effect_play_pick_checks_play_legality_after_compilation() {
          (the pick would offer cards the play refuses):\n{}",
         offenders.join("\n")
     );
+}
+
+#[test]
+fn printed_turn_durations_use_player_relative_expiries() {
+    let official = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/card_official.json");
+    let report = digimon_dsl::printed_duration_lint::check_pool(&cards_root(), &official)
+        .expect("read data/card_official.json");
+    assert!(report.checked > 1000, "only {} specs had printed text", report.checked);
+    assert!(
+        report.findings.is_empty(),
+        "printed turn durations authored with the wrong expiry:
+{}",
+        report.findings.join("
+")
+    );
+    assert!(
+        report.stale_exemptions.is_empty(),
+        "PRINTED_DURATION_EXEMPT entries no longer needed: {:?}",
+        report.stale_exemptions
+    );
+}
+
+/// `may_attack_now` has no `windowed` deferral any more: an effect's "may
+/// attack" is declared inside the effect (CR 4.3 15-1-2). Monarchlizamon
+/// (BT25-057) authored `windowed: true` and attacked in the end-of-turn
+/// window, after its own Arts Digivolve (scan finding F02).
+#[test]
+fn may_attack_now_rejects_the_removed_windowed_flag() {
+    let err = serde_yml::from_str::<digimon_dsl::step::StepSpec>(
+        "may_attack_now: { attacker: source, optional: true, windowed: true }",
+    )
+    .expect_err("`windowed` must not parse");
+    assert!(err.to_string().contains("windowed"), "{err}");
+}
+
+/// Each reviewed `refund-after-explicit-accept` exemption must still match a
+/// refund in its card's spec; drop an entry the card no longer needs.
+#[test]
+fn refund_after_accept_exemptions_are_still_needed() {
+    for (card, _reason) in digimon_dsl::authoring_lint::REFUND_AFTER_ACCEPT_REVIEWED {
+        assert!(
+            digimon_dsl::authoring_lint::refund_exemption_is_still_needed(&cards_root(), card),
+            "{card}: the refund-after-explicit-accept exemption is no longer needed"
+        );
+    }
 }

@@ -375,7 +375,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] When your Digimon or Tamers are played or digivolve, if any of them have [Greymon] or [Matt Ishida] in their names, this Digimon may digivolve into a Digimon card with [Garurumon] in its name in the hand without paying the cost.",
     "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
@@ -10621,6 +10621,11 @@
     "evo_costs": [
       {
         "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
         "level": 4,
         "memory_cost": 3
       }
@@ -28251,11 +28256,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 0
       }
     ],
     "xros_req": ""
@@ -30245,16 +30245,6 @@
       {
         "card_color": 0,
         "level": 3,
-        "memory_cost": 2
-      },
-      {
-        "card_color": 5,
-        "level": 2,
-        "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 2,
         "memory_cost": 2
       }
     ],
@@ -32561,11 +32551,6 @@
     "evo_costs": [
       {
         "card_color": 1,
-        "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 1,
         "level": 3,
         "memory_cost": 2
       }
@@ -32603,11 +32588,6 @@
       {
         "card_color": 1,
         "level": 3,
-        "memory_cost": 2
-      },
-      {
-        "card_color": 1,
-        "level": 4,
         "memory_cost": 2
       }
     ],
@@ -33180,7 +33160,7 @@
     ],
     "type_eng": [
       "Archangel",
-      "X Antibody}}"
+      "X Antibody"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -33236,16 +33216,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 4,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 0,
-        "level": 4,
-        "memory_cost": 0
       }
     ],
     "xros_req": "[Digivolve] [RizeGreymon]: Cost 1"
@@ -36055,11 +36025,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 0,
-        "level": 4,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in name: Cost 3"
@@ -37684,11 +37649,6 @@
     "evo_costs": [
       {
         "card_color": 3,
-        "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 3,
         "level": 3,
         "memory_cost": 2
       }
@@ -38349,11 +38309,6 @@
       {
         "card_color": 5,
         "level": 4,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
         "memory_cost": 4
       }
     ],
@@ -40156,11 +40111,6 @@
         "card_color": 2,
         "level": 2,
         "memory_cost": 1
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 0
       }
     ],
     "xros_req": "DigiXros Requirements [DigiXros -1] [Shoutmon] x [Starmons] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
@@ -40308,11 +40258,6 @@
         "card_color": 2,
         "level": 3,
         "memory_cost": 3
-      },
-      {
-        "card_color": 0,
-        "level": 3,
-        "memory_cost": 2
       }
     ],
     "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
@@ -40658,11 +40603,6 @@
         "card_color": 1,
         "level": 6,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 6
       }
     ],
     "xros_req": "DigiXros Requirements [DigiXros -2] [OmniShoutmon] x [ZeigGreymon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
@@ -42060,16 +42000,6 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 3,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 3
       }
     ],
     "xros_req": ""
@@ -42600,16 +42530,6 @@
         "card_color": 3,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 3,
-        "level": 4,
-        "memory_cost": 0
       }
     ],
     "xros_req": ""
@@ -44463,16 +44383,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 3,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] [BurningGreymon]: Cost 1"
@@ -45168,16 +45078,6 @@
         "card_color": 3,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 4,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 3,
-        "level": 4,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] [Paildramon]/[Dinobeemon]: Cost 3"
@@ -45974,11 +45874,6 @@
         "card_color": 3,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 3,
-        "level": 3,
-        "memory_cost": 0
       }
     ],
     "xros_req": "[Digivolve] Lv.3 w/＜Save＞ in text: Cost 2"
@@ -46374,11 +46269,6 @@
         "card_color": 5,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 5,
-        "level": 3,
-        "memory_cost": 0
       }
     ],
     "xros_req": "[Digivolve] Lv.3 w/＜Save＞ in text: Cost 2"
@@ -46494,11 +46384,6 @@
         "card_color": 5,
         "level": 4,
         "memory_cost": 1
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.3 w/＜Save＞ in text: Cost 3"
@@ -51253,11 +51138,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 6,
-        "level": 2,
-        "memory_cost": 0
       }
     ],
     "xros_req": "[Digivolve] [Belphemon: Rage Mode]: Cost 1"
@@ -54962,16 +54842,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] [Seraphimon]: Cost 1"
@@ -56144,11 +56014,6 @@
         "card_color": 0,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 4
       }
     ],
     "xros_req": ""
@@ -57060,11 +56925,6 @@
     "evo_costs": [
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 0,
         "level": 5,
         "memory_cost": 3
       }
@@ -70943,11 +70803,6 @@
         "card_color": 0,
         "level": 2,
         "memory_cost": 0
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 2
       }
     ],
     "xros_req": ""
@@ -71894,11 +71749,6 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 4
-      },
       {
         "card_color": 1,
         "level": 5,
@@ -72926,16 +72776,6 @@
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
       {
         "card_color": 3,
         "level": 5,
@@ -75848,11 +75688,6 @@
       {
         "card_color": 5,
         "level": 2,
-        "memory_cost": 1
-      },
-      {
-        "card_color": 2,
-        "level": 3,
         "memory_cost": 1
       }
     ],
@@ -81325,11 +81160,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.3 w/[Gabumon] in name or w/[ADVENTURE] trait: Cost 2"
@@ -86656,7 +86486,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Virus"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.\r\n[On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.",
     "inherited_effect_description_eng": "",
@@ -87074,11 +86904,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 5
       }
     ],
     "xros_req": "[App Fusion] [Oujamon] & [Beautymon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
@@ -88520,7 +88345,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] When any of your Digimon or Tamers would leave the battle area by your opponent's effects, by suspending this Digimon, 1 of those Digimon or Tamers doesn't leave.\r\n[All Turns] [Once Per Turn] When this Digimon suspends, delete all of your opponent's Digimon with the lowest play cost.",
     "inherited_effect_description_eng": "",
@@ -89547,7 +89372,8 @@
       4
     ],
     "type_eng": [
-      "Hudie/CS"
+      "Hudie",
+      "CS"
     ],
     "form_eng": [],
     "attribute_eng": [],
@@ -92668,11 +92494,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 0
       }
     ],
     "xros_req": ""
@@ -92746,7 +92567,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Ultimate"
+      "Virus"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card in your hand, until your opponent's turn ends, 1 of your Digimon with the [Demon], [Shaman] or [Titan] trait gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.).\r\n[On Deletion] You may play 1 level 4 or lower [Demon] or [Titan] trait Digimon card from your trash without paying the cost.",
     "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1}＞ (This Digimon checks 1} additional security cards.).",
@@ -92864,7 +92685,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Ultimate"
+      "Data"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card in your hand, delete 1 each of your opponent's level 3 and level 4 Digimon.",
     "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1}＞ (This Digimon checks 1} additional security cards.).",
@@ -96984,11 +96805,6 @@
         "card_color": 6,
         "level": 2,
         "memory_cost": 0
-      },
-      {
-        "card_color": 6,
-        "level": 2,
-        "memory_cost": 2
       }
     ],
     "xros_req": ""
@@ -101963,11 +101779,6 @@
       {
         "card_color": 6,
         "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 6,
-        "level": 5,
         "memory_cost": 3
       }
     ],
@@ -103147,11 +102958,6 @@
         "card_color": 6,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 4
       }
     ],
     "xros_req": "[DNA Digivolve] Red Lv.4 + Purple Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
@@ -103212,7 +103018,7 @@
         "memory_cost": 3
       },
       {
-        "card_color": 6,
+        "card_color": 5,
         "level": 4,
         "memory_cost": 3
       }
@@ -103684,11 +103490,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 4,
-        "memory_cost": 4
       }
     ],
     "xros_req": ""
@@ -107574,11 +107375,6 @@
       },
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 3,
         "level": 5,
         "memory_cost": 4
       }
@@ -112141,16 +111937,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 5
       }
     ],
     "xros_req": "[DNA Digivolve] Yellow Lv.5 + Purple Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
@@ -113414,6 +113200,11 @@
       },
       {
         "card_color": 5,
+        "level": 6,
+        "memory_cost": 7
+      },
+      {
+        "card_color": 6,
         "level": 6,
         "memory_cost": 7
       }
@@ -114813,11 +114604,6 @@
         "card_color": 2,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
       }
     ],
     "xros_req": ""
@@ -116049,11 +115835,6 @@
         "card_color": 0,
         "level": 5,
         "memory_cost": 5
-      },
-      {
-        "card_color": 3,
-        "level": 5,
-        "memory_cost": 5
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Dark Dragon]/[Evil Dragon] trait: Cost 4"
@@ -116957,16 +116738,6 @@
         "card_color": 3,
         "level": 5,
         "memory_cost": 5
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 5
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[Tyrannomon] in name or Lv.5 w/[Dinosaur] trait: Cost 4"
@@ -117417,11 +117188,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[DS] trait: Cost 3"
@@ -117462,11 +117228,6 @@
       },
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 6,
         "level": 5,
         "memory_cost": 4
       }
@@ -118567,11 +118328,6 @@
     "evo_costs": [
       {
         "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 0,
         "level": 5,
         "memory_cost": 4
       }
@@ -119859,11 +119615,6 @@
         "card_color": 1,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 1,
-        "level": 3,
-        "memory_cost": 0
       }
     ],
     "xros_req": "[Digivolve] Lv.3 w/[DM] trait: Cost 2"
@@ -120248,11 +119999,6 @@
         "card_color": 2,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 0
       }
     ],
     "xros_req": "[Digivolve] Lv.3 w/[DM] trait: Cost 2"
@@ -122504,6 +122250,11 @@
       },
       {
         "card_color": 6,
+        "level": 5,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 1,
         "level": 5,
         "memory_cost": 6
       }
@@ -126541,11 +126292,6 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Cyborg] trait: Cost 3"
@@ -126895,11 +126641,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 6,
-        "level": 4,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Dark Dragon]/[Evil Dragon] trait: Cost 3"
@@ -132244,11 +131985,6 @@
       {
         "card_color": 1,
         "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 1,
-        "level": 3,
         "memory_cost": 0
       }
     ],
@@ -138842,11 +138578,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 0,
-        "level": 5,
-        "memory_cost": 3
       }
     ],
     "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in name: Cost 3"
@@ -139804,15 +139535,10 @@
       {
         "card_color": 0,
         "level": 6,
-        "memory_cost": 5
+        "memory_cost": 6
       },
       {
         "card_color": 6,
-        "level": 6,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 0,
         "level": 6,
         "memory_cost": 6
       }
@@ -144103,7 +143829,7 @@
       "Mega"
     ],
     "attribute_eng": [
-      "Free}}"
+      "Free"
     ],
     "effect_description_eng": "[When Digivolving] You may play 1 level 4 or lower blue Digimon card and 1 level 4 or lower green Digimon card from this Digimon's digivolution cards without paying their memory costs.",
     "inherited_effect_description_eng": "",
@@ -144601,16 +144327,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 3
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 0
       }
     ],
     "xros_req": ""
@@ -148580,11 +148296,6 @@
     "evo_costs": [
       {
         "card_color": 3,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 1,
         "level": 5,
         "memory_cost": 3
       }
@@ -152585,7 +152296,8 @@
       "Cyborg",
       "Saneiketsu",
       "Tentei Hachibushu",
-      "Shambala"
+      "Shambala",
+      "SW"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -153285,11 +152997,12 @@
       "Shaman",
       "Saneiketsu",
       "Tentei Hachibushu",
-      "Shambala"
+      "Shambala",
+      "SW"
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[On Play] [When Digivolving] You may play 1 [Kotenken] Token. (Digimon/Black/9000 DP/＜Blocker＞)\r\n[All Turns] [Once Per Turn] When any of your Digimon are played, return 1 of your opponent's lowest level Digimon to the bottom of the deck.\r\n[All Turns] [Once Per Turn] When any of your Digimon would leave the battle area, you may play 1 level 5 or lower [SW] trait card from your hand or this Digimon's digivolution cards without paying the cost.",
     "inherited_effect_description_eng": "|applinkdp =",
@@ -154325,7 +154038,8 @@
       "Shaman",
       "Saneiketsu",
       "Tentei Hachibushu",
-      "Shambala"
+      "Shambala",
+      "SW"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -162218,7 +161932,7 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Data"
+      "Vaccine"
     ],
     "effect_description_eng": "[When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. Then, if they have 5 or more memory, gain 2 memory.\r\n[Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or Tamers are played, 1 of your Digimon may attack. Then, you may activate 1 of this Digimon's [When Digivolving] effects.\r\n[End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card without [Alphamon] in its name from your hand with the cost reduced by 6. It gains ＜Rush＞ for the turn. (This Digimon can attack the turn it was played.)",
     "inherited_effect_description_eng": "",

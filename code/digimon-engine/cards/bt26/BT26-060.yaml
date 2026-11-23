@@ -34,7 +34,11 @@
 #   opponent Digimon): canNoSelect pick of 1 opponent Digimon → delete; nothing
 #   picked → RemoveUse.
 #   → `on_add_to_deck` + `event_caused_by_own_effect`; optional + outer prompt;
-#   optional pick (continue_on_decline) + `refund_opt` when nothing was picked.
+#   optional pick (continue_on_decline). Declining the outer prompt keeps the
+#   [Once Per Turn] (official Q1818). Accepting it is choosing to activate,
+#   so passing the pick afterwards still uses it: CR 4.3 15-14-1-4 ("even if
+#   the effect's processing can't be executed"). No RemoveUse-style refund;
+#   the rules text decides.
 
 card: BT26-060
 name: "Chronomon: Destroy Mode"
@@ -128,5 +132,3 @@ effects:
           condition: { binding_present: victim }
           then:
             - delete_permanent: { target: victim }
-          else:
-            - refund_opt: {}

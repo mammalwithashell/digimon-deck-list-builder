@@ -93,8 +93,11 @@ effects:
           position: bottom
 
   # ─── [When Attacking][Counter][OPT] trash opp sources; may end attack ───────
-  - when: [when_attacking, counter]
+  - when: when_attacking
+    opt_group: grace_trash
     once_per_turn: true
+    # The trigger arm keeps the refund when both "you may" halves are
+    # declined (owner-decided 2026-10-21, W13). Its [Counter] arm follows.
     summary: "[When Attacking][Counter][OPT] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack"
     process:
       # DCGO SelectTrashDigivolutionCards(maxCount = own sources, canNoTrash:
@@ -128,3 +131,36 @@ effects:
               - equals: [end_choice, 1]
           then:
             - refund_opt: {}
+
+  - when: counter
+    opt_group: grace_trash
+    once_per_turn: true
+    # The [Counter] arm of the same printed effect (shared [Once Per Turn]
+    # via `opt_group`, CR 4.3 15-14-1 / Q1550). [Counter] is activation-type
+    # (CR 4.3 15-16-14-1): declaring it uses the [Once Per Turn] even if
+    # nothing then happens (CR 4.3 15-14-1-4), so this arm has no DCGO-style
+    # RemoveUse refund; the rules text decides.
+    summary: "[When Attacking][Counter][OPT] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack"
+    process:
+      # DCGO SelectTrashDigivolutionCards(maxCount = own sources, canNoTrash:
+      # true, isFromOnly1Permanent: false) — cross-permanent (no `target`),
+      # each pick optional (min 0), clamped to what the opponent has.
+      - select_opponent_sources:
+          min: 0
+          max: { formula: { source_material_count: {} } }
+          clamp_to_available: true
+          filter: { host_kind_is: digimon }
+          bind_as: trashed
+          prompt: "For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon"
+          then:
+            - trash_selected_sources: { source_refs: trashed }
+      - select_effect_choice:
+          bind_as: end_choice
+          labels:
+            - "End this attack"
+            - "Don't end the attack"
+          prompt: "You may end this attack"
+      - if:
+          condition: { equals: [end_choice, 0] }
+          then:
+            - end_attack: true

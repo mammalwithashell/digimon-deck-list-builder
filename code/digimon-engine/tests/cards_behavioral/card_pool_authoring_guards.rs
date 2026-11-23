@@ -19,6 +19,10 @@
 //!    the Digi-Egg Nyaromon (EX12-001) under Proximamon (EX12-077); the union
 //!    picks of Gankoomon (BT13-019), Unique Emblem: Poseidia Lagoon (BT22-096),
 //!    The Sistermon Sisters Training Gym (BT23-099), Tsunomon (BT24-007); a `<Decode>` under Pomumon).
+//! 3. `printed_duration_lint` -- a printed "until your turn ends" / "until your
+//!    opponent's turn ends" is authored with the matching player-relative
+//!    expiry, not `end_of_turn` (CR 4.3 15-10-1-1-1): Blastmon (EX10-034)
+//!    lost its bonus a turn early when used on the opponent's turn.
 
 use std::path::{Path, PathBuf};
 
@@ -70,4 +74,40 @@ fn pool_guard_every_effect_play_pick_checks_play_legality() {
          (the pick would offer cards the play refuses):\n{}",
         offenders.join("\n")
     );
+}
+
+#[test]
+fn pool_guard_printed_turn_durations_use_player_relative_expiries() {
+    let official = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/card_official.json");
+    let report = digimon_dsl::printed_duration_lint::check_pool(&cards_root(), &official)
+        .expect("read data/card_official.json");
+    assert!(
+        report.checked > 1000,
+        "only {} specs had printed text -- is card_official.json present?",
+        report.checked
+    );
+    assert!(
+        report.findings.is_empty(),
+        "printed turn durations authored with the wrong expiry:
+{}",
+        report.findings.join("
+")
+    );
+    assert!(
+        report.stale_exemptions.is_empty(),
+        "PRINTED_DURATION_EXEMPT entries no longer needed (remove them): {:?}",
+        report.stale_exemptions
+    );
+}
+
+/// Each reviewed `refund-after-explicit-accept` exemption must still match a
+/// refund in its card's spec; drop an entry the card no longer needs.
+#[test]
+fn pool_guard_refund_after_accept_exemptions_are_still_needed() {
+    for (card, _reason) in digimon_dsl::authoring_lint::REFUND_AFTER_ACCEPT_REVIEWED {
+        assert!(
+            digimon_dsl::authoring_lint::refund_exemption_is_still_needed(&cards_root(), card),
+            "{card}: the refund-after-explicit-accept exemption is no longer needed"
+        );
+    }
 }

@@ -68,7 +68,13 @@ fn stale_already_suspended_payment_does_not_protect_the_group(){
  assert!(group.iter().all(|h|r.game.players[1].hand.iter().any(|c|c.handle()==*h)));
 }
 
-fn cost_decline_preserves_use(inherited:bool){
+/// Slayerdramon (EX13-024): accepting the [Once Per Turn] replacement is
+/// choosing to activate it, so declining the "by suspending" pick afterwards
+/// still uses it (CR 4.3 15-14-1-4: it counts "even if the effect's processing
+/// can't be executed"; owner ruling #20, BT24-026 / P-250: a declined optional
+/// cost of an activated effect spends the use). DCGO EX13_024.cs RemoveUse()s
+/// here; the rules text decides (bug scan: 2 turns over the cap).
+fn cost_decline_spends_use(inherited:bool){
  let(mut r,group,_)=setup(inherited,false);act(&mut r,REPLACEMENT_ACCEPT);
  assert_eq!(r.pending_selection_view().unwrap().kind,SelectionKind::OwnField);
  assert_eq!(build_action_mask(&r.game,1)[PASS as usize],1.0,"optional suspension cost can be declined");
@@ -77,16 +83,31 @@ fn cost_decline_preserves_use(inherited:bool){
  act(&mut r,PASS);assert!(r.game.pending_selection.is_none());
  assert!(group.iter().all(|h|r.game.players[1].hand.iter().any(|c|c.handle()==*h)));
  assert!(!r.game.players[1].battle_area[1].is_suspended);
- assert!(r.game.players[1].battle_area[0].effect_activations.values().all(|n|*n==0),"declining cost refunds the exact face/inherited OPT");
- r.place_on_field(1,"Q7272-A",None);r.place_on_field(1,"Q7272-B",None);
+ assert!(r.game.players[1].battle_area[0].effect_activations.values().any(|n|*n==1),"the accepted activation is recorded on the exact face/inherited OPT");
+ let a=r.place_on_field(1,"Q7272-A",None);let b=r.place_on_field(1,"Q7272-B",None);
+ let second:Vec<CardHandle>=[a,b].iter().map(|h|r.game.players[1].battle_area[h.index as usize].top_card().handle()).collect();
  let idx=r.add_to_hand(0,"Q7272-RETURN");let action=PLAY_HAND_START+idx as u16;
  assert_eq!(build_action_mask(&r.game,0)[action as usize],1.0);r.game.decode_action(action,0);
- assert_eq!(r.pending_selection_view().unwrap().kind,SelectionKind::Replacement,"same-turn second event can offer the refunded effect");
+ assert!(r.pending_selection_view().is_none_or(|v|v.kind!=SelectionKind::Replacement),"the used [Once Per Turn] is not offered again this turn");
+ assert!(second.iter().all(|h|r.game.players[1].hand.iter().any(|c|c.handle()==*h)),"the second group leaves");
  if let Some(d)=expected{assert_eq!(r.game.verification_digest(),d);}else{expected=Some(r.game.verification_digest());}
  }
 }
-#[test]fn face_cost_picker_decline_refunds_opt_and_clones(){cost_decline_preserves_use(false);}
-#[test]fn inherited_cost_picker_decline_refunds_opt_and_clones(){cost_decline_preserves_use(true);}
+#[test]fn face_cost_picker_decline_spends_opt_and_clones(){cost_decline_spends_use(false);}
+#[test]fn inherited_cost_picker_decline_spends_opt_and_clones(){cost_decline_spends_use(true);}
+
+/// The other side (official Q1818): declining the replacement itself is not
+/// activating it, so its [Once Per Turn] stays available for the next leave.
+fn outer_decline_keeps_use(inherited:bool){
+ let(mut r,_,_)=setup(inherited,false);act(&mut r,PASS);assert!(r.game.pending_selection.is_none());
+ assert!(r.game.players[1].battle_area[0].effect_activations.values().all(|n|*n==0),"a declined replacement records no use");
+ r.place_on_field(1,"Q7272-A",None);r.place_on_field(1,"Q7272-B",None);
+ let idx=r.add_to_hand(0,"Q7272-RETURN");let action=PLAY_HAND_START+idx as u16;
+ assert_eq!(build_action_mask(&r.game,0)[action as usize],1.0);r.game.decode_action(action,0);
+ assert_eq!(r.pending_selection_view().unwrap().kind,SelectionKind::Replacement,"same-turn second event offers the unused effect");
+}
+#[test]fn face_outer_decline_keeps_opt(){outer_decline_keeps_use(false);}
+#[test]fn inherited_outer_decline_keeps_opt(){outer_decline_keeps_use(true);}
 
 fn setup(inherited:bool,nonmatching:bool)->(DebugRunner,Vec<CardHandle>,Option<CardHandle>){setup_inner(inherited,nonmatching,false)}
 fn success_consumes_use(inherited:bool){

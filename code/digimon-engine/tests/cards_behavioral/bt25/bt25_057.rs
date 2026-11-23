@@ -323,6 +323,163 @@ fn bt25_057_arts_accept_stacks_dual_onto_base_without_cost() {
     );
 }
 
+// ─── Option [Main] "Then, it may attack." — inside the effect ────────────────
+//
+// Printed (card image + official bundle): "[Main] 1 of your Digimon gains
+// <Rush>, <Security A. +1> and +5000 DP for the turn. Then, it may attack."
+// The attack is a process of the [Main] effect: CR 4.3 15-1-2 (an effect's
+// processing is carried out in the order of its text), 9-1-5 (the used Option
+// is trashed as pending processing only once its effect has resolved) and
+// 4-20-1/4-20-2 (Arts Digivolve overwrites that trash). DCGO BT25_057.cs runs
+// `SelectAttackEffect.Activate()` right after the buffs inside the OptionSkill
+// coroutine (no `SetCanNotSelectNotAttack`: declinable), and the Arts
+// Digivolve is a separate later effect. Official Q&A for BT25-057: the
+// Digimon that attacked through [Main] and then Arts digivolved into this card
+// cannot activate this card's [When Attacking] -- the attack comes first.
+//
+// The spec used `may_attack_now { windowed: true }`, which only granted a
+// MayAttack until end of turn: no attack prompt inside the effect, the Arts
+// Digivolve armed first, and the attack (if any) happened in the end-of-turn
+// window, possibly by a different Digimon (scan finding F02).
+
+fn security_runner() -> DebugRunner {
+    builder()
+        .add_card(make_test_card("SEC", "Sec"))
+        .security(1, &["SEC", "SEC", "SEC", "SEC"])
+        .deck(0, &["GD-DIGI"])
+        .hand(0, &[CARD_ID])
+        .memory(8)
+        .start()
+}
+
+#[test]
+fn bt25_057_option_attack_is_offered_inside_the_effect_before_arts_digivolve() {
+    use digimon_engine::action::space::SECURITY_TARGET;
+    let mut r = security_runner();
+    let base = r.place_on_field(0, "GD-BASE", Some(0));
+    r.game.enter_main_phase();
+    let sec_before = r.security_count(1);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("pick the Digimon to buff");
+
+    // The next decision is the effect's own optional attack by the CHOSEN
+    // Digimon -- not the Arts Digivolve prompt.
+    let attack = r
+        .pending_selection_view()
+        .expect("the effect offers the attack now");
+    let attack_id = encode_attack(base.index as u16, SECURITY_TARGET);
+    assert_eq!(attack.kind, SelectionKind::Target, "attack target prompt");
+    assert!(attack.is_optional, "\"it may attack\" is declinable");
+    assert!(
+        attack.valid_action_ids.contains(&attack_id),
+        "the chosen Digimon may attack the player: {:?}",
+        attack.valid_action_ids
+    );
+    assert!(
+        !r.game.modifiers.has(base, ModifierType::MayAttack),
+        "no deferred end-of-turn MayAttack grant"
+    );
+
+    r.execute_action(0, attack_id).expect("attack the player");
+    r.game.drain_effect_queue();
+    assert!(
+        r.game.player(0).battle_area[base.index as usize].is_suspended,
+        "the chosen Digimon attacked (suspended by the declaration)"
+    );
+
+    // Answer the attack's own timings (counter / block windows) until the
+    // Arts Digivolve prompt arms. When it arms, the attack has already
+    // resolved: both security checks (<Security A. +1>) are done.
+    drive_to_arts(&mut r, base);
+    assert_eq!(
+        r.security_count(1),
+        sec_before - 2,
+        "the attack resolved with <Security A. +1> (2 checks) before Arts armed"
+    );
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("accept Arts digivolve");
+    assert_eq!(
+        r.game.player(0).battle_area[base.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        CARD_ID,
+        "Arts Digivolve happened after the attack"
+    );
+    assert_eq!(
+        r.security_count(1),
+        sec_before - 2,
+        "no second (end-of-turn) attack"
+    );
+}
+
+/// With the memory past 0 on the opponent's side after paying Use 4, the
+/// attack is still part of the effect: the turn does not end until the effect
+/// (and its attack) has resolved (CR 4.3 15-1-4; official Q&A Q602's "you
+/// don't switch turns until the attack is finished"). Scan finding F02 saw the
+/// player sent back to Main / the turn passed with no attack offered.
+#[test]
+fn bt25_057_option_attack_is_offered_even_when_memory_goes_past_zero() {
+    use digimon_engine::action::space::SECURITY_TARGET;
+    let mut r = builder()
+        .add_card(make_test_card("SEC", "Sec"))
+        .security(1, &["SEC", "SEC", "SEC", "SEC"])
+        .deck(0, &["GD-DIGI"])
+        .hand(0, &[CARD_ID])
+        .memory(1)
+        .start();
+    let base = r.place_on_field(0, "GD-BASE", Some(0));
+    r.game.enter_main_phase();
+    let turn_player = r.game.turn_player();
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("pick the Digimon to buff");
+    let attack = r
+        .pending_selection_view()
+        .expect("the attack is offered although memory is now -3");
+    assert_eq!(attack.kind, SelectionKind::Target);
+    assert!(attack
+        .valid_action_ids
+        .contains(&encode_attack(base.index as u16, SECURITY_TARGET)));
+    assert_eq!(r.game.turn_player(), turn_player, "the turn has not passed");
+}
+
+#[test]
+fn bt25_057_declining_the_option_attack_leaves_no_deferred_attack() {
+    let mut r = security_runner();
+    let base = r.place_on_field(0, "GD-BASE", Some(0));
+    r.game.enter_main_phase();
+    let sec_before = r.security_count(1);
+
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("pick the Digimon to buff");
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Target));
+    r.execute_action(0, PASS).expect("decline the attack");
+
+    // Decline the Arts Digivolve too, so the Option goes to the trash.
+    drive_to_arts(&mut r, base);
+    r.execute_action(0, PASS).expect("decline Arts");
+
+    assert!(
+        !r.game.modifiers.has(base, ModifierType::MayAttack),
+        "declining leaves no MayAttack grant behind"
+    );
+    assert!(!r.game.player(0).battle_area[base.index as usize].is_suspended);
+    assert_eq!(r.security_count(1), sec_before);
+}
+
 // ─── Digimon face: [WD] may-battle ───────────────────────────────────────────
 
 fn fire_when_digivolving(r: &mut DebugRunner, handle: PermanentHandle) {
@@ -580,3 +737,4 @@ fn bt25_057_glowing_dawn_green_lv4_offers_cost_3_vs_4_choice() {
         "the trait route pays exactly 3"
     );
 }
+

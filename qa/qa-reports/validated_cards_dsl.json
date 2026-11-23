@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-11-18",
+  "last_updated": "2026-11-22",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -1342,16 +1342,18 @@
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
-      "validated_date": "2026-05-22",
-      "report": "unblock-medusamon-tier3-cards",
+      "validated_date": "2026-11-23",
+      "report": "mf2-cards-review-2026-11-23",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/st22/ST22-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st22/st22_08.rs",
-      "test_count": 34,
+      "test_count": 41,
       "patterns": [],
-      "notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards): G-LINK-OPTION-DUAL-PLAY-MODE closed. classify_option_modes returns the set of available play modes; play_option_core installs an EffectChoice mode-select for a dual-mode Plug-In and forks cost (Standard use cost 4 vs flat Link cost 2) + disposal (Standard trash vs Link attach) on the chosen mode. ST22-08.yaml gained a kind: link_requirement clause (cost 2, level_gte 3). All 4 clauses behavioral; 34/34 tests pass, 0 ignored."
+      "notes": "Link box authored 2026-11-23 (card face ST22-08.webp + official bundle; cards.json drops it): scope linked aura DP +2000 and scope linked [End of Your Turn][Once Per Turn] optional 'This Digimon may attack' (DCGO ST22_08.cs EndOfTurnLinkedEffect: isOptional, maxCountPerTurn 1, activates only while the host can attack). All 6 clauses behavioural (st22_08: link DP, unlinked no DP, EOT attack accepted / declined, suspended host offered nothing, unlinked offers nothing).",
+      "previous_status": "IMPLEMENTED",
+      "previous_notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards): G-LINK-OPTION-DUAL-PLAY-MODE closed. classify_option_modes returns the set of available play modes; play_option_core installs an EffectChoice mode-select for a dual-mode Plug-In and forks cost (Standard use cost 4 vs flat Link cost 2) + disposal (Standard trash vs Link attach) on the chosen mode. ST22-08.yaml gained a kind: link_requirement clause (cost 2, level_gte 3). All 4 clauses behavioral; 34/34 tests pass, 0 ignored."
     },
     "BT21-072": {
       "card_name": "Arresterdramon: Superior Mode",
@@ -3741,10 +3743,10 @@
     },
     "EX7-063": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-063.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_063.rs",
@@ -3753,7 +3755,9 @@
         "START-OF-MAIN",
         "SECURITY-PLAY-SELF"
       ],
-      "notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon and Security play-self. The all-turns Token/Puppet deletion observer that suspends this Tamer to play a level 3 Puppet from hand remains omitted pending reusable event-context plus suspend-cost support."
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [All Turns] When any of your Tokens or [Puppet] trait Digimon are deleted, by suspending this Tamer, you may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost. Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented.",
+      "previous_status": "IMPLEMENTED",
+      "previous_notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon and Security play-self. The all-turns Token/Puppet deletion observer that suspends this Tamer to play a level 3 Puppet from hand remains omitted pending reusable event-context plus suspend-cost support."
     },
     "EX11-021": {
       "card_name": "Kokeshimon",
@@ -5391,22 +5395,23 @@
     },
     "BT22-009": {
       "card_name": "Effecmon",
-      "validated_date": "2026-06-15",
-      "report": "royal-knights-author-remaining-2026-06-15",
+      "validated_date": "2026-11-23",
+      "report": "mf2-cards-review-2026-11-23",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-009.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_009.rs",
-      "test_count": 4,
-      "tests_passing": 2,
-      "tests_ignored": 2,
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "ROYAL-KNIGHTS-POOL-SLICE"
       ],
-      "notes": "[Security] end-of-battle play + On Play/WD delete + both digivolve circles (Lv3-red + Stnd.-trait) faithful. [Link]/[When Linking] is the Appmon Link subsystem (separate G-LINK-REQUIREMENTS), not an RK gap.",
-      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
+      "notes": "Link box authored 2026-11-23 (card face BT22-009.webp + official bundle; cards.json drops it): link_condition [Appmon] trait cost 2, scope linked aura +3000 DP, scope linked [When Linking] mandatory delete of 1 opponent Digimon with 4000 DP or less (DCGO BT22_009.cs WhenLinked, not optional, canNoSelect false). YAML trait line gains Appmon and Effect (cards.json form/type). The empty ignored G-LINK-REQUIREMENTS placeholder test is replaced by behavioural link tests.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified.",
+      "previous_status": "IMPLEMENTED",
+      "previous_notes": "[Security] end-of-battle play + On Play/WD delete + both digivolve circles (Lv3-red + Stnd.-trait) faithful. [Link]/[When Linking] is the Appmon Link subsystem (separate G-LINK-REQUIREMENTS), not an RK gap."
     },
     "BT23-064": {
       "card_name": "Bakemon",
@@ -17135,6 +17140,86 @@
       "tests_ignored": 0,
       "notes": "inherited [When Attacking][OPT] may digivolve into a [Dinosaur]/[Tyrannomon]-named hand card with the printed cost; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
       "integration_verification": "limited"
+    },
+    "AD1-006": {
+      "card_name": "Shoutmon X7",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_006.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [All Turns] When this Digimon would leave the battle area other than by DigiXros, from this Digimon's digivolution cards, you may place up to 4 [Xros Heart] or [Blue Flare] trait Digimon cards under 1 of your Tamers and play 1 such card without paying the cost. Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT10-009": {
+      "card_name": "Shoutmon X4",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_009.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [End of Attack] By placing all digivolution cards from under this Digimon under 1 of your Tamers, unsuspend 1 of your Tamers, and delete this Digimon. Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT20-076": {
+      "card_name": "Imperialdramon: Dragon Mode",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_076.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 11000 DP or less. Then, if DNA digivolving, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand ... (the whole clause; the YAML authors only <Blast Digivolve>). Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT20-081": {
+      "card_name": "Fenriloogamon: Takemikazuchi",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-081.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_081.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [On Play] [When Digivolving] 2 of your opponent's Digimon get -10000 DP for the turn. Then, if a Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's 10000 DP or lower Digimon. AND [When Attacking] By trashing your top security card, activate 1 of this Digimon's [When Digivolving] effects. (The YAML authors only <Blast DNA Digivolve>.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT21-095": {
+      "card_name": "Wind Guardians",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_095.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): While you have no face-up security cards, you can ignore this card's color requirements. AND [Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card. AND [Security] You may play 1 level 5 or lower Digimon card with the [WG] trait from your hand without paying the cost. (Only the {Security} [Your Turn] <Vortex> aura is authored.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT24-062": {
+      "card_name": "MasterBlimpmon",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-062.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_062.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): <Blocker>, <Armor Purge>, [End of Attack] [End of Opponent's Turn] [Once per Turn] You may play 1 play cost 5 or lower card with the [Machine], [Cyborg] or [TS] trait from this Digimon's digivolution cards without paying the cost. (Only a flood_gate is authored; the inherited [Your Turn] attack-target clause was not verified either.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "EX11-074": {
+      "card_name": "Vortexdramon",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_074.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [When Digivolving] [When Attacking] You may suspend 1 Digimon. If this effect suspended your Digimon, until your opponent's turn ends, their Digimon's effects don't affect this Digimon and it gets +6000 DP. (The [All Turns][OPT] on-suspend clause is authored only as a 'readiness slice' battle; its 'this Digimon may unsuspend' half was not verified.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "EX6-029": {
+      "card_name": "Mastemon",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/ex6/EX6-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_029.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [On Play] [When Digivolving] You may play 1 level 5 or lower [Angel], [Archangel] or [Fallen Angel] trait Digimon card from your hand or trash without paying the cost. Then, if DNA digivolving, place 1 other Digimon as the bottom security card, and trash the top cards of your opponent's security stack so that it has 4 cards left. (The YAML authors only <Blast DNA Digivolve>.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
     }
   }
 }

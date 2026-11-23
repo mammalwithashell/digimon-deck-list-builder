@@ -309,7 +309,11 @@ fn bt25_103_clause_shape() {
             _ => None,
         })
         .collect();
-    assert_eq!(t.len(), 2);
+    // The bounce, then ONE printed [When Attacking] [Counter] [Once Per Turn]
+    // effect authored as two arms (the [Counter] arm is activation-type and
+    // keeps no refund) that share one [Once Per Turn] counter (`opt_group`,
+    // CR 4.3 15-14-1, official Q1550).
+    assert_eq!(t.len(), 3);
     let bounce = t
         .iter()
         .find(|t| t.when.contains(&CompiledTiming::WhenDigivolving))
@@ -322,14 +326,21 @@ fn bt25_103_clause_shape() {
     let counter = t
         .iter()
         .find(|t| t.when.contains(&CompiledTiming::Counter))
-        .expect("WA/Counter clause");
-    assert!(counter.when.contains(&CompiledTiming::WhenAttacking));
-    assert!(!counter.when.contains(&CompiledTiming::WhenDigivolving));
-    assert!(counter.once_per_turn);
-    assert!(
-        !counter.optional,
-        "DCGO optional:false — choices live in the body"
-    );
+        .expect("Counter arm");
+    assert_eq!(counter.when, vec![CompiledTiming::Counter]);
+    let attack = t
+        .iter()
+        .find(|t| t.once_per_turn && t.when == vec![CompiledTiming::WhenAttacking])
+        .expect("When Attacking arm");
+    for arm in [counter, attack] {
+        assert!(arm.once_per_turn);
+        assert!(
+            !arm.optional,
+            "DCGO optional:false — choices live in the body"
+        );
+    }
+    assert!(counter.opt_group.is_some());
+    assert_eq!(counter.opt_group, attack.opt_group, "one shared [Once Per Turn]");
 }
 
 // ─── Section 2 — [When Digivolving] bounce ──────────────────────────────────
@@ -549,8 +560,45 @@ fn bt25_103_no_sources_on_self_skips_trash_still_offers_end() {
     assert_eq!(opp_source_total(&r), 1);
 }
 
+/// [When Attacking] arm: "you may trash ... Then, you may end this attack"
+/// with both halves declined executed nothing, so the use is kept
+/// (owner-decided 2026-10-21, W13, qa/rules/mechanics-gaps-2026-10.md; DCGO
+/// BT25_103.cs `if (!used) activateClass.RemoveUse()`).
 #[test]
-fn bt25_103_declining_everything_refunds_opt() {
+fn bt25_103_when_attacking_declining_everything_keeps_opt() {
+    let mut r = start(&[], 5);
+    let me = r.place_stack(0, &["SRC", "RED-L6", CARD_ID]); // 2 sources
+    // 3 sources: no target for the mandatory WD/WA bounce that also triggers.
+    r.place_stack(1, &["OPP-S", "OPP-S", "OPP-S", "OPP-A"]);
+    fire(&mut r, EffectTiming::WhenAttacking, me);
+    for _ in 0..8 {
+        match r.pending_kind() {
+            Some(SelectionKind::TriggerOrder) => resolve_trigger_order(&mut r),
+            Some(SelectionKind::SourceMulti { .. }) => finish_source_picks(&mut r),
+            Some(SelectionKind::EffectChoice) => answer_end_attack(&mut r, false),
+            _ => break,
+        }
+    }
+    let _ = r.auto_resolve();
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(opp_source_total(&r), 3, "nothing was trashed");
+    // OPT not spent: the shared effect is still available, at either timing.
+    fire(&mut r, EffectTiming::CounterEffect, me);
+    assert!(
+        matches!(r.pending_kind(), Some(SelectionKind::SourceMulti { .. })),
+        "a [When Attacking] that declined both halves keeps the [Once Per Turn]: {:?}",
+        r.pending_kind()
+    );
+}
+
+/// [Counter] arm: [Counter] is a timing for activation-type effects (CR 4.3
+/// 15-16-14-1), activated by the player's declaration in the counter timing
+/// (11-3). CR 4.3 15-14-1-4 counts that declaration as the use "even if the
+/// effect's processing can't be executed", so declining both halves after
+/// declaring it still spends the [Once Per Turn], for both timings of this one
+/// printed effect. DCGO RemoveUse()s here too; the rules text decides.
+#[test]
+fn bt25_103_counter_declared_then_declining_everything_spends_opt() {
     let mut r = start(&[], 5);
     let me = r.place_stack(0, &["SRC", "RED-L6", CARD_ID]);
     r.place_stack(1, &["OPP-S", "OPP-A"]);
@@ -559,12 +607,17 @@ fn bt25_103_declining_everything_refunds_opt() {
     answer_end_attack(&mut r, false);
     let _ = r.auto_resolve();
     assert!(r.game.pending_selection.is_none());
-    // OPT not spent: the clause fires again.
+    assert_eq!(opp_source_total(&r), 1, "nothing was trashed");
     fire(&mut r, EffectTiming::CounterEffect, me);
     assert!(
-        matches!(r.pending_kind(), Some(SelectionKind::SourceMulti { .. })),
-        "declining everything refunds [Once Per Turn]: {:?}",
+        r.game.pending_selection.is_none(),
+        "the declared [Counter] used the [Once Per Turn]: {:?}",
         r.pending_kind()
+    );
+    fire(&mut r, EffectTiming::WhenAttacking, me);
+    assert!(
+        !matches!(r.pending_kind(), Some(SelectionKind::SourceMulti { .. })),
+        "the [When Attacking] timing of the same effect shares that use"
     );
 }
 

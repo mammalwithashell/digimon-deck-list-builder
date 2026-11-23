@@ -162,3 +162,14 @@ effects:
               targets: any
               optional: true
               prompt: "Have the selected Digimon attack now?"
+
+  # ─── Inherited: <Security A. +1> ────────────────────────────────────────
+  # Card face (EX9-013.webp inherited box) and official bundle print
+  # "<Security A. +1>"; DCGO EX9_013.cs ChangeSelfSAttackStaticEffect(
+  # isInheritedEffect: true). cards.json files the Ace Overflow note under
+  # inherited text instead, so the clause was never authored.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "Inherited <Security A. +1>"

@@ -71,3 +71,12 @@ effects:
           of: you
           hand_index: pick
           cost_delta: { reduce: 2 }
+
+  # ─── [Security] Play this card without paying the cost ──────────────────
+  # Card face (EX11-071.webp security box) + bundle "### Security Effect";
+  # DCGO EX11_071.cs SecuritySkill -> PlaySelfTamerSecurityEffect(card).
+  # EX7-063 idiom.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

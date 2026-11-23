@@ -31,6 +31,27 @@
 //!   any of your Digimon are played or digivolve") uses observer timings only;
 //!   "When Digimon attack" is `[on_ally_attack, on_opponent_attack]` (the
 //!   observer's own attack is inside `on_ally_attack`), never `when_attacking`.
+//!
+//! * `refund-after-explicit-accept` -- a `refund_opt` inside a clause whose
+//!   activation is an explicit choice the player has already made: an
+//!   `optional: true` replacement (the "May accept replacement" prompt), an
+//!   `outer_prompt: true` clause, or a [Main] / [Counter] clause (activation-
+//!   type, CR 4.3 15-8-4 / 15-16-14-1: activated by declaring it). CR 4.3
+//!   15-14-1-4: "When a player chooses to activate an [X Per Turn] effect, it
+//!   will count toward 1 use of [X Per Turn], even if the effect's processing
+//!   can't be executed." DCGO's `RemoveUse()` after such a choice is a
+//!   divergence the rules text overrides. Erlangmon (EX12-034) and
+//!   Slayerdramon (EX13-024) refunded an accepted leave replacement that did
+//!   nothing and were used twice in one turn in logged games. A refund stays
+//!   legal where the "may" is folded into the clause's first pick (official
+//!   Q1818: declining it is not activating) and for the owner-decided
+//!   "you may A. Then, you may B." shape (W13); neither has an explicit
+//!   accept. A [When Attacking] [Counter] effect that refunds on its trigger
+//!   arm is authored as two arms sharing an `opt_group` (GraceNovamon
+//!   (BT25-103)). [`REFUND_AFTER_ACCEPT_REVIEWED`] lists the reviewed cards
+//!   whose `outer_prompt` is an unprinted DCGO Yes/No in front of a W13
+//!   "you may A. Then, you may B." body (Imperialdramon: Fighter Mode
+//!   (AD1-024)); there both halves declined keeps the use.
 
 use serde_yml::Value;
 
@@ -42,6 +63,38 @@ pub struct AuthoringFinding {
 }
 
 const SELF_TIMINGS: &[&str] = &["on_play", "when_digivolving", "when_attacking", "on_deletion"];
+/// Activation-type timings: the player activates the effect by declaring it.
+const DECLARED_TIMINGS: &[&str] = &["main", "main_on_field", "main_from_hand", "main_from_trash", "counter"];
+
+/// Why a clause mapping's activation is an explicit choice, if it is.
+fn explicit_accept(clause: &serde_yml::Mapping) -> Option<String> {
+    let is_true = |k: &str| clause.get(k).and_then(Value::as_bool) == Some(true);
+    if clause.get("kind").and_then(Value::as_str) == Some("replacement") && is_true("optional") {
+        return Some("an optional replacement (accepted at its \"May accept replacement\" prompt)".into());
+    }
+    if is_true("outer_prompt") {
+        return Some("an `outer_prompt: true` clause (accepted at its outer prompt)".into());
+    }
+    let timings: Vec<&str> = match clause.get("when") {
+        Some(Value::String(s)) => vec![s.as_str()],
+        Some(Value::Sequence(items)) => items.iter().filter_map(Value::as_str).collect(),
+        _ => Vec::new(),
+    };
+    timings
+        .into_iter()
+        .find(|t| DECLARED_TIMINGS.contains(t))
+        .map(|t| format!("a `{t}` clause (activation-type: activated by declaring it)"))
+}
+
+fn contains_key(value: &Value, wanted: &str) -> bool {
+    match value {
+        Value::Mapping(map) => map
+            .iter()
+            .any(|(k, v)| k.as_str() == Some(wanted) || contains_key(v, wanted)),
+        Value::Sequence(items) => items.iter().any(|v| contains_key(v, wanted)),
+        _ => false,
+    }
+}
 const OBSERVER_TIMINGS: &[&str] = &[
     "on_digivolve",
     "on_enter_field_anyone",
@@ -52,14 +105,61 @@ const OBSERVER_TIMINGS: &[&str] = &[
     "on_any_deletion",
 ];
 
-/// Lint one card's raw YAML text. A file that does not parse yields no
-/// findings here (the loader reports the parse error).
-pub fn check_authoring_yaml(raw: &str) -> Vec<AuthoringFinding> {
+/// Cards whose explicit-accept clause keeps a `refund_opt` on purpose, each
+/// with the reason. The pool guards fail on an entry the card no longer needs
+/// ([`refund_exemption_is_still_needed`]).
+pub const REFUND_AFTER_ACCEPT_REVIEWED: &[(&str, &str)] = &[(
+    "AD1-024",
+    concat!(
+        "Imperialdramon: Fighter Mode prints \"you may suspend ... Then, ... you may return ...\": ",
+        "the owner-decided W13 shape (qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21), where ",
+        "both halves declined means nothing executed, the effect was not activated and the ",
+        "[Once Per Turn] is kept. Its `outer_prompt` is DCGO's unprinted always-shown Yes/No, ",
+        "not a printed whole-effect \"you may\", so accepting it and then declining both halves ",
+        "is still both halves declined (DCGO AD1_024.cs executed-flag RemoveUse)."
+    ),
+)];
+
+fn card_id(value: &Value) -> Option<&str> {
+    value.as_mapping()?.get("card")?.as_str()
+}
+
+/// Lint one card's raw YAML text, ignoring [`REFUND_AFTER_ACCEPT_REVIEWED`].
+pub fn check_authoring_yaml_unexempted(raw: &str) -> Vec<AuthoringFinding> {
     let mut out = Vec::new();
     if let Ok(value) = serde_yml::from_str::<Value>(raw) {
         walk(&value, "", &mut out);
     }
     out
+}
+
+/// Lint one card's raw YAML text. A file that does not parse yields no
+/// findings here (the loader reports the parse error).
+pub fn check_authoring_yaml(raw: &str) -> Vec<AuthoringFinding> {
+    let mut out = check_authoring_yaml_unexempted(raw);
+    let card = serde_yml::from_str::<Value>(raw)
+        .ok()
+        .and_then(|v| card_id(&v).map(str::to_string));
+    if let Some(card) = card {
+        if REFUND_AFTER_ACCEPT_REVIEWED.iter().any(|(id, _)| *id == card) {
+            out.retain(|f| f.rule != "refund-after-explicit-accept");
+        }
+    }
+    out
+}
+
+/// Whether the reviewed refund exemption for `card` still matches a
+/// `refund-after-explicit-accept` finding in its spec under `cards_root`.
+pub fn refund_exemption_is_still_needed(cards_root: &std::path::Path, card: &str) -> bool {
+    pool_card_files(cards_root)
+        .into_iter()
+        .filter(|f| f.file_stem().and_then(|s| s.to_str()) == Some(card))
+        .filter_map(|f| std::fs::read_to_string(f).ok())
+        .any(|raw| {
+            check_authoring_yaml_unexempted(&raw)
+                .iter()
+                .any(|f| f.rule == "refund-after-explicit-accept")
+        })
 }
 
 /// Every production card spec under `cards_root` (`code/digimon-engine/cards`), sorted. `_examples/` holds DSL
@@ -122,6 +222,17 @@ fn zone_includes_battle_area(zone: Option<&Value>) -> bool {
 fn walk(value: &Value, path: &str, out: &mut Vec<AuthoringFinding>) {
     match value {
         Value::Mapping(map) => {
+            if let (Some(process), Some(why)) = (map.get("process"), explicit_accept(map)) {
+                if contains_key(process, "refund_opt") {
+                    out.push(AuthoringFinding {
+                        rule: "refund-after-explicit-accept",
+                        path: if path.is_empty() { "process".into() } else { format!("{path}.process") },
+                        message: format!(
+                            "`refund_opt` in {why}: CR 4.3 15-14-1-4 counts the [X Per Turn] use as soon as the player chooses to activate, \"even if the effect's processing can't be executed\" (DCGO RemoveUse() diverges here). Drop the refund; a refund belongs only where the \"may\" is folded into the first pick (Q1818) or the W13 \"you may A. Then, you may B.\" shape"
+                        ),
+                    });
+                }
+            }
             for (key, child) in map {
                 let Some(key) = key.as_str() else {
                     continue;
@@ -243,6 +354,58 @@ mod tests {
             let raw = format!("effects:\n  - when: {when}\n    process: []\n");
             assert!(rules(&raw).is_empty(), "{when}");
         }
+    }
+
+    const REFUND_TAIL: &str = "    process:\n      - select_hand: { of: you, bind_as: pick, optional: true, filter: {} }\n      - if:\n          condition: { binding_absent: pick }\n          then:\n            - refund_opt: {}\n";
+
+    #[test]
+    fn refund_after_an_explicit_accept_is_rejected() {
+        for head in [
+            // Erlangmon (EX12-034) / Slayerdramon (EX13-024) shape.
+            "  - kind: replacement\n    trigger: when_would_leave_battle_area\n    optional: true\n    once_per_turn: true\n",
+            "  - when: on_add_to_deck\n    once_per_turn: true\n    optional: true\n    outer_prompt: true\n",
+            "  - when: main_on_field\n    once_per_turn: true\n    optional: true\n",
+            "  - when: counter\n    once_per_turn: true\n",
+            "  - when: [when_attacking, counter]\n    once_per_turn: true\n",
+        ] {
+            let raw = format!("effects:\n{head}{REFUND_TAIL}");
+            assert_eq!(rules(&raw), vec!["refund-after-explicit-accept"], "{head}");
+        }
+    }
+
+    #[test]
+    fn refund_without_an_explicit_accept_passes() {
+        for head in [
+            // Folded "may" (Q1818) and the W13 then-may shape: no outer accept.
+            "  - when: when_attacking\n    once_per_turn: true\n",
+            "  - when: on_play\n    once_per_turn: true\n    optional: true\n",
+            // A mandatory (non-optional) replacement has no accept prompt.
+            "  - kind: replacement\n    trigger: when_would_leave_battle_area\n    once_per_turn: true\n",
+        ] {
+            let raw = format!("effects:\n{head}{REFUND_TAIL}");
+            assert!(rules(&raw).is_empty(), "{head}");
+        }
+        // An explicit-accept clause without a refund is fine.
+        let raw = "effects:\n  - when: main_on_field\n    once_per_turn: true\n    process:\n      - draw: { of: you, count: 1 }\n";
+        assert!(rules(raw).is_empty());
+    }
+
+    #[test]
+    fn reviewed_refund_exemption_applies_to_its_card_only() {
+        let body = format!(
+            "effects:\n  - when: on_play\n    once_per_turn: true\n    optional: true\n    outer_prompt: true\n{REFUND_TAIL}"
+        );
+        let exempt = format!("card: AD1-024\n{body}");
+        assert!(rules(&exempt).is_empty());
+        assert_eq!(
+            check_authoring_yaml_unexempted(&exempt)
+                .into_iter()
+                .map(|f| f.rule)
+                .collect::<Vec<_>>(),
+            vec!["refund-after-explicit-accept"]
+        );
+        let other = format!("card: AD1-025\n{body}");
+        assert_eq!(rules(&other), vec!["refund-after-explicit-accept"]);
     }
 
     #[test]

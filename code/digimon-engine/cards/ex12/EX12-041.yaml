@@ -21,7 +21,9 @@
 #     of a [Mutant]/[ME] card that is an Option (not CanNotPlayThisOption) or a
 #     Digimon/Tamer with a play cost that can be played for cost-2; the chosen
 #     card is then played/used paying the reduced cost. Nothing picked ->
-#     RemoveUse() (the once-per-turn is not consumed) -> `refund_opt`.
+#     DCGO RemoveUse(). Not here: a [Main] is activation-type (CR 4.3 15-8-4),
+#     and declaring it uses the [Once Per Turn] even if nothing is then
+#     played (CR 4.3 15-14-1-4); the rules text decides.
 #     Mirrors EX12-013 (BetelGammamon).
 #   - Inherited: OnAllyAttack, OPT (hash EX12_041_Inherited), mandatory target.
 
@@ -90,9 +92,6 @@ effects:
                 of: you
                 hand_index: pick
                 cost_delta: { reduce: 2 }
-          else:
-            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
-            - refund_opt: {}
 
   - scope: inherited
     when: when_attacking

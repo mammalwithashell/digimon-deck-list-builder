@@ -60,6 +60,7 @@ color: [blue, green]
 cost: 13
 dp: 12000
 traits: [Ancient Dragon]
+attribute: Free  # card face: Mega | Free (cards.json had ingest residue "Free}}")
 
 alt_paths:
   # Printed split circle: Blue|Green Lv.5 / cost 4 — one entry per colour.

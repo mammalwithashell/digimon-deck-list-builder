@@ -135,10 +135,14 @@ fn ex12_034_leave_offers_only_zones_with_a_playable_card() {
     assert_eq!(labels, vec!["Hand".to_string(), "Don't play".to_string()]);
 }
 
-/// Playing nothing refunds the [Once Per Turn] (DCGO RemoveUse), so the next
-/// leave this turn offers the replacement again.
+/// CR 4.3 15-14-1-4: "When a player chooses to activate an [X Per Turn]
+/// effect, it will count toward 1 use of [X Per Turn], even if the effect's
+/// processing can't be executed." Accepting the replacement is that choice, so
+/// choosing "Don't play" afterwards spends the [Once Per Turn] and the next
+/// leave this turn is not offered it. DCGO EX12_034.cs RemoveUse()s here
+/// instead; the rules text decides (bug scan: 4 turns over the cap).
 #[test]
-fn ex12_034_leave_playing_nothing_refunds_once_per_turn() {
+fn ex12_034_leave_accepted_then_dont_play_spends_once_per_turn() {
     let (mut runner, _) = leave_setup(&["SW-5"]);
     delete_own(&mut runner, "VICTIM-A");
     runner.accept_optional_trigger().expect("accept the replacement");
@@ -148,14 +152,32 @@ fn ex12_034_leave_playing_nothing_refunds_once_per_turn() {
 
     delete_own(&mut runner, "VICTIM-B");
     assert!(
+        runner.pending_selection().is_none(),
+        "the accepted activation used the [Once Per Turn]: no second offer this turn"
+    );
+    assert!(!field_contains(&runner, 0, "VICTIM-B"), "the second Digimon left");
+}
+
+/// The other side (official Q1818: a "you may" effect the player chooses not
+/// to activate does not use up its [Once Per Turn]): declining the replacement
+/// itself keeps the use, and the next leave this turn offers it again.
+#[test]
+fn ex12_034_leave_declined_keeps_once_per_turn() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.decline_optional_trigger().expect("decline the replacement");
+    let _ = runner.auto_resolve();
+    assert!(!field_contains(&runner, 0, "VICTIM-A"), "the first Digimon left");
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
         runner.pending_selection().is_some(),
-        "the refunded [Once Per Turn] replacement is offered again"
+        "a declined replacement was never activated: it is offered again"
     );
 }
 
-/// After choosing "Hand" the card pick can't be passed: declining there would
-/// spend the [Once Per Turn] without the refund. "Don't play" is the opt-out
-/// (DCGO's decline-then-RemoveUse has the same outcome).
+/// After choosing "Hand" the card pick can't be passed. "Don't play" is the
+/// opt-out offered with the zone choice.
 #[test]
 fn ex12_034_leave_hand_pick_after_choosing_hand_is_mandatory() {
     let (mut runner, _) = leave_setup(&["SW-5"]);
@@ -168,7 +190,9 @@ fn ex12_034_leave_hand_pick_after_choosing_hand_is_mandatory() {
 }
 
 /// With nothing playable anywhere, the choice is only "Don't play" (it
-/// auto-binds, no prompt) and the [Once Per Turn] is refunded.
+/// auto-binds, no prompt). The player still chose to activate, so the
+/// [Once Per Turn] is spent (CR 4.3 15-14-1-4, "even if the effect's
+/// processing can't be executed").
 #[test]
 fn ex12_034_leave_with_no_playable_card_plays_nothing() {
     let (mut runner, _) = leave_setup(&[]);
@@ -177,6 +201,12 @@ fn ex12_034_leave_with_no_playable_card_plays_nothing() {
     let _ = runner.auto_resolve();
     assert!(!field_contains(&runner, 0, "VICTIM-A"));
     assert!(runner.pending_selection().is_none());
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
+        runner.pending_selection().is_none(),
+        "the accepted activation used the [Once Per Turn]"
+    );
 }
 
 /// "Play ... without paying the cost" stays free for a DigiXros card: Erlangmon
