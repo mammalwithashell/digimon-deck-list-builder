@@ -99,3 +99,40 @@ fn file_loader_rejects_omission() {
         matches!(result, Err(digimon_dsl::DslError::Validation(errors)) if errors[0].message.contains("step `select_hand` must declare `optional:`"))
     );
 }
+
+#[test]
+fn migration_snapshot_accepts_omissions_but_verification_requires_explicit_fields() {
+    let root = std::env::temp_dir().join(format!("authoring-snapshot-{}", std::process::id()));
+    std::fs::create_dir_all(root.join("bt99")).unwrap();
+    let path = root.join("bt99/BT99-001.yaml");
+    let snapshot = root.join("before.json");
+    let raw = "card: BT99-001\nname: Snapshot\nkind: digimon\ncolor: [red]\nalt_paths: [{kind: digivolve, from: {level_eq: 3}, cost: 1}]\neffects: [{when: on_play, process: [{select_hand: {of: you, filter: {}, bind_as: pick, prompt: Choose}}]}]";
+    std::fs::write(&path, raw).unwrap();
+    let run = |mode| {
+        std::process::Command::new(env!("CARGO_BIN_EXE_verify_authoring_fields"))
+            .arg(mode)
+            .arg(&root)
+            .arg(&snapshot)
+            .output()
+            .unwrap()
+    };
+    let output = run("snapshot");
+    assert!(output.status.success(), "{:?}", output);
+    assert!(!run("verify").status.success());
+    std::fs::write(
+        &path,
+        raw.replace("level_eq: 3", "any_color: true, level_eq: 3")
+            .replace("of: you", "optional: false, of: you"),
+    )
+    .unwrap();
+    let output = run("verify");
+    assert!(output.status.success(), "{:?}", output);
+    assert!(String::from_utf8(output.stdout)
+        .unwrap()
+        .contains("1 identical compiled cards; 0 differences"));
+    std::fs::write(&path, "card: [").unwrap();
+    assert!(!run("snapshot").status.success());
+    std::fs::remove_file(&path).unwrap();
+    assert!(!run("snapshot").status.success());
+    std::fs::remove_dir_all(root).unwrap();
+}

@@ -11,8 +11,9 @@ fn run() -> Result<(), String> {
     let root = PathBuf::from(&args[2]);
     let mut cards = BTreeMap::new();
     for path in digimon_dsl::authoring_lint::pool_card_files(&root) {
-        let spec = digimon_dsl::loader::load_file(&path)
-            .map_err(|e| format!("{}: {e}", path.display()))?;
+        let spec =
+            digimon_dsl::loader::load_file_with_authoring_checks(&path, args[1] != "snapshot")
+                .map_err(|e| format!("{}: {e}", path.display()))?;
         let card = digimon_dsl::compile::compile(&spec)
             .map_err(|e| format!("{}: {e:?}", path.display()))?;
         cards.insert(
