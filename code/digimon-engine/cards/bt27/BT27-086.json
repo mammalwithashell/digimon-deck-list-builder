@@ -1,0 +1,27 @@
+{
+  "index": 4573,
+  "norm_id": 0.22865,
+  "card_id": "BT27-086",
+  "card_index": 86,
+  "card_name_eng": "Kanata Hondo",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_086",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with [Gemmon] in its text, gain 1 memory. [Your Turn] When your Digimon are played or digivolve, if any of them have the [ALYSION] trait, by suspending this Tamer, 1 of your Digimon gets +3000 DP for the turn. After, if you have a Digimon with 8000 DP or more, ＜Draw 1＞.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "evo_costs": [],
+  "xros_req": ""
+}

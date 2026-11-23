@@ -1,0 +1,27 @@
+{
+  "index": 4576,
+  "norm_id": 0.2288,
+  "card_id": "BT27-089",
+  "card_index": 89,
+  "card_name_eng": "Thomas H. Norstein",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_089",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 Digimon card with [Gaomon] or [Gaogamon] in its name from your hand face down under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.\r\n[All Turns] When effects add to your opponent's hand, by suspending this Tamer, you may place the top card of your deck face down under this Tamer. After, 1 of your Digimon with [Gaogamon] in its name can't be deleted in battle for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.AQ117:AQ118",
+  "evo_costs": [],
+  "xros_req": ""
+}

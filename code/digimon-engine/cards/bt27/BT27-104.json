@@ -1,0 +1,28 @@
+{
+  "index": 4591,
+  "norm_id": 0.22955,
+  "card_id": "BT27-104",
+  "card_index": 104,
+  "card_name_eng": "King Drasil",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_104",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 4,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Royal Knight",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 card from your hand under this Tamer, ＜Draw 1＞ and gain 1 memory. [End of Your Turn] By suspending this Tamer, activate 1 of the effects below: ・1 of your Digimon may digivolve into a [Royal Knight] trait card under this Tamer with the cost reduced by 2. ・You may use 1 use cost 5 or higher [Royal Knight] trait Option card from under this Tamer with the cost reduced by 3. (Rule) Name: Also treated as [King Drasil_7D6].",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 4560,
+  "norm_id": 0.228,
+  "card_id": "BT27-073",
+  "card_index": 73,
+  "card_name_eng": "Chiropmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_073",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mammal",
+    "Glowing Dawn",
+    "BEATBREAK"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a purple Digimon card with the [BEATBREAK] trait, reduce the cost by 1.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ and trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0"
+}

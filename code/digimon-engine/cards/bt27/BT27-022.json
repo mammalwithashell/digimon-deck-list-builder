@@ -1,0 +1,37 @@
+{
+  "index": 4509,
+  "norm_id": 0.22545,
+  "card_id": "BT27-022",
+  "card_index": 22,
+  "card_name_eng": "Renamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_022",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beastkin",
+    "ALYSION",
+    "Ice-Snow"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Ice-Snow] or [ALYSION] trait card and 1 blue Tamer card among them to the hand. Return the rest to the bottom of the deck. (Rule) Trait: Has [Ice-Snow] Type.",
+  "inherited_effect_description_eng": "[When Attacking] If this Digimon has the [Ice-Snow] trait, you may change the attack target to 1 of your opponent's unsuspended Digimon with the fewest digivolution cards.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

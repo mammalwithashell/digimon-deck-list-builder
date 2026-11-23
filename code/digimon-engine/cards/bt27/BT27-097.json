@@ -1,0 +1,28 @@
+{
+  "index": 4584,
+  "norm_id": 0.2292,
+  "card_id": "BT27-097",
+  "card_index": 97,
+  "card_name_eng": "Makoto Kuonji",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_097",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Glowing Dawn",
+    "BEATBREAK"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [All Turns] When a Digimon attacks, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer. After, if its your turn, by trashing 4 bottom face-down cards from under any of your Tamers, you may use 1 purple [BEATBREAK] trait Option card from your trash with the cost reduced by 3.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "evo_costs": [],
+  "xros_req": ""
+}
