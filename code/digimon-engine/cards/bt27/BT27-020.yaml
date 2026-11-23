@@ -1,0 +1,108 @@
+# Source: data/card_bundles/BT27-020.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Blue/BT27_020.cs
+#   (On Play: skippable Lv.4- [Aquatic]/[DATA SQUAD] Digimon hand pick, then a
+#   destination among own Digimon and [DATA SQUAD] Tamers; draw 1. Inherited
+#   When Attacking OPT: mandatory opposing Digimon pick, top/bottom choice.)
+card: BT27-020
+name: Kamemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Cyborg, DATA SQUAD, Aquatic]
+form: Rookie
+attribute: Data
+
+effects:
+  - text: "[On Play] By placing 1 level 4 or lower [Aquatic] or [DATA SQUAD] trait Digimon card from your hand as any of your Digimon's bottom digivolution card, or face down under any of your [DATA SQUAD] trait Tamers, ＜Draw 1＞."
+    when: on_play
+    summary: "[On Play] By placing 1 Lv.4- [Aquatic]/[DATA SQUAD] Digimon card from your hand under 1 of your Digimon or face down under 1 of your [DATA SQUAD] Tamers, <Draw 1>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: placed
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Aquatic
+                  - trait_has: DATA SQUAD
+          prompt: "Place 1 level 4 or lower [Aquatic]/[DATA SQUAD] Digimon card from your hand under 1 of your Digimon or [DATA SQUAD] Tamers"
+      - if:
+          condition: { binding_present: placed }
+          then:
+            - select_effect_choice:
+                bind_as: destination
+                labels:
+                  - "Place it as the bottom digivolution card of 1 of your Digimon"
+                  - "Place it face down under 1 of your [DATA SQUAD] trait Tamers"
+                legal_when:
+                  - any_permanent: { of: you, zone: [battle_area], kind: digimon }
+                  - any_permanent: { of: you, zone: [battle_area], kind: tamer, trait_has: DATA SQUAD }
+                prompt: "Place the card under 1 of your Digimon or face down under 1 of your [DATA SQUAD] Tamers?"
+            - if:
+                condition: { equals: [destination, 0] }
+                then:
+                  - select_own_permanent:
+                      optional: false
+                      bind_as: host
+                      filter: { kind: digimon }
+                      prompt: "Choose 1 of your Digimon to place the card as its bottom digivolution card"
+                  - place_as_bottom_source:
+                      source: placed
+                      target: host
+            - if:
+                condition: { equals: [destination, 1] }
+                then:
+                  - select_own_permanent:
+                      optional: false
+                      bind_as: host
+                      filter:
+                        all_of:
+                          - kind: tamer
+                          - trait_has: DATA SQUAD
+                      prompt: "Choose 1 of your [DATA SQUAD] Tamers to place the card face down under"
+                  - place_selected_card_under_tamer:
+                      card: placed
+                      tamer: host
+                      face_down: true
+            - draw: { of: you, count: 1 }
+
+  - text: "[When Attacking] [Once Per Turn] Trash the top or bottom digivolution card of 1 of your opponent's Digimon."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    # EX7-020 idiom: a sourceless target cannot satisfy the trash, so the
+    # clause is gated on (and targets) Digimon with digivolution cards.
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        stack_size_gte: 2
+    summary: "[Inherited][When Attacking][Once Per Turn] Trash the top or bottom digivolution card of 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: stripped
+          filter:
+            kind: digimon
+            stack_size_gte: 2
+          prompt: "Choose 1 of your opponent's Digimon to trash its top or bottom digivolution card"
+      - select_effect_choice:
+          bind_as: end
+          labels:
+            - "Trash the top digivolution card"
+            - "Trash the bottom digivolution card"
+          prompt: "Trash the top or bottom digivolution card?"
+      - if:
+          condition: { equals: [end, 0] }
+          then:
+            - trash_top_stacked_sources: { target: stripped, count: 1 }
+      - if:
+          condition: { equals: [end, 1] }
+          then:
+            - trash_bottom_sources: { target: stripped, count: 1 }
