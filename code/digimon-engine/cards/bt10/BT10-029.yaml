@@ -24,7 +24,8 @@ effects:
     keyword: Save
     summary: "<Save>"
 
-  - scope: inherited
+  - text: "[When Attacking] If this Digimon has [Shoutmon] in its name, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: when_attacking
     condition:
       source_name_contains: "Shoutmon"

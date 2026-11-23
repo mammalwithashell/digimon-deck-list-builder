@@ -16,7 +16,8 @@ use_requirement:
           - trait_has: TS
 
 effects:
-  - kind: flood_gate
+  - text: "While you have a [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements."
+    kind: flood_gate
     active_when:
       any_field_permanent:
         of: you
@@ -61,7 +62,8 @@ effects:
               - kind: digimon
               - trait_has: TS
 
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     summary: "[Security] Activate [Main] effects: return all opponent lowest-level Digimon; if returned, unsuspend 1 TS Digimon; then optionally link this card"
     process:

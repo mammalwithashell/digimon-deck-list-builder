@@ -15,7 +15,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Trash 2 digivolution cards at the bottom of 1 of your opponent's Digimon."
+    when: when_digivolving
     summary: "[When Digivolving] Trash 2 bottom sources of 1 opponent Digimon"
     process:
       - select_opponent_permanent:

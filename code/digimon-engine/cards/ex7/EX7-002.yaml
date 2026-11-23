@@ -9,7 +9,8 @@ cost: 0
 form: In-Training
 traits: [Lesser]
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If your opponent has no Digimon with digivolution cards, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "If your opponent has no Digimon with digivolution cards, Draw 1"

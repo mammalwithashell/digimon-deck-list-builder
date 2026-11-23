@@ -76,7 +76,8 @@ effects:
                   - add_to_hand_from_trash: { of: you, card: second }
 
   # ─── [Security] Add this card to its owner's hand ──────────────────────────
-  - scope: inherited
+  - text: "[Security] Add this card to its owner's hand."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Add this card to its owner's hand"

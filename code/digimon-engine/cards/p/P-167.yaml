@@ -31,7 +31,8 @@ alt_paths:
 # destination and the ordering are surfaced through pending selections per
 # Working Rule §17 (no auto-determinism).
 effects:
-  - when: [start_of_your_main_phase, when_digivolving]
+  - text: "[Start of Your Main Phase] [When Digivolving] By trashing 1 [Mineral] or [Rock] trait card from any of your Digimon's digivolution cards, reveal the top 3 cards of your deck. Among them, add 1 [Mineral] or [Rock] trait card to the hand or place 1 such card as this Digimon's bottom digivolution card. Return the rest to the top or bottom of the deck."
+    when: [start_of_your_main_phase, when_digivolving]
     optional: true
     summary: "[Start of Your Main Phase][When Digivolving] Trash 1 Mineral/Rock source; reveal 3, route 1 to hand or as bottom source, order rest"
     process:

@@ -49,7 +49,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: cost_reduction
+  - text: "[Your Turn][Once Per Turn] When you would play a green Tamer card from your hand, by suspending 1 of your green Digimon, reduce the play cost by 3."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
     when_any_ally_played:
@@ -80,7 +81,8 @@ effects:
       - suspend: { target: suspend_cost }
     summary: "[Your Turn][Once Per Turn] When you would play a green Tamer card from your hand, by suspending 1 of your green Digimon, reduce the play cost by 3"
 
-  - kind: cost_reduction
+  - text: "[Your Turn][Once Per Turn] When this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1."
+    kind: cost_reduction
     scope: inherited
     reduction_timing: before_pay_cost
     active_when:

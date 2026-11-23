@@ -42,7 +42,8 @@ traits: [Larva, X Antibody, Royal Base, LIBERATOR]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When face-up [Royal Base] trait cards are placed in your security stack, ＜Draw 1＞."
+    scope: inherited
     when: on_added_to_security
     once_per_turn: true
     active_when: { your_turn: true }

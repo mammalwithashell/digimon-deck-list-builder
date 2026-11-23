@@ -131,7 +131,8 @@ cost: 1
 
 effects:
   # ─── Clause 0 — cost reduction: -1 if you control a [Snatchmon] ────────────
-  - kind: cost_reduction
+  - text: "When you would use this card, if you have a [Snatchmon] in play, reduce the cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
     condition:
@@ -223,7 +224,8 @@ effects:
                       cost: printed
 
   # ─── Clause 2 — [Security] (inherited scope) ────────────────────────────────
-  - scope: inherited
+  - text: "[Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon] among them without paying the cost. Trash the rest."
+    scope: inherited
     when: on_security
     optional: true
     summary: "[Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon] among them without paying the cost. Trash the rest"

@@ -29,7 +29,8 @@ traits: [Lesser]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] You may trash 1 card in your hand to have this Digimon get +1000 DP for the turn."
+    scope: inherited
     when: when_attacking
     optional: true
     outer_prompt: true

@@ -63,7 +63,8 @@ effects:
 
   # ─── [When Digivolving][End of Attack] delete this OR trash 2 FD under Tamers
   #     → delete 1 of the opponent's highest-DP Digimon ─────────────────────────
-  - when: [when_digivolving, end_of_attack]
+  - text: "[When Digivolving] [End of Attack] By deleting this Digimon or trashing 2 bottom face-down cards from under any of your Tamers, delete 1 of your opponent's highest DP Digimon."
+    when: [when_digivolving, end_of_attack]
     summary: "[When Digivolving][End of Attack] By deleting this Digimon or trashing 2 bottom face-down cards from under your Tamers, delete 1 of your opponent's highest DP Digimon"
     process:
       - if:
@@ -122,7 +123,8 @@ effects:
 
   # ─── [On Deletion] opponent trashes 1 hand card; then if their hand <= 7, may
   #     place this card face up as the bottom security card ──────────────────
-  - when: on_deletion
+  - text: "[On Deletion] Your opponent trashes 1 card in their hand. Then, if their hand has 7 or fewer cards, you may place this card face up as the bottom security card."
+    when: on_deletion
     summary: "[On Deletion] Your opponent trashes 1 card in their hand. Then, if their hand has 7 or fewer cards, you may place this card face up as the bottom security card"
     process:
       - as_selecting_player:

@@ -290,7 +290,8 @@ effects:
   #
   # `optional: true` mirrors DCGO `isOptional: true` / `canNoSelect: true` on
   # the source-select — the player may decline the whole clause (`min: 0`).
-  - when: when_attacking
+  - text: "[When Attacking] By trashing up to 3 level 6 or higher cards from this Digimon's digivolution cards, for each card trashed, activate the effect below. Then, if you trashed 3 cards, trash your opponent's top 2 security cards. ・Delete 1 of your opponent's Digimon or Tamers with the lowest play cost."
+    when: when_attacking
     optional: true
     summary: "[When Attacking] Trash up to 3 Lv6+ sources; per-trash delete lowest-cost opp Digimon/Tamer; if 3 trashed, trash 2 opp security"
     process:

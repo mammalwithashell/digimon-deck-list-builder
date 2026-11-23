@@ -127,7 +127,8 @@ effects:
   # face-up permanent and a TS Digimon/Tamer is on the controller's field.
   # Card-scoped via `target: { card_number_is: "BT24-097" }` — mirrors DCGO
   # IgnoreColorConditionClass(cardCondition: cardSource == card).
-  - kind: flood_gate
+  - text: "While you have a [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements."
+    kind: flood_gate
     active_when:
       any_field_permanent:
         of: you
@@ -176,7 +177,8 @@ effects:
   # Printed: "[Security] Activate this card's [Main] effects."
   # DCGO: AddActivateMainOptionSecurityEffect — the security trigger re-runs
   # the same Main process (mandatory delete, then optional free link).
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     summary: "[Security] Activate [Main] effects: delete 1 opponent's level 6 or higher Digimon; then you may link this card free"
     process:

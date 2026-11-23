@@ -112,7 +112,8 @@ effects:
 
   # ─── [Security] -5000 DP to all opponent Digimon AND opponent security
   #     Digimon until the end of your turn. ────────────────────────────────────
-  - when: on_security
+  - text: "[Security] All of your opponent's Digimon and security Digimon get -5000 DP until the end of your turn."
+    when: on_security
     summary: "[Security] All opponent Digimon and opponent security Digimon get -5000 DP until end of your turn"
     process:
       - add_modifier:

@@ -31,7 +31,8 @@ alt_paths:
     from: { name_is: MetalKabuterimon }
     cost: 0
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Until the end of your opponent's turn, this Digimon can't be deleted by their effects."
+    when: when_digivolving
     process:
       - add_modifier:
           target: source
@@ -39,7 +40,8 @@ effects:
           value: 1
           opponent_only: true
           expiry: end_of_opponents_turn
-  - when: when_attacking
+  - text: "[When Attacking] 1 of your Digimon or Tamers may digivolve into a black or yellow Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+    when: when_attacking
     process:
       - select_own_permanent:
           bind_as: host
@@ -73,7 +75,8 @@ effects:
           source: hybrid
           cost: { reduce: 1 }
           ignore_requirements: false
-  - scope: inherited
+  - text: "[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 Tamer card with inherited effects from this Digimon's digivolution cards without paying the cost."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

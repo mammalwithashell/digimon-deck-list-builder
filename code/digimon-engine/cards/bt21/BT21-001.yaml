@@ -51,7 +51,8 @@ traits: [Lesser, LIBERATOR]
 #     are #[ignore]'d.
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, 1 of your Digimon may digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait in the hand with the digivolution cost reduced by 1."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     # The whole effect is one "may" (DCGO BT21_001.cs:21 `isOptional: true`):

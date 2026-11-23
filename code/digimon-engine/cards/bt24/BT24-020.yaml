@@ -21,7 +21,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Sea Beast] or [Shaman] trait or [Aqua] or [Sea Animal] in any of its traits and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add one Sea Beast/Shaman/Aqua/Sea Animal Digimon and one TS card"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

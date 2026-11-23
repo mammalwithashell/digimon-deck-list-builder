@@ -36,7 +36,8 @@ effects:
     amount: 5
     summary: "When played while there are 3 or more Digimon, reduce play cost by 5"
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon may get +5000 DP for the turn and attack your opponent's Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Suspend 2 opposing Digimon/Tamers, then 1 own Digimon may get +5000 DP and attack a Digimon"
     condition:
       any_permanent:
@@ -82,7 +83,8 @@ effects:
               optional: true
               prompt: "Have the selected Digimon attack an opponent's Digimon?"
 
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] 1 of your Digimon may unsuspend."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     optional: true
     summary: "[When Digivolving][When Attacking][OPT] 1 of your Digimon may unsuspend"

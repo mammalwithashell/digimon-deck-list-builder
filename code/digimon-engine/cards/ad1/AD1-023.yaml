@@ -7,7 +7,8 @@ color: [black, yellow, purple]
 cost: 5
 also_treated_as: [J.P. Shibayama, Koji Minamoto, Koichi Kimura]
 effects:
-  - when: [on_play, start_of_your_main_phase]
+  - text: "[Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, ＜Draw 1＞. Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory."
+    when: [on_play, start_of_your_main_phase]
     process:
       - select_zone_cards:
           zones: [hand, trash]
@@ -30,7 +31,8 @@ effects:
               source_count: {filter: {trait_has: Hybrid}, at_least: 4}
           then:
             - gain_memory: 2
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon with the [Hybrid] or [Ten Warriors] trait would leave the battle area, by adding your top security card to the hand, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true
@@ -50,6 +52,7 @@ effects:
           condition: {effect_added_any_card_to_hand: true}
           then:
             - cancel_replacement: {}
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     process:
       - play_from_security: {}

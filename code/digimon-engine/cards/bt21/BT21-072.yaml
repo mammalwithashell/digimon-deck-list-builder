@@ -106,7 +106,8 @@ effects:
     summary: "[All Turns] +1000 DP per digivolution card (material_count formula)"
 
   # ─── Clause 5 (Inherited): [Your Turn] +2000 DP ───────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

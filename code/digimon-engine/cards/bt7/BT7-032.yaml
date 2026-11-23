@@ -84,7 +84,8 @@ effects:
   # own stack is the attacker, matching `cardSources.Contains(card)`.
   # Mandatory (DCGO isOptional:false — no "you may" in the printed text, no
   # activation cost, no player choice to expose).
-  - scope: inherited
+  - text: "[When Attacking][Once Per Turn] If you have 3 security cards, gain 2 memory."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][OPT] If you have exactly 3 security cards, gain 2 memory"

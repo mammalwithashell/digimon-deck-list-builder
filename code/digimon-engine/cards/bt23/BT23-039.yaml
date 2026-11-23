@@ -55,7 +55,8 @@ effects:
     summary: "<Link> [Appmon] trait: Cost 1"
 
   # ─── [On Play] reveal 3; add 1 [Appmon] + 1 [Game]/[Invincible]; rest bottom ─
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Game] or [Invincible] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal the top 3; add 1 [Appmon] card and 1 [Game]/[Invincible] card to the hand; return the rest to the bottom of the deck"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

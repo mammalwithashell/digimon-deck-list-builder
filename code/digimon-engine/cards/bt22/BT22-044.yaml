@@ -68,7 +68,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_add_digivolution_cards
+  - text: "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, gain 1 memory."
+    when: on_add_digivolution_cards
     once_per_turn: true
     active_when: { your_turn: true }
     trigger_if:

@@ -58,14 +58,16 @@ cost: 4
 
 effects:
   # ─── Clause 1: [Start of Your Turn] if memory <= 2, set it to 3 ──────────────
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
     condition: { memory_lte: 2 }
     process:
       - set_memory: 3
 
   # ─── Clause 2: [Your Turn] your red 4+source Digimon gain <Security A. +1> ────
-  - kind: aura
+  - text: "[Your Turn] All of your red Digimon with 4 or more digivolution cards gain ＜Security A. +1＞. (This Digimon checks 1 additional security card.)"
+    kind: aura
     summary: "[Your Turn] Your red Digimon with 4+ digivolution cards gain <Security A. +1>"
     active_when: { your_turn: true }
     target:
@@ -77,7 +79,8 @@ effects:
     grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
 
   # ─── Clause 3: [Security] play self without paying the cost ──────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

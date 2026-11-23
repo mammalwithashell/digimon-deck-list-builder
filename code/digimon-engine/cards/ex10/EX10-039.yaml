@@ -40,7 +40,8 @@ alt_paths:
 
 effects:
   # ─── [Start of Your Main Phase] place a [Bagra Army] card ──────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] You may place 1 Digimon card with the [Bagra Army] trait from your hand or trash as any of your [Bagra Army] trait Digimon's bottom digivolution cards or under any of your [Bagra Army] trait Tamers."
+    when: start_of_your_main_phase
     optional: true
     summary: "[Start of Your Main Phase] You may place 1 [Bagra Army] trait Digimon card from your hand or trash as any of your [Bagra Army] trait Digimon's bottom digivolution cards or under any of your [Bagra Army] trait Tamers"
     process:

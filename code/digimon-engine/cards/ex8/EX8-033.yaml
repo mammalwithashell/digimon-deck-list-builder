@@ -57,7 +57,8 @@ alt_paths:
     stacks_unsuspended: true
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Return 1 card with the [NSo] trait from your trash to the hand."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Return 1 card with the [NSo] trait from your trash to the hand"
     process:
       - select_trash:
@@ -67,7 +68,8 @@ effects:
           prompt: "Return 1 card with the [NSo] trait from your trash to the hand"
       - add_to_hand_from_trash: { of: you, card: recovered }
 
-  - when: on_deletion
+  - text: "[On Deletion] 1 of your opponent's Digimon gets -4000 DP for the turn."
+    when: on_deletion
     summary: "[On Deletion] 1 of your opponent's Digimon gets -4000 DP for the turn"
     process:
       - select_opponent_permanent:

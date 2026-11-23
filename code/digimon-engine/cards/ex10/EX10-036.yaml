@@ -76,7 +76,8 @@ alt_paths:
 
 effects:
   # ─── Printed keyword ──────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Fragment《3》＞"
+    kind: grant_keyword
     keyword: Fragment
     value: 3
 

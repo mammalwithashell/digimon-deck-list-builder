@@ -13,7 +13,8 @@ alt_paths:
     from: { level_eq: 4, color_is: yellow }
     cost: 3
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] When you have 3 security cards or less, trigger ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.)"
+    when: when_digivolving
     condition: { security_count_lte: 3 }
     process:
       - recover: { of: you, count: 1 }

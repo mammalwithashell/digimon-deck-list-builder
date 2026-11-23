@@ -81,16 +81,19 @@ dual:
         keyword: SecurityAttackPlus
         value: 1
         summary: "<Security A. +1>"
-      - kind: grant_keyword
+      - text: "＜Reboot＞"
+        kind: grant_keyword
         keyword: Reboot
         summary: "<Reboot>"
-      - kind: grant_keyword
+      - text: "＜Blocker＞"
+        kind: grant_keyword
         keyword: Blocker
         summary: "<Blocker>"
 
       # [WD][WA][OPT] self effect-immunity (opp Digimon effects don't affect this
       # until their turn ends), then delete 1 lowest-DP opponent Digimon.
-      - when: [when_digivolving, when_attacking]
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] Your opponent's Digimon effects don't affect this Digimon until their turn ends. Then, delete 1 of your opponent's Digimon with the lowest DP."
+        when: [when_digivolving, when_attacking]
         once_per_turn: true
         summary: "[WD][WA][OPT] Opp Digimon effects don't affect this until their turn ends; delete 1 lowest-DP opp Digimon"
         process:

@@ -18,9 +18,11 @@ alt_paths:
     color_is: blue
   cost: 3
 effects:
-- kind: grant_keyword
+- text: "＜Blocker＞"
+  kind: grant_keyword
   keyword: Blocker
-- when:
+- text: "[On Play] [When Digivolving] Until the end of your opponent's turn, 1 of your Digimon can't be deleted in battle."
+  when:
   - on_play
   - when_digivolving
   process:
@@ -34,7 +36,8 @@ effects:
       modifier: CannotBeDestroyedByBattle
       value: 1
       expiry: end_of_opponents_turn
-- scope: inherited
+- text: "[Your Turn] This Digimon's attack targets can't change."
+  scope: inherited
   kind: aura
   active_when:
     your_turn: true

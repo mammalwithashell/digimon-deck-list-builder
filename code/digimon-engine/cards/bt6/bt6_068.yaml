@@ -14,7 +14,8 @@ form: Rookie
 attribute: Virus
 
 effects:
-  - when: on_play
+  - text: "[On Play] You may trash 1 card in your hand. If you do, return 1 Digimon card with [Seven Great Demon Lords] or [Three Musketeers] in its type from your trash to your hand."
+    when: on_play
     summary: "[On Play] You may trash 1 card in your hand. If you do, return 1 Digimon card with the [Seven Great Demon Lords] or [Three Musketeers] trait from your trash to your hand."
     process:
       - select_hand:

@@ -58,11 +58,13 @@ alt_paths:
     ignore_requirements: true
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if it's your turn, 2 of your Digimon may DNA digivolve into [Silphymon] in the hand."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Suspend 1 opp Digimon; then if your turn, 2 of your Digimon may DNA digivolve into [Silphymon] in hand"
     process:
       - select_opponent_permanent:
@@ -97,7 +99,8 @@ effects:
                 optional: true
                 prompt: "DNA digivolve 2 of your Digimon into [Silphymon] in the hand?"
 
-  - kind: aura
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     target: {}

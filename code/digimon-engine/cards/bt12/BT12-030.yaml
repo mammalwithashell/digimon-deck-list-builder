@@ -64,7 +64,8 @@ effects:
   # sources beneath the top card — DCGO `DigivolutionCards`). The suspend is a
   # mandatory pick of 1 opponent Digimon (DCGO canNoSelect: false); it is the
   # player's choice, never auto-picked. No eligible target → silently skipped.
-  - when: when_digivolving
+  - text: "[When Digivolving] If this Digimon has a blue digivolution card, unsuspend this Digimon. If it has a green digivolution card, suspend 1 of your opponent's Digimon."
+    when: when_digivolving
     summary: "[When Digivolving] If it has a blue digivolution card, unsuspend this Digimon; if it has a green digivolution card, suspend 1 opponent Digimon"
     process:
       - if:
@@ -92,7 +93,8 @@ effects:
   #
   # Optional (DCGO isOptional: true; "may"). Only hand Digimon with a legal
   # route onto this Digimon are offered. EX13-004 / AD1-011 idiom.
-  - when: end_of_attack
+  - text: "[End of Attack] This Digimon may digivolve into a Digimon card with [Imperialdramon] in its name in your hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2."
+    when: end_of_attack
     summary: "[End of Attack] This Digimon may digivolve into an [Imperialdramon]-named Digimon in hand with the cost reduced by 2"
     process:
       - select_hand:

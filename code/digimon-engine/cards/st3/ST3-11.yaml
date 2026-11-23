@@ -13,7 +13,8 @@ alt_paths:
     from: { level_eq: 5, color_is: yellow }
     cost: 4
 effects:
-  - when: when_attacking
+  - text: "[When Attacking] 1 of your opponent's Digimon gets -4000 DP for the turn."
+    when: when_attacking
     process:
       - select_opponent_permanent:
           bind_as: target

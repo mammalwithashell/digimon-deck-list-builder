@@ -35,7 +35,8 @@ effects:
             - trash_from_reveal: { of: you, card: rest }
       - place_self_as_delay_option: {}
 
-  - when: on_security
+  - text: "[Security] Reveal 3 cards from the top of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] in its traits among them to your hand. Trash the rest. Then, place this card in your Battle Area."
+    when: on_security
     summary: "[Security] Activate this card's Main effect"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

@@ -86,12 +86,14 @@ alt_paths:
 
 effects:
   # ─── <Execute> ─────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Execute＞"
+    kind: grant_keyword
     keyword: Execute
     summary: "<Execute>"
 
   # ─── <Ascension> ───────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Ascension＞ (When this Digimon is deleted, you may place this card as the top security card.)"
+    kind: grant_keyword
     keyword: Ascension
     summary: "<Ascension> (When this Digimon is deleted, you may place this card as the top security card)"
 

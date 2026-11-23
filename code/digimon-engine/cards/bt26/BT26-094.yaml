@@ -29,7 +29,8 @@ cost: 3
 traits: [DATA SQUAD]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By placing 1 [DATA SQUAD] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter:
@@ -55,7 +56,8 @@ effects:
             - draw: { of: you, count: 1 }
             - gain_memory: 1
 
-  - when: [on_discard_hand, on_digivolution_card_trashed]
+  - text: "[Your Turn] When your opponent's hand is trashed from or effects trash cards from under this Tamer, by suspending this Tamer, 1 of your [DATA SQUAD] trait Digimon gains ＜Execute＞ for the turn."
+    when: [on_discard_hand, on_digivolution_card_trashed]
     optional: true
     active_when: { your_turn: true }
     timing_conditions:
@@ -80,7 +82,8 @@ effects:
           keyword: Execute
           expiry: end_of_turn
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

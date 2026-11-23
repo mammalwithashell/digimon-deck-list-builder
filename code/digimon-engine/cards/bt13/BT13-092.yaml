@@ -71,7 +71,8 @@ alt_paths:
 
 effects:
   # ─── [When Digivolving] trash 1 from opp hand; then hand <= 7 -> +security ─
-  - when: when_digivolving
+  - text: "[When Digivolving] Search your opponent's hand, and trash 1 card among it. Then, if they have 7 or fewer cards in their hand, they add the top card of their security stack to the hand."
+    when: when_digivolving
     summary: "[When Digivolving] Search your opponent's hand, and trash 1 card among it. Then, if they have 7 or fewer cards in their hand, they add the top card of their security stack to the hand"
     process:
       # The controller (not `as_selecting_player`) chooses among the
@@ -91,7 +92,8 @@ effects:
             - add_top_security_to_hand: { of: opponent }
 
   # ─── [When Attacking] opp-trash Digimon -> deck bottom; delete same name ───
-  - when: when_attacking
+  - text: "[When Attacking] By returning 1 Digimon card from your opponent's trash to the bottom of the deck, delete all of your opponent's Digimon with the same name as that card."
+    when: when_attacking
     optional: true
     condition:
       count_gte:

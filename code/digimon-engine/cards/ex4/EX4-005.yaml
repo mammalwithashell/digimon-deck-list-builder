@@ -31,7 +31,8 @@ effects:
   # ─── Clause 1 — [Start of Your Main Phase] conditional gain 1 memory ─────────
   # MANDATORY (no "may"; DCGO isOptional: false). The condition gate (own
   # red/yellow Tamer in play) makes the trigger simply not fire when unmet.
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have a red or yellow Tamer in play, gain 1 memory."
+    when: start_of_your_main_phase
     optional: false
     condition:
       any_permanent:
@@ -46,7 +47,8 @@ effects:
       - gain_memory: 1
 
   # ─── Clause 2 — Inherited [Your Turn][OPT] own red/yellow Tamer suspend → Draw 1
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes suspended, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: on_suspend
     once_per_turn: true
     active_when: { your_turn: true }

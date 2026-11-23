@@ -15,7 +15,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] While your opponent has a Digimon with no digivolution cards, this Digimon gains ＜Security Attack +1＞. (This Digimon checks 1 additional security card.)"
+    scope: inherited
     kind: aura
     active_when:
       all_of:

@@ -48,7 +48,8 @@ alt_paths:
 effects:
   # ─── [Start of Your Main Phase] trash 1 [Chronomon]-text / [Shaman] card →
   #     <Draw 1> + gain 1 memory ────────────────────────────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 card with [Chronomon] in its text or the [Shaman] trait from your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter:

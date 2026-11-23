@@ -24,7 +24,8 @@ effects:
     process:
       - draw: { of: you, count: 1 }
 
-  - when: on_deletion
+  - text: "[On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand as the bottom digivolution card of one of your [King Drasil_7D6] in the breeding area."
+    when: on_deletion
     summary: "[On Deletion] Place 1 Royal Knight Digimon from hand under your King Drasil_7D6 in breeding"
     process:
       - select_own_breeding_permanent:

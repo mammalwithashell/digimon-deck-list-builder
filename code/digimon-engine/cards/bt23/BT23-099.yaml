@@ -92,7 +92,8 @@ effects:
       - play_union_bound_free: { binding: pick }
 
   # ─── Clause 3: [Security] may play a [Sistermon] card, then place this card ──
-  - scope: inherited
+  - text: "[Security] You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] You may play 1 card with [Sistermon] in its name from your hand or trash without paying the cost. Then, place this card in the battle area"

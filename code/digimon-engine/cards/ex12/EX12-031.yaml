@@ -38,7 +38,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or the [TB] trait from your hand as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand."
+    when: [on_play, when_digivolving]
     condition:
       count_gte:
         filter:

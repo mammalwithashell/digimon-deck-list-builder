@@ -238,7 +238,8 @@ effects:
   #     flag), exactly like BT24-089's `[Security]` clause. `scope: inherited`
   #     would make enqueue_from_permanent skip the clause on a top-card Option.
   #   - select_opponent_permanent with `selector: highest_dp` + delete_permanent.
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's Digimon with the highest DP."
+    when: on_security
     summary: "[Security] Delete 1 opponent highest-DP Digimon"
     process:
       - select_opponent_permanent:

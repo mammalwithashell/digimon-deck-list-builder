@@ -57,7 +57,8 @@ alt_paths:
 
 effects:
   # ─── [When Digivolving] conditional <Retaliation> until end of opp's next turn
-  - when: when_digivolving
+  - text: "[When Digivolving] If a card with [Hybrid] in its traits or [Koichi Kimura] is in this Digimon's digivolution cards, this Digimon gains ＜Retaliation＞ until the end of your opponent's next turn. (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
+    when: when_digivolving
     condition:
       any_of:
         - self_digivolution_sources_trait_has: Hybrid

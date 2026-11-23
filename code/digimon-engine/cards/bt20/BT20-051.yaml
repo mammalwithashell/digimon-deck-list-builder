@@ -27,7 +27,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Kota Domoto] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     condition:
       count_lte:
@@ -46,7 +47,8 @@ effects:
           prompt: "Play 1 [Kota Domoto] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: kota }
 
-  - kind: aura
+  - text: "[Opponent's Turn] This Digimon gets +2000 DP."
+    kind: aura
     scope: inherited
     active_when: { opponents_turn: true }
     target: {}

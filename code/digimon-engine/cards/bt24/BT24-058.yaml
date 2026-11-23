@@ -79,7 +79,8 @@ alt_paths:
     ignore_requirements: true
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Among them, add 1 [Machine], [Cyborg] or [TS] trait Digimon card or Tamer card to the hand or place it as any of your [Machine], [Cyborg] or [TS] trait Digimon's bottom digivolution card. Return the rest to the top or bottom of the deck."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal 3; add 1 Machine/Cyborg/TS Digimon-or-Tamer to hand or place as bottom source of a Machine/Cyborg/TS Digimon; rest to top or bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -139,6 +140,7 @@ effects:
           of: you
           destinations: [deck_top, deck_bottom]
 
-  - scope: inherited
+  - text: "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Reboot

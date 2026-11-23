@@ -81,20 +81,24 @@ alt_paths:
 
 effects:
   # ─── Keywords ───────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
 
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 
   # ─── [When Digivolving] delete up to 10000 DP total; then this Digimon may attack ──
-  - when: when_digivolving
+  - text: "[When Digivolving] Delete up to 10000 DP total worth of your opponent's Digimon. Then, this Digimon may attack."
+    when: when_digivolving
     summary: "[When Digivolving] Delete up to 10000 DP total worth of your opponent's Digimon. Then, this Digimon may attack"
     process:
       - select_opponent_dp_budget:
@@ -112,7 +116,8 @@ effects:
           prompt: "This Digimon may attack"
 
   # ─── [When Digivolving][When Attacking][OPT] delete 1 lowest-DP opponent Digimon ──
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] Delete 1 of your opponent's lowest DP Digimon."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[When Digivolving][When Attacking][Once Per Turn] Delete 1 of your opponent's lowest DP Digimon"
     process:

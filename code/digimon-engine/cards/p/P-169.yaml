@@ -118,7 +118,8 @@ effects:
           target: target_digi
 
   # --- Clause 3: [Security] Play this card without paying the cost -----------
-  - scope: inherited
+  - text: "[Security] Play this card without paying the cost."
+    scope: inherited
     when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:

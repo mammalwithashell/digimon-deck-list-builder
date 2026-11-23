@@ -86,7 +86,8 @@ alt_paths:
 
 effects:
   # ─── <Blocker> ───────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -141,7 +142,8 @@ effects:
             - unsuspend: { target: unsuspend_target }
 
   # ─── Inherited [All Turns][OPT] sec removed → 1 own [Shaman] unsuspend ────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your [Shaman] trait Digimon may unsuspend."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     optional: true

@@ -56,7 +56,8 @@ form: In-Training
 
 effects:
   # ─── Inherited [Your Turn][OPT] TM Option placed under this Digimon → +1 memory
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When effects place Option cards with the [Three Musketeers] trait in this Digimon's digivolution cards, gain 1 memory."
+    scope: inherited
     when: on_add_digivolution_cards
     once_per_turn: true
     active_when: { your_turn: true }

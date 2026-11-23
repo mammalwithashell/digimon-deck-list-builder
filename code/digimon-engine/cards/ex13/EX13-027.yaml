@@ -70,7 +70,8 @@ effects:
               prompt: "Trash 1 card with [Sukamon] or [Etemon] in its name"
           remainder: bottom
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 other Digimon with [Sukamon] in its name, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

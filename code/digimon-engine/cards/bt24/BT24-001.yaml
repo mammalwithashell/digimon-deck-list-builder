@@ -29,7 +29,8 @@ form: In-Training
 #     tests are #[ignore]'d pending this fix.
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, you may delete 1 of their Digimon with 3000 DP or less."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     # DCGO BT24_001.cs:21 `isOptional: true` and CanActivateCondition (:57-60)

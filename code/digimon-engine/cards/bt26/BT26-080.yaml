@@ -110,7 +110,8 @@ effects:
 
   # ─── [When Digivolving] by suspending 1 Digimon, may attack without
   #     suspending ─────────────────────────────────────────────────────────
-  - when: when_digivolving
+  - text: "[When Digivolving] By suspending 1 Digimon, this Digimon may attack without suspending."
+    when: when_digivolving
     condition:
       any_field_permanent:
         of: any
@@ -138,7 +139,8 @@ effects:
 
   # ─── [When Attacking][Once Per Turn] delete 1 opp Digimon with the same
   #     orientation as this Digimon ────────────────────────────────────────
-  - when: when_attacking
+  - text: "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with the same orientation as this Digimon."
+    when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][Once Per Turn] Delete 1 of your opponent's Digimon with the same orientation as this Digimon"
     process:

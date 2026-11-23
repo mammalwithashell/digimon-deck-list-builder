@@ -7,7 +7,8 @@ cost: 0
 traits: [Minor, Xros Heart]  # official Bandai DB: type "Minor/Xros Heart" (was mis-authored "Mini Dragon")
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] If this Digimon has [Xros Heart] in its traits, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: when_attacking
     condition:
       source_permanent_trait_has: "Xros Heart"

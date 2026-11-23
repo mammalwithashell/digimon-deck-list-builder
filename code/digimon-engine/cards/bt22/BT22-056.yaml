@@ -65,7 +65,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if this Digimon's stack has 2 or more same-level cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play] [When Digivolving] 1 opponent Digimon gets -3000 DP for the turn; then if this stack has 2+ same-level cards, <De-Digivolve 1> 1 opponent Digimon"
     process:
       - if:
@@ -98,7 +99,8 @@ effects:
                 amount: 1
                 stop_at_level: 3
 
-  - scope: inherited
+  - text: "[Opponent's Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { opponents_turn: true }
     target: {}

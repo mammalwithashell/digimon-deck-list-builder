@@ -80,7 +80,8 @@ effects:
 
   # ─── [Your Turn][OPT] When this Digimon gets linked: if ≤1 Tamers, play
   #     1 [Haru Shinkai] from hand free ─────────────────────────────────────
-  - when: when_card_linked_to_this
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Haru Shinkai] from your hand without paying the cost."
+    when: when_card_linked_to_this
     once_per_turn: true
     optional: true
     active_when:

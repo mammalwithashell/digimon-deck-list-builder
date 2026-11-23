@@ -23,7 +23,8 @@ traits: [Lesser, LIBERATOR]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true

@@ -33,7 +33,8 @@ effects:
     process:
       - draw: {of: you, count: 1}
     summary: "[On Play] Draw 1"
-  - kind: aura
+  - text: "[Your Turn] All of your Digimon with [D-Reaper] in their traits get +1000 DP."
+    kind: aura
     scope: inherited
     active_when: {your_turn: true}
     target: {owner: you, zone: [battle_area], kind: digimon, trait_has: D-Reaper}

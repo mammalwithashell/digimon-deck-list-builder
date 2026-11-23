@@ -22,7 +22,8 @@ effects:
     keyword: Save
     summary: "<Save>"
 
-  - when: on_play
+  - text: "[On Play] This Digimon may digivolve into [AtlurBallistamon] under your Tamers without paying the cost."
+    when: on_play
     summary: "[On Play] May digivolve into AtlurBallistamon under your Tamers without paying the cost"
     process:
       - select_under_tamer_sources:
@@ -38,7 +39,8 @@ effects:
                 source: evo_source
                 cost: free
 
-  - scope: inherited
+  - text: "[Opponent's Turn] This Digimon with the [Xros Heart] trait gains ＜Blocker＞."
+    scope: inherited
     kind: grant_keyword
     active_when:
       all_of:

@@ -152,7 +152,8 @@ effects:
   # Printed (inherited_text): "Security Effect [Security] Play this card
   # without paying the cost." Standard mandatory tamer security-play pattern
   # (AD1-019, BT16-085, BT17-081).
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

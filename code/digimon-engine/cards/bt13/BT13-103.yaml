@@ -59,7 +59,8 @@ cost: 3
 effects:
   # ─── Clause 1: [Your Turn] reduce a played [Belphemon] card's cost by the
   #     printed cost of a deleted [Gizmon]-name Digimon ────────────────────────
-  - kind: cost_reduction
+  - text: "[Your Turn] When a card with [Belphemon] in its name would be played, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the play cost by the play cost of the deleted Digimon."
+    kind: cost_reduction
     active_when: { your_turn: true }
     when_any_ally_played: { name_contains: "Belphemon" }
     optional: true
@@ -154,7 +155,8 @@ effects:
   # cost." Standard play_from_security pattern (cf. BT22-094, BT17-093,
   # BT21-015). Mandatory ([Security] effects are not opt-out per the rules
   # manual §16). DCGO `EffectTiming.SecuritySkill` → PlaySelfTamerSecurityEffect.
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

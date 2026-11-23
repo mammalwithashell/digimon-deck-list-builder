@@ -90,7 +90,8 @@ effects:
   # with canNoSelect: true. Rust models this with a PASS-able attacker select
   # followed by may_attack_now, which opens the centralized attack flow and
   # resumes this effect after the attack closes.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] 2 of your Digimon may DNA digivolve into [Omnimon Alter-S] in the hand. Then, 1 of your Digimon may attack."
+    when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] 2 Digimon may DNA digivolve into Omnimon Alter-S in hand"
     # DCGO EX9_013.cs: the effect activates whenever this Digimon is on the

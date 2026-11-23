@@ -6,7 +6,8 @@ cost: 3
 traits: [TS]
 
 effects:
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the bottom of the deck, you may play 1 [Hiroko Sagisaka] or 1 [TS] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+    when: start_of_your_turn
     optional: true
     condition: { memory_lte: 4 }
     summary: "[Start of Your Turn] If memory <=4, return this Tamer to deck bottom to play Hiroko or a TS Digimon with 5000 DP or less from hand free"
@@ -29,7 +30,8 @@ effects:
           prompt: "Play 1 [Hiroko Sagisaka] or TS Digimon with 5000 DP or less from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: pick }
 
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add 1 TS card; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -44,7 +46,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: ts_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

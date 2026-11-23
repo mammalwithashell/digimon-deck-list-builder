@@ -232,7 +232,8 @@ effects:
           stop_at_level: 3
 
   # ─── Clause D — Inherited [All Turns][OPT] security removed → 1 opp -4000 DP ─
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your security stack is removed from, 1 of your opponent's Digimon gets -4000 DP for the turn."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     active_when: { all_turns: true }

@@ -23,7 +23,8 @@ alt_paths:
 effects:
   # [Hand][Counter] <Blast Digivolve> — alt-path marker + keyword grant.
   # PRECEDENT: BT22-052.
-  - kind: grant_keyword
+  - text: "{Hand}"
+    kind: grant_keyword
     keyword: BlastDigivolve
 
   # [On Play][When Digivolving] Activate 1 of the effects below:
@@ -34,7 +35,8 @@ effects:
   # bottom-decks the opponent's lowest-LEVEL Digimon (level_matches_aggregate,
   # same evaluated pattern as BT22-026 / AD1-012). Branch 1 is "you may play",
   # so the inner hand pick is optional (PASS surfaces a faithful decline).
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Activate 1 of the effects below: ・Return 1 of your opponent's lowest level Digimon to the bottom of the deck. ・You may play 1 play cost 4 or lower blue Tamer card from your hand without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Choose: bottom-deck opp's lowest-level Digimon OR play a blue Tamer cost <=4 from hand free"
     process:
       - select_effect_choice:
@@ -75,7 +77,8 @@ effects:
                 prompt: "You may play 1 blue Tamer with play cost 4 or lower from your hand"
             - play_from_hand_free: { of: you, hand_index: tamer_pick }
 
-  - when: when_attacking
+  - text: "[When Attacking] [Once Per Turn] This Digimon may unsuspend."
+    when: when_attacking
     optional: true
     once_per_turn: true
     summary: "[When Attacking][Once Per Turn] This Digimon may unsuspend"

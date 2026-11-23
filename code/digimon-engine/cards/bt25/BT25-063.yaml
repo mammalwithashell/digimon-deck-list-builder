@@ -52,7 +52,8 @@ effects:
           of: you
           destinations: [deck_top, deck_bottom]
   # Inherited [All Turns] This Digimon gets +1000 DP.
-  - kind: aura
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    kind: aura
     scope: inherited
     target: {}
     active_when: { all_turns: true }

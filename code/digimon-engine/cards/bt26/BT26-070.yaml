@@ -85,7 +85,8 @@ effects:
           prompt: "You may use 1 [Glowing Dawn] Option card from your trash with the cost reduced by 2"
 
   # ─── Inherited <Retaliation> ───────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Retaliation
     summary: "Inherited <Retaliation>"

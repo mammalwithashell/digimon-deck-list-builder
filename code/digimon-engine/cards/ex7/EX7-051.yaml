@@ -84,7 +84,8 @@ alt_paths:
 
 effects:
   # ─── [Start of Your Main Phase] place a TM Option under 1 own Digimon → Draw 1
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By placing 1 Option card with the [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, ＜Draw 1＞."
+    when: start_of_your_main_phase
     optional: true
     summary: "[Start of Your Main Phase] By placing 1 [Three Musketeers] Option from hand or trash as 1 of your Digimon's bottom digivolution card, Draw 1"
     condition:
@@ -124,7 +125,8 @@ effects:
       - draw: { of: you, count: 1 }
 
   # ─── Inherited <Retaliation> ────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation
     summary: "Inherited <Retaliation>"

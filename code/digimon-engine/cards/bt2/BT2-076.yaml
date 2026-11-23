@@ -24,7 +24,8 @@ traits: [Puppet]
 attribute: Data
 
 effects:
-  - scope: inherited
+  - text: "[On Deletion] Trigger ＜Draw 2＞. (Draw 2 cards from your deck.) Then trash 1 card from your hand."
+    scope: inherited
     when: on_deletion
     summary: "[Inherited][On Deletion] Draw 2, then trash 1 card from your hand"
     process:

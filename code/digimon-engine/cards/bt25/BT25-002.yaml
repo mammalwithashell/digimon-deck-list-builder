@@ -17,7 +17,8 @@ traits: [Lesser, DATA SQUAD]
 #   first) — gated [Your Turn], so the turn player is always the controller.
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your [DATA SQUAD] trait Tamers are played, both players ＜Draw 1＞."
+    scope: inherited
     when: on_ally_played
     once_per_turn: true
     active_when: { your_turn: true }

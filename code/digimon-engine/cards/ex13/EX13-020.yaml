@@ -61,15 +61,18 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
     keyword: ArmorPurge
     summary: "<Armor Purge>"
 
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] This Digimon gets +1000 DP until your opponent's turn ends for each color in trashes. Then, to 1 of your opponent's Digimon, give -4000 DP until their turn ends for every 5000 DP this Digimon has."
+    when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[On Play][When Digivolving][When Attacking][OPT] +1000 DP per color in trashes; then 1 opponent Digimon gets -4000 DP for every 5000 DP this Digimon has"
     process:
@@ -99,7 +102,8 @@ effects:
                 - -4000
           expiry: end_of_opponents_turn
 
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] 1 of your [Free] or [Royal Knight] trait Digimon may unsuspend."
+    when: end_of_your_turn
     once_per_turn: true
     summary: "[End of Your Turn][OPT] 1 of your [Free] or [Royal Knight] trait Digimon may unsuspend"
     process:
@@ -123,7 +127,8 @@ effects:
           then:
             - refund_opt: {}
 
-  - scope: inherited
+  - text: "[End of Your Turn] [Once Per Turn] 1 of your Digimon with the [Free] or [Royal Knight] trait may unsuspend."
+    scope: inherited
     when: end_of_your_turn
     once_per_turn: true
     summary: "[Inherited][End of Your Turn][OPT] 1 of your Digimon with the [Free] or [Royal Knight] trait may unsuspend"

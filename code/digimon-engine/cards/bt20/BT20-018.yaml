@@ -79,7 +79,8 @@ effects:
           prompt: "Delete 1 opponent Digimon with the lowest DP"
       - delete_permanent: { target: lowest_dp_target }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If this Digimon is [Alphamon: Ouryuken], trash your opponent's top security card."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition: { name_is: "Alphamon: Ouryuken" }

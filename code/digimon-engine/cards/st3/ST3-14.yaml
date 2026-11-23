@@ -14,6 +14,7 @@ effects:
           target: target
           value: -2000
           expiry: end_of_turn
-  - when: on_security
+  - text: "[Security] Add this card to its owner's hand."
+    when: on_security
     process:
       - add_this_option_to_hand: {}

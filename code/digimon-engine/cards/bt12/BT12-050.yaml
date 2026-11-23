@@ -60,7 +60,8 @@ effects:
   # Closed by Phase 2 Track H — green→blue swap from BT12-022's clause 0.
   # See `code/digimon-engine/cards/bt12/BT12-022.yaml` for substrate context.
   #
-  - when: before_pay_cost_observe
+  - text: "[Your Turn] When this Digimon would DNA digivolve into a blue Digimon card, gain 1 memory."
+    when: before_pay_cost_observe
     active_when:
       all_of:
         - your_turn: true
@@ -85,7 +86,8 @@ effects:
   #   `self_digivolution_contains_name`, which scanned top + ALL sources and
   #   over-granted Piercing when [Imperialdramon] was a buried source. Mirrors
   #   the BT12-022 Jamming fix.
-  - scope: inherited
+  - text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Piercing＞."
+    scope: inherited
     kind: aura
     target: {}
     grant_keyword: { keyword: Piercing }

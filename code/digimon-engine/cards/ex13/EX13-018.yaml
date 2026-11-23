@@ -45,7 +45,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card with [Dracomon] or [Examon] in its text from your hand, ＜Draw 2＞."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] By trashing 1 [Dracomon]/[Examon]-text card from hand, Draw 2"
     condition:
@@ -71,7 +72,8 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 2 }
 
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2."
+    when: on_ally_played
     active_when: { your_turn: true }
     trigger_if:
       all_of:
@@ -103,7 +105,8 @@ effects:
                 from_hand: examon_evo
                 cost: { reduce: 2 }
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

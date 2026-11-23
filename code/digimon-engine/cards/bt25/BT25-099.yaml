@@ -75,7 +75,8 @@ use_requirement:
 
 effects:
   # ─── Color-ignore floodgate (no face-up security) ──────────────────────────
-  - kind: flood_gate
+  - text: "While you have no face-up security cards, you can ignore this card's color requirements. {Security}"
+    kind: flood_gate
     active_when:
       face_up_security_count_lte: 0
     modifier: IgnoreColorRequirement
@@ -154,7 +155,8 @@ effects:
           cost_delta: { reduce: 3 }
 
   # ─── [Security][Inherited] play lvl4- green/black TS from hand/trash free ───
-  - scope: inherited
+  - text: "[Security] You may play 1 level 4 or lower green or black [TS] trait Digimon card from your hand or trash without paying the cost."
+    scope: inherited
     when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 level 4 or lower green/black TS Digimon from hand or trash free"

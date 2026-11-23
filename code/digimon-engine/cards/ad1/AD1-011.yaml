@@ -84,7 +84,8 @@ effects:
   # attacker-side lock consulted by every retarget path (Block, Raid, effect
   # redirects — combat/mod.rs; BT26-021 idiom). `dna_origin` reads the
   # trigger's DNA flag (BT12-028 idiom).
-  - when: when_digivolving
+  - text: "[When Digivolving] Until your opponent's turn ends, this Digimon can't be deleted in battle. Then, if DNA digivolving, this Digimon's attack target can't change for the turn."
+    when: when_digivolving
     summary: "[When Digivolving] Can't be deleted in battle until opp turn ends; if DNA, attack target can't change this turn"
     process:
       - add_modifier:
@@ -106,7 +107,8 @@ effects:
   # Not once-per-turn. Optional pick (decline = no digivolve). Only hand cards
   # with a legal digivolve route onto this Digimon are offered (DCGO
   # DigivolveIntoHandOrTrashCard filters by CanDigivolve). EX13-004 idiom.
-  - when: when_attacking
+  - text: "[When Attacking] This Digimon may digivolve into a Digimon card with [Imperialdramon] in its name in the hand with the digivolution cost reduced by 2."
+    when: when_attacking
     summary: "[When Attacking] This Digimon may digivolve into an [Imperialdramon]-named Digimon in hand with the cost reduced by 2"
     process:
       - select_hand:

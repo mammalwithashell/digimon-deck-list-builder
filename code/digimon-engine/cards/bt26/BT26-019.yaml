@@ -75,7 +75,8 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [When Attacking] If hand <= 7, <Draw 1> ────────────────────────────────
-  - when: when_attacking
+  - text: "[When Attacking] If your hand has 7 or fewer cards, ＜Draw 1＞."
+    when: when_attacking
     active_when:
       count_lte:
         filter: { owner: you, zone: [hand] }

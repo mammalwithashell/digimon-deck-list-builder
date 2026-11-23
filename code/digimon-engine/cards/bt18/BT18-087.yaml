@@ -119,7 +119,8 @@ effects:
       - delete_permanent: { target: tgt }
 
   # ─── Clause 3: [Security] Play without paying the cost ─────────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

@@ -15,7 +15,8 @@ alt_paths:
 effects:
   # [On Play] If the total trashes of both players' add up to 20 or more
   # cards, this Digimon gains <Rush> for the turn.
-  - when: on_play
+  - text: "[On Play] If the total number of cards in both players' trashes is 20 or more, this Digimon gains ＜Rush＞ for the turn. (This Digimon may attack the turn it was played.)"
+    when: on_play
     condition:
       count_gte:
         filter: { zone: [trash], owner: any }

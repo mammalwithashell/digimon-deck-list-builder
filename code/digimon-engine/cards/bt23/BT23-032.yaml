@@ -268,7 +268,8 @@ effects:
   # DCGO installs this as a SEPARATE ActivateClass (SetIsInheritedEffect(true),
   # its own SetHashString OPT bucket) on the same WhenRemoveField timing —
   # a distinct OPT counter from Clause C's face-up scope.
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, black or [CS] trait Digimon card from its digivolution cards without paying the cost."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

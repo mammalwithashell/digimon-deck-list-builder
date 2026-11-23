@@ -36,7 +36,8 @@ traits: [Lesser, CS]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When effects place [CS] trait Digimon cards in this Digimon's digivolution cards, it may digivolve into a [CS] trait Digimon card in the hand with the digivolution cost reduced by 1."
+    scope: inherited
     when: on_add_digivolution_cards
     optional: true
     outer_prompt: true

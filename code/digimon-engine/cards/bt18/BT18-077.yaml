@@ -34,10 +34,12 @@ alt_paths:
     cost: 1
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Retaliation＞"
+    kind: grant_keyword
     keyword: Retaliation
     summary: "Retaliation"
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon."
+    when: [on_play, when_digivolving]
     summary: "Delete 1 of your opponent's level 4 or lower Digimon"
     process:
       - select_opponent_permanent:
@@ -45,7 +47,8 @@ effects:
           filter: { kind: digimon, level_lte: 4 }
           prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
       - delete_permanent: { target: target }
-  - kind: grant_keyword
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Retaliation
     summary: "Inherited Retaliation"

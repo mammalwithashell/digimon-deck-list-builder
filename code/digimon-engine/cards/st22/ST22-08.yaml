@@ -158,7 +158,8 @@ effects:
   # face-up permanent and a Tamer is on the controller's field. Card-scoped
   # via `target: { card_number_is: "ST22-08" }` — mirrors DCGO
   # IgnoreColorConditionClass(cardCondition: cardSource == card).
-  - kind: flood_gate
+  - text: "While you have a Tamer, you can ignore this card's color requirements."
+    kind: flood_gate
     scope: face_up
     active_when:
       any_field_permanent:
@@ -173,7 +174,8 @@ effects:
   # canNoSelect: false). The lowest-DP filter offers only the lowest-DP
   # opponent Digimon (all tied lowest-DP Digimon on a tie). "Then, add this
   # card to the hand" routes ST22-08 from pending-security to the hand.
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, add this card to the hand."
+    when: on_security
     summary: "[Security] Delete opponent's lowest-DP Digimon, then add this card to hand"
     process:
       - select_opponent_permanent:

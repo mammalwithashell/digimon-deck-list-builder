@@ -54,7 +54,8 @@ alt_paths:
 
 effects:
   # ─── Clause 0: [On Play] reveal 3, add 2 by filters, bottom the rest ─────────
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Thomas H. Norstein] or card with the [DATA SQUAD] trait and 1 card with [Gaogamon] in its name among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add 1 [Thomas H. Norstein]/[DATA SQUAD] and 1 [Gaogamon]-named; bottom the rest"
     process:
       - reveal_top_deck:
@@ -83,7 +84,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Clause 1: Inherited [When Attacking][OPT] both players draw 1 ───────────
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Both players ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][OPT] Both players draw 1"

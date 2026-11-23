@@ -93,7 +93,8 @@ effects:
                   - draw: { of: you, count: 1 }
 
   # ─── Clause 1: Inherited [Your Turn] +2000 DP ───────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

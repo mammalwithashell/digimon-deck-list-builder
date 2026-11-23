@@ -36,7 +36,8 @@ traits: [Reptile]
 
 effects:
   # ─── Clause 1: [Your Turn] other Gaossmon +3000 DP ─────────────────────────
-  - kind: aura
+  - text: "[Your Turn] Your other [Gaossmon] all get +3000 DP."
+    kind: aura
     summary: "[Your Turn] Your other [Gaossmon] get +3000 DP"
     active_when: { your_turn: true }
     target:
@@ -47,7 +48,8 @@ effects:
     dp_modifier: 3000
 
   # ─── Clause 2: [Opponent's Turn] Opponent can't reduce digivolve costs ─────
-  - kind: flood_gate
+  - text: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
+    kind: flood_gate
     summary: "[Opponent's Turn] Opponent can't reduce digivolution costs"
     active_when: { opponents_turn: true }
     target_player: opponent

@@ -40,7 +40,8 @@ cost: 4
 traits: [Chronicle]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 [Chronicle] trait card from your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     optional: true
     # Unpayable without a [Chronicle] trait card in hand (DCGO CanActivate
     # convention): no offer, so the draw + memory never run unpaid.
@@ -62,7 +63,8 @@ effects:
       - draw: { of: you, count: 1 }
       - gain_memory: 1
 
-  - when: on_ally_attack
+  - text: "[Your Turn] When one of your [Chronicle] trait Digimon attacks, by suspending this Tamer, you may use 1 [X Antibody] or 1 Option card with the [Chronicle] trait from your hand with the cost reduced by 1."
+    when: on_ally_attack
     optional: true
     active_when:
       all_of:
@@ -105,7 +107,8 @@ effects:
           binding: option_pick
           cost: { reduce: 1 }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

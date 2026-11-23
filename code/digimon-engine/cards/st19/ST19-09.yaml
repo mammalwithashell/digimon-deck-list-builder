@@ -12,10 +12,12 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
     keyword: Blocker
 
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost."
+    when: on_deletion
     optional: true
     summary: "You may play 1 level 3 Puppet Digimon from hand without paying the cost"
     process:

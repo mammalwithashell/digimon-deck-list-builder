@@ -90,7 +90,8 @@ effects:
     dp_modifier: 2000
     summary: "[All Turns] While your opponent has 10 or more cards in their trash, this Digimon gets +2000 DP"
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Trash the top card of both players' decks."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: false

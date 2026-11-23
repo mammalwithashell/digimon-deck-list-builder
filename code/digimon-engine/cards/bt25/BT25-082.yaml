@@ -170,7 +170,8 @@ effects:
   # The select is NOT optional once the trigger is accepted — it is the cost
   # that must be paid for the Draw (reference_dsl_optional_mandatory_selection:
   # the inner select stays mandatory; only the outer trigger is optional).
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] By placing 1 [Three Musketeers] trait card from your hand or trash as this Digimon's bottom digivolution card, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true

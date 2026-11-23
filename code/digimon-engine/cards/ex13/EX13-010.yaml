@@ -67,7 +67,8 @@ effects:
                 value: 3000
                 expiry: end_of_turn
 
-  - kind: aura
+  - text: "[All Turns] Add 2000 to this Digimon's DP deletion effects' maximums."
+    kind: aura
     scope: inherited
     active_when: { all_turns: true }
     target: {}

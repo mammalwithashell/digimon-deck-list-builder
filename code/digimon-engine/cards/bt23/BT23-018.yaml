@@ -128,7 +128,8 @@ effects:
   # "This Digimon can't be deleted in battles against Security Digimon."
   # DCGO: JammingSelfStaticEffect, isInheritedEffect: false (face-up only).
   # Same lowering shape as BT23-008's <Raid> grant.
-  - kind: grant_keyword
+  - text: "＜Jamming＞"
+    kind: grant_keyword
     keyword: Jamming
 
   # ─── Clause 2 — [Main][OPT] place-top-as-bottom + play Agumon/Nokia ──────────
@@ -179,7 +180,8 @@ effects:
   # The DSL self-aura (empty target `{}`) with `scope: inherited` sets the
   # static `dp_modifier` field on the Effect. `Game::source_dp_contribution`
   # reads this field for tensor-layer DP computation, gated by `active_when`.
-  - scope: inherited
+  - text: "[Opponent's Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { opponents_turn: true }
     target: {}

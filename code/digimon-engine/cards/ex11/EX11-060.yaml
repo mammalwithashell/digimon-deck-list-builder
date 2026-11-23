@@ -12,7 +12,8 @@ effects:
     process:
       - set_memory: 3
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

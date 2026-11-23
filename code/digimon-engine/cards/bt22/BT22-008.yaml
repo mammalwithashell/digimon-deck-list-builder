@@ -135,7 +135,8 @@ effects:
   #
   # No tamer gate (sister BT17-007 has Tai-Kamiya gating; BT22-008 does
   # not — the trigger fires unconditionally on ETB).
-  - when: on_play
+  - text: "[On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand."
+    when: on_play
     optional: true
     summary: "[On Play] May return 1 Greymon/Garurumon/Omnimon-named Digimon from trash to hand"
     process:
@@ -165,7 +166,8 @@ effects:
   # the player can decline. On accept, the step orchestrates partner
   # (own-field, anchor excluded) + target (any own Digimon card in hand)
   # selections and calls the engine's `effect_initiated_dna_digivolve`.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     # FAITHFULNESS FIX (G-FIX-BT12-EOT-DNA-PAYCOST, 2026-06-02): NORMAL DNA

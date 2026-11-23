@@ -103,7 +103,8 @@ effects:
                 value: 1
                 expiry: end_of_opponents_turn
 
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon may unsuspend."
+    scope: inherited
     when: on_own_security_removed
     once_per_turn: true
     optional: true

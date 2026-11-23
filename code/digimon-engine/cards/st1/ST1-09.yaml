@@ -18,7 +18,8 @@ alt_paths:
 
 effects:
   # Inherited [Your Turn] When this Digimon is blocked, gain 3 memory.
-  - scope: inherited
+  - text: "[Your Turn] When this Digimon is blocked, gain 3 memory."
+    scope: inherited
     when: on_block
     active_when: { your_turn: true }
     condition: { event_permanent_is_source: true }

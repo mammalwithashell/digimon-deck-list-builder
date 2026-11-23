@@ -80,7 +80,8 @@ alt_paths:
 
 effects:
   # ─── Clause 1 — [On Play][When Digivolving] may attack, then trash→delete ────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] This Digimon may attack. Then, by trashing 1 card in your hand, delete 1 of your opponent's Digimon with 7000 DP or less."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] This Digimon may attack; then by trashing 1 hand card, delete 1 opp Digimon with <=7000 DP"
     process:
       # "This Digimon may attack."
@@ -110,7 +111,8 @@ effects:
             - delete_permanent: { target: victim }
 
   # ─── Clause 2 — [Your Turn] blue played/digivolve → digivolve into Apollomon, cost -2 ─
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When your Digimon are played or digivolve, if any of them are blue, this Digimon may digivolve into [Apollomon] in the hand with the cost reduced by 2."
+    when: [on_enter_field_anyone, on_digivolve]
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon are played/digivolve and any are blue, this Digimon may digivolve into [Apollomon] in hand with cost -2"

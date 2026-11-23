@@ -70,7 +70,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] Delete 1 of your opponent's play cost 3 or lower Digimon or Tamers. For each card with [Etemon] or [Sukamon] in its name in your trash, add 1 to the maximum play cost this effect can choose."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon/Tamer with play cost <= 3 (+1 per [Etemon]/[Sukamon]-name card in your trash)"
     process:
       - select_opponent_permanent:
@@ -94,7 +95,8 @@ effects:
           prompt: "Delete 1 of your opponent's play cost 3 or lower Digimon or Tamers"
       - delete_permanent: { target: victim }
 
-  - when: on_opponent_attack
+  - text: "[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by placing 1 card with [Etemon] or [Sukamon] in its name from your hand on top of your security stack, you may switch the target of attack to this Digimon or the player."
+    when: on_opponent_attack
     optional: true
     once_per_turn: true
     active_when: { opponents_turn: true }

@@ -76,7 +76,8 @@ effects:
 
   # ─── [Your Turn][OPT] When a [Glowing Dawn] card would be played, by trashing
   #     a bottom face-down card under a Tamer, reduce the cost by 1 ────────────
-  - kind: cost_reduction
+  - text: "[Your Turn] [Once Per Turn] When any of your [Glowing Dawn] trait cards would be played, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 1."
+    kind: cost_reduction
     active_when: { your_turn: true }
     # "would be PLAYED": a play cost only. Using an Option is not playing it
     # (CR 4.3 7-1-1 vs 9-1-1), and DCGO requires `HasPlayCost` (BT25_088.cs:98-
@@ -91,7 +92,8 @@ effects:
     summary: "[Your Turn][OPT] When a [Glowing Dawn] card would be played, by trashing a bottom face-down card under a Tamer, reduce the cost by 1"
 
   # ─── [Security] Play this card without paying the cost ─────────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

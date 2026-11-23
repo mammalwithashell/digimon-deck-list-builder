@@ -15,5 +15,6 @@ alt_paths:
     cost: 0
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞ (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead.)"
+    kind: grant_keyword
     keyword: Blocker

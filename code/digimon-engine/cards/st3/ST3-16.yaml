@@ -14,7 +14,8 @@ effects:
           target: target
           value: -10000
           expiry: end_of_turn
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effect."
+    when: on_security
     process:
       - select_opponent_permanent:
           bind_as: target

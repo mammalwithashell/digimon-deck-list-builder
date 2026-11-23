@@ -38,7 +38,8 @@ traits: [TS]
 
 effects:
   # ─── [Start of Your Turn] memory ≤2 → set to 3 ──────────────────────────
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     condition: { memory_lte: 2 }
     summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
     process:
@@ -79,7 +80,8 @@ effects:
           cost_delta: { reduce: 2 }
 
   # ─── [Security] Play this card without paying the cost ──────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

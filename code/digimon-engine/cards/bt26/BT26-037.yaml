@@ -84,7 +84,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -102,7 +103,8 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [On Play][When Digivolving] may link 1 Lv.3 Navi/System/Seven Code source
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may link 1 level 3 Digimon card with the [Navi], [System] or [Seven Code] trait from this Digimon's digivolution cards to this Digimon without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may link 1 level 3 [Navi]/[System]/[Seven Code] trait Digimon card from this Digimon's digivolution cards to this Digimon without paying the cost"
     process:
       - link_cards:

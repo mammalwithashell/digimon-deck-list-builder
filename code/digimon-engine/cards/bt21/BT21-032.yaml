@@ -32,7 +32,8 @@ alt_paths:
       trait_has: Hero
   cost: 0
 effects:
-- kind: cost_reduction
+- text: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Armor Form] or [Hero] trait, reduce the digivolution cost by 1."
+  kind: cost_reduction
   reduction_timing: before_pay_cost
   active_when:
     all_of:
@@ -43,7 +44,8 @@ effects:
         - trait_has: Armor Form
         - trait_has: Hero
   amount: 1
-- scope: inherited
+- text: "[Your Turn] This Digimon gets +2000 DP."
+  scope: inherited
   kind: aura
   active_when:
     your_turn: true

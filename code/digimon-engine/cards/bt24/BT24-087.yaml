@@ -58,7 +58,8 @@ traits: ["App Driver", Appmon]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] if opp has a Digimon, gain 1 memory
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter: { of: opponent, zone: [battle_area], kind: digimon }
@@ -81,7 +82,8 @@ effects:
   # activation_cost: { suspend_self: true } — DCGO: SuspendPermanentsClass([self]);
   #   must be first body step (compile-validated).
   # select_hand (mandatory, no optional) — DCGO: canNoSelect: false, maxCount: 1.
-  - when: on_any_link
+  - text: "[Your Turn] When any of your Digimon get linked, by suspending this Tamer, ＜Draw 1＞ and trash 1 card in your hand. Then, 1 of your Digimon may app fuse into a Digimon card with the [System], [Life] or [Transmutation] trait in the trash."
+    when: on_any_link
     optional: true
     active_when:
       your_turn: true
@@ -110,7 +112,8 @@ effects:
               - trait_has: Transmutation
 
   # ─── Clause 3: [Security] play this card without paying the cost ──────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

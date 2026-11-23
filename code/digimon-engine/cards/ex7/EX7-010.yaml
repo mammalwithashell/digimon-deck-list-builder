@@ -97,7 +97,8 @@ alt_paths:
 
 effects:
   # ─── [WD][WA][OPT] You may trash any 1 Option card from 1 Digimon's sources ─
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may trash any 1 Option card from 1 Digimon's digivolution cards."
+    when: [when_digivolving, when_attacking]
     optional: true
     once_per_turn: true
     summary: "[When Digivolving][When Attacking][OPT] You may trash 1 Option card from 1 Digimon's digivolution cards (either player's)"
@@ -150,14 +151,16 @@ effects:
   # ─── [Your Turn] This Digimon gains the [Three Musketeers] trait ────────────
   # Face-up only (DCGO `TopCard == card` gate) — as a digivolution card
   # Deputymon grants nothing.
-  - kind: aura
+  - text: "[Your Turn] This Digimon gains the [Three Musketeers] trait."
+    kind: aura
     target: {}
     active_when: { your_turn: true }
     grant_traits: ["Three Musketeers"]
     summary: "[Your Turn] This Digimon gains the [Three Musketeers] trait"
 
   # ─── Inherited [Your Turn] +2000 DP ─────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

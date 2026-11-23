@@ -45,7 +45,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn"
     process:
       - select_opponent_permanent:
@@ -57,7 +58,8 @@ effects:
           value: -3000
           expiry: end_of_turn
 
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier
     summary: "[Inherited] <Barrier>"

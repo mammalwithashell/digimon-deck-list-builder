@@ -21,9 +21,11 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞ (When this Digimon would be deleted, by trashing this Digimon's top stacked card, it isn't deleted.)"
+    kind: grant_keyword
     keyword: ArmorPurge
 
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier

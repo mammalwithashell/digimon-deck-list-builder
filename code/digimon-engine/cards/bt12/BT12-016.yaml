@@ -52,7 +52,8 @@ alt_paths:
 
 effects:
   # ─── [When Digivolving] delete <=4000 DP; else may digivolve into Gallantmon ─
-  - when: when_digivolving
+  - text: "[When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less. If no opponent's Digimon was deleted by this effect, you may digivolve this Digimon into a level 6 Digimon card with [Gallantmon] in its name in your hand for the digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 1."
+    when: when_digivolving
     summary: "[When Digivolving] Delete 1 opp Digimon with 4000 DP or less; if none was deleted, you may digivolve into a Lv.6 [Gallantmon] in hand for the digivolution cost reduced by 1"
     process:
       # Top-level select+delete (BT25-014 idiom): an empty mandatory select
@@ -94,7 +95,8 @@ effects:
                 cost: { reduce: 1 }
 
   # ─── Inherited [End of Attack][OPT] no opp Digimon + Growlmon/Gallantmon name ─
-  - scope: inherited
+  - text: "[End of Attack][Once Per Turn] If your opponent has no Digimon in play, and this Digimon has [Growlmon] or [Gallantmon] in its name, gain 2 memory."
+    scope: inherited
     when: end_of_attack
     once_per_turn: true
     summary: "Inherited [End of Attack][OPT] If your opponent has no Digimon and this Digimon has [Growlmon]/[Gallantmon] in its name, gain 2 memory"

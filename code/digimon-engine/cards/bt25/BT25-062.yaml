@@ -73,7 +73,8 @@ effects:
   # for free. NOTE: `target: source` (resolves the source *permanent*), NOT
   # `target: self` — `self`/`SelfRef` lowers to a Card handle, but the EID step
   # requires a Permanent target (binding_ref.rs), so `self` would silently no-op.
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a [Machine], [Cyborg] or [TS] trait Digimon card in the hand without paying the cost."
+    when: start_of_your_main_phase
     optional: true
     active_when:
       all_of:
@@ -103,7 +104,8 @@ effects:
   # `target: {}` + `scope: inherited` is the carrier-self DP aura idiom
   # (BT19-026, BT18-064): the empty filter resolves to the Digimon carrying
   # this inherited effect.
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true }

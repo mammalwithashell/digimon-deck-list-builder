@@ -101,13 +101,16 @@ alt_paths:
 
 effects:
   # ─── Declarative keywords ────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
 
-  - kind: grant_keyword
+  - text: "＜Progress＞"
+    kind: grant_keyword
     keyword: Progress
 
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
 
   # ─── [When Digivolving] ──────────────────────────────────────────────────────
@@ -118,7 +121,8 @@ effects:
   #      the opponent plays 2 Petrification Tokens.
   #   3. After, this Digimon gets +2000 DP for each opponent Digimon until
   #      their turn ends.
-  - when: when_digivolving
+  - text: "[When Digivolving] Delete 1 of your opponent's lowest DP Digimon. Then, by returning 2 cards from their trash to the bottom of the deck, they play 2 [Petrification] Tokens. (Digimon/white/3000 DP/[Your Turn] This Digimon can't suspend."
+    when: when_digivolving
     summary: "[When Digivolving] Delete lowest-DP opp Digimon; return 2 trash for 2 Tokens; +2000 DP per opp Digimon"
     process:
       # Step 1 — delete opponent's lowest-DP Digimon. The `selector: lowest_dp`

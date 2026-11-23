@@ -40,17 +40,21 @@ alt_paths:
     cost: 9
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] All opponent Digimon get -3000 DP for each source color"
     process:
       - add_modifier:
@@ -66,7 +70,8 @@ effects:
               delta: -3000
           expiry: end_of_turn
 
-  - when: when_attacking
+  - text: "[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞."
+    when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][OPT] Place 1 opponent Digimon as top security; if 4+ source colors, trash top security and Recovery +1"
     process:

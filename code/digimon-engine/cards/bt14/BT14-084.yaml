@@ -58,7 +58,8 @@ color: [yellow]
 cost: 3
 
 effects:
-  - when: on_play
+  - text: "[On Play] By returning the top card of your security stack to the hand, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack."
+    when: on_play
     condition: { security_count_gte: 1 }
     summary: "[On Play] Add top security to hand; then you may place 1 yellow [Vaccine] card from hand at the bottom of security"
     process:
@@ -94,7 +95,8 @@ effects:
   # CanActivateSuspendCostEffect so the suspend cost is only offered when
   # payable; the suspend cost lifts to EffectBuilder::activation_cost
   # (suspend self), then the body gains 1 memory).
-  - when: on_added_to_security
+  - text: "[Your Turn] When a card is added to your security stack, by suspending this Tamer, gain 1 memory."
+    when: on_added_to_security
     active_when: { your_turn: true }
     optional: true
     summary: "[Your Turn] When a card is added to your security, may suspend self to gain 1 memory"
@@ -103,7 +105,8 @@ effects:
       - activation_cost: { suspend_self: true }
       - gain_memory: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

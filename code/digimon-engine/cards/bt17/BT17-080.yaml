@@ -51,7 +51,8 @@ cost: 3
 traits: []
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have a Digimon with [Guilmon], [Growlmon] or [Gallantmon] in its name, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       any_permanent:
         of: you
@@ -66,7 +67,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] By placing this Tamer and 1 [Growlmon] and 1 [WarGrowlmon] from your trash as 1 of your [Guilmon]'s bottom digivolution cards, that Digimon may digivolve into [Gallantmon] in the hand, ignoring its digivolution requirements and without paying the cost."
+    when: end_of_your_turn
     optional: true
     condition:
       all_of:
@@ -139,7 +141,8 @@ effects:
                       cost: free
                       ignore_requirements: true
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

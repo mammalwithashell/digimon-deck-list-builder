@@ -23,7 +23,8 @@ effects:
           value: 0
           expiry: end_of_opponents_turn
 
-  - when: on_security
+  - text: "[Security] Choose 1 of your opponent's Digimon with no digivolution cards. That Digimon can't attack or block until the end of your next turn."
+    when: on_security
     summary: "[Security] 1 no-source opponent Digimon can't attack or block until your turn ends"
     process:
       - select_opponent_permanent:

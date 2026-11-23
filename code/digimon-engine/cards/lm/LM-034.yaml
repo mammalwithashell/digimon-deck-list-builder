@@ -44,13 +44,15 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # Player-activated Main timing, after the placing turn. Trash self as cost.
-  - kind: delay
+  - text: "Red also meets this card's color requirements."
+    kind: delay
     trigger: delayed
     summary: "[Main]<Delay> Gain 2 memory"
     process:
       - gain_memory: 2
 
-  - scope: inherited
+  - text: "[Security] Place this card in the battle area."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Place this card in the battle area"

@@ -13,10 +13,12 @@ attribute: Data
 also_treated_as: [X Antibody]
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
-  - when: on_play
+  - text: "[On Play] If you have 1 or fewer security cards, this Digimon may digivolve into [Omnimon (X Antibody)] in the hand, ignoring digivolution requirements and without paying the cost."
+    when: on_play
     optional: true
     condition: { security_count_lte: 1 }
     summary: "[On Play] At 1 or fewer security, may free digivolve into Omnimon (X Antibody)"
@@ -32,7 +34,8 @@ effects:
           cost: 0
           ignore_requirements: true
 
-  - when: on_deletion
+  - text: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area."
+    when: on_deletion
     summary: "[On Deletion] You may place this card under your breeding King Drasil_7D6"
     process:
       - select_own_breeding_permanent:
@@ -48,7 +51,8 @@ effects:
   # [Breeding]: the effect specifies the breeding area, so it triggers only
   # while the carrier is there (CR 4.3 §3-4-7-4; `in_breeding: true` is also
   # what lets the breeding-area dispatch consider it at all).
-  - scope: inherited
+  - text: "[Opponent's Turn] When your security stack is removed from, by suspending this Digimon, play 1 [Omekamon] from this Digimon's digivolution cards without paying the cost."
+    scope: inherited
     when: on_own_security_removed
     optional: true
     active_when:

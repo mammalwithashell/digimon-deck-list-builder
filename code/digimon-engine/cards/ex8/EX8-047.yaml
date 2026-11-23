@@ -33,7 +33,8 @@ alt_paths:
 # true } requires printed-text "may"` requirement for the rule
 # motivating this rewrite.
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Mineral] or [Rock] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add 1 Mineral/Rock and 1 LIBERATOR to hand; rest to bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

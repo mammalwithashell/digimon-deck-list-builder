@@ -15,7 +15,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] Trigger ＜Draw 1＞. (Draw 1 card from your deck.) Then, trash 1 card in your hand."
+    scope: inherited
     when: when_attacking
     summary: "[When Attacking] Draw 1, then trash 1 card in your hand"
     process:

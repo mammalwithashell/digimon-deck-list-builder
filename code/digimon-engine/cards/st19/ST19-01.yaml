@@ -7,7 +7,8 @@ cost: 0
 traits: [Lesser, LIBERATOR]
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If you have another Digimon, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[When Attacking] [Once Per Turn] If you have another Digimon, Draw 1"

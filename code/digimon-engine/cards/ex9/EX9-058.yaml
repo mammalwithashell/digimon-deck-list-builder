@@ -73,7 +73,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with the [DM] trait to the hand and place 1 card with the [Ver.5] trait face down as the bottom digivolution card of any of your Digimon with the [DM] trait. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [DM] card to hand and place 1 [Ver.5] card face down as the bottom digivolution card of a chosen [DM] Digimon; rest to bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -100,6 +101,7 @@ effects:
           face_down: true
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation

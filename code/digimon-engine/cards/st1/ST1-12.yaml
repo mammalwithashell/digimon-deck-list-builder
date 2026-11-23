@@ -6,7 +6,8 @@ cost: 2
 
 effects:
   # [Your Turn] All of your Digimon get +1000 DP.
-  - kind: aura
+  - text: "[Your Turn] All of your Digimon get +1000 DP."
+    kind: aura
     target:
       of: you
       zone: [battle_area]
@@ -16,7 +17,8 @@ effects:
     summary: "[Your Turn] All of your Digimon get +1000 DP"
 
   # [Security] Play this card without paying the cost.
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

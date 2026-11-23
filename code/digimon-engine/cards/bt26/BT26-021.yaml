@@ -65,7 +65,8 @@ alt_paths:
 effects:
   # ─── [On Play][When Digivolving] 1 own [TS] Digimon's attack target can't
   #     change for the turn ─────────────────────────────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your [TS] trait Digimon's attack target can't change for the turn."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 of your [TS] trait Digimon's attack target can't change for the turn"
     process:
       - select_own_permanent:
@@ -115,7 +116,8 @@ effects:
 
   # ─── Inherited [All Turns][Once Per Turn] When a Digimon attacks, by trashing
   #     1 hand card, trash the bottom 2 sources of 1 opp Digimon ──────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When a Digimon attacks, by trashing 1 card in your hand, trash the bottom 2 digivolution cards of 1 of your opponent's Digimon."
+    scope: inherited
     when: [on_ally_attack, on_opponent_attack]
     once_per_turn: true
     optional: true

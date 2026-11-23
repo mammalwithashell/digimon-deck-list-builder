@@ -79,7 +79,8 @@ effects:
   #
   # Identical DSL pattern: BT18-087 Clause 1, EX11-054 Clause 1, EX11-060,
   # EX8-067, BT21-102 Clause (a), ST19-14.
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 memory or less, set your memory to 3."
+    when: start_of_your_turn
     summary: "[Start of Your Turn] If memory ≤ 2, set it to 3"
     condition: { memory_lte: 2 }
     process:
@@ -108,7 +109,8 @@ effects:
   #
   # `place_remainder_on_deck { position: bottom }` → DCGO
   # `RemainingCardsPlace.DeckBottom`.
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 blue and 1 green Digimon card among them to your hand. Place the rest at the bottom of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 blue Digimon + 1 green Digimon; bottom rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -143,7 +145,8 @@ effects:
   # Standard play_from_security pattern (cf. BT17-093 Clause 3, BT18-087
   # Clause 3, BT9-092, EX11-054 Clause 3). Mandatory — [Security] effects
   # are not optional per rules manual §16.
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

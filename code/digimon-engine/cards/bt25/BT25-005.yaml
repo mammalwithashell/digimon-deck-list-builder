@@ -88,7 +88,8 @@ form: In-Training
 
 effects:
   # ─── Inherited [Your Turn][OPT] TM card placed under this Digimon → may digivolve (cost −2)
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When [Three Musketeers] trait cards are placed in this Digimon's digivolution cards, it may digivolve into a Digimon card with [Three Musketeers] in its text or the [TS] trait in the hand with the cost reduced by 2."
+    scope: inherited
     when: on_add_digivolution_cards
     optional: true
     outer_prompt: true

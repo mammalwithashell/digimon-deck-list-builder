@@ -21,7 +21,8 @@ effects:
     summary: "When this card would be played, you may trash 7 or more bottom digivolution cards of 1 of your Mother D-Reaper to set its play cost to 0"
   - kind: grant_keyword
     keyword: Rush
-  - when: when_attacking
+  - text: "[When Attacking] You may place 2 [ADR-02 Searcher]s from your trash under this Digimon in any order as its bottom digivolution cards to unsuspend this Digimon."
+    when: when_attacking
     process:
       - select_zone_cards:
           zones: [trash]

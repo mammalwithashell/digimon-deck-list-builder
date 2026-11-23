@@ -10,7 +10,8 @@ form: Mega
 attribute: Virus
 
 effects:
-  - kind: aura
+  - text: "[Your Turn] This Digimon gets +3000 DP."
+    kind: aura
     target: {}
     active_when: { your_turn: true }
     dp_modifier: 3000

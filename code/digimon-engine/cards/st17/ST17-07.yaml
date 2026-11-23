@@ -67,7 +67,8 @@ effects:
                 stop_at_level: 3
 
   # ─── Clause 2 — Inherited [All Turns][OPT] battle-delete-by-this → trash sec ─
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, trash the top card of their security stack."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     condition: { source_deleted_battle_opponent: true }

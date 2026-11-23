@@ -17,7 +17,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] By trashing 1 card in your hand, ＜Draw 2＞."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "By trashing 1 card in hand, Draw 2"
     condition:
@@ -37,7 +38,8 @@ effects:
             - trash_from_hand_by_index: { of: you, hand_index: discard }
             - draw: { of: you, count: 2 }
 
-  - scope: inherited
+  - text: "[When Attacking] By trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon."
+    scope: inherited
     when: when_attacking
     optional: true
     summary: "[Inherited][When Attacking] By trashing 1 card in hand, delete 1 opponent level 3 Digimon"

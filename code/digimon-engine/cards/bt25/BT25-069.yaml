@@ -34,11 +34,13 @@ alt_paths:
 
 effects:
   # ─── <Jamming> (self) ───────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Jamming＞"
+    kind: grant_keyword
     keyword: Jamming
 
   # ─── [On Play]/[When Digivolving] link 1 [TS] from trash to 1 of your Digimon ─
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may link 1 [TS] trait card from your trash to 1 of your Digimon without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may link 1 [TS] trait card from your trash to 1 of your Digimon without paying the cost"
     process:
       - link_cards:
@@ -52,7 +54,8 @@ effects:
           cost: free
 
   # ─── Inherited [All Turns] +1000 DP ────────────────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     dp_modifier: 1000

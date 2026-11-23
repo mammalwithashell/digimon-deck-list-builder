@@ -52,7 +52,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [when_digivolving, on_deletion]
+  - text: "[When Digivolving] [On Deletion] Reveal the top 3 cards of your deck. You may play 1 play cost 7 or lower Digimon card with [Mamemon] in its name or the [Mutant] trait among them without paying the cost. Trash the rest."
+    when: [when_digivolving, on_deletion]
     summary: "[When Digivolving][On Deletion] Reveal top 3; you may play 1 cost<=7 [Mamemon]-name or [Mutant] Digimon free; trash the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -80,7 +81,8 @@ effects:
                 of: you
                 card: rest
 
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] By deleting 1 of your Digimon with [Mamemon] in its name, delete 1 of your opponent's Digimon with the lowest play cost."
+    when: end_of_your_turn
     once_per_turn: true
     optional: true
     outer_prompt: true
@@ -107,7 +109,8 @@ effects:
           prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
       - delete_permanent: { target: victim }
 
-  - scope: inherited
+  - text: "[End of Your Turn] [Once Per Turn] By deleting 1 of your Digimon with [Mamemon] in its name, delete all of your opponent's Digimon with the lowest play cost."
+    scope: inherited
     when: end_of_your_turn
     once_per_turn: true
     optional: true

@@ -49,7 +49,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 3 or more security cards, trash your top or bottom security card, ＜Draw 1＞ and gain 1 memory. Then, if you have 2 or fewer security cards, you may place 1 card with [Witchelny] in its text from your hand as the bottom security card."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If 3+ security: trash top or bottom security, <Draw 1>, gain 1 memory. Then, if 2 or fewer security, you may place 1 [Witchelny]-text card from hand as bottom security"
     process:
       - if:
@@ -87,7 +88,8 @@ effects:
                 position: bottom
                 face_up: false
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Dynasmon] or [Witchelny] in its text would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

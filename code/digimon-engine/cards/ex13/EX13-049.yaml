@@ -69,7 +69,8 @@ effects:
           destinations: [deck_top, deck_bottom]
           prompt: "Return the rest to the top or bottom of the deck?"
 
-  - when: when_attacking
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+    when: when_attacking
     scope: inherited
     once_per_turn: true
     summary: "[Inherited][When Attacking][OPT] 1 of your opponent's Digimon gets -2000 DP for the turn"

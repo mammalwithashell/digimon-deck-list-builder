@@ -106,7 +106,8 @@ effects:
                 then:
                   - unsuspend: { target: evo_base }
 
-  - scope: inherited
+  - text: "[Security] You may play 1 level 3 Digimon card with [Free] in its traits from your hand or trash without paying its memory cost."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] You may play 1 level 3 [Free] trait Digimon card from your hand or trash without paying its memory cost"

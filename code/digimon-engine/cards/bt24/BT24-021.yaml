@@ -77,7 +77,8 @@ alt_paths:
 effects:
   # ─── [On Play] reveal 3: add 1 [Demon]/[Shaman] Digimon + 1 [Titan] card;
   #     rest to bottom; if added, trash 1 card in hand ─────────────────────
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Demon] or [Shaman] trait and 1 card with the [Titan] trait among them to the hand. Return the rest to the bottom of the deck. If this effect added, trash 1 card in your hand."
+    when: on_play
     summary: "[On Play] Reveal the top 3; add 1 [Demon]/[Shaman] Digimon card and 1 [Titan] card to hand; rest to the bottom; if this effect added, trash 1 card in your hand"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -122,7 +123,8 @@ effects:
   # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Demon] or
   #     [Titan] Digimon may digivolve into [Titamon] / a [Titan] trash card,
   #     cost -1 (BT26-066 idiom; trait gate widened to Demon OR Titan) ───────
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1."
+    scope: inherited
     when: on_discard_hand
     once_per_turn: true
     active_when:

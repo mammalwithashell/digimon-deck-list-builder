@@ -60,7 +60,8 @@ effects:
   # this clause — and the clause `condition` below already suppresses the
   # prompt when the hand is empty or the opponent has no Digimon, which is the
   # same gate DCGO applies in `CanActivateCondition`.
-  - when: [when_digivolving, on_deletion]
+  - text: "[When Digivolving] [On Deletion] By trashing 1 card in your hand, 1 of your opponent's Digimon gets -4000 DP for the turn."
+    when: [when_digivolving, on_deletion]
     optional: true
     outer_prompt: true
     summary: "[When Digivolving] [On Deletion] MAY trash 1 card in hand → 1 opponent Digimon gets -4000 DP for the turn"
@@ -109,7 +110,8 @@ effects:
   #      burns the [Once Per Turn] use, whereas DCGO's `isOptional` prompt
   #      refunds it (`RemoveUse`). Converting this to
   #      `optional: true` + `outer_prompt: true` would fix that.
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     active_when: { opponents_turn: true }

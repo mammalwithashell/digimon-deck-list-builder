@@ -101,7 +101,8 @@ effects:
   # condition: count_lte own battle-area tamers <= 1 ("1 or fewer Tamers").
   # process: select_hand filtered to Tamer cards named exactly "Suzune Kazuki"
   #   (DCGO IsTamer && EqualsCardName) → play_from_hand_free.
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Suzune Kazuki] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     summary: "If ≤1 Tamer, you may play 1 [Suzune Kazuki] from hand without paying the cost"
     condition:
@@ -131,7 +132,8 @@ effects:
   # "<Jamming> (This Digimon can't be deleted in battles against Security
   #  Digimon.)"
   # DCGO: JammingSelfStaticEffect(isInheritedEffect: true) — unconditional.
-  - scope: inherited
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Jamming
     summary: "[Inherited] <Jamming>"

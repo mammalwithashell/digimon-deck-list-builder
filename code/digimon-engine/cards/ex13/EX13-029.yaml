@@ -55,11 +55,13 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
     keyword: ArmorPurge
     summary: "<Armor Purge>"
 
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, 1 of your opponent's Digimon gets -4000 DP for the turn. After, if you have 3 or fewer security cards, delete 1 of your opponent's Digimon with 4000 DP or less."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     optional: true
     outer_prompt: true
@@ -87,7 +89,8 @@ effects:
                 prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
             - delete_permanent: { target: delete_target }
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Dynasmon] or [Witchelny] in its text would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

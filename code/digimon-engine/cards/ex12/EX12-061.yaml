@@ -22,7 +22,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [Puppet] or [TB] trait from your hand, ＜Draw 2＞."
+    when: on_play
     condition:
       count_gte:
         filter:

@@ -120,7 +120,8 @@ effects:
   # as_selecting_player → select_hand → place_on_security → trash_top_security
   # shape. `trash_top_security` is the printed "trash their top security card"
   # (NOT the non-top G-TRASH-SELECTED-SECURITY gap).
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] Your opponent places 1 card from their hand as the bottom security card. Then, trash their top security card."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[When Digivolving][When Attacking][OPT] Opponent places hand card as bottom security; trash their top security"
     process:
@@ -154,7 +155,8 @@ effects:
   # "you may" → optional: true. dp_lte: 5000 on the hand-card filter is
   # honored (G-PRED-DP-LTE RESOLVED 2026-05-17 — dp_lte works on card-zone
   # subjects incl. hand). Non-Digimon cards fail the dp_lte constraint.
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your opponent's security stack is removed from, you may play 1 5000 DP or lower [Reptile] or [Dragonkin] trait Digimon card from your hand without paying the cost."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     optional: true

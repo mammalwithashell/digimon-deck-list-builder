@@ -75,7 +75,8 @@ effects:
   #   effect_initiated_digivolve with cost { reduce: 3 } (DCGO reduceCostTuple
   #   (3, null), payCost true, isHand true). BT12-016 idiom (target + from_hand
   #   + cost reduce).
-  - when: on_suspend
+  - text: "[Your Turn] When this Tamer suspends, ＜Draw 1＞. Then, 1 of your Digimon may digivolve into a yellow Digimon card with [Greymon] in its name in the hand with the digivolution cost reduced by 3."
+    when: on_suspend
     active_when: { your_turn: true }
     summary: "[Your Turn] When this Tamer suspends, Draw 1; then 1 of your Digimon may digivolve into a yellow [Greymon] hand card with cost reduced by 3"
     trigger_if:
@@ -132,7 +133,8 @@ effects:
   #   exists, faithful to DCGO's HasMatchConditionOwnersPermanent guard.
   # - (b) THEN, independently, "1 of your Digimon may attack" — optional
   #   may_attack_now (DCGO second canNoSelect:true SelectAttack). BT21-044 idiom.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] If you have a yellow Digimon with [Agumon] or [Greymon] in its name, for the turn, 1 of your [Marcus Damon]s is also treated as a 6000 DP Digimon, gains ＜Rush＞ and can't digivolve. Then, 1 of your Digimon may attack."
+    when: end_of_your_turn
     once_per_turn: true
     summary: "[End of Your Turn][OPT] If you have a yellow Agumon/Greymon Digimon, treat a Marcus Damon as a 6000 DP Digimon (Rush + can't digivolve, for turn); then 1 Digimon may attack"
     condition:
@@ -191,7 +193,8 @@ effects:
               prompt: "Have the selected Digimon attack now?"
 
   # ─── Clause 3: [Security] play self without paying the cost ─────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

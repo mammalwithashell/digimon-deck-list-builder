@@ -37,7 +37,8 @@ effects:
   # re-scans the candidate set every declarative tick; `SecurityAttackChange`
   # is the shipped modifier backing <Security A. ±N> (summed alongside the
   # keyword bonus in `raw_security_strike`).
-  - when: on_security
+  - text: "[Security] All of your Digimon gain ＜Security Attack +1＞ (This Digimon checks 1 additional security card) until the end of your next turn."
+    when: on_security
     summary: "[Security] All of your Digimon gain SecurityAttackPlus +1 until end of your next turn"
     process:
       - add_modifier:

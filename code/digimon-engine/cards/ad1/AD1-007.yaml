@@ -83,7 +83,8 @@ alt_paths:
 
 effects:
   # ─── Keywords ───────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
@@ -92,12 +93,14 @@ effects:
     value: 1
     summary: "<Security A. +1>"
 
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
   # ─── [When Digivolving][When Attacking][OPT] place 3 Gammamon-text cards → delete ──
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] By placing 3 Digimon cards with [Gammamon] in their texts from your hand or trash as this Digimon's top or bottom digivolution cards, delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     optional: true
     outer_prompt: true
@@ -159,7 +162,8 @@ effects:
   # made (CR 4.3 §15-14-1-4, §16-16-3 shape). DCGO additionally gates the
   # activation on CanAttack(withoutTap: true); the rules text outranks it here
   # (a clause-level `can_attack` gate would hide a legal no-op activation).
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] This Digimon with 5 or more digivolution cards may attack without suspending."
+    when: end_of_your_turn
     once_per_turn: true
     optional: true
     outer_prompt: true

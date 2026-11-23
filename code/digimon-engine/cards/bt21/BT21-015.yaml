@@ -29,12 +29,14 @@ alt_paths:
 # dp_modifier: 2000. Identical pattern to BT23-005.
 
 effects:
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card for free at end of battle"
     process:
       - play_from_security: {}
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less."
+    when: [on_play, when_digivolving]
     summary: "Delete 1 opponent Digimon with 4000 DP or less"
     process:
       - select_opponent_permanent:
@@ -46,7 +48,8 @@ effects:
           prompt: "Delete a Digimon (≤4000 DP)"
       - delete_permanent: { target: tgt }
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

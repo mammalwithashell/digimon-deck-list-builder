@@ -77,18 +77,22 @@ alt_paths:
 
 effects:
   # ─── Printed keywords ────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
-  - kind: grant_keyword
+  - text: "＜Execute＞"
+    kind: grant_keyword
     keyword: Execute
     summary: "<Execute>"
 
   # ─── [OP][WD][WA] By trashing 1 hand card, delete all opp lowest-level Digimon
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level."
+    when: [on_play, when_digivolving, when_attacking]
     optional: true
     condition:
       count_gte:
@@ -119,7 +123,8 @@ effects:
             - delete_permanent: { target: victim }
 
   # ─── [On Deletion] may play 1 [Titamon] or 1 Lv.≤5 [Titan] Digimon from trash free
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost."
+    when: on_deletion
     optional: true
     condition:
       count_gte:

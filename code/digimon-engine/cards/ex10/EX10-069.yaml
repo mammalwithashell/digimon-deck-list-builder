@@ -110,7 +110,8 @@ effects:
                 prompt: "Select Sunarizamon or Close from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
 
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Activate [Main]: play Sunarizamon/Close from hand or trash, then place self in battle area"
@@ -175,7 +176,8 @@ effects:
   # [Your Turn] When any of your [Close]s suspend, <Delay>:
   # 1 of your [Mineral] or [Rock] trait Digimon may digivolve into a Digimon
   # card with [Mineral] and [LIBERATOR] traits in hand, cost reduced by 3.
-  - kind: delay
+  - text: "[Your Turn] When any of your [Close]s suspend, ＜Delay＞. ・1 of your [Mineral] or [Rock] trait Digimon may digivolve into a Digimon card with the [Mineral] and [LIBERATOR] traits in the hand with the digivolution cost reduced by 3."
+    kind: delay
     trigger: on_suspend
     active_when:
       your_turn: true

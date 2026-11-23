@@ -101,7 +101,8 @@ effects:
           prompt: "Link 1 [Appmon] trait Digimon card from your trash to 1 of those Digimon without paying the cost"
 
   # Clause 4 — [Security] Place this card in the battle area.
-  - scope: inherited
+  - text: "[Security] Place this card in the battle area."
+    scope: inherited
     when: on_security
     summary: "[Security] Place this card in the battle area"
     process:

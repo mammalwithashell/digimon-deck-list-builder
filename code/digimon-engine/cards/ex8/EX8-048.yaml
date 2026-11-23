@@ -22,7 +22,8 @@ effects:
   # condition: count_lte with tamer kind in battle_area ≤ 1 gates activation.
   # process: select_hand filtered to exact name "Close" → play_from_hand_free.
   # Pattern: identical shape to BT21-017 Dimetromon (same archetype, same clause).
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Close] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     summary: "If ≤1 Tamer, you may play 1 [Close] from hand without paying the cost"
     condition:

@@ -33,17 +33,20 @@ dual:
     effect_text: "<Progress> <Piercing> <Security A. +1>. [When Digivolving][When Attacking][Once Per Turn] You may place up to 2 Digimon cards with [Gammamon] in text or [VB] from hand or trash as this Digimon's top or bottom digivolution cards. If placed, 1 opponent Digimon gets -2000 DP per source until their turn ends."
     inherited_text: ""
     effects:
-      - kind: grant_keyword
+      - text: "＜Progress＞"
+        kind: grant_keyword
         keyword: Progress
 
-      - kind: grant_keyword
+      - text: "＜Piercing＞"
+        kind: grant_keyword
         keyword: Piercing
 
       - kind: grant_keyword
         keyword: SecurityAttackPlus
         value: 1
 
-      - when: [when_digivolving, when_attacking]
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may place up to 2 Digimon cards with [Gammamon] in their texts or the [VB] trait from your hand or trash as this Digimon's top or bottom digivolution cards. If this effect placed, to 1 of your opponent's Digimon, give -2000 DP until their turn ends for each of this Digimon's digivolution cards."
+        when: [when_digivolving, when_attacking]
         once_per_turn: true
         summary: "[When Digivolving][When Attacking][OPT] Place up to 2 [Gammamon-text]/[VB] Digimon cards from hand/trash as top/bottom sources; if placed, -2000 DP per source"
         # Printed: "place up to 2 Digimon cards ... from your hand or trash" - ONE choice of up to 2

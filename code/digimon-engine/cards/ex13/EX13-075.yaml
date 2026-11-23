@@ -18,13 +18,15 @@ color: [white]
 cost: 4
 
 effects:
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     condition: { memory_lte: 2 }
     summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
     process:
       - set_memory: 3
 
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its text among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Huckmon]-text card to hand; rest to deck bottom"
     process:
       - reveal_search:
@@ -37,7 +39,8 @@ effects:
               prompt: "Add 1 card with [Huckmon] in its text to the hand"
           remainder: bottom
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

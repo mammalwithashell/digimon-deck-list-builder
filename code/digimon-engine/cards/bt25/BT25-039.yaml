@@ -264,7 +264,8 @@ effects:
           face_up: true
 
   # ─── Inherited [Opponent's Turn][OPT] redirect opp attack to suspended own ──
-  - when: on_opponent_attack
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to 1 of your suspended Digimon."
+    when: on_opponent_attack
     scope: inherited
     once_per_turn: true
     optional: true

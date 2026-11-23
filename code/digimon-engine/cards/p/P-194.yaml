@@ -21,12 +21,15 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
     keyword: Blocker
 
-  - kind: grant_keyword
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    kind: grant_keyword
     keyword: Barrier
 
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier

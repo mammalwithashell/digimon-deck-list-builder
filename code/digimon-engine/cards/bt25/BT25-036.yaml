@@ -95,13 +95,15 @@ effects:
     summary: "[Link] +3000 DP to the linked Digimon (host)"
 
   # ─── [Security] play self for free at end of battle ────────────────────────
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
   # ─── [On Play][When Digivolving] add top security to hand, then Recovery +1 ─
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Add your top security card to the hand. Then, ＜Recovery +1＞."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Add your top security card to the hand; then <Recovery +1>"
     process:
       - add_top_security_to_hand: { of: you }

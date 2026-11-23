@@ -94,7 +94,8 @@ effects:
   # ─── [When Digivolving] by trashing the top security card of 1 player with
   #     the most security cards, 1 opp Digimon/Tamer can't suspend until their
   #     turn ends ───────────────────────────────────────────────────────────
-  - when: when_digivolving
+  - text: "[When Digivolving] By trashing the top security card of 1 player with the most security cards, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+    when: when_digivolving
     condition:
       any_of:
         - security_count_gte: 1
@@ -200,7 +201,8 @@ effects:
                 expiry: end_of_opponents_turn
 
   # ─── [WD][WA][OPT] by trashing a Tamer's bottom face-down card, <Recovery +1>
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, ＜Recovery +1＞."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     optional: true
     condition: { face_down_sources_under_tamers_gte: 1 }

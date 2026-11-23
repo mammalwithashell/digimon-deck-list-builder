@@ -46,7 +46,8 @@ effects:
           modifier: SecurityAttackChange
           value: -1
           expiry: end_of_opponents_turn
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing your top security card, trash the top 2 cards of your deck and all of your opponent's Digimon get -3000 DP for the turn."
+    when: [on_play, when_digivolving]
     optional: true
     outer_prompt: true
     condition: { security_count_gte: 1 }
@@ -63,6 +64,7 @@ effects:
                 modifier: ChangeDp
                 value: -3000
                 expiry: end_of_turn
-  - kind: grant_keyword
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Barrier

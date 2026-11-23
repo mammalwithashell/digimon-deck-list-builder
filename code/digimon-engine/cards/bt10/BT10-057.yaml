@@ -55,7 +55,8 @@ alt_paths:
     cost: 4
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] You may suspend 1 of your Digimon. Then, gain 1 memory for each of your suspended Digimon with [Vegetation], [Plant] or [Fairy] in any of their traits. If this effect gains 2 or more memory, this Digimon unsuspends and gains ＜Piercing＞ for the turn."
+    when: when_digivolving
     summary: "[When Digivolving] You may suspend 1 of your Digimon. Then, gain 1 memory for each of your suspended Digimon with [Vegetation], [Plant] or [Fairy] in any of their traits. If this effect gains 2 or more memory, this Digimon unsuspends and gains <Piercing> for the turn"
     process:
       - select_own_permanent:

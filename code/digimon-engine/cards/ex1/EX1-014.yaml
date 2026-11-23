@@ -76,7 +76,8 @@ effects:
   # "This Digimon can't be deleted in battles against Security Digimon."
   # DCGO: JammingSelfStaticEffect(isInheritedEffect: false, condition: null).
   # Unconditional face-up keyword grant.
-  - kind: grant_keyword
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
     keyword: Jamming
     summary: "<Jamming>"
 
@@ -85,7 +86,8 @@ effects:
   # `target: {}` under inherited scope targets the carrier permanent. The
   # active condition mirrors DCGO's owner-turn gate plus carrier top card name
   # or trait checks.
-  - scope: inherited
+  - text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or [Free] in its traits, it gains ＜Jamming＞."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

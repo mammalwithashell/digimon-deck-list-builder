@@ -6,7 +6,8 @@ cost: 4
 traits: [LIBERATOR]
 
 effects:
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When your Digimon are played or digivolve, if any of them have the [Royal Knight] trait, by suspending this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: [on_enter_field_anyone, on_digivolve]
     active_when: { your_turn: true }
     optional: true
     summary: "[Your Turn] When your Royal Knight is played or digivolves, suspend self to Draw 1 and gain 1 memory"
@@ -34,7 +35,8 @@ effects:
   # layer the accepted body deliberately leaves the replacement outcome as
   # Proceed/None, so the original leave event commits after the hand-play
   # selection resolves.
-  - kind: replacement
+  - text: "[Opponent's Turn] [Once Per Turn] When any of your Digimon with the [Royal Knight] trait would leave the battle area, you may play 1 [Omekamon] from your hand without paying the cost."
+    kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
@@ -64,7 +66,8 @@ effects:
           of: you
           hand_index: omekamon_pick
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

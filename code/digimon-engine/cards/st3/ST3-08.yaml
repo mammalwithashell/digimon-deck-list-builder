@@ -13,7 +13,8 @@ alt_paths:
     from: { level_eq: 4, color_is: yellow }
     cost: 3
 effects:
-  - scope: inherited
+  - text: "[When Attacking] 1 of your opponent's Digimon gets -1000 DP for the turn."
+    scope: inherited
     when: when_attacking
     process:
       - select_opponent_permanent:

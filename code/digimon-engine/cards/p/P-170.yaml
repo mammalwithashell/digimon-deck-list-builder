@@ -138,7 +138,8 @@ effects:
     summary: "<Retaliation>"
 
   # ─── [On Deletion] may play 1 TM Digimon (cost ≤ 12) from hand or trash ───
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost."
+    when: on_deletion
     optional: true
     # DCGO CanActivateCondition: an eligible card exists in hand OR trash —
     # without one the optional gate is not offered at all.

@@ -35,7 +35,8 @@ traits: [Lesser]
 effects:
   # ─── Inherited [Your Turn][OPT] when one of your effects trashes a card in
   #     your hand → <Draw 1> ─────────────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When you trash a card in your hand using one of your effects, trigger ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: on_discard_hand
     once_per_turn: true
     active_when:

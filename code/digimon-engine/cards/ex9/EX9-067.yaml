@@ -6,7 +6,8 @@ cost: 3
 traits: [LIBERATOR]
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Puppet] or [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "Reveal top 3; add 1 Puppet or LIBERATOR card; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3 }
@@ -22,7 +23,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
@@ -52,7 +54,8 @@ effects:
   #   BT15-096 reduced-cost play rider; the pick filter carries the same
   #   `affordable_with_cost` / `can_play_from_effect_without_cost` so an
   #   unplayable card is not a legal pick, CR 4.3 1-3-2).
-  - when: on_digivolve
+  - text: "[Your Turn] When any of your Digimon digivolve into a [Puppet] trait Digimon, by returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] or 1 [Puppet] trait Digimon card from your hand with the play cost reduced by 3."
+    when: on_digivolve
     optional: true
     active_when: { your_turn: true }
     trigger_if:

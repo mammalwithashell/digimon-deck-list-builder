@@ -8,7 +8,8 @@ traits: [Lesser, LIBERATOR]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your Tokens or other [Puppet] trait Digimon are deleted, ＜Draw 1＞."
+    scope: inherited
     when: on_any_deletion
     active_when: { your_turn: true }
     once_per_turn: true

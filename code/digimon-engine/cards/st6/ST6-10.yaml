@@ -15,7 +15,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] You may return 1 purple Digimon card from your trash to your hand."
+    when: when_digivolving
     optional: true
     summary: "[When Digivolving] You may return 1 purple Digimon card from trash to hand"
     process:

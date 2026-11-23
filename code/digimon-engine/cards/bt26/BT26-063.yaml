@@ -64,7 +64,8 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [Your Turn][OPT] When this Digimon gets linked → reveal 3 ──────────────
-  - when: when_card_linked_to_this
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, reveal the top 3 cards of your deck. Add 1 card with the [Entertainment], [Open] or [Seven Code] trait among them to the hand. Return the rest to the top or bottom of the deck."
+    when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, reveal the top 3 cards of your deck; add 1 [Entertainment]/[Open]/[Seven Code] card to hand; return the rest to the top or bottom of the deck"

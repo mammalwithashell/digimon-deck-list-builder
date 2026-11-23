@@ -4,10 +4,12 @@ kind: tamer
 color: [yellow]
 cost: 2
 effects:
-  - kind: aura
+  - text: "[Opponent's Turn] All of your Security Digimon get +2000 DP."
+    kind: aura
     active_when: { opponents_turn: true }
     dp_modifier: 2000
     applies_to_own_security_dp: true
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     process:
       - play_from_security: {}

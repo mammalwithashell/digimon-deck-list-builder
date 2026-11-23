@@ -50,7 +50,8 @@ traits: [Bird, ACCEL]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your Digimon with the [ACCEL] trait are played, this Digimon may digivolve into a Digimon card with the [ACCEL] trait in the hand with the digivolution cost reduced by 2."
+    scope: inherited
     when: on_enter_field_anyone
     optional: true
     outer_prompt: true

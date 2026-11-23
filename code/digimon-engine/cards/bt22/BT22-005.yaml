@@ -126,7 +126,8 @@ effects:
   #   2. event_target_kind: digimon   — entering permanent is a Digimon (not a Tamer)
   #   3. any_of [trait Unidentified, trait CS] — trait disjunction on the
   #      entering permanent's top card.
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your Digimon with the [Unidentified] or [CS] trait are played, ＜Draw 1＞."
+    scope: inherited
     when: on_enter_field_anyone
     once_per_turn: true
     active_when: { your_turn: true }

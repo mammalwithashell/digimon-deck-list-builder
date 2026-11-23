@@ -47,7 +47,8 @@ alt_paths:
 effects:
   # ─── [On Play][When Digivolving] top security → hand, <Recovery +1>; then
   #     you may suspend 1 Digimon ──────────────────────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Add your top security card to the hand and ＜Recovery +1＞. Then, you may suspend 1 Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Add your top security card to the hand and <Recovery +1>. Then, you may suspend 1 Digimon"
     process:
       - add_top_security_to_hand: { of: you }
@@ -65,7 +66,8 @@ effects:
             - suspend: { target: susp }
 
   # ─── Inherited [Your Turn][OPT] win a battle → gain 1 memory ────────────
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When this Digimon wins a battle, gain 1 memory."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     active_when: { your_turn: true }

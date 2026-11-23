@@ -71,7 +71,8 @@ effects:
                 suppress_on_play: true
 
   # ─── Clause 1 — [Security] mirror ────────────────────────────────────────────
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effect."
+    scope: inherited
     when: on_security
     summary: "[Security] Activate this card's [Main] effects"
     process:

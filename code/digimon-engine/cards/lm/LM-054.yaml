@@ -45,7 +45,8 @@ effects:
   # the controller trashes the parked Option to activate the body on a later
   # main phase; the body never auto-fires (RULES_CONTEXT 16-16; processing
   # optional, never the placing turn).
-  - kind: delay
+  - text: "While you don't have [Treadmill Training] in the battle area, you can ignore this card's color requirements."
+    kind: delay
     trigger: delayed
     summary: "[Main]<Delay> 1 of your Digimon may digivolve into a yellow or black Digimon in hand, cost -2"
     process:
@@ -89,7 +90,8 @@ effects:
           cost: { reduce: 2 }
           ignore_requirements: false
 
-  - scope: inherited
+  - text: "[Security] Reveal the top 2 cards of your deck. Add 1 yellow or black card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Reveal top 2; add 1 yellow or black card; bottom rest; place self in battle area"

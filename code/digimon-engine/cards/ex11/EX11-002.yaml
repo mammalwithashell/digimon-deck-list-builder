@@ -63,7 +63,8 @@ effects:
   #      carrier permanent for an inherited self-aura).
   #   3. no_permanent(opponent, battle_area, digimon, stack >= 2) — "your
   #      opponent has no Digimon with digivolution cards".
-  - scope: inherited
+  - text: "[Your Turn] While your opponent has no Digimon with digivolution cards, this [Ice-Snow] trait Digimon can also attack your opponent's unsuspended Digimon."
+    scope: inherited
     kind: aura
     target: {}
     active_when:

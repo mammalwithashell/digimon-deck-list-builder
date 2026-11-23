@@ -49,7 +49,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_deletion
+  - text: "[On Deletion] Reveal the top 3 cards of your deck. Add 1 card with [Chuumon], [Sukamon], or [Etemon] in its name among them to your hand. Trash the rest."
+    when: on_deletion
     summary: "[On Deletion] Reveal 3; add 1 card with [Chuumon]/[Sukamon]/[Etemon] in its name to your hand; trash the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -70,7 +71,8 @@ effects:
           body:
             - trash_from_reveal: { of: you, card: rest }
 
-  - kind: replacement
+  - text: "[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion."
+    kind: replacement
     scope: inherited
     trigger: when_would_be_deleted
     optional: true

@@ -9,7 +9,8 @@ cost: 0
 traits: [Baby Dragon]
 form: In-Training
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If this Digimon has [Dracomon] or [Examon] in its text, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:

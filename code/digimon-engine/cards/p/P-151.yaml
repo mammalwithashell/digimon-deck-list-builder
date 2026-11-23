@@ -88,7 +88,8 @@ effects:
   # "While you have [LIBERATOR] Digimon or Tamer, ignore this card's color requirements."
   # DCGO: IgnoreColorConditionClass, CanUseCondition checks battle area for LIBERATOR
   # Digimon/Tamer, CardCondition restricts to THIS card only.
-  - kind: flood_gate
+  - text: "While you have a Digimon or Tamer with the [LIBERATOR] trait, you may ignore this card's color requirements."
+    kind: flood_gate
     active_when:
       any_of:
         - any_permanent:
@@ -161,7 +162,8 @@ effects:
   # "Security Effect [Security] Activate this card's [Main] effects."
   # DCGO: AddActivateMainOptionSecurityEffect — replays the OptionSkill coroutine.
   # The process mirrors Clause 1 exactly (same reveal + select + free-play body).
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security][Inherited] Activate [Main] effects (reveal top 3 + free-play)"

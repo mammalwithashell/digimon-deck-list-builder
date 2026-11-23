@@ -155,7 +155,8 @@ effects:
   #
   # G-PRED-DP-LTE: literal `dp_lte: 8000` form is wired (sister cards
   # EX4-060, BT8-097, BT13-012, BT18-087 all use it). Not blocked.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or less."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 opp Digimon with DP 8000 or less"
     process:
       - select_opponent_permanent:
@@ -271,7 +272,8 @@ effects:
   # idiom): empty target `{}` + `active_when: { your_turn: true }` +
   # `scope: inherited`. `Game::source_dp_contribution` reads `dp_modifier`
   # gated by `active_when` for tensor-layer DP computation.
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +4000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

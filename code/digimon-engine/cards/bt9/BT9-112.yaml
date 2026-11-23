@@ -30,7 +30,8 @@ effects:
   # cards placed in the battle area (CR 4.3 4-28-1). DCGO BT9_112.cs:
   # `3 * Enemy.GetBattleAreaPermanents().Count(p => p.IsDigimon || p.IsTamer)`.
   # delta: 3 gives 3 memory reduction per opponent permanent.
-  - kind: cost_reduction
+  - text: "When this card would be played, reduce the play cost by 3 for each of your opponent's Digimon and Tamers."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
     amount_fn:
@@ -120,7 +121,8 @@ effects:
   # GAP G-OPT-TRIGGERED: once_per_turn: true is compiled to Effect::max_per_turn=1
   # but triggered OPT lockout is not yet enforced by run_queued_effect_inner.
   # The clause will over-fire until that gap closes.
-  - when: end_of_opponents_turn
+  - text: "[End of Opponent’s Turn] [Once Per Turn] Delete all of your opponent's Digimon with the lowest play cost."
+    when: end_of_opponents_turn
     once_per_turn: true
     summary: "Delete all opp Digimon with lowest play cost (once per turn)"
     process:

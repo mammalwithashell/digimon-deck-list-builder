@@ -57,11 +57,13 @@ alt_paths:
 
 effects:
   # ─── Clause 0: <Blocker> (self) ─────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
   # ─── Clause 1: [On Play][When Digivolving] +3000 DP until opp turn ends ──────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your Digimon with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits or the [Shaman] or [TS] trait gets +3000 DP until your opponent's turn ends."
+    when: [on_play, when_digivolving]
     summary: "[OnPlay/WhenDigivolving] 1 of your [Beast]/[Animal]/[Sovereign] (not [Sea Animal]) or [Shaman]/[TS] Digimon gets +3000 DP until your opponent's turn ends"
     condition:
       any_permanent:
@@ -103,7 +105,8 @@ effects:
           expiry: end_of_opponents_turn
 
   # ─── Clause 2: Inherited [All Turns][OPT] on winning a battle, draw 1 ────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon wins a battle, ＜Draw 1＞."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     condition: { source_deleted_battle_opponent: true }

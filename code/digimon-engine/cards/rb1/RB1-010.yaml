@@ -66,7 +66,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] By placing 1 Digimon card with [Gammamon] in its text from your hand as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP."
+    when: when_digivolving
     summary: "[When Digivolving] By placing 1 [Gammamon]-text Digimon card from hand as bottom source, delete 1 opponent Digimon with DP <= this Digimon's DP"
     process:
       - select_hand:
@@ -92,7 +93,8 @@ effects:
                 prompt: "Delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP"
             - delete_permanent: { target: victim }
 
-  - when: on_any_deletion
+  - text: "[Your Turn][Once Per Turn] When an opponent’s Digimon is deleted, you may unsuspend this Digimon."
+    when: on_any_deletion
     active_when: { your_turn: true }
     once_per_turn: true
     optional: true

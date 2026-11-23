@@ -64,7 +64,8 @@ effects:
 
   # ─── [On Play][When Digivolving] by trashing 1 hand card, delete 1 level 4
   #     or lower Digimon ───────────────────────────────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, delete 1 level 4 or lower Digimon."
+    when: [on_play, when_digivolving]
     condition:
       count_gte:
         filter: { of: you, zone: [hand] }
@@ -90,7 +91,8 @@ effects:
 
   # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Titan]
   #     Digimon may digivolve into [Titamon] / a [Titan] trash card, cost -1 ──
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the cost reduced by 1."
+    scope: inherited
     when: on_discard_hand
     once_per_turn: true
     active_when:

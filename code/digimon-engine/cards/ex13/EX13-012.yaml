@@ -41,10 +41,12 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
 
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may play or use 1 white card with [Huckmon] in its text from your hand with the cost reduced by 3."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[When Digivolving][When Attacking][OPT] You may play or use 1 white [Huckmon]-text card from your hand with the cost reduced by 3"
     process:
@@ -77,6 +79,7 @@ effects:
           else:
             - refund_opt: {}
 
-  - scope: inherited
+  - text: "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Alliance

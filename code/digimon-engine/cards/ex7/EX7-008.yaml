@@ -83,7 +83,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] reveal 3; add 1 TM-text card + 1 cost-6 Option; bottom rest ──
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Three Musketeers] in its text and 1 Option card with a use cost of 6 among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add 1 card with [Three Musketeers] in its text and 1 Option with use cost 6; return the rest to the bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -112,7 +113,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Inherited [Your Turn] +2000 DP ─────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

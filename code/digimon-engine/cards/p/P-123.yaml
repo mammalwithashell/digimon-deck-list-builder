@@ -99,7 +99,8 @@ alt_paths:
 #     micro-gap as BT16-082 / BT17-102 hatch sub-steps.
 
 effects:
-  - when: on_move
+  - text: "[Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, you may hatch in your breeding area. Then, gain 1 memory."
+    when: on_move
     once_per_turn: true
     active_when: { your_turn: true }
     condition:

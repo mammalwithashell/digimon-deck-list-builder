@@ -76,11 +76,13 @@ alt_paths:
     stacks_unsuspended: true
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 
@@ -89,15 +91,18 @@ effects:
     value: 1
     summary: "<Security A. +1>"
 
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
-  - kind: grant_keyword
+  - text: "＜Evade＞"
+    kind: grant_keyword
     keyword: Evade
     summary: "<Evade>"
 
-  - when: when_digivolving
+  - text: "[When Digivolving] If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends. Then, this Digimon may battle 1 of your opponent's Digimon."
+    when: when_digivolving
     summary: "[When Digivolving] If DNA digivolving, this Digimon attacks and all of your Digimon get +10000 DP until your opponent's turn ends; then this Digimon may battle 1 of your opponent's Digimon"
     process:
       - if:
@@ -126,7 +131,8 @@ effects:
           attacker: source
           defender: battle_target
 
-  - when: on_ally_won_battle
+  - text: "[Your Turn] [Once Per Turn] When this Digimon wins a battle, you may play or use 1 play or use cost 12 or lower [Dracomon] or [Examon] text card from your hand or its digivolution cards without paying the cost."
+    when: on_ally_won_battle
     once_per_turn: true
     active_when:
       your_turn: true

@@ -175,7 +175,8 @@ alt_paths:
 effects:
   # ─── [On Play][When Digivolving] choose opp's highest-cost Digimon, ────────
   # delete all their other Digimon; then conditional Blocker + immunity ──────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Choose 1 of your opponent's highest play cost Digimon and delete all of their other Digimon. Then, if this Digimon has 4 or more [Vemmon] in its digivolution cards, until your opponent's turn ends, it gains ＜Blocker＞ and isn't affected by their effects."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Choose 1 of opponent's highest play cost Digimon and delete all their other Digimon. Then, if 4+ [Vemmon] sources, gain Blocker + opp-effect immunity until end of opp turn"
     process:
       - select_opponent_permanent:
@@ -239,7 +240,8 @@ effects:
 
   # ─── [End of Opponent's Turn] free digivolve into Galacticmon ──────────────
   # from hand or trash, ignoring digivolution requirements, no cost ─────────
-  - when: end_of_opponents_turn
+  - text: "[End of Opponent's Turn] This Digimon may digivolve into [Galacticmon] in the hand or trash, ignoring digivolution requirements and without paying the cost."
+    when: end_of_opponents_turn
     summary: "[End of Opponent's Turn] This Digimon may digivolve into [Galacticmon] in the hand or trash, ignoring digivolution requirements and without paying the cost"
     condition:
       count_gte:

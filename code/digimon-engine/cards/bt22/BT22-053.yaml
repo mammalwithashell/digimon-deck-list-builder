@@ -41,7 +41,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Arata Sanada] and 1 card with the [Unidentified] or [CS] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Arata Sanada] and 1 [Unidentified]/[CS] card; rest to the bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -65,7 +66,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: trait_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Diaboromon] in its text would leave the battle area, by deleting 1 of your other [Diaboromon], it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

@@ -110,7 +110,8 @@ effects:
   # turn." Mass SecurityAttackChange +1 over your battle-area Digimon. Mandatory
   # ([Security] effects are not opt-out). Resolved on the opponent's turn during
   # their security check → expires at the end of your next turn.
-  - when: on_security
+  - text: "[Security] All of your Digimon gain ＜Security A. +1＞ until the end of your turn."
+    when: on_security
     summary: "[Security] All of your Digimon gain <Security Attack +1> until the end of your next turn"
     process:
       - add_modifier:

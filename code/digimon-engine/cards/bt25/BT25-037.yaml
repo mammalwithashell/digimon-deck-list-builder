@@ -54,11 +54,13 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
     keyword: ArmorPurge
     summary: "<Armor Purge> (when would be deleted, may trash top card to prevent)"
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Add your top security card to the hand. Then, you may place 1 [Angel], [Archangel], [Three Great Angels] or [Iliad] trait Digimon card or 1 [TS] trait Tamer card from your hand as the top or bottom security card."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Add top security to hand; then may place 1 [Angel]/[Archangel]/[Three Great Angels]/[Iliad] Digimon or 1 [TS] Tamer from hand to top/bottom security"
     process:
       - add_top_security_to_hand: { of: you }

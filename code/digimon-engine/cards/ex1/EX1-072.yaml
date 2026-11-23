@@ -39,7 +39,8 @@ effects:
           modifier: CannotUseOptionCards
           expiry: end_of_opponents_turn
 
-  - scope: inherited
+  - text: "[Security] Your opponent can't use Option cards this turn. Then, add this card to its owner's hand."
+    scope: inherited
     when: on_security
     summary: "[Security] Your opponent can't use Option cards this turn. Then, add this card to its owner's hand"
     process:

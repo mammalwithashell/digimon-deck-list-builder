@@ -58,7 +58,8 @@ effects:
           prompt: "Add 1 card with [Dracomon] or [Examon] in its text to your hand"
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     summary: "[Inherited][End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in hand (paying its DNA cost)"

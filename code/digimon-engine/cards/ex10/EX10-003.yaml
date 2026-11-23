@@ -6,7 +6,8 @@ color: [black]
 traits: [Rock, LIBERATOR]
 
 effects:
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by trashing 3 [Mineral] or [Rock] trait cards from this Digimon's digivolution cards, end that attack."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     # §15-7-1: "Optional processing conditions include text such as 'by X, Y.'"

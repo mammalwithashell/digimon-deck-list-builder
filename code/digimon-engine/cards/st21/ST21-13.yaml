@@ -211,7 +211,8 @@ effects:
   # Standard play_from_security pattern (cf. BT17-093, BT18-087, BT22-084,
   # BT21-015, BT9-092, EX11-054, BT22-094). Mandatory (no [Security] effect
   # is opt-out per the rules manual §16 / RULES_CONTEXT.md).
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

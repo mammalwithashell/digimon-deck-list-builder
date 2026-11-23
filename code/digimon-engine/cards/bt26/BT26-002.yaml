@@ -24,7 +24,8 @@ traits: [Vegetation, DATA SQUAD]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When effects trash cards from under your Tamers, ＜Draw 1＞."
+    scope: inherited
     when: on_digivolution_card_trashed
     once_per_turn: true
     active_when:

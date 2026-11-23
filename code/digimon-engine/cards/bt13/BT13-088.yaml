@@ -59,7 +59,8 @@ effects:
   # [Belphemon: Rage Mode] is in trash the clause never fires — no prompt,
   # no placement, no grants. The `select_trash optional:true cost:true`
   # additionally lets the player DECLINE even when a Rage Mode exists.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] By placing 1 [Belphemon: Rage Mode] from your trash as this Digimon's top digivolution card, until the end of your opponent's turn, this Digimon can't attack and isn't affected by your opponent's effects."
+    when: [on_play, when_digivolving]
     summary: "[OnPlay/WhenDigi] By placing a Belphemon: Rage Mode from trash as a source, gain CannotAttack + opp-effect immunity until end of opp turn"
     condition:
       count_gte:
@@ -119,7 +120,8 @@ effects:
   # condition can't be executed, so the engine does not offer the clause
   # (§15-7-4, Ver. 4.3: the two leading hand picks are the optional processing
   # condition; `leading_cost_guard`), matching DCGO's CanActivateCondition.
-  - when: on_opponent_attack
+  - text: "[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by trashing 2 cards in your hand, end the attack."
+    when: on_opponent_attack
     once_per_turn: true
     active_when: { opponents_turn: true }
     optional: true

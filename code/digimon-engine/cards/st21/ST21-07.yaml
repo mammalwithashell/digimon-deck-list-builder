@@ -44,7 +44,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [ADVENTURE] trait in your hand, ＜Draw 2＞. (Draw 2 cards from your deck.)"
+    when: on_play
     optional: true
     summary: "[On Play] By trashing 1 [ADVENTURE] card from hand, <Draw 2>"
     condition:
@@ -66,7 +67,8 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 2 }
 
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     active_when: { all_turns: true }
     target: {}

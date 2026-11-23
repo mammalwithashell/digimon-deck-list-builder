@@ -102,7 +102,8 @@ effects:
       name: Slayerdramon
     summary: "[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution"
 
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Dracomon] or [Examon] in its text suspends, it may unsuspend."
+    scope: inherited
     when: on_suspend
     active_when: { all_turns: true }
     once_per_turn: true

@@ -60,7 +60,8 @@ effects:
   # ─── [On Play][When Digivolving] 1 opp Digimon gets -3000 DP; then, by
   #     trashing 2 bottom face-down cards from under any of your Tamers, this
   #     Digimon may digivolve into a [Glowing Dawn] card in hand for free ──────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, by trashing 2 bottom face-down cards from under any of your Tamers, this Digimon may digivolve into a [Glowing Dawn] trait Digimon card in the hand without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] -3000 DP to 1 opp Digimon; then trash 2 FD under Tamers to free-digivolve into a [Glowing Dawn] hand card"
     process:
       # "1 of your opponent's Digimon gets -3000 DP for the turn." — DCGO
@@ -113,7 +114,8 @@ effects:
                             cost: free
 
   # ─── Inherited <Barrier> ───────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier
     summary: "Inherited <Barrier>"

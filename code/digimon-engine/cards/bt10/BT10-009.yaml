@@ -25,7 +25,8 @@ alt_paths:
     cost: 9
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Material Save 2＞ (When this Digimon would be deleted, you may place 2 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)"
+    kind: grant_keyword
     keyword: MaterialSave
     value: 2
 

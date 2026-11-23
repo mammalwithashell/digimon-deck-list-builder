@@ -236,7 +236,8 @@ effects:
   # DCGO BT17_102.cs:256-365 mirrors Clause 3 with
   # `activateClass.SetIsInheritedEffect(true)` and uses
   # `CanActivateOnDeletionInherited` (vs. `CanActivateOnDeletion` for Clause 3).
-  - scope: inherited
+  - text: "[On Deletion] You may play 1 Tamer card with [Tai Kamiya] or [Kari Kamiya] in its name from your hand without paying the cost, or hatch in your breeding area."
+    scope: inherited
     when: on_deletion
     optional: true
     summary: "[Inherited][On Deletion] May play 1 Tai/Kari Tamer free, OR hatch"

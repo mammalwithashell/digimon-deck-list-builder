@@ -46,7 +46,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to the hand."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may return 1 non-Digi-Egg [Dracomon]/[Examon]-text card from trash to hand"
     process:
       - select_trash:
@@ -63,7 +64,8 @@ effects:
           prompt: "You may return 1 non-Digi-Egg card with [Dracomon] or [Examon] in its text from your trash to your hand"
       - add_to_hand_from_trash: { of: you, card: recovered }
 
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your other Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into a Digimon card with [Examon] in its text in the hand with the cost reduced by 2."
+    when: on_ally_played
     active_when: { your_turn: true }
     trigger_if:
       all_of:
@@ -95,7 +97,8 @@ effects:
                 from_hand: examon_evo
                 cost: { reduce: 2 }
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

@@ -15,7 +15,8 @@ alt_paths:
     from: {level_eq: 3, color_is: black}
     cost: 2
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 5 cards of your deck. Add up to 2 cards with [Knightmon] in their names among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+    when: on_play
     process:
       - reveal_top_deck: {of: you, count: 5, bind_as: revealed}
       - select_reveal_buckets:
@@ -28,7 +29,8 @@ effects:
           prompt: Add up to 2 cards with Knightmon in their names to your hand
       - add_to_hand_from_reveal: {of: you, card: knights}
       - place_remainder_on_deck: {of: you, position: bottom}
-  - kind: aura
+  - text: "[Your Turn] While this Digimon has [Knightmon] or [Bagramon] in its name, it gets +2000 DP."
+    kind: aura
     scope: inherited
     active_when:
       all_of:

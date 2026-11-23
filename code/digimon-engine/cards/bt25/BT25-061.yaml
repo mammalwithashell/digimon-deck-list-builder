@@ -74,7 +74,8 @@ effects:
   # gain 1 memory." Cost is optional (DCGO canNoSelect: true); both payoffs
   # only fire when a card was actually trashed. Memory-then-draw order follows
   # DCGO (AddMemory before DrawClass).
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 card with the [Appmon] trait from your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] By trashing 1 [Appmon] card from hand, draw 1 and gain 1 memory"
     process:
       - select_hand:

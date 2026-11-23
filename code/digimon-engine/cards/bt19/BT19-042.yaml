@@ -22,11 +22,14 @@ alt_paths:
     cost: 1
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] If [Dynasmon] or [X Antibody] is in this Digimon's digivolution cards, by trashing your top security card, trash your opponent's top security card, and this Digimon gets +6000 DP until the end of your opponent's turn."
+    when: [when_digivolving, when_attacking]
     optional: true
     once_per_turn: true
     active_when:
@@ -50,7 +53,8 @@ effects:
                 target: source
                 value: 6000
                 expiry: end_of_opponents_turn
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] If you have 2 or fewer security cards, ＜Recovery +1 ≪Deck≫＞."
+    when: end_of_your_turn
     condition: { security_count_lte: 2 }
     summary: "[End of Your Turn] With 2 or fewer security cards, Recovery +1 Deck"
     process:

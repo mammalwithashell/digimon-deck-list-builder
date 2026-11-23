@@ -103,7 +103,8 @@ effects:
   # `arm_digivolve_cost_reducer` installs a player-scoped, turn-scoped,
   # single-fire reducer keyed to a green digivolving Digimon, with a
   # suspend cost. See file header for the full analysis.
-  - when: main
+  - text: "[Main] The next time one of your green Digimon digivolves this turn, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 5."
+    when: main
     summary: "[Main] Arm a one-shot green-Digimon digivolve cost -5 (suspend 1 Digimon)"
     process:
       - arm_digivolve_cost_reducer:
@@ -117,7 +118,8 @@ effects:
   # Printed: "Security Effect [Security] Add this card to the hand."
   # Mandatory — no optional: flag. Lowers to
   # EffectContext::add_pending_security_to_hand() via add_this_option_to_hand.
-  - scope: inherited
+  - text: "[Security] Add this card to your hand."
+    scope: inherited
     when: on_security
     summary: "[Security][Inherited] Add this card to the hand"
     process:

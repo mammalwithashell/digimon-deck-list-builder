@@ -57,7 +57,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] [When Digivolving] mill 2, then may tuck a [Gammamon]-name Digimon from trash ───
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Trash the top 2 cards of your deck. Then, you may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Trash the top 2 cards of your deck. Then, you may place 1 Digimon card with [Gammamon] in its name from your trash as this Digimon's bottom digivolution card"
     process:
       - trash_from_top: { of: you, count: 2 }
@@ -78,7 +79,8 @@ effects:
                 target: source
 
   # ─── [Your Turn][OPT] when effects add to this Digimon's digivolution cards: digivolve into [Regulusmon] ───
-  - when: on_add_digivolution_cards
+  - text: "[Your Turn] [Once Per Turn] When effects add to this Digimon's digivolution cards, this Digimon may digivolve into [Regulusmon] in the hand or trash with the digivolution cost reduced by 1."
+    when: on_add_digivolution_cards
     optional: true
     outer_prompt: true
     once_per_turn: true
@@ -119,7 +121,8 @@ effects:
           ignore_requirements: false
 
   # ─── Inherited <Raid> ───
-  - kind: grant_keyword
+  - text: "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Raid
     summary: "<Raid>"

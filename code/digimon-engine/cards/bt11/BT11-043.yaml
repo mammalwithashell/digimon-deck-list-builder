@@ -77,7 +77,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] If your opponent has 16 or more cards in their trash, or you have 3 or more cards with [Sukamon] in their names in your trash, change 1 of your opponent's Digimon into a white Digimon with 3000 DP and an original name of [Sukamon] until the end of your opponent's turn."
+    when: [on_play, when_digivolving]
     condition:
       any_of:
         - count_gte:
@@ -111,7 +112,8 @@ effects:
           payload: { dp: 3000 }
           expiry: end_of_opponents_turn
 
-  - when: when_attacking
+  - text: "[When Attacking] For each other Digimon with [Sukamon] in its name in play, this Digimon gains ＜Security Attack +1＞ for the turn."
+    when: when_attacking
     condition:
       count_gte:
         filter:
@@ -140,7 +142,8 @@ effects:
             delta: 1
           expiry: end_of_turn
 
-  - kind: replacement
+  - text: "[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion."
+    kind: replacement
     scope: inherited
     trigger: when_would_be_deleted
     optional: true

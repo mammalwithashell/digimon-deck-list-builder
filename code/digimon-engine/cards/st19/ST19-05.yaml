@@ -16,10 +16,12 @@ alt_paths:
     cost: 1
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
     keyword: Blocker
 
-  - when: on_deletion
+  - text: "[On Deletion] By trashing 1 card with the [Puppet] trait in your hand, ＜Draw 2＞. (Draw 2 cards from your deck.)"
+    when: on_deletion
     optional: true
     summary: "By trashing a Puppet card from hand, Draw 2"
     condition:

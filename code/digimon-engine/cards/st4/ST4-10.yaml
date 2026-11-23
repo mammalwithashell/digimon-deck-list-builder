@@ -14,7 +14,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Reveal the top 5 cards of your deck. Add 1 level 6 or higher Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+    when: when_digivolving
     summary: "[When Digivolving] Reveal top 5; add 1 level 6 or higher Digimon; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 5, bind_as: revealed }

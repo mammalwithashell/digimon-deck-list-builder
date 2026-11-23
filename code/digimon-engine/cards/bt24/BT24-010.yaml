@@ -102,13 +102,15 @@ effects:
   #
   # <Blocker> — own (face-up) only. DCGO: BlockerSelfStaticEffect on
   # EffectTiming.None, isInheritedEffect: false.
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
   # <Raid> — INHERITED only (no own-face grant on this card). DCGO:
   # RaidSelfEffect on OnAllyAttack, isInheritedEffect: true.
-  - scope: inherited
+  - text: "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Raid
     summary: "Inherited <Raid>"

@@ -117,7 +117,8 @@ effects:
     process: []
 
   # ─── [Security] Activate this card's [Main] effects ──────────────────────────
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
     summary: "[Security] Activate this card's [Main] effects"
     process:
       - select_union_zone:

@@ -63,7 +63,8 @@ effects:
           position: bottom
           face_up: true
 
-  - scope: inherited
+  - text: "[Security] You may play 1 level 3 Digimon card from your trash without paying the cost."
+    scope: inherited
     when: on_security
     optional: true
     summary: "[Security] You may play 1 level 3 Digimon card from your trash without paying the cost"

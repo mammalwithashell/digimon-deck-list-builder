@@ -52,12 +52,14 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By placing 1 Digimon card with [Gammamon] in its name from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's level 4 or lower Digimon."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] By placing 1 Digimon card with [Gammamon] in its name from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's level 4 or lower Digimon"
     process:
@@ -88,7 +90,8 @@ effects:
                 prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
             - delete_permanent: { target: victim }
 
-  - kind: grant_keyword
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Retaliation
     summary: "<Retaliation>"

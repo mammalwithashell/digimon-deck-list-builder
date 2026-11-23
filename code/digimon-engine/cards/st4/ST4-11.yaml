@@ -14,7 +14,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When this Digimon deletes an opponent's Digimon in battle and survives, trash the top card of your opponent's security stack."
+    scope: inherited
     when: on_any_deletion
     active_when: { your_turn: true }
     once_per_turn: true

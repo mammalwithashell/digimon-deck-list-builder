@@ -14,7 +14,8 @@ alt_paths:
     cost: 4
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 

@@ -33,7 +33,8 @@ effects:
   #   - amount: 1
   #   - optional: false (printed text is mandatory, no "you may")
   #
-  - kind: cost_reduction
+  - text: "When you would play this card from your hand, if you have a blue Digimon in play, reduce its play cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
     condition:
@@ -73,7 +74,8 @@ effects:
   # Note on deck-empty guard: the `draw` step in the engine silently handles
   # deck-out (draws up to count, 0 if empty); no explicit condition needed.
   #
-  - scope: inherited
+  - text: "[When Attacking] If you have a blue Digimon in play, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: when_attacking
     condition:
       any_permanent:

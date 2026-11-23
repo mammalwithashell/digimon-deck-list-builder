@@ -15,7 +15,8 @@ alt_paths:
     cost: 4
 
 effects:
-  - when: when_attacking
+  - text: "[When Attacking][Once Per Turn] Unsuspend this Digimon."
+    when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][OPT] Unsuspend this Digimon"
     process:

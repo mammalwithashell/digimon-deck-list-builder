@@ -32,7 +32,8 @@ alt_paths:
     stacks_unsuspended: true
 
 effects:
-  - kind: grant_keyword
+  - text: "{Hand}"
+    kind: grant_keyword
     keyword: BlastDigivolve
 
 # Stubbed:

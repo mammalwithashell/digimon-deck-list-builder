@@ -34,7 +34,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Huckmon] or [Sistermon] in its text and 1 such Tamer card or Option card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Huckmon]/[Sistermon]-text Digimon and 1 such Tamer or Option to hand; rest to deck bottom"
     process:
       - reveal_search:
@@ -63,7 +64,8 @@ effects:
               prompt: "Add 1 Tamer or Option card with [Huckmon] or [Sistermon] in its text to the hand"
           remainder: bottom
 
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your white Digimon are played, gain 1 memory."
+    scope: inherited
     when: on_ally_played
     once_per_turn: true
     active_when: { your_turn: true }

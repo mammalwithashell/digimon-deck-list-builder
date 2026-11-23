@@ -85,7 +85,8 @@ effects:
 
   # Inherited [All Turns][Once Per Turn] substitute — see EX5-015 clause C for
   # the full derivation of this shape.
-  - kind: replacement
+  - text: "[All Turns][Once Per Turn] When this Digimon with [Garurumon] or [Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion."
+    kind: replacement
     scope: inherited
     trigger: when_would_be_deleted
     optional: true

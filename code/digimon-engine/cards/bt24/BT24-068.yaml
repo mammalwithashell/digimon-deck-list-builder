@@ -45,7 +45,8 @@ traits: [Evil]
 attribute: Virus
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil] or [Fallen Angel] trait and 1 card with the [Seven Great Demon Lords] trait among them to the hand. Return the rest to the bottom of the deck. Then, trash 1 card in your hand."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Evil]/[Fallen Angel] card and 1 [Seven Great Demon Lords] card; bottom the rest; trash 1 from hand"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -75,7 +76,8 @@ effects:
           prompt: "Trash 1 card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Trash the top card of both players' decks."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][Once Per Turn] Trash the top card of both players' decks"

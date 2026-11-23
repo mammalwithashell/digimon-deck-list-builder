@@ -23,7 +23,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 4 or lower Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] By deleting 1 of your Digimon, delete 1 opponent level 4 or lower Digimon"
     process:
       - select_own_permanent:

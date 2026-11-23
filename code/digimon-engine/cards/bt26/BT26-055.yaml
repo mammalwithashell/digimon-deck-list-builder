@@ -58,14 +58,16 @@ alt_paths:
 
 effects:
   # ─── <Fragment <2>> ────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Fragment《2》＞"
+    kind: grant_keyword
     keyword: Fragment
     value: 2
 
   # ─── [On Play][When Digivolving][Counter][OPT] may place 1 hand card face
   #     down as bottom source; then may delete 1 own [Ver.3] Digimon + all
   #     opponent's lowest-play-cost Digimon ─────────────────────────────────
-  - when: [on_play, when_digivolving, counter]
+  - text: "[On Play] [When Digivolving] [Counter] [Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your Digimon with the [Ver.3] trait and all of your opponent's Digimon with the lowest play cost."
+    when: [on_play, when_digivolving, counter]
     once_per_turn: true
     summary: "[On Play][When Digivolving][Counter][Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your [Ver.3] Digimon and all of your opponent's Digimon with the lowest play cost"
     process:
@@ -147,7 +149,8 @@ effects:
 
   # ─── Inherited [All Turns][OPT] when this Digimon would leave the battle
   #     area, trash your opponent's top security card ────────────────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, trash your opponent's top security card."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     once_per_turn: true

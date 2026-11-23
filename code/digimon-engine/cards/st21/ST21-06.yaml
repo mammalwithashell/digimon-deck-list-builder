@@ -59,7 +59,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Place 1 of your opponent's 6000 DP or lower Digimon as the top security card. For every 2 colors your Tamers have, add 2000 to this effect's DP maximum."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Place 1 of your opponent's 6000 DP or lower Digimon as the top security card; +2000 to the DP maximum for every 2 colors your Tamers have"
     process:
       - select_opponent_permanent:
@@ -88,7 +89,8 @@ effects:
           of: opponent
           position: top
 
-  - when: [on_ally_played, on_digivolve]
+  - text: "[Your Turn] [Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains ＜Alliance＞ for the turn. Then, 1 of your Digimon may attack."
+    when: [on_ally_played, on_digivolve]
     active_when: { your_turn: true }
     once_per_turn: true
     summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
@@ -118,7 +120,8 @@ effects:
           optional: true
           prompt: "Attack with the selected Digimon?"
 
-  - scope: inherited
+  - text: "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Alliance
     summary: "Inherited <Alliance>"

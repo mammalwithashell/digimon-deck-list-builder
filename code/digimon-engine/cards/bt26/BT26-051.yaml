@@ -65,7 +65,8 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [Your Turn][OPT] When this Digimon gets linked → Collision + 3000 ──────
-  - when: when_card_linked_to_this
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your Digimon with the [Social], [Tool], [Open] or [Seven Code] trait gains ＜Collision＞ and +3000 DP for the turn."
+    when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, 1 of your [Social]/[Tool]/[Open]/[Seven Code] Digimon gains <Collision> and +3000 DP for the turn"

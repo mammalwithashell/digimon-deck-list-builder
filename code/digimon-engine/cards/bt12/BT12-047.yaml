@@ -80,7 +80,8 @@ effects:
   #       maxCount 1.
   #   - mutualConditions: true → no_duplicate_cards: true.
   #   - remainingCardsPlace: DeckBottom → place_remainder_on_deck bottom.
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Imperialdramon] in its name or the [Free] trait and 1 Tamer card with [Ken Ichijoji] in its name among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add one Imperialdramon/Free Digimon and one Ken Ichijoji Tamer"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -128,7 +129,8 @@ effects:
   # {this, partner} and you pay its printed DNA cost. `ignore_requirements: false`
   # gates targets on a valid DNA route and charges the matching DNA cost (the
   # `cost: 0` is a fallback only). See BT12-021 for the full rationale.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     summary: "[EoT] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand (paying its DNA cost)"

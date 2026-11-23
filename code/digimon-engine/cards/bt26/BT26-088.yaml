@@ -31,7 +31,8 @@ traits: [TS]
 
 effects:
   # ─── [Start of Your Main Phase] If opponent has a Digimon, gain 1 memory ──
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -43,7 +44,8 @@ effects:
 
   # ─── [Your Turn] When a [Boss]/[TS] Digimon card would be played, by
   #     suspending this Tamer, reduce the cost by 1 (2 if you have no Digimon)
-  - kind: cost_reduction
+  - text: "[Your Turn] When any [Boss] or [TS] trait Digimon cards would be played, by suspending this Tamer, reduce the cost by 1. If you have no Digimon, instead reduce the cost by 2."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
     when_any_ally_played:
@@ -67,7 +69,8 @@ effects:
           delta: -1
     summary: "[Your Turn] When a [Boss]/[TS] Digimon card would be played, by suspending this Tamer, reduce the cost by 1 (by 2 if you have no Digimon)"
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

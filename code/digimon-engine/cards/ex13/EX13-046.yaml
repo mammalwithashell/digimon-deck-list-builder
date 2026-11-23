@@ -31,7 +31,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Mamemon] in its text and 1 card with the [Mutant] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Mamemon]-text card and 1 [Mutant] trait card to hand; rest to deck bottom"
     process:
       - reveal_search:

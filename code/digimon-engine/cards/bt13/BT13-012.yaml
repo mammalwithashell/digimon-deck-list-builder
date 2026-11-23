@@ -54,7 +54,8 @@ effects:
   # ─────────────────────────────────────────────────────────────────────────
   # Clause 1 — [When Digivolving] search security for red/yellow Tamer;
   # play free; if played, Recovery +1; then shuffle.
-  - when: when_digivolving
+  - text: "[When Digivolving] Search your security stack, and you may play 1 red or yellow Tamer card among it without paying the cost. If you did, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.) Then, shuffle your security stack."
+    when: when_digivolving
     summary: "[When Digivolving] search security; may play 1 red/yellow Tamer free; if played, Recovery +1; then shuffle security"
     process:
       - search_own_security_stack:
@@ -108,7 +109,8 @@ effects:
   # The inherited clause is authored faithfully against printed text; the
   # gaps are documented and the affected behavioral assertions are
   # `#[ignore]`'d with their gap IDs in the test file.
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes suspended, you may delete 1 of your opponent's Digimon with 3000 DP or less."
+    scope: inherited
     when: on_suspend
     optional: true
     once_per_turn: true

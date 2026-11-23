@@ -15,7 +15,8 @@ alt_paths:
 
 effects:
   # Clause 1: <Progress> printed keyword grant.
-  - kind: grant_keyword
+  - text: "＜Progress＞ (While attacking, your opponent's effects don't affect this Digimon.)"
+    kind: grant_keyword
     keyword: Progress
 
   # Clause 2: [Your Turn] [Once Per Turn] When any of your [Reptile] or
@@ -25,7 +26,8 @@ effects:
   # The engine's OnAttackTargetChange event context carries the attacker as
   # event_target, so this condition gates on the attacking permanent's owner
   # and trait instead of approximating with a broad board scan.
-  - when: on_attack_target_change
+  - text: "[Your Turn] [Once Per Turn] When any of your [Reptile] or [Dragonkin] trait Digimon's attack targets change, trash your opponent's top security card."
+    when: on_attack_target_change
     active_when: { your_turn: true }
     once_per_turn: true
     trigger_if:
@@ -43,7 +45,8 @@ effects:
   #
   # G-INHERITED-DISPATCH is closed: bt21_025.rs §5 drives this clause through
   # a real security removal (Lamiamon as a digivolution card).
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your opponent's security is removed from, you may play 1 [Reptile] or [Dragonkin] trait Digimon card with 5000 DP or less from your hand without paying the cost."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     optional: true

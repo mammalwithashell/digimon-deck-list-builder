@@ -43,7 +43,8 @@ color: [green]
 cost: 3
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in any of its traits among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in one of its traits among them to the hand. Return the rest to the bottom of the deck"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -64,7 +65,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: plant_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - when: on_suspend
+  - text: "[Your Turn] When effects suspend Digimon, by suspending this Tamer, gain 1 memory."
+    when: on_suspend
     optional: true
     active_when: { your_turn: true }
     trigger_if:
@@ -77,7 +79,8 @@ effects:
       - activation_cost: { suspend_self: true }
       - gain_memory: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

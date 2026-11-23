@@ -16,7 +16,8 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 0
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing your top security card, gain 1 memory."
+    when: on_play
     optional: true
     active_when: { security_count_gte: 1 }
     summary: "[On Play] By trashing your top security card, gain 1 memory"
@@ -26,7 +27,8 @@ effects:
           condition: { equals: [paid_security, 1] }
           then:
             - gain_memory: 1
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this yellow Digimon with the [Data] or [Witchelny] trait would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

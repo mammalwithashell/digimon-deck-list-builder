@@ -57,7 +57,8 @@ effects:
           then:
             - recover: { of: you, count: 1 }
 
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's Digimon with 6000 DP or less. Then, if you have 0 security cards, ＜Recovery +1 ≪Deck≫＞."
+    when: on_security
     summary: "[Security] Delete 1 opponent Digimon with 6000 DP or less. Then, if 0 security, Recovery +1 Deck"
     process:
       - select_opponent_permanent:

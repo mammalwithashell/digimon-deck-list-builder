@@ -19,7 +19,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_deletion
+  - text: "[On Deletion] If deleted other than in battle, you may play 1 [Shoemon] from your hand without paying the cost."
+    when: on_deletion
     optional: true
     condition:
       not:
@@ -46,7 +47,8 @@ effects:
           prompt: "Play 1 [Shoemon] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: shoemon }
 
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     active_when: { opponents_turn: true }

@@ -91,7 +91,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] reveal 3; add 1 [X Antibody] card + 1 [Kota Domoto]; bottom rest
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Kota Domoto] and 1 card with the [X Antibody] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add 1 card with the [X Antibody] trait and 1 [Kota Domoto] among them to hand; place the rest at the bottom of the deck in any order"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -118,7 +119,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Inherited [Your Turn][OPT] your effect places a card under this Digimon → +1 memory
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your effects add to this Digimon's digivolution cards, gain 1 memory."
+    scope: inherited
     when: on_add_digivolution_cards
     once_per_turn: true
     active_when: { your_turn: true }

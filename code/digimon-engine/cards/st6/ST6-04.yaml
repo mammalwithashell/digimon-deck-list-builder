@@ -15,7 +15,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] You may return 1 purple Option card with a memory cost of 1 or 7 from your trash to your hand."
+    when: on_play
     optional: true
     summary: "[On Play] You may return 1 purple Option card with cost 1 or 7 from trash to hand"
     process:
