@@ -87,3 +87,29 @@ effects:
       kind: digimon
       trait_has: TS
     summary: "[Link] [TS] trait: Cost 3"
+
+  # ─── Link Effect: [When Attacking][Once Per Turn] bounce a suspended Digimon ─
+  # Card face + bundle "### Link Effect"; DCGO BT24_095.cs "Link ESS"
+  # (OnAllyAttack, SetIsLinkedEffect, maxCountPerTurn 1, not optional,
+  # SelectPermanentEffect Mode.Bounce canNoSelect false over opponent
+  # Digimon with IsSuspended). Same idiom as BT24-097's linked ESS.
+  - scope: linked
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Link][When Attacking][Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: wa_bounce
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to the hand"
+      - return_to_hand: { target: wa_bounce }
+
+  # ─── Link DP +2000 (card-face link box) ─────────────────────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon (host)"
