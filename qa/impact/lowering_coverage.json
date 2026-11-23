@@ -20011,7 +20011,6 @@
     "predicate:color_is",
     "predicate:cost_target",
     "predicate:in_breeding",
-    "predicate:is_source",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:not",
@@ -20020,7 +20019,7 @@
     "predicate:your_turn"
    ],
    "effect_clause_count": 2,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20046,7 +20045,7 @@
     "keyword:Piercing"
    ],
    "effect_clause_count": 2,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20088,7 +20087,7 @@
     "timing:when_digivolving"
    ],
    "effect_clause_count": 3,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20113,7 +20112,9 @@
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_is",
+    "predicate:not",
     "predicate:owner",
+    "predicate:play_cost_gte",
     "predicate:play_or_use_cost_lte",
     "predicate:trait_has",
     "predicate:zone",
@@ -20125,7 +20126,7 @@
     "keyword:SecurityAttackPlus"
    ],
    "effect_clause_count": 5,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20148,7 +20149,7 @@
     "keyword:Reboot"
    ],
    "effect_clause_count": 2,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20174,7 +20175,7 @@
     "keyword:Blocker"
    ],
    "effect_clause_count": 2,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20213,7 +20214,7 @@
     "timing:when_digivolving"
    ],
    "effect_clause_count": 3,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20226,12 +20227,14 @@
     "verb:add_dp_modifier",
     "verb:cancel_replacement",
     "verb:de_digivolve",
+    "verb:if",
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",
     "verb:trash_bottom_face_down_sources_under_tamers",
     "verb:unsuspend",
     "predicate:any_field_permanent",
     "predicate:any_of",
+    "predicate:any_permanent",
     "predicate:color_is",
     "predicate:event_cause",
     "predicate:event_host_is_own_tamer",
@@ -20242,6 +20245,7 @@
     "predicate:owner",
     "predicate:replacement_subject_is_mine",
     "predicate:trait_has",
+    "predicate:zone",
     "timing:main",
     "timing:on_attack_target_change",
     "timing:on_digivolution_card_trashed",
@@ -20250,7 +20254,7 @@
     "keyword:Raid"
    ],
    "effect_clause_count": 6,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
@@ -20281,7 +20285,7 @@
     "timing:when_attacking"
    ],
    "effect_clause_count": 2,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20307,7 +20311,7 @@
     "keyword:Retaliation"
    ],
    "effect_clause_count": 2,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20348,7 +20352,7 @@
     "keyword:Rush"
    ],
    "effect_clause_count": 3,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20387,7 +20391,7 @@
     "keyword:Execute"
    ],
    "effect_clause_count": 5,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20419,7 +20423,7 @@
     "timing:start_of_your_main_phase"
    ],
    "effect_clause_count": 3,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20455,7 +20459,7 @@
     "timing:start_of_your_turn"
    ],
    "effect_clause_count": 3,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -20489,7 +20493,7 @@
     "timing:start_of_your_turn"
    ],
    "effect_clause_count": 3,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],

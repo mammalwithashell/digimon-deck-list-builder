@@ -30,5 +30,5 @@ effects:
     kind: aura
     scope: inherited
     active_when: { your_turn: true }
-    target: { is_source: true }
+    target: {}
     dp_modifier: 2000

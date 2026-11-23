@@ -56,12 +56,15 @@ dual:
                 - event_cause: own_effect
                 - event_cause: opponent_effect
         process: &artio_main
-          - select_opponent_permanent:
-              optional: false
-              bind_as: to_devolve
-              filter: { kind: digimon }
-              prompt: De-Digivolve 2 an opponent's Digimon
-          - de_digivolve: { target: to_devolve, amount: 2 }
+          - if:
+              condition: { any_permanent: { of: opponent, zone: [battle_area], kind: digimon } }
+              then:
+                - select_opponent_permanent:
+                    optional: false
+                    bind_as: to_devolve
+                    filter: { kind: digimon }
+                    prompt: De-Digivolve 2 an opponent's Digimon
+                - de_digivolve: { target: to_devolve, amount: 2 }
           - select_own_permanent:
               optional: false
               bind_as: to_boost

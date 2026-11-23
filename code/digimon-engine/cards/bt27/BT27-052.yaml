@@ -18,7 +18,7 @@ alt_paths:
     from: { any_color: true, level_eq: 5, trait_has: Glowing Dawn }
     cost: 4
   - kind: digivolve
-    from: { any_color: true, name_is: Atratusmon, kind: dual }
+    from: { any_color: true, name_is: Atratusmon, not: { play_cost_gte: 0 } }
     cost: 2
   - kind: assembly
     cost: 5

@@ -2,7 +2,21 @@
 
 mod bt17_015;
 mod bt25_057;
-mod bt27_glowing_dawn;
+mod bt27_044;
+mod bt27_046;
+mod bt27_050;
+mod bt27_052;
+mod bt27_056;
+mod bt27_058;
+mod bt27_064;
+mod bt27_067;
+mod bt27_073;
+mod bt27_077;
+mod bt27_080;
+mod bt27_082;
+mod bt27_091;
+mod bt27_094;
+mod bt27_097;
 mod common;
 mod st23_01;
 mod st23_03;
