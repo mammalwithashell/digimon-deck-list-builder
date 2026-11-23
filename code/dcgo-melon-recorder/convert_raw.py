@@ -305,7 +305,7 @@ def convert(rows, cards, allow_truncated=False):
         return k
 
     def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None,
-               operand_card_index=None, operand_source="recorder"):
+               operand_card_index=None, operand_source="recorder", attack_target_card_index=None):
         nonlocal step
         row = {"type": "action", "step": step, "actor": actor, "action_id": action_id,
                "phase": phase, "source": source}
@@ -325,6 +325,8 @@ def convert(rows, cards, allow_truncated=False):
             # identity (`ReplayDriver::named_operand_slot`) instead of pairing duplicates in occurrence order
             row["operand_card_index"] = operand_card_index
             row["operand_card_index_source"] = operand_source
+        if attack_target_card_index is not None:
+            row["attack_target_card_index"] = attack_target_card_index
         out.append(row)
         step += 1
 
@@ -1069,7 +1071,8 @@ def convert(rows, cards, allow_truncated=False):
                 break
             target = SECURITY_TARGET if a[1] < 0 else a[1]
             action(actor, ATTACK_START + a[0] * TARGETS_PER_ATTACKER + target, "Main", "main_phase", boards=r.get("boards"),
-                   operand_card_index=board_operand_index(r, actor, a[0]))
+                   operand_card_index=board_operand_index(r, actor, a[0]),
+                   attack_target_card_index=board_operand_index(r, 1 - actor, a[1]))
             continue
         if m in ("TurnStateMachine.QueueMainPhaseAction", "TurnStateMachine.PassTurn"):
             continue  # the Internal row above already carries the decision
