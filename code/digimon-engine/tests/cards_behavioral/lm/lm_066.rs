@@ -18,7 +18,8 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, Keyword};
+use digimon_engine::enums::{CardKind, Expiry, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
 
@@ -144,4 +145,34 @@ fn lm_066_attack_offers_optional_unsuspend_of_any_suspended_digimon() {
     // candidates, and declining is legal ("You may").
     assert_eq!(view.valid_action_ids.len(), 2, "both suspended Digimon");
     assert!(view.is_optional, "unsuspend is optional");
+}
+
+#[test]
+fn lm_066_unsuspend_offers_unsuspended_digimon_but_not_ones_that_cannot_unsuspend() {
+    let mut runner = base();
+    let zeph = runner.place_stack(0, &["LM-066"]);
+    let locked = runner.place_stack(1, &["LM-066"]);
+    runner.game.players[1].battle_area[locked.index as usize].is_suspended = true;
+    runner.game.modifiers.add(
+        locked,
+        ModifierEntry::simple(ModifierType::CannotUnsuspend, 0, Expiry::Permanent, 1),
+    );
+    runner.place_stack(1, &["LM-066"]);
+    runner.attack_player(zeph, 1, false);
+    let view = runner.pending_selection_view().expect("unsuspend prompt installs");
+    // The suspended attacker and the opponent's unsuspended Digimon (a legal
+    // no-op target); the suspended one under CannotUnsuspend is excluded.
+    assert_eq!(view.valid_action_ids.len(), 2);
+    assert!(view.is_optional);
+}
+
+#[test]
+fn lm_066_suspension_costs_require_a_digimon_that_can_suspend() {
+    let runner = base();
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    let dual = card.dual.as_ref().expect("dual");
+    let digimon = format!("{:?}", dual.digimon.effects);
+    let option = format!("{:?}", dual.option.effects);
+    assert!(digimon.contains("can_change_orientation: Some(true)"), "leave replacement payment");
+    assert_eq!(option.matches("can_change_orientation: Some(true)").count(), 3, "cost gate + both payments");
 }

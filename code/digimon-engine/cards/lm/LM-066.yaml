@@ -55,7 +55,7 @@ dual:
               filter:
                 all_of:
                   - kind: digimon
-                  - is_suspended: true
+                  - can_unsuspend: true
               prompt: "You may unsuspend 1 Digimon"
           - if:
               condition: { binding_present: wake_target }
@@ -90,6 +90,7 @@ dual:
                 all_of:
                   - kind: digimon
                   - is_unsuspended: true
+                  - can_change_orientation: true
               prompt: "Suspend 1 Digimon to prevent this Digimon from leaving the battle area"
           - suspend: { target: brace_target }
           - cancel_replacement: {}
@@ -114,6 +115,7 @@ dual:
               zone: [battle_area]
               kind: digimon
               is_unsuspended: true
+              can_change_orientation: true
             n: 2
         amount: 2
         summary: "When this card would be used, by suspending 2 Digimon, reduce the use cost by 2"
@@ -125,6 +127,7 @@ dual:
                 all_of:
                   - kind: digimon
                   - is_unsuspended: true
+                  - can_change_orientation: true
               prompt: "Suspend 1 Digimon (cost 1/2)"
           - suspend: { target: suspend_1 }
           - select_any_permanent:
@@ -134,6 +137,7 @@ dual:
                 all_of:
                   - kind: digimon
                   - is_unsuspended: true
+                  - can_change_orientation: true
               prompt: "Suspend 1 Digimon (cost 2/2)"
           - suspend: { target: suspend_2 }
 
