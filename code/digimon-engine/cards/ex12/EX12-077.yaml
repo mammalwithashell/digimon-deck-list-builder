@@ -11,6 +11,7 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - any_of:
@@ -66,6 +67,7 @@ effects:
           prompt: "Place 2 [Gammamon]-text or [VB] cards from hand or trash as one Digimon's digivolution cards to delete an opponent Digimon or Tamer"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: source_host
                 filter: { kind: digimon }
                 prompt: "Choose the Digimon that gets the placed cards"
@@ -86,6 +88,7 @@ effects:
                       source: placed_first
                       target: source_host
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: placed_second
@@ -112,6 +115,7 @@ effects:
                             source: placed_second
                             target: source_host
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: victim
                       filter:
                         any_of:

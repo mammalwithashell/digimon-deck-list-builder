@@ -60,12 +60,14 @@ effects:
     summary: "[Inherited][Opp Turn][OPT] When opp Digimon attacks, trash 1 hand card to unsuspend 1 of your [Titan] Digimon"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
           prompt: "Trash 1 card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - select_own_permanent:
+          optional: false
           bind_as: titan
           filter:
             all_of:

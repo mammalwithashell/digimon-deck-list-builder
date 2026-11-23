@@ -106,6 +106,7 @@ effects:
     summary: "[When Digivolving / DNA] Return 1 opp Digimon DP<=6000 to bottom of its owner's deck"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

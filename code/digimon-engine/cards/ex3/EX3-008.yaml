@@ -76,6 +76,7 @@ effects:
                     - other: true
                 prompt: "1 of your other Digimon may digivolve from your trash"
             - select_trash:
+                optional: false
                 of: you
                 bind_as: evo_card
                 filter:

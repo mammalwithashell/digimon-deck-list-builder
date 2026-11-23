@@ -23,6 +23,7 @@ effects:
         n: 1
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: cost_card
           filter:
@@ -109,6 +110,7 @@ effects:
       # Cost 2: trash 1 Option from hand OR any of your Digimon's digivolution
       # cards — one prompt spanning both origins; mandatory.
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, material]
           filter: { kind: option }

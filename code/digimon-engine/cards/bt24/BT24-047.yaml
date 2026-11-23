@@ -33,6 +33,7 @@ effects:
             effect_suspended_any_own_digimon: true
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: unsuspended
                 filter:
                   all_of:

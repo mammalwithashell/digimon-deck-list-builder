@@ -48,7 +48,7 @@ traits: [Vegetation, DATA SQUAD]
 # Alt-digivolve: Lv.3 with the [DATA SQUAD] trait / cost 2.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 3, trait_has: "DATA SQUAD" }
     cost: 2
 
 effects:

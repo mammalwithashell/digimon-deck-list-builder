@@ -132,6 +132,7 @@ effects:
               kind: digimon
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: del_target
                 filter: { kind: digimon }
                 prompt: "Delete 1 of your opponent's Digimon"
@@ -179,6 +180,7 @@ effects:
           prompt: "Return 1 [Kimeramon] from your trash to the bottom of your deck"
       - return_trash_list_to_deck_bottom: { of: you, cards: kim }
       - select_trash:
+          optional: false
           of: you
           bind_as: mach
           filter: { name_is: "Machinedramon" }

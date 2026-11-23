@@ -51,6 +51,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: DM
@@ -117,6 +118,7 @@ effects:
                   trait_has: "Ver.3"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: ver3
                 filter:
                   all_of:

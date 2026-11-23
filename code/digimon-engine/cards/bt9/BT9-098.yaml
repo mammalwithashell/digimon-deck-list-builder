@@ -51,6 +51,7 @@ effects:
   when: on_security
   process:
   - select_trash:
+      optional: false
       of: you
       bind_as: recover
       filter:

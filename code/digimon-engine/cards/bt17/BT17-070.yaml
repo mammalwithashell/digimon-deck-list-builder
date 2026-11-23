@@ -64,7 +64,7 @@ alt_paths:
 
   # [Digivolve] Lv.5 w/[Dark Masters] in text: Cost 3 (any colour).
   - kind: digivolve
-    from: { level_eq: 5, in_text_contains: "Dark Masters" }
+    from: { any_color: true, level_eq: 5, in_text_contains: "Dark Masters" }
     cost: 3
 
 effects:
@@ -109,6 +109,7 @@ effects:
           source: dark_master
           target: source
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

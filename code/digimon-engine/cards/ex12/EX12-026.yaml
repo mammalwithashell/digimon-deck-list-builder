@@ -14,7 +14,7 @@ alt_paths:
     from: { level_eq: 3, color_is: blue }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Shambala }
+    from: { any_color: true, level_eq: 3, trait_has: Shambala }
     cost: 2
 
 effects:
@@ -28,11 +28,13 @@ effects:
     summary: "[On Play][When Digivolving] Trash bottom 2 sources of 1 opponent Digimon; then 1 opponent Digimon with 1 or fewer sources can't attack or block"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: source_target
           filter: { kind: digimon }
           prompt: "Trash the bottom 2 digivolution cards of 1 opponent Digimon"
       - trash_bottom_sources: { target: source_target, count: 2 }
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             all_of:

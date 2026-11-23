@@ -70,6 +70,7 @@ effects:
           then:
             - trash_selected_sources_as_cost: { source_refs: cost_sources }
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   any_of:
@@ -101,6 +102,7 @@ effects:
           source: src1
           target: source
       - select_trash:
+          optional: false
           of: you
           bind_as: src2
           filter:
@@ -112,6 +114,7 @@ effects:
           source: src2
           target: source
       - select_trash:
+          optional: false
           of: you
           bind_as: src3
           filter:

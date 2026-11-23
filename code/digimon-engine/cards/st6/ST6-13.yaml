@@ -39,6 +39,7 @@ effects:
           prompt: "Trash 2 digivolution cards under this Digimon for Digi-Burst 2"
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: lv3_pick
                 filter:

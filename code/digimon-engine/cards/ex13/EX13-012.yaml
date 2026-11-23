@@ -36,6 +36,7 @@ alt_paths:
   # Printed special condition: "[Digivolve] Lv.4 w/[Huckmon] in text: Cost 3".
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 4
       in_text_contains: Huckmon
     cost: 3

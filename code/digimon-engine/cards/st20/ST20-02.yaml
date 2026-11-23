@@ -40,7 +40,7 @@ alt_paths:
     from: { level_eq: 2, color_is: red }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 2, trait_has: ADVENTURE }
     cost: 0
 
 effects:

@@ -17,12 +17,14 @@ alt_paths:
     cost: 5
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - trait_has: TS
     cost: 5
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - name_contains: Aegiochusmon
@@ -41,6 +43,7 @@ effects:
     process:
       - trash_top_security: { of: you }
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Select 1 opponent Digimon to get -13000 DP"

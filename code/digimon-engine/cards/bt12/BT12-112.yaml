@@ -40,6 +40,7 @@ effects:
     when: on_play
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Return to deck"

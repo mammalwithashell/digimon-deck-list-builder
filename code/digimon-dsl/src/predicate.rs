@@ -50,6 +50,9 @@ pub struct PredicateSpec {
     pub materials_count_matches_aggregate: Option<MaterialCountAggregatePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_is: Option<ColorSpec>,
+    /// Intentional colour-free gate. Authoring metadata; imposes no constraint.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub any_color: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_only: Option<Vec<ColorSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1423,7 +1426,10 @@ where
 
 impl PredicateSpec {
     pub fn is_empty(&self) -> bool {
-        self == &Self::default()
+        self == &Self {
+            any_color: self.any_color,
+            ..Self::default()
+        }
     }
 }
 

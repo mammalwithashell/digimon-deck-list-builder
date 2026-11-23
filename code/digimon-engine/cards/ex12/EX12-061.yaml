@@ -18,7 +18,7 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Shambala }
+    from: { any_color: true, level_eq: 2, trait_has: Shambala }
     cost: 0
 
 effects:
@@ -58,6 +58,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

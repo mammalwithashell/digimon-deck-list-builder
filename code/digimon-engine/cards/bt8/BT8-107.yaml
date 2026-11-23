@@ -92,6 +92,7 @@ effects:
       # than or equal to the deleted Digimon's level" — mandatory once the
       # cost is paid (DCGO canNoSelect: false on this second select).
       - select_opponent_permanent:
+          optional: false
           bind_as: opp_target
           filter:
             all_of:
@@ -109,6 +110,7 @@ effects:
     summary: "[Security] Delete 1 of your opponent's unsuspended Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: sec_target
           filter:
             all_of:

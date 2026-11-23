@@ -26,6 +26,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -34,6 +35,7 @@ effects:
           amount: 2
           stop_at_level: 3
       - select_opponent_permanent:
+          optional: false
           bind_as: lower
           filter:
             all_of:

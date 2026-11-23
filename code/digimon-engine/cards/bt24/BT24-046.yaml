@@ -17,6 +17,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - any_of:
@@ -34,6 +35,7 @@ effects:
     summary: "[On Play][When Digivolving] Suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Suspend 1 of your opponent's Digimon"
@@ -46,6 +48,7 @@ effects:
     summary: "[Inherited][When Attacking][OPT] Suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: inherited_target
           filter: { kind: digimon }
           prompt: "Suspend 1 of your opponent's Digimon"

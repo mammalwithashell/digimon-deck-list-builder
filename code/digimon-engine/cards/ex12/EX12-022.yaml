@@ -13,7 +13,7 @@ alt_paths:
     from: { level_eq: 2, color_is: blue }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Shambala }
+    from: { any_color: true, level_eq: 2, trait_has: Shambala }
     cost: 0
 
 effects:

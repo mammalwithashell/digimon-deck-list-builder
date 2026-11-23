@@ -71,7 +71,7 @@ alt_paths:
     from: { level_eq: 4, color_is: red }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 4, trait_has: ADVENTURE }
     cost: 3
 
 effects:
@@ -80,6 +80,7 @@ effects:
     summary: "[On Play][When Digivolving] For the turn, 1 of your Digimon gains <Security A. +1> and +2000 DP for every 2 colors your Tamers have"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: boosted
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Security A. +1> and +2000 DP for every 2 colors your Tamers have, for the turn"
@@ -118,6 +119,7 @@ effects:
         - event_target_trait_has: ADVENTURE
     process:
       - select_own_permanent:
+          optional: false
           bind_as: alliance_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"

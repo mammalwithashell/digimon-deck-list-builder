@@ -11,6 +11,7 @@ effects:
     summary: "[Start of Main] Place 1 Xros Heart/Blue Flare Digimon from hand under this Tamer, gain 1 memory, draw 1"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: stash
           filter:

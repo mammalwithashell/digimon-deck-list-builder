@@ -47,6 +47,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - trait_has: NSo
@@ -61,21 +62,25 @@ effects:
     summary: "[On Play][When Digivolving] Activate the effect below 4 times: 1 of your opponent's Digimon gets -2000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: shrunk_1
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (1 of 4)"
       - add_dp_modifier: { target: shrunk_1, value: -2000, expiry: end_of_turn }
       - select_opponent_permanent:
+          optional: false
           bind_as: shrunk_2
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (2 of 4)"
       - add_dp_modifier: { target: shrunk_2, value: -2000, expiry: end_of_turn }
       - select_opponent_permanent:
+          optional: false
           bind_as: shrunk_3
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (3 of 4)"
       - add_dp_modifier: { target: shrunk_3, value: -2000, expiry: end_of_turn }
       - select_opponent_permanent:
+          optional: false
           bind_as: shrunk_4
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -2000 DP for the turn (4 of 4)"

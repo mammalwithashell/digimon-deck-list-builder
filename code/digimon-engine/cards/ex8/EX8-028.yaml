@@ -134,7 +134,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3". DCGO
   # gates on EqualsTraits("Ice-Snow") && Level == 5 — no color restriction.
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Ice-Snow }
+    from: { any_color: true, level_eq: 5, trait_has: Ice-Snow }
     cost: 3
 
 effects:
@@ -229,6 +229,7 @@ effects:
     summary: "[When Digivolving][When Attacking][Once Per Turn] By placing 1 sourceless Digimon as the bottom security card, this Digimon unsuspends"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: pay
           filter:
             all_of:

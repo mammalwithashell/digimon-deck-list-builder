@@ -47,6 +47,7 @@ effects:
           condition: { effect_returned_any_card: true }
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: unsuspend_target
                 filter:
                   all_of:
@@ -79,6 +80,7 @@ effects:
           condition: { effect_returned_any_card: true }
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: sec_unsuspend_target
                 filter:
                   all_of:
@@ -120,6 +122,7 @@ effects:
     summary: "[Link][When Attacking][OPT] Return 1 opponent lowest-level Digimon to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: wa_bounce
           filter:
             all_of:

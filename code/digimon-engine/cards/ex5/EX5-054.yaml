@@ -62,6 +62,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -75,6 +76,7 @@ effects:
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon/Tamer with play cost <= 3 (+1 per [Etemon]/[Sukamon]-name card in your trash)"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -138,8 +140,8 @@ effects:
       - if:
           condition: { equals: [switch_to, 0] }
           then:
-            - redirect_attack_target: { new_target: source }
+            - redirect_attack_target: { optional: false, new_target: source }
       - if:
           condition: { equals: [switch_to, 1] }
           then:
-            - redirect_attack_target: { player: you }
+            - redirect_attack_target: { optional: false, player: you }

@@ -71,6 +71,7 @@ effects:
     amount: 3
     pay_cost:
       - select_own_permanent:
+          optional: false
           bind_as: suspend_cost
           filter:
             all_of:

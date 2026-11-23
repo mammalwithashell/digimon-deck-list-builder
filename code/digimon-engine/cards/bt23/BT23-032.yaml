@@ -158,7 +158,7 @@ alt_paths:
   # ─── Alt-digivolve: Lv.4 w/[CS] trait / Cost 3 ──────────────────────────────
   # DCGO: AddSelfDigivolutionRequirementStaticEffect(Level4 && HasCSTraits, 3).
   - kind: digivolve
-    from: { level_eq: 4, trait_has: CS }
+    from: { any_color: true, level_eq: 4, trait_has: CS }
     cost: 3
 
   # ─── DNA Digivolve: Yellow Lv.4 + (Black or Blue) Lv.4 / Cost 0 ─────────────
@@ -186,6 +186,7 @@ effects:
     summary: "[When Digivolving] Give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: forced_target
           filter:
             kind: digimon
@@ -215,6 +216,7 @@ effects:
     summary: "[On DNA Digivolve] <De-Digivolve 1> 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"

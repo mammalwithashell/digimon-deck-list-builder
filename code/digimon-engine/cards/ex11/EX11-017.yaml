@@ -143,7 +143,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3". DCGO
   # gates on EqualsTraits("Ice-Snow") && IsLevel5 — no color restriction.
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Ice-Snow }
+    from: { any_color: true, level_eq: 5, trait_has: Ice-Snow }
     cost: 3
 
 effects:
@@ -322,6 +322,7 @@ effects:
       #  cards" = materials_count 0 (EX8-023 idiom); the mandatory select
       #  silently skips when no sourceless opponent Digimon exists.
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             all_of:

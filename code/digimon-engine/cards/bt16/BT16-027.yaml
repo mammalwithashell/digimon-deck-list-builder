@@ -143,6 +143,7 @@ effects:
     summary: "[On Play][When Digivolving] Return 1 opp Digimon with <= this Digimon's digivolution cards to bottom of deck"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:
@@ -171,6 +172,7 @@ effects:
             self_digivolution_sources_contain_name: "Imperialdramon: Dragon Mode"
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: opp_suspended
                 filter:
                   all_of:

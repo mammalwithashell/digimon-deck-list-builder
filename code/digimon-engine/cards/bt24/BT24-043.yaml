@@ -12,6 +12,7 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: TS
@@ -59,6 +60,7 @@ effects:
     summary: "[When Attacking] [Once Per Turn] Suspend 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Suspend 1 of your opponent's Digimon"

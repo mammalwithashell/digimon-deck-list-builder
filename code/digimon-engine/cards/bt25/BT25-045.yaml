@@ -62,7 +62,7 @@ alt_paths:
   # Printed special condition: "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
   # (DCGO AddSelfDigivolutionRequirementStaticEffect: HasAppmonTraits, lvl 2, cost 0).
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:
@@ -97,6 +97,7 @@ effects:
     summary: "[When Linking] Suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: suspend_target
           filter: { kind: digimon }
           prompt: "Suspend 1 of your opponent's Digimon"

@@ -60,6 +60,7 @@ traits: [Beastkin, Glowing Dawn, BEATBREAK]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Glowing Dawn"
@@ -141,7 +142,7 @@ effects:
       - if:
           condition: { equals: [pay_choice, 1] }
           then:
-            - trash_bottom_face_down_source_under_tamer: { of: you }
+            - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
             - select_hand:
                 of: you
                 bind_as: gd_pick_fd
@@ -187,5 +188,5 @@ effects:
       source_permanent_trait_has: "Glowing Dawn"
     summary: "[Inherited][End of Attack][OPT] By trashing a bottom face-down card under a Tamer, this [Glowing Dawn] Digimon unsuspends"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - unsuspend: { target: source }

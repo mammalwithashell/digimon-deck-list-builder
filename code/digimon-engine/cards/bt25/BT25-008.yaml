@@ -49,7 +49,7 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: TS }
+    from: { any_color: true, level_eq: 2, trait_has: TS }
     cost: 0
 
 effects:

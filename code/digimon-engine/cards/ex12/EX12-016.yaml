@@ -17,6 +17,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -54,6 +55,7 @@ effects:
     summary: "<Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -75,6 +77,7 @@ effects:
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with 6000 DP or less; then give 1 of their Digimon a mandatory Start-of-Main attack"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: delete_target
           filter:
             all_of:
@@ -83,6 +86,7 @@ effects:
           prompt: "Delete 1 opponent Digimon with 6000 DP or less"
       - delete_permanent: { target: delete_target }
       - select_opponent_permanent:
+          optional: false
           bind_as: forced_target
           filter: { kind: digimon }
           prompt: "Give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.'"
@@ -106,6 +110,7 @@ effects:
     summary: "[Inherited] <Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source_inherited
           filter:

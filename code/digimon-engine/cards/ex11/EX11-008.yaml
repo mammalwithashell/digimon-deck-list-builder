@@ -32,6 +32,7 @@ effects:
           - trait_has: Dragonkin
     process:
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

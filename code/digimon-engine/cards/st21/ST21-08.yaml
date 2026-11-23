@@ -52,7 +52,7 @@ alt_paths:
     from: { level_eq: 3, color_is: green }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 3, trait_has: ADVENTURE }
     cost: 2
 
 effects:

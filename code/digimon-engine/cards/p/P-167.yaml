@@ -63,6 +63,7 @@ effects:
                 condition: { equals: [dest_choice, 0] }
                 then:
                   - choose_from_reveal:
+                      optional: false
                       of: you
                       filter:
                         any_of:
@@ -75,6 +76,7 @@ effects:
                 condition: { equals: [dest_choice, 1] }
                 then:
                   - choose_from_reveal:
+                      optional: false
                       of: you
                       filter:
                         any_of:
@@ -106,6 +108,7 @@ effects:
     summary: "When this source is trashed from a Mineral/Rock Digimon, De-Digivolve 1"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"

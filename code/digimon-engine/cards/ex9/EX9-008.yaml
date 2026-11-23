@@ -17,7 +17,7 @@ alt_paths:
     cost: 0
 
   - kind: digivolve
-    from: { level_eq: 2, trait_has: DM }
+    from: { any_color: true, level_eq: 2, trait_has: DM }
     cost: 0
     ignore_requirements: true
 

@@ -77,6 +77,7 @@ alt_paths:
   # Special: "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3".
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - in_text_contains: "Three Musketeers"
@@ -123,6 +124,7 @@ effects:
               dp_lte: 6000
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:

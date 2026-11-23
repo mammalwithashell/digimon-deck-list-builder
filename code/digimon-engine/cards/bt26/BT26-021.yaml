@@ -57,6 +57,7 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: TS
@@ -70,6 +71,7 @@ effects:
     summary: "[On Play][When Digivolving] 1 of your [TS] trait Digimon's attack target can't change for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: locked
           filter:
             all_of:
@@ -129,12 +131,14 @@ effects:
     summary: "[Inherited][All Turns][Once Per Turn] When a Digimon attacks, by trashing 1 card in your hand, trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
           prompt: "Trash 1 card in your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - select_opponent_permanent:
+          optional: false
           bind_as: strip
           filter: { kind: digimon }
           prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"

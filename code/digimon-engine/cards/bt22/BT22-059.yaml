@@ -44,7 +44,7 @@ alt_paths:
     from: { level_eq: 4, color_is: black }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: CS }
+    from: { any_color: true, level_eq: 4, trait_has: CS }
     cost: 3
 
 effects:
@@ -53,6 +53,7 @@ effects:
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with play cost <= 5; then with [Arata Sanada]/[Eater Adam] this Digimon is protected until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

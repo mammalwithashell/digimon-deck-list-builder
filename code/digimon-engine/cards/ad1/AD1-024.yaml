@@ -85,7 +85,7 @@ alt_paths:
 
   # xros_req: Lv.5 with [Hero] trait / Cost 5 (any color).
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Hero }
+    from: { any_color: true, level_eq: 5, trait_has: Hero }
     cost: 5
     ignore_requirements: true
 
@@ -116,6 +116,7 @@ effects:
     summary: "[WD][WA][OPT] Return 1 opp lowest-DP Digimon to the deck bottom"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: bounce_target
           selector: lowest_dp
           filter: { kind: digimon }

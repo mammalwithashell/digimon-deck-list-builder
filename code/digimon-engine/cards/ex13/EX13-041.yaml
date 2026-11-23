@@ -71,6 +71,7 @@ effects:
     summary: "[On Play][When Digivolving] Suspend 1 opponent Digimon or Tamer; then 1 opponent Digimon or Tamer can't unsuspend in their next unsuspend phase"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: suspend_target
           filter:
             any_of:
@@ -82,6 +83,7 @@ effects:
           then:
             - suspend: { target: suspend_target }
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:

@@ -55,6 +55,7 @@ effects:
     summary: "[On Play] Delete 1 opp play-cost-5-or-lower Digimon; then return 1 opp-trash Digimon to deck bottom and may play a same-color Lv.4-or-lower Digimon free from hand/trash"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

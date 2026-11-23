@@ -150,6 +150,7 @@ effects:
         - event_target_color_any_of: [red, yellow]
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: marcus_in_trash
           filter: { name_contains: "Marcus Damon" }
@@ -181,6 +182,7 @@ effects:
         - event_target_color_any_of: [red, yellow]
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: marcus_in_trash
           filter: { name_contains: "Marcus Damon" }

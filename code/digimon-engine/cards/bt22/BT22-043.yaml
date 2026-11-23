@@ -38,7 +38,7 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 1
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
 
 effects:

@@ -59,6 +59,7 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: "Glowing Dawn"
@@ -110,6 +111,7 @@ effects:
                 condition: { binding_present: place_pick }
                 then:
                   - select_own_permanent:
+                      optional: false
                       bind_as: gd_tamer
                       filter:
                         all_of:
@@ -123,6 +125,7 @@ effects:
           else:
             # No [Glowing Dawn] Tamer — only the add-to-hand half runs.
             - select_reveal:
+                optional: false
                 of: you
                 bind_as: add_pick
                 filter: { trait_has: "Glowing Dawn" }

@@ -88,7 +88,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2".
   # DCGO gates on EqualsTraits("Ice-Snow") && IsLevel3 — no color restriction.
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Ice-Snow }
+    from: { any_color: true, level_eq: 3, trait_has: Ice-Snow }
     cost: 2
 
 effects:

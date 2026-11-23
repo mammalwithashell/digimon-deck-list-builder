@@ -54,7 +54,7 @@ alt_paths:
     from: { level_eq: 5, color_is: blue }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
   # ─── Assembly -5: Lv.5 × Lv.4 × Lv.3, all w/[Veemon]/[Veedramon] in name ───
   - kind: assembly

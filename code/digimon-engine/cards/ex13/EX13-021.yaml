@@ -71,6 +71,7 @@ effects:
     summary: "[On Play][When Digivolving] Trash the bottom 2 digivolution cards of 1 opponent Digimon; then 1 opponent Digimon or Tamer can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: source_target
           filter: { kind: digimon }
           prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
@@ -79,6 +80,7 @@ effects:
           then:
             - trash_bottom_sources: { target: source_target, count: 2 }
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:

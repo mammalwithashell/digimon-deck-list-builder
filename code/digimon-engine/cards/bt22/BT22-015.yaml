@@ -168,7 +168,7 @@ alt_paths:
   # From official Bandai DB (data/card_bundles/BT22-015.md) and printed card image.
   # This is a cheaper route than the standard Lv.6 Red / Cost 6.
   - kind: digivolve
-    from: { level_eq: 6, trait_has: CS }
+    from: { any_color: true, level_eq: 6, trait_has: CS }
     cost: 5
 
   # DNA digivolve: Lv.6 Greymon-named + Lv.6 Garurumon-named / Cost 0.
@@ -204,6 +204,7 @@ effects:
     summary: "<Decode (Red/Black Lv.3)> play a matching source when this Digimon would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -230,6 +231,7 @@ effects:
     summary: "<Decode (Blue/Yellow Lv.3)> play a matching source when this Digimon would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -265,6 +267,7 @@ effects:
     summary: "[On Play][When Attacking] Delete 1 opp Digimon with lowest DP"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

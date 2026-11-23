@@ -50,7 +50,7 @@ alt_paths:
     from: { level_eq: 2, color_is: blue }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 2, trait_has: ADVENTURE }
     cost: 0
   # [Your Turn] warp into [MetalGarurumon] for 4, ignoring requirements.
   # Same `direction: into` + condition shape as ST20-10 Agumon.
@@ -81,6 +81,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

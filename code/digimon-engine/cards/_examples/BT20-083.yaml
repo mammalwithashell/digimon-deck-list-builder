@@ -16,6 +16,7 @@ effects:
     condition: { security_count_lte: 1 }
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: omni_x
           filter: { name_is: "Omnimon (X Antibody)" }

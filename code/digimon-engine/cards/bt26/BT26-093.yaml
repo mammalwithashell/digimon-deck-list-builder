@@ -82,6 +82,7 @@ effects:
           target: source
           face_down: true
       - select_own_permanent:
+          optional: false
           bind_as: bb
           filter:
             all_of:

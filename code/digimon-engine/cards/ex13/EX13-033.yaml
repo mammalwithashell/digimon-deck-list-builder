@@ -53,6 +53,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - in_text_contains: Witchelny
@@ -106,6 +107,7 @@ effects:
     summary: "[All Turns][OPT] When your security is removed from, 1 opponent Digimon gets -6000 DP for the turn; then, if 3 or fewer security, delete 1 of their 6000 DP or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -6000 DP for the turn"
@@ -117,6 +119,7 @@ effects:
           condition: { security_count_lte: 3 }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter:
                   all_of:

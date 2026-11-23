@@ -117,6 +117,7 @@ alt_paths:
   # printed text), so `in_text_contains`, NOT `trait_has` (see header note).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - in_text_contains: "Three Musketeers"

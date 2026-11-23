@@ -47,6 +47,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -73,6 +74,7 @@ effects:
     summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] <De-Digivolve 3> 1 of your opponent's Digimon. Then, by placing 2 level 5 or lower [Machine]/[Cyborg]/[ME] cards from your hand or trash as bottom digivolution cards, your opponent's effects can't trash any of your Digimon's stacked cards until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigi
           filter: { kind: digimon }
           prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"

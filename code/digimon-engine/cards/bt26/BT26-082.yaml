@@ -50,7 +50,7 @@ alt_paths:
     from: { name_is: "Crowmon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 5, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
@@ -85,6 +85,7 @@ effects:
                       condition: { effect_deleted_any_own_digimon: true }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim
                             selector: highest_dp
                             filter: { kind: digimon }
@@ -95,6 +96,7 @@ effects:
                 then:
                   - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: victim2
                       selector: highest_dp
                       filter: { kind: digimon }
@@ -115,6 +117,7 @@ effects:
                       condition: { effect_deleted_any_own_digimon: true }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim3
                             selector: highest_dp
                             filter: { kind: digimon }
@@ -131,6 +134,7 @@ effects:
           of: opponent
           body:
             - select_hand:
+                optional: false
                 of: opponent
                 bind_as: discarded
                 filter: {}

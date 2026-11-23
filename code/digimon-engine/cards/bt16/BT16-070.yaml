@@ -79,6 +79,7 @@ effects:
           condition: { binding_present: own_pick }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: opp_pick
                 filter:
                   all_of:

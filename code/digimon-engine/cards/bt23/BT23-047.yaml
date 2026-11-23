@@ -20,7 +20,7 @@ alt_paths:
     cost: 5
   # Printed alt: "[Digivolve] Lv.6 w/[CS] trait: Cost 5" (gate-only, same cost).
   - kind: digivolve
-    from: { level_eq: 6, trait_has: CS }
+    from: { any_color: true, level_eq: 6, trait_has: CS }
     cost: 5
   - kind: dna_digivolve
     materials:
@@ -121,11 +121,13 @@ effects:
     summary: "[Your Turn][OPT] When opp security removed, trash 1 opp Option then delete 1 suspended opp Digimon/Tamer"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: opt_target
           filter: { kind: option }
           prompt: "Trash 1 of your opponent's Option cards in the battle area"
       - delete_permanent: { target: opt_target }
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:

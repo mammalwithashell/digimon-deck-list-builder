@@ -16,7 +16,7 @@ alt_paths:
     from: { level_eq: 3, color_is: red }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
     ignore_requirements: true
 

@@ -136,6 +136,7 @@ effects:
     summary: "[All Turns][OPT] When this Digimon gets linked, 1 opp Digimon/Tamer can't digivolve until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: deny_target
           filter:
             any_of:

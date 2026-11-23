@@ -63,7 +63,7 @@ alt_paths:
     from: { level_eq: 5, color_is: red }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
 
 
@@ -133,6 +133,7 @@ effects:
       #  For each of your other Digimon, add 3 to this effect's play cost
       #  maximum." Cap = 6 + 3 * (own battle-area Digimon other than this card).
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

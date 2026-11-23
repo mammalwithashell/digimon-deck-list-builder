@@ -24,6 +24,7 @@ alt_paths:
   # Printed alt: "Lv.4 w/[Xros Heart] trait: Cost 3" (cheaper trait route).
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 4
       trait_has: "Xros Heart"
     cost: 3
@@ -34,6 +35,7 @@ effects:
     summary: "[On Play][When Digivolving] -3000 DP, then delete 3000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: reduced
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -3000 DP"
@@ -42,6 +44,7 @@ effects:
           value: -3000
           expiry: end_of_turn
       - select_opponent_permanent:
+          optional: false
           bind_as: deleted
           filter: { kind: digimon, dp_lte: 3000 }
           prompt: "Delete 1 opponent Digimon with 3000 DP or less"
@@ -52,10 +55,12 @@ effects:
     summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: tamer
           filter: { kind: tamer }
           prompt: "Choose a Tamer to place a card under"
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, trash]
           bind_as: stash

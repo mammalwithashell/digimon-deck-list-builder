@@ -47,7 +47,7 @@ traits: [Beast, DATA SQUAD]
 # Alt-digivolve: Lv.2 with the [DATA SQUAD] trait / cost 0.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 2, trait_has: "DATA SQUAD" }
     cost: 0
 
 effects:

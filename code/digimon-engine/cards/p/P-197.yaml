@@ -14,6 +14,7 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: TS
@@ -51,6 +52,7 @@ effects:
     summary: "[When Attacking][Once Per Turn] 1 opponent Digimon gets -2000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -2000 DP"

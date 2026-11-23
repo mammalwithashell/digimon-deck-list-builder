@@ -48,6 +48,7 @@ effects:
     summary: "[Your Turn][Once Per Turn] When an effect suspends one of your Digimon, 1 of your Digimon gets +2000 DP for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter: { kind: digimon }
           prompt: "Select 1 Digimon that will get DP +2000."

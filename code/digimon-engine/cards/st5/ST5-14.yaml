@@ -24,6 +24,7 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon, is_suspended: true }
           prompt: "Choose 1 of your Digimon to unsuspend"

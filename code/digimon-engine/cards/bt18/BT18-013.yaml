@@ -116,6 +116,7 @@ effects:
           prompt: "Trash 1 card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: cost_card }
       - select_trash:
+          optional: false
           of: you
           bind_as: recover
           filter:

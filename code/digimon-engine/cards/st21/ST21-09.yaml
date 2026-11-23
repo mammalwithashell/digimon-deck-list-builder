@@ -52,7 +52,7 @@ alt_paths:
     from: { level_eq: 4, color_is: green }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 4, trait_has: ADVENTURE }
     cost: 3
 
 effects:
@@ -110,6 +110,7 @@ effects:
         - event_target_trait_has: ADVENTURE
     process:
       - select_own_permanent:
+          optional: false
           bind_as: alliance_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"

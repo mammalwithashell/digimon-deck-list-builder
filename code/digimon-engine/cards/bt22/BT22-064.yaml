@@ -40,6 +40,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -70,6 +71,7 @@ effects:
     summary: "[All Turns][OPT] When any of your other [Unidentified] Digimon are played, delete 1 of your opponent's Digimon with the lowest play cost"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

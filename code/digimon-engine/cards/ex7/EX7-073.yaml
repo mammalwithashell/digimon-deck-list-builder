@@ -165,6 +165,7 @@ alt_paths:
   # `ignore_requirements`). ────────────────────────────────────────────────────
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - trait_has: "Three Musketeers"
@@ -266,6 +267,7 @@ effects:
                           kind: digimon
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim_wd
                             filter:
                               all_of:
@@ -316,6 +318,7 @@ effects:
                           kind: digimon
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim_wa
                             filter:
                               all_of:

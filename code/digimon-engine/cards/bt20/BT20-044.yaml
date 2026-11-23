@@ -29,10 +29,12 @@ effects:
     summary: "[On Play][When Digivolving] Suspend 2 opponent Digimon or Tamers; then 1 of your Digimon may attack"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: first
           filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
           prompt: "Choose the first Digimon or Tamer to suspend"
       - select_opponent_permanent:
+          optional: false
           bind_as: second
           filter:
             not_in_binding: first
@@ -68,6 +70,7 @@ effects:
     summary: "[All Turns][Once Per Turn] When any of your Dracomon/Examon-text Digimon deletes an opponent Digimon in battle, delete 1 suspended opponent Digimon or Tamer"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             is_suspended: true
@@ -88,6 +91,7 @@ effects:
     summary: "Inherited [All Turns][Once Per Turn] When any of your Dracomon/Examon-text Digimon deletes an opponent Digimon in battle, delete 1 suspended opponent Digimon or Tamer"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             is_suspended: true

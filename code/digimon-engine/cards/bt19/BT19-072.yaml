@@ -46,10 +46,11 @@ effects:
         trait_has: "Royal Knight"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: redirect_target
           filter:
             all_of:
               - kind: digimon
               - trait_has: "Royal Knight"
           prompt: "Switch the attack target to 1 of your Royal Knight Digimon"
-      - redirect_attack_target: { new_target: redirect_target }
+      - redirect_attack_target: { optional: false, new_target: redirect_target }

@@ -43082,6 +43082,16 @@
     "rules_conformance::ch18_pending_overwrite.rs::stoppable_loop_repeats_until_its_owner_stops_it"
    ]
   },
+  "predicate:any_color": {
+   "kind": "predicate",
+   "name": "any_color",
+   "near_miss_files": [],
+   "parsed_only": false,
+   "signals": {},
+   "tested": false,
+   "tested_behaviourally": false,
+   "tests": []
+  },
   "predicate:any_field_permanent": {
    "kind": "predicate",
    "name": "any_field_permanent",
@@ -85860,8 +85870,8 @@
     "parsed_only": 7,
     "tested": 208,
     "tested_behaviourally": 201,
-    "total": 240,
-    "untested": 32,
+    "total": 241,
+    "untested": 33,
     "used_by_cards": 213,
     "used_untested": 24
    },

@@ -114,6 +114,7 @@ effects:
       # Cost (b): 1 Lv.4 + 1 Lv.5 yellow [Holy Beast] Digimon card from trash
       # as 1 of your [Kudamon]'s bottom digivolution cards.
       - select_own_permanent:
+          optional: false
           bind_as: kudamon
           filter:
             all_of:
@@ -130,6 +131,7 @@ effects:
           condition: { equals: [bottom_order, 0] }
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: first_material
                 filter:
@@ -137,6 +139,7 @@ effects:
                 prompt: "Place 1 level 4 yellow [Holy Beast] trait Digimon card from your trash as this [Kudamon]'s bottom digivolution card"
             - place_as_bottom_source: { source: first_material, target: kudamon }
             - select_trash:
+                optional: false
                 of: you
                 bind_as: second_material
                 filter:
@@ -145,6 +148,7 @@ effects:
             - place_as_bottom_source: { source: second_material, target: kudamon }
           else:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: first_material
                 filter:
@@ -152,6 +156,7 @@ effects:
                 prompt: "Place 1 level 5 yellow [Holy Beast] trait Digimon card from your trash as this [Kudamon]'s bottom digivolution card"
             - place_as_bottom_source: { source: first_material, target: kudamon }
             - select_trash:
+                optional: false
                 of: you
                 bind_as: second_material
                 filter:

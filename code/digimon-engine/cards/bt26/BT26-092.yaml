@@ -92,7 +92,7 @@ effects:
                   - if:
                       condition: { binding_present: new_defender }
                       then:
-                        - redirect_attack_target: { new_target: new_defender }
+                        - redirect_attack_target: { optional: false, new_target: new_defender }
 
   - text: "[Security] Play this card without paying the cost."
     when: on_security

@@ -130,6 +130,7 @@ effects:
     summary: "<Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -157,6 +158,7 @@ effects:
     summary: "[Inherited] <Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source_inh
           filter:

@@ -44,6 +44,7 @@ effects:
             any_of: [{color_is: purple}, {color_is: yellow}]
     process:
       - select_own_permanent:
+          optional: false
           bind_as: host
           filter:
             kind: tamer
@@ -86,6 +87,7 @@ effects:
     once_per_turn: true
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: {kind: digimon}
           prompt: Choose 1 opponent Digimon to get -4000 DP for the turn

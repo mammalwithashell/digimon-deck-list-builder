@@ -15,6 +15,7 @@ effects:
     summary: "[Main] 1 of your Digimon gets +3000 DP for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to get +3000 DP for the turn"

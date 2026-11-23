@@ -188,10 +188,10 @@ alt_paths:
   # DCGO gates on (CS-trait || Greymon-name) && Lv.5 — no color restriction.
   # Encoded as two alt_paths (one per branch of the disjunction), matching P-215 idiom.
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "Greymon" }
+    from: { any_color: true, level_eq: 5, name_contains: "Greymon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
 
 effects:
@@ -241,6 +241,7 @@ effects:
             this_card_can_digivolve_onto: { cost: 6, ignore_requirements: true }
     process:
       - select_own_permanent:
+          optional: false
           bind_as: base
           filter:
             all_of:
@@ -333,6 +334,7 @@ effects:
           condition: { equals: [branch, 1] }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:

@@ -50,6 +50,7 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -86,6 +87,7 @@ effects:
     summary: "[On Play][When Digivolving] 1 of your Digimon with the [Shambala] trait gains <Security A. +1> and <Progress> for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: boosted
           filter:
             all_of:

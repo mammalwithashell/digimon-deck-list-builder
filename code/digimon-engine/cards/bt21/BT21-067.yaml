@@ -43,6 +43,7 @@ alt_paths:
   # [Digivolve] Lv.3 w/[Gabumon] in name or w/[ADVENTURE] trait: Cost 2.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - any_of:
@@ -83,6 +84,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

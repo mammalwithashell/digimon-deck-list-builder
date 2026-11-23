@@ -97,6 +97,7 @@ alt_paths:
   # [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 4 (whole-card HasText).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - in_text_contains: "Three Musketeers"
@@ -148,6 +149,7 @@ effects:
     summary: "[End of Your Turn][OPT] By trashing 1 Option from this Digimon's digivolution cards, 1 of your [Three Musketeers] Digimon gains <Security A. +1> for the turn and attacks"
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [material]
           material_of: source
@@ -157,6 +159,7 @@ effects:
       - trash_union_bound:
           binding: option_source
       - select_own_permanent:
+          optional: false
           bind_as: attacker
           filter:
             all_of:

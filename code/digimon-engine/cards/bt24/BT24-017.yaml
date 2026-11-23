@@ -131,6 +131,7 @@ effects:
       # target-legality. If no opponent Digimon exist the step installs no
       # selection (no-op).
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: { kind: digimon }
           selector: lowest_dp

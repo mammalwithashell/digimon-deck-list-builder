@@ -10,6 +10,7 @@ traits: [Composite, Xros Heart, Blue Flare]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:

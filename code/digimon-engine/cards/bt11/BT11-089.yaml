@@ -82,6 +82,7 @@ effects:
           of: you
           count: 4
       - choose_from_reveal:
+          optional: false
           of: you
           filter:
             all_of:

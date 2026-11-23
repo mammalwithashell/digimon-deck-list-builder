@@ -54,14 +54,16 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter:
+            - optional: false
+              filter:
                 any_of:
                   - name_contains: Sukamon
                   - name_contains: Etemon
               to: hand
               max: 1
               prompt: "Add 1 card with [Sukamon] or [Etemon] in its name to the hand"
-            - filter:
+            - optional: false
+              filter:
                 any_of:
                   - name_contains: Sukamon
                   - name_contains: Etemon
@@ -82,6 +84,7 @@ effects:
     summary: "Inherited [All Turns][OPT] By deleting 1 other [Sukamon]-named Digimon, this Digimon doesn't leave (not by your effects)"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: prevent_cost
           filter:
             all_of:

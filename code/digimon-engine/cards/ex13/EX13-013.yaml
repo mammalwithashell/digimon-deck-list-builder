@@ -52,6 +52,7 @@ effects:
     summary: "[When Digivolving][When Attacking] Delete 1 opp Digimon with 5000 DP or less; if this effect didn't delete, this Digimon gains <Piercing> and +3000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

@@ -48,6 +48,7 @@ effects:
     summary: "[When Moving][When Digivolving] Trash 1 card in your hand. Then your opponent may trash 1 card in their hand; if they didn't, trash the top 2 cards of their deck"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: own_trash
           filter: {}

@@ -36,6 +36,7 @@ effects:
     summary: "[Main] Suspend 1 opponent Digimon or Tamer; it cannot unsuspend next unsuspend phase; then optionally link this card"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             any_of:
@@ -62,6 +63,7 @@ effects:
     summary: "[Security] Activate [Main] effects: suspend 1 opponent Digimon or Tamer; it cannot unsuspend; then optionally link this card"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: sec_target
           filter:
             any_of:

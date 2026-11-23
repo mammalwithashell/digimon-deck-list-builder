@@ -29,6 +29,7 @@ effects:
     summary: "Trash any 3 digivolution cards of 1 opponent Digimon. Then delete 1 opponent Digimon with no digivolution cards."
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: host
           filter: { kind: digimon, source_count: { filter: {}, at_least: 1 } }
           prompt: "Choose 1 opponent Digimon to trash sources from"
@@ -42,6 +43,7 @@ effects:
           then:
             - trash_selected_sources: { source_refs: stripped }
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             kind: digimon

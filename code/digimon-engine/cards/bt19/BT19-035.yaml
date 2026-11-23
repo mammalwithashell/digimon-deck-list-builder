@@ -13,6 +13,7 @@ digixros_aliases: [Starmons]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Xros Heart"
@@ -30,6 +31,7 @@ effects:
     summary: "[All Turns][OPT] When your Xros Heart Digimon is played, give 1 opponent Digimon Security A. -1 and -3000 DP"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon for Security A. -1 and -3000 DP"
@@ -55,6 +57,7 @@ effects:
           condition: { binding_present: tamer }
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: stash
@@ -77,6 +80,7 @@ effects:
     summary: "[Inherited][When Attacking][OPT] If carrier has Xros Heart, 1 opponent Digimon gets -2000 DP"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -2000 DP"

@@ -91,6 +91,7 @@ dual:
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Glowing Dawn"
@@ -104,7 +105,7 @@ effects:
     condition: { face_down_sources_under_tamers_gte: 1 }
     summary: "[When Digivolving] By trashing the bottom face-down card from under any of your Tamers, until your opponent's turn ends, their Digimon effects don't affect this Digimon, and it gets +3000 DP"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - grant_effect_immunity:
           target: source
           source_kind: digimon
@@ -136,6 +137,7 @@ effects:
     summary: "[Main] <De-Digivolve 1> 1 of your opponent's Digimon. Then, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
@@ -144,6 +146,7 @@ effects:
           amount: 1
           stop_at_level: 3
       - select_opponent_permanent:
+          optional: false
           bind_as: taunt_target
           filter: { kind: digimon }
           prompt: "Give 1 of your opponent's Digimon \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends"

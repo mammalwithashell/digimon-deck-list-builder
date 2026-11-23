@@ -18,6 +18,7 @@ alt_paths:
     cost: 1
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 2
       any_of:
         - trait_has: "Xros Heart"

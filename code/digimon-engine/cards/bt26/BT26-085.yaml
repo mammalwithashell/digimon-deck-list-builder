@@ -100,6 +100,7 @@ effects:
     summary: "[All Turns] When this Digimon would leave the battle area, by digivolving it into [Chronomon: Destroy Mode] in the hand or trash without paying the cost, it doesn't leave"
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, trash]
           bind_as: destroy_mode

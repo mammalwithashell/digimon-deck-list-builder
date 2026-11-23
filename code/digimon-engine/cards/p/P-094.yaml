@@ -189,6 +189,7 @@ effects:
     process:
       # 1) Choose 1 of your [Galacticmon] that carries ≥2 [Vemmon] sources.
       - select_own_permanent:
+          optional: false
           bind_as: chosen_galacticmon
           filter:
             all_of:
@@ -211,4 +212,4 @@ effects:
                 source_refs: returned_vemmon
                 position: bottom
             # 3) Switch the attack target to this Digimon.
-            - redirect_attack_target: {}
+            - redirect_attack_target: {optional: false}

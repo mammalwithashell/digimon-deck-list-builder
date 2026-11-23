@@ -48,7 +48,7 @@ alt_paths:
     from: { name_is: "Lilamon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 5, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:

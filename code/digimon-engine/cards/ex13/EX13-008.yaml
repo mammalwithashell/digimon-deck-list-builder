@@ -48,6 +48,7 @@ effects:
     process:
       - reveal_top_deck: { of: you, count: 3 }
       - choose_from_reveal:
+          optional: false
           of: you
           filter:
             any_of:

@@ -45,6 +45,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: TS
@@ -81,6 +82,7 @@ effects:
           prompt: "Trash 1 card in your hand to delete 1 level 4 or lower Digimon"
       - trash_from_hand_by_index: { of: you, hand_index: cost_card }
       - select_any_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

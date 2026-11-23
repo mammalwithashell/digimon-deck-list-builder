@@ -28,6 +28,7 @@ effects:
     when: [when_digivolving, when_attacking]
     process:
       - select_opponent_permanent:
+          optional: false
           filter: {kind: digimon}
           bind_as: victim
           prompt: Give 1 opponent Digimon -4000 DP for the turn
@@ -81,6 +82,7 @@ effects:
     when: when_attacking
     process:
       - select_opponent_permanent:
+          optional: false
           filter: {kind: digimon}
           bind_as: victim
           prompt: Give 1 opponent Digimon -4000 DP for the turn

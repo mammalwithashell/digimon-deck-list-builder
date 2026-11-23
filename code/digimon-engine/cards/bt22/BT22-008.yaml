@@ -112,6 +112,7 @@ alt_paths:
   # — admits any-color Koromon OR any-color Lv.2 CS-trait Digimon.
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Koromon
         - all_of:

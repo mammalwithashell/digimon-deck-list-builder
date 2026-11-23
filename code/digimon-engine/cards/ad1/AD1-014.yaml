@@ -21,6 +21,7 @@ traits: [Cyborg, ADVENTURE, Hero]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -88,6 +89,7 @@ effects:
     summary: "[OP][WD][WA][OPT] Delete 1 opp L5- Digimon, then lock floor(tamer-colors/2) opp Digimon/Tamers"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:
@@ -207,6 +209,7 @@ effects:
                 kind: tamer
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: inh_lock
           filter:
             any_of:

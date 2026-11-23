@@ -150,6 +150,7 @@ alt_paths:
   # DCGO: EqualsCardName("Patamon") || (IsLevel3 && HasCSTraits).
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Patamon
         - all_of:

@@ -48,7 +48,7 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 3, trait_has: "DATA SQUAD" }
     cost: 2
 
 effects:
@@ -66,6 +66,7 @@ effects:
     summary: "[OnPlay/WhenDigivolving] If <=1 Tamers, may play 1 [Thomas H. Norstein] from hand without paying the cost"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: thomas
           # Only a Thomas the free play would accept (DCGO BT25_023.cs:53-57

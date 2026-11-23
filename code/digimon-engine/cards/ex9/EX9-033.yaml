@@ -18,7 +18,7 @@ alt_paths:
     cost: 4
 
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Puppet }
+    from: { any_color: true, level_eq: 5, trait_has: Puppet }
     cost: 3
     ignore_requirements: true
 
@@ -57,6 +57,7 @@ effects:
         - event_permanent_is_source: false
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

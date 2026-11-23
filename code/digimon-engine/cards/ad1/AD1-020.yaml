@@ -69,6 +69,7 @@ effects:
         can_attack: {targets: any}
     process:
       - may_attack_now:
+          optional: false
           attacker: source
           targets: any
           cost_upgrade: {security_attack: 1}

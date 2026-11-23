@@ -93,6 +93,7 @@ alt_paths:
   # trait, cost 2 (requirement-respecting — colour check still applies). ───────
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 3
       any_of:
         - effect_text_contains: "Three Musketeers"
@@ -188,6 +189,7 @@ effects:
         n: 1
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, trash]
           bind_as: tm_card

@@ -70,6 +70,7 @@ effects:
       # `selector: highest_dp` restricts the prompt to the highest-DP
       # opponent Digimon; ties expose every tied permanent.
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           selector: highest_dp
           filter:
@@ -202,6 +203,7 @@ effects:
           then:
             # Select a Reptile/Dragonkin card from hand to digivolve into.
             - select_hand:
+                optional: false
                 of: you
                 bind_as: evo_card
                 filter:
@@ -243,6 +245,7 @@ effects:
     summary: "[Security] Delete 1 opponent highest-DP Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           selector: highest_dp
           filter:

@@ -47,6 +47,7 @@ effects:
     summary: "[On Play][When Digivolving] Opponent Digimon effects don't affect 1 of your Digimon"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: protected
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to protect from opponent Digimon effects"
@@ -61,6 +62,7 @@ effects:
     summary: "[Security] De-Digivolve 1, then delete opponent Digimon with play cost 3 or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
@@ -73,6 +75,7 @@ effects:
       # when a cost-≤3 target exists the controller must delete it. With no valid
       # target the select no-ops (delete is the final step, so nothing is lost).
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -97,6 +100,7 @@ effects:
             - event_card_text_contains: Lucemon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"

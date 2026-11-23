@@ -87,6 +87,7 @@ effects:
         n: 1
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: pick
           # DCGO BT22_084.cs:84-89: IsDigimon && (EqualsCardName("Agumon") ||

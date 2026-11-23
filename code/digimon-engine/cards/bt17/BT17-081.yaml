@@ -166,6 +166,7 @@ effects:
         can_attack: { targets: player }
     process:
       - select_own_permanent:
+          optional: false
           bind_as: attacker
           # DCGO BT17_081.cs IsOmnimonPermanentCondition: CanAttack.
           filter:

@@ -44,11 +44,13 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter: { in_text_contains: Leopardmon }
+            - optional: false
+              filter: { in_text_contains: Leopardmon }
               to: hand
               max: 1
               prompt: "Add 1 card with [Leopardmon] in its text to the hand"
-            - filter:
+            - optional: false
+              filter:
                 all_of:
                   - kind: digimon
                   - any_of:

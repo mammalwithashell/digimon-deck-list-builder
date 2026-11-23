@@ -135,10 +135,10 @@ alt_paths:
     cost: 1
   # Printed alt: "[Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3".
   - kind: digivolve
-    from: { level_eq: 4, name_contains: "Greymon" }
+    from: { any_color: true, level_eq: 4, name_contains: "Greymon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 4, trait_has: ADVENTURE }
     cost: 3
 
 effects:
@@ -160,6 +160,7 @@ effects:
     summary: "[On Play][When Digivolving] Delete 1 opp Digimon with DP 8000 or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:

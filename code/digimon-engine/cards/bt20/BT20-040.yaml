@@ -18,7 +18,7 @@ alt_paths:
     from: { level_eq: 3, color_is: red }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 3, name_contains: Dracomon }
+    from: { any_color: true, level_eq: 3, name_contains: Dracomon }
     cost: 2
 effects:
   - text: "＜Raid＞"

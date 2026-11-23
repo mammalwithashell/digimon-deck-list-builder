@@ -29,11 +29,13 @@ effects:
     summary: "[On Deletion] Place 1 Royal Knight Digimon from hand under your King Drasil_7D6 in breeding"
     process:
       - select_own_breeding_permanent:
+          optional: false
           bind_as: kd
           filter: { name_is: "King Drasil_7D6" }
           prompt: "Choose your [King Drasil_7D6] in the breeding area"
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: rk
                 filter:

@@ -110,6 +110,7 @@ effects:
       # G-PRED-DP-LTE: dp_lte filter compiled but not evaluated at runtime yet;
       # all opponent Digimon will be offered until the gap closes.
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

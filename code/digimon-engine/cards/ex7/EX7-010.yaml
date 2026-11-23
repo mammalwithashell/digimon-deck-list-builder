@@ -90,6 +90,7 @@ alt_paths:
   # Special: "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2".
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - in_text_contains: "Three Musketeers"
@@ -114,6 +115,7 @@ effects:
       # Host pick — ANY Digimon on either battle area that carries at least
       # one Option digivolution card (official Q&A: yours or the opponent's).
       - select_any_permanent:
+          optional: false
           bind_as: host
           filter:
             all_of:

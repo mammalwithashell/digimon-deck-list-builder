@@ -181,6 +181,7 @@ effects:
       # `CanPlayCardTargetFrame(target, PayCost: true, ...)` with the -4
       # applied: a route onto `target` AND the reduced cost payable.
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:

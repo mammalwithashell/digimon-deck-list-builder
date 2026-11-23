@@ -73,6 +73,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - any_of:
@@ -112,6 +113,7 @@ effects:
           prompt: "Trash 1 card in your hand: 1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Jamming> and <Blocker>"
       - trash_from_hand_by_index: { of: you, hand_index: cost_card }
       - select_own_permanent:
+          optional: false
           bind_as: buff
           filter:
             all_of:

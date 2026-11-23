@@ -78,7 +78,7 @@ alt_paths:
     cost: 4
   # Alt-digivolution: Lv.4 with [TS] trait / cost 3 (printed digivolve box).
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
@@ -93,6 +93,7 @@ effects:
     process:
       # "1 of your Digimon gets +3000 DP for the turn." — mandatory pick.
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter: { kind: digimon }
           prompt: "Select 1 of your Digimon to gain +3000 DP for the turn"
@@ -125,6 +126,7 @@ effects:
       event_target_dp_gte: 13000
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:

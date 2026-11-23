@@ -23,6 +23,7 @@ alt_paths:
 
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - name_contains: "Gallantmon"

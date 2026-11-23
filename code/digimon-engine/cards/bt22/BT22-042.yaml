@@ -74,6 +74,7 @@ effects:
                 condition: { equals: [puppet_choice, 0] }
                 then:
                   - select_hand:
+                      optional: false
                       of: you
                       bind_as: puppet
                       filter:
@@ -85,6 +86,7 @@ effects:
                       prompt: "Play 1 level 4 or lower [Puppet] Digimon from hand"
                   - play_from_hand_free: { of: you, hand_index: puppet }
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Give -3000 DP per own Digimon"

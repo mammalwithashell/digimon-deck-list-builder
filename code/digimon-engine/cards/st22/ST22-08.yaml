@@ -179,6 +179,7 @@ effects:
     summary: "[Security] Delete opponent's lowest-DP Digimon, then add this card to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -211,6 +212,7 @@ effects:
       # "1 of your Digimon" — the DP comparator (mandatory pick, DCGO
       # canNoSelect: false). Bound as `ally` for the dp_lte formula below.
       - select_own_permanent:
+          optional: false
           bind_as: ally
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon (the DP comparator)"
@@ -218,6 +220,7 @@ effects:
       # your Digimon" — only opponent Digimon with DP <= the chosen ally's
       # effective DP are eligible (binding_dp formula).
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

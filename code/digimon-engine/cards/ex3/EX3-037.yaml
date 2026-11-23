@@ -29,7 +29,8 @@ effects:
           of: you
           count: 4
           buckets:
-            - filter:
+            - optional: false
+              filter:
                 all_of:
                   - name_contains: Dramon
                   - any_of:
@@ -38,7 +39,8 @@ effects:
               to: hand
               max: 1
               prompt: "Add 1 green or blue card with [Dramon] in its name"
-            - filter: { name_contains: Examon }
+            - optional: false
+              filter: { name_contains: Examon }
               to: hand
               max: 1
               prompt: "Add 1 card with [Examon] in its name"

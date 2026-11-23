@@ -103,6 +103,7 @@ effects:
           prompt: "Choose 1 of your purple Digimon to digivolve"
       # Step 2: choose the digivolve target from hand.
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           # DCGO DigivolveIntoHandOrTrashCard (CardEffectCommons.cs:859-885,

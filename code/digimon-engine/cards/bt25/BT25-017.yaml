@@ -75,7 +75,7 @@ alt_paths:
     cost: 3
   # Alt-digivolution: Lv.4 with [TS] trait / cost 3 (printed digivolve box).
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
@@ -102,6 +102,7 @@ effects:
             - trash_from_hand_by_index: { of: you, hand_index: trashed }
             # "delete 1 of your opponent's Digimon with 7000 DP or less."
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:
@@ -122,6 +123,7 @@ effects:
       event_target_owner: you
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           # DCGO BT25_017.cs:150-166: EqualsCardName("Apollomon") (the printed

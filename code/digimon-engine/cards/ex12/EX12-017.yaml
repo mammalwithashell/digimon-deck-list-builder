@@ -17,6 +17,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -84,6 +85,7 @@ effects:
     summary: "<Decode (Lv.5 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -106,6 +108,7 @@ effects:
     summary: "[On Play][When Digivolving][When Attacking][OPT] De-Digivolve 2 one opponent Digimon, then delete 1 opponent lowest-DP Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: degen_target
           filter: { kind: digimon }
           prompt: "De-Digivolve 2 one opponent Digimon"
@@ -114,6 +117,7 @@ effects:
           amount: 2
           stop_at_level: 3
       - select_opponent_permanent:
+          optional: false
           bind_as: delete_target
           selector: lowest_dp
           filter: { kind: digimon }

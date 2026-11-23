@@ -14,7 +14,7 @@ alt_paths:
     from: { level_eq: 3, color_is: red }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Shambala }
+    from: { any_color: true, level_eq: 3, trait_has: Shambala }
     cost: 2
 
 effects:
@@ -26,6 +26,7 @@ effects:
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with 5000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: delete_target
           filter:
             all_of:

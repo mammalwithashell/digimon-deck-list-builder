@@ -70,6 +70,7 @@ alt_paths:
   # cost 3, requirements respected (colour gate replaced by the name/trait box).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:

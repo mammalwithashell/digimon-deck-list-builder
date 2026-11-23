@@ -86,6 +86,7 @@ alt_paths:
   # xros_req; DCGO PermanentCondition: IsLevel4 && HasTSTraits).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: TS

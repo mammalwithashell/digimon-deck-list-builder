@@ -215,6 +215,7 @@ effects:
     summary: "[All Turns][Once Per Turn] When any [Vemmon] are returned to the bottom of the deck from this Digimon's digivolution cards, delete 1 opponent Digimon with play cost 4 or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon, play_cost_lte: 4 }
           prompt: "Choose 1 opponent Digimon with play cost 4 or less to delete"

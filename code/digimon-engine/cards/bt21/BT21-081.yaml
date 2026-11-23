@@ -69,6 +69,7 @@ effects:
       - suspend: { target: source }
       # Select 1 Reptile/Dragonkin Digimon to receive Piercing.
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

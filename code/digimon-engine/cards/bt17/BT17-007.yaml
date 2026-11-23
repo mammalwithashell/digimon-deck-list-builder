@@ -74,6 +74,7 @@ effects:
         name_contains: "Tai Kamiya"
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: pick
           filter:

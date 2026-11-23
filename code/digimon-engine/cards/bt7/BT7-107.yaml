@@ -41,6 +41,7 @@ effects:
     summary: "[Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards from your trash to your hand"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter: { kind: digimon }
           prompt: "Delete 1 of your Digimon"

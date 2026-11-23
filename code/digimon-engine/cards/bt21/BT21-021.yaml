@@ -97,6 +97,7 @@ alt_paths:
   # 3) Lv.4 [Xros Heart] or [Hero] trait digivolve: Cost 3 (xros_req)
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 4
       any_of:
         - trait_has: "Xros Heart"
@@ -184,6 +185,7 @@ effects:
                 condition: { equals: [zone_choice, 0] }
                 then:
                   - select_hand:
+                      optional: false
                       of: you
                       bind_as: source_card
                       filter:
@@ -200,6 +202,7 @@ effects:
                 condition: { equals: [zone_choice, 1] }
                 then:
                   - select_trash:
+                      optional: false
                       of: you
                       bind_as: source_card
                       filter:

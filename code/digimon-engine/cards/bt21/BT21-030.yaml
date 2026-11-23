@@ -11,6 +11,7 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - trait_has: Hero
@@ -28,6 +29,7 @@ effects:
         materials_count_gte: 1
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

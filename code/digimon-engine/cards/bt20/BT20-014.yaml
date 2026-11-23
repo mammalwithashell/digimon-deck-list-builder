@@ -25,6 +25,7 @@ effects:
     summary: "Delete 1 opponent Digimon with 5000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

@@ -42,7 +42,8 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter:
+            - optional: false
+              filter:
                 all_of:
                   - kind: digimon
                   - any_of:
@@ -51,7 +52,8 @@ effects:
               to: hand
               max: 1
               prompt: "Add 1 Digimon card with [Huckmon] or [Sistermon] in its text to the hand"
-            - filter:
+            - optional: false
+              filter:
                 all_of:
                   - any_of:
                       - kind: tamer

@@ -40,6 +40,7 @@ alt_paths:
   # [Digivolve] Lv.4 w/[Gargomon] or [Rapidmon] in name: Cost 3.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -58,6 +59,7 @@ effects:
           condition: { any_permanent: { of: opponent, kind: digimon } }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: dedigivolve_target
                 filter: { kind: digimon }
                 prompt: "Choose 1 opponent Digimon to De-Digivolve 1"

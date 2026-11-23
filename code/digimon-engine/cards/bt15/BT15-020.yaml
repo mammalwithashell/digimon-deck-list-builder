@@ -69,6 +69,7 @@ effects:
               kind: digimon
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: tgt
                 filter: { kind: digimon }
                 prompt: "Choose 1 of your Digimon to gain Blocker"

@@ -74,6 +74,7 @@ effects:
         - event_target_in_text_contains: Knightmon
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, trash]
           bind_as: knight_card

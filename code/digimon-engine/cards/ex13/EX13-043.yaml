@@ -157,6 +157,7 @@ effects:
     summary: "[All Turns][OPT] When any of your suspended Digimon would leave other than by your effects, by unsuspending 1 of your Digimon, they don't leave"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: to_unsuspend
           filter:
             all_of:

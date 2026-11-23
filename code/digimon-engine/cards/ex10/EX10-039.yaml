@@ -56,6 +56,7 @@ effects:
           condition: { equals: [zone_choice, 0] }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: placed_pick
                 filter:
@@ -64,6 +65,7 @@ effects:
                     - trait_has: "Bagra Army"
                 prompt: "Select 1 [Bagra Army] trait Digimon card to place"
             - select_own_permanent:
+                optional: false
                 bind_as: dest
                 filter:
                   all_of:
@@ -77,6 +79,7 @@ effects:
                 target: dest
           else:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: placed_pick
                 filter:
@@ -85,6 +88,7 @@ effects:
                     - trait_has: "Bagra Army"
                 prompt: "Select 1 [Bagra Army] trait Digimon card to place"
             - select_own_permanent:
+                optional: false
                 bind_as: dest
                 filter:
                   all_of:

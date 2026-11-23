@@ -51,6 +51,7 @@ effects:
     summary: "[Start of Your Main Phase] If you have 4 or less memory, suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: suspend_target
           filter: { kind: digimon }
           prompt: "Suspend 1 of your opponent's Digimon"

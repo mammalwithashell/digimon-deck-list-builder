@@ -39,11 +39,13 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter: { in_text_contains: Mamemon }
+            - optional: false
+              filter: { in_text_contains: Mamemon }
               to: hand
               max: 1
               prompt: "Add 1 card with [Mamemon] in its text to the hand"
-            - filter: { trait_has: Mutant }
+            - optional: false
+              filter: { trait_has: Mutant }
               to: hand
               max: 1
               prompt: "Add 1 card with the [Mutant] trait to the hand"
@@ -54,6 +56,7 @@ effects:
     summary: "Inherited [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigi
           filter: { kind: digimon }
           prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"

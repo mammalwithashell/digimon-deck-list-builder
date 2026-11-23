@@ -180,6 +180,7 @@ effects:
     summary: "[OP][WD] Choose 1 of opponent's highest play cost Digimon and delete all their other Digimon. Then, if 4+ [Vemmon] sources, gain Blocker + opp-effect immunity until end of opp turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: kept
           filter: { kind: digimon }
           selector: highest_play_cost

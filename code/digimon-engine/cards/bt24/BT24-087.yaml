@@ -95,6 +95,7 @@ effects:
       - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

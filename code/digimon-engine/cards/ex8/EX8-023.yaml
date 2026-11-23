@@ -122,7 +122,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3". DCGO
   # gates on EqualsTraits("Ice-Snow") && Level == 4.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: Ice-Snow }
+    from: { any_color: true, level_eq: 4, trait_has: Ice-Snow }
     cost: 3
 
 effects:
@@ -198,6 +198,7 @@ effects:
       # (sibling steps — the dispatcher parks this outer tail across the
       # in-branch source selection, so it runs in every ladder arm).
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             all_of:

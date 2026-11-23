@@ -61,7 +61,7 @@ traits: [Fairy, DATA SQUAD]
 # Alt-digivolve: Lv.4 with the [DATA SQUAD] trait / cost 3.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 4, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
@@ -76,6 +76,7 @@ effects:
       # their turn ends." — DCGO canNoSelect:false → mandatory when a target
       # exists; the selection short-circuits cleanly when none do.
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:
@@ -147,5 +148,5 @@ effects:
             - source_permanent_trait_has: "DATA SQUAD"
     summary: "Inherited [All Turns][OPT] When this [Rosemon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}

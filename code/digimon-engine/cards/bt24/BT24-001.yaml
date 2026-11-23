@@ -44,6 +44,7 @@ effects:
     summary: "[Your Turn] [OPT] When opp security removed, you may delete 1 opp Digimon with 3000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

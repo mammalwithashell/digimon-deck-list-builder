@@ -83,6 +83,7 @@ effects:
           prompt: "You may place 1 blue level 3 Digimon card from your hand as the bottom digivolution card of 1 of your blue Digimon to have this Digimon gain <Jamming> for the turn"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: host
                 filter:
                   all_of:

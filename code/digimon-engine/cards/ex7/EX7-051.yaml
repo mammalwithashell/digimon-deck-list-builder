@@ -77,6 +77,7 @@ alt_paths:
   # Special: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0".
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - in_text_contains: "Three Musketeers"
@@ -113,6 +114,7 @@ effects:
       # NOT a token. `kind: digimon` accepts tokens on the field
       # (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT), so exclude them explicitly.
       - select_own_permanent:
+          optional: false
           bind_as: host
           filter:
             all_of:

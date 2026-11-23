@@ -142,6 +142,7 @@ effects:
           prompt: "Choose 1 of your Digimon to digivolve"
       # DCGO: cardCondition: IsDigimon && HasCardColor(Red)
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:

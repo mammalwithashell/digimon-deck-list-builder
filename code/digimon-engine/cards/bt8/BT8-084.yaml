@@ -102,7 +102,7 @@ alt_paths:
   # EvoCosts row per colour). A rainbow circle is ANY colour, so the gate carries
   # no `color_is` — the Ukkomon (BT16-082) idiom. cards.json holds it as seven rows.
   - kind: digivolve
-    from: { level_eq: 4 }
+    from: { any_color: true, level_eq: 4 }
     cost: 4
   - kind: dna_digivolve
     materials:

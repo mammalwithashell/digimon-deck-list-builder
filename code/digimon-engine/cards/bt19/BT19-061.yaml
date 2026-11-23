@@ -20,6 +20,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Xros Heart"
@@ -65,6 +66,7 @@ effects:
           condition: { binding_present: tamer }
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: stash

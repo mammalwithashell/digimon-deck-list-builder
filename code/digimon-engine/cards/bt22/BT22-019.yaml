@@ -15,7 +15,7 @@ alt_paths:
     from: { level_eq: 2, color_is: blue }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
 effects:
   - text: "[Your Turn] When this Digimon would digivolve into a Digimon card with [Veedramon] in its name, reduce the digivolution cost by 1."

@@ -9,10 +9,12 @@ effects:
     summary: "[Main] Play 1 source from under 1 of your Digimon for free"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: host
           filter: { kind: digimon, materials_count_gte: 1 }
           prompt: "Choose 1 of your Digimon with digivolution cards"
       - select_material:
+          optional: false
           of_permanent: host
           filter: { kind: digimon }
           bind_as: picked_source
@@ -27,10 +29,12 @@ effects:
     summary: "[Security] Activate this card's Main effect"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: host
           filter: { kind: digimon, materials_count_gte: 1 }
           prompt: "Choose 1 of your Digimon with digivolution cards"
       - select_material:
+          optional: false
           of_permanent: host
           filter: { kind: digimon }
           bind_as: picked_source

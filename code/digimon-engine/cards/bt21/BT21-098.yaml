@@ -54,6 +54,7 @@ effects:
     summary: "[Main] Delete 1 opponent Digimon with the lowest play cost; then place this card in the battle area"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -77,6 +78,7 @@ effects:
     summary: "[Your Turn] When your [Galacticmon] attacks, <Delay>: delete 1 lowest-play-cost opponent Digimon; if none deleted, trash opponent security down to 1"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: delay_victim
           filter:
             all_of:

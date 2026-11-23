@@ -157,6 +157,7 @@ effects:
               name_is: "Marcus Damon"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: marcus
                 filter:
                   all_of:

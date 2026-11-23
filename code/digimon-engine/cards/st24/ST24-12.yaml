@@ -42,7 +42,7 @@ traits: [Avian, DATA SQUAD]
 # Alt-digivolve: Lv.2 with the [DATA SQUAD] trait / cost 0.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 2, trait_has: "DATA SQUAD" }
     cost: 0
 
 effects:
@@ -61,7 +61,7 @@ effects:
     process:
       # "By trashing the bottom face-down card from under any of your Tamers" —
       # the activation cost. Its tail runs ONLY if a face-down source was trashed.
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       # "you may return 1 [DATA SQUAD] Digimon from your trash" — optional pick.
       - select_trash:
           of: you
@@ -82,6 +82,7 @@ effects:
     summary: "Inherited [When Attacking][OPT] Delete 1 of your opponent's level 3 Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

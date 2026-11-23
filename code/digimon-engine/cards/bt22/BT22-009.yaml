@@ -38,6 +38,7 @@ effects:
         dp_lte: 4000
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

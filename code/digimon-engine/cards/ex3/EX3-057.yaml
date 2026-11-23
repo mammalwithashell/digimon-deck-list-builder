@@ -67,6 +67,7 @@ effects:
       # is skipped, and the result-log stays visible to the trailing
       # `effect_deleted_*` check (G-DSL-IF-BODY-PARK-RESULT-LOG).
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

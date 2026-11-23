@@ -15,7 +15,7 @@ alt_paths:
     from: { name_is: "Justimon: Critical Arm" }
     cost: 1
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
 
 effects:
@@ -69,6 +69,7 @@ effects:
     process:
       # Step 1: Select own Option card in battle area to trash (the cost).
       - select_own_permanent:
+          optional: false
           bind_as: opt_cost
           filter: { kind: option }
           prompt: "Trash 1 of your Option cards in the battle area"
@@ -77,6 +78,7 @@ effects:
       # `selector: lowest_play_cost` restricts the candidate set to those
       # at the minimum play cost. Only Digimon (not Tamers) per printed text.
       - select_opponent_permanent:
+          optional: false
           bind_as: low_cost_target
           filter: { kind: digimon }
           selector: lowest_play_cost

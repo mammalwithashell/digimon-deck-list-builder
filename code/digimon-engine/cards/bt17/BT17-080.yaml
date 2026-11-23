@@ -95,6 +95,7 @@ effects:
     summary: "[End of Your Turn] By placing this Tamer and 1 [Growlmon] and 1 [WarGrowlmon] from your trash as a [Guilmon]'s bottom digivolution cards, it may digivolve into [Gallantmon] in hand, ignoring requirements, without paying the cost"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: guilmon
           filter:
             all_of:

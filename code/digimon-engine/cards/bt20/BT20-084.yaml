@@ -53,6 +53,7 @@ effects:
     summary: "1 opponent Digimon or Tamer can't suspend until the end of their turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             any_of:

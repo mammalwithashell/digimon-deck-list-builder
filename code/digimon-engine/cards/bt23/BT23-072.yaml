@@ -23,6 +23,7 @@ effects:
     process:
       - lose_memory: 3
       - select_own_breeding_permanent:
+          optional: false
           bind_as: breeding_host
           prompt: "Choose your breeding King Drasil_7D6 or Mother Eater"
           filter:

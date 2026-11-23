@@ -19,6 +19,7 @@ effects:
     summary: "[On Play] 1 of your Veedramon Digimon gets +3000 DP until your opponent's turn ends"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: boosted
           filter:
             all_of:

@@ -17,6 +17,14 @@ pub fn load_file(path: &Path) -> Result<CardSpec, DslError> {
         path: path.display().to_string(),
         source: e,
     })?;
+    let source: serde_json::Value = serde_yml::from_str(&raw).map_err(|e| DslError::Yaml {
+        path: path.display().to_string(),
+        source: e,
+    })?;
+    let errors = crate::authoring_fields::check(&source);
+    if !errors.is_empty() {
+        return Err(DslError::Validation(errors));
+    }
     let spec: CardSpec = serde_yml::from_str(&raw).map_err(|e| DslError::Yaml {
         path: path.display().to_string(),
         source: e,

@@ -102,6 +102,7 @@ effects:
           condition: { binding_present: target }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: evo
                 filter:

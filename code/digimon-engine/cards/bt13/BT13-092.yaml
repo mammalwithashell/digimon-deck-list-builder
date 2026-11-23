@@ -62,6 +62,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: keenan
           filter: { kind: tamer, name_is: "Keenan Crier" }
           prompt: "Return Keenan Crier to hand"
@@ -78,6 +79,7 @@ effects:
       # The controller (not `as_selecting_player`) chooses among the
       # opponent's hand; mandatory while the hand is non-empty.
       - select_hand:
+          optional: false
           of: opponent
           bind_as: discarded
           filter: {}

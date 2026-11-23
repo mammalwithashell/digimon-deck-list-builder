@@ -31,6 +31,7 @@ effects:
     summary: "[Main] -6000 DP to 1 opp Digimon (turn); then may free-play a purple/yellow Digimon DP<=6000 from trash"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Give 1 of your opponent's Digimon -6000 DP for the turn"
@@ -61,6 +62,7 @@ effects:
     summary: "[Security] Activate this card's [Main] effect"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Give 1 of your opponent's Digimon -6000 DP for the turn"

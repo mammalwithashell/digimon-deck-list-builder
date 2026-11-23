@@ -121,6 +121,7 @@ effects:
     summary: "[Inherited][When Attacking][OPT] Trash the top digivolution card of 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: peel_target
           filter:
             kind: digimon

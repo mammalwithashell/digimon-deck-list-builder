@@ -91,6 +91,7 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - select_hand:
+          optional: false
           of: you
           bind_as: option_pick
           filter:

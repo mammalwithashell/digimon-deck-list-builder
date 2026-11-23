@@ -111,6 +111,7 @@ effects:
     summary: "[OP][WD] Give 1 opponent Digimon a mandatory Start of Main attack until opponent turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: forced_target
           filter:
             kind: digimon

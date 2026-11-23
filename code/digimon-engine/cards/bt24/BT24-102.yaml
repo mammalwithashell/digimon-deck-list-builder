@@ -71,6 +71,7 @@ effects:
               - has_refireable_effect: on_play_or_when_digivolving
           prompt: "Choose 1 of your Olympos XII Digimon"
       - refire_effect:
+          optional: false
           source: refire_target
           timing: on_play_or_when_digivolving
 

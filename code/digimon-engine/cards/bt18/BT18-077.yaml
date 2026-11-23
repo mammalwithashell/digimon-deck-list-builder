@@ -43,6 +43,7 @@ effects:
     summary: "Delete 1 of your opponent's level 4 or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon, level_lte: 4 }
           prompt: "Delete 1 of your opponent's level 4 or lower Digimon"

@@ -73,7 +73,7 @@ alt_paths:
     cost: 4
   # Printed alt evo box: "Digivolve 3 from Lv.4 w/[Sukamon] in name".
   - kind: digivolve
-    from: { level_eq: 4, name_contains: Sukamon }
+    from: { any_color: true, level_eq: 4, name_contains: Sukamon }
     cost: 3
 
 effects:
@@ -90,6 +90,7 @@ effects:
     summary: "[On Play][When Digivolving] If opp has 16+ trash cards or you have 3+ [Sukamon]-name cards in trash, change 1 opp Digimon into a white 3000 DP [Sukamon] until the end of their turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: { kind: digimon }
           prompt: "Change 1 of your opponent's Digimon into a white Digimon with 3000 DP and an original name of [Sukamon] until the end of their turn"
@@ -154,6 +155,7 @@ effects:
     summary: "Inherited [All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: prevent_cost
           filter:
             all_of:

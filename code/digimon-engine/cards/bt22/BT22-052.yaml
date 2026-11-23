@@ -14,7 +14,7 @@ alt_paths:
     from: { level_eq: 5, color_is: green }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
   - kind: burst_digivolve
     marker: true

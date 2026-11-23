@@ -112,4 +112,4 @@ effects:
     active_when: { opponents_turn: true }
     summary: "[Opponent's Turn][OPT] When opponent's Digimon attacks, change the attack target to this Digimon"
     process:
-      - redirect_attack_target: { new_target: source }
+      - redirect_attack_target: { optional: false, new_target: source }

@@ -100,6 +100,7 @@ effects:
                   owner_can_add_security: true
           then:
             - select_material:
+                optional: false
                 of_permanent: source
                 bind_as: antibody
                 filter: { name_is: X Antibody }

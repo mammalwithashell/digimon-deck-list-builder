@@ -51,6 +51,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -151,6 +152,7 @@ effects:
           binding: marcus_pick
       # (b) Mandatory -3000×(own Digimon+Tamers) DP to 1 opponent Digimon.
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Give -3000 DP per your Digimon and Tamer to 1 opponent Digimon"
@@ -215,6 +217,7 @@ effects:
         - event_card_name_contains: Marcus Damon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:

@@ -152,6 +152,7 @@ effects:
                         - place_as_bottom_source: { source: placed_1, target: source }
                         - place_as_bottom_source: { source: placed_2, target: source }
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim_1
                             filter:
                               all_of:
@@ -162,6 +163,7 @@ effects:
                             prompt: "Delete 1 (of 2) of your opponent's Digimon with as high or lower a play cost as the number of this Digimon's digivolution cards"
                         - delete_permanent: { target: victim_1 }
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim_2
                             filter:
                               all_of:

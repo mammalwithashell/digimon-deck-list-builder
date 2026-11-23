@@ -55,7 +55,7 @@ attribute: Free
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: TS }
+    from: { any_color: true, level_eq: 2, trait_has: TS }
     cost: 0
   - kind: digivolve
     from: { name_is: Poromon }

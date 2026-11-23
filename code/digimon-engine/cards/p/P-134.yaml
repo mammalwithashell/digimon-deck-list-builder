@@ -17,6 +17,7 @@ effects:
     summary: "1 opponent Digimon gains Security Attack -1 until the end of their turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to gain Security Attack -1"
@@ -33,6 +34,7 @@ effects:
     summary: "[When Attacking][OPT] 1 opponent Digimon gets -2000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -2000 DP"
