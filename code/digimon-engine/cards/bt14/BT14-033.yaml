@@ -117,7 +117,6 @@ effects:
                 optional: true
                 filter:
                   all_of:
-                    - kind: digimon
                     - color_is: yellow
                     - trait_has: Vaccine
                 prompt: "If digivolved by this effect, you may place 1 yellow [Vaccine] card from your hand at the bottom of your security stack"

@@ -30,6 +30,7 @@ pub mod pack;
 pub mod play_candidates;
 pub mod predicate;
 pub mod pretty;
+pub mod printed_text_lint;
 pub mod raw_rust_registry;
 pub mod registry;
 pub mod schema;

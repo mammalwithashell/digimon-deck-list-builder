@@ -907,6 +907,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             serde_json::Value::Null,
         );
         let digimon_dsl::clause::TriggeredClause {
+            text,
             when,
             scope,
             summary,
@@ -925,6 +926,7 @@ impl Walk for digimon_dsl::clause::TriggeredClause {
             trigger_if,
         } = self;
         when.walk(c, &format!("{}.when", path), "UNCLASSIFIED_STRING");
+        text.walk(c, &format!("{}.text", path), "METADATA_NO_EXECUTABLE_REFERENCE");
         scope.walk(c, &format!("{}.scope", path), "UNCLASSIFIED_STRING");
         summary.walk(
             c,
@@ -1462,6 +1464,7 @@ impl Walk for digimon_dsl::clause::DeclarativeClause {
             serde_json::Value::Null,
         );
         let digimon_dsl::clause::DeclarativeClause {
+            text,
             kind,
             scope,
             active_when,
@@ -1470,6 +1473,7 @@ impl Walk for digimon_dsl::clause::DeclarativeClause {
             body,
         } = self;
         kind.walk(c, &format!("{}.kind", path), "UNCLASSIFIED_STRING");
+        text.walk(c, &format!("{}.text", path), "METADATA_NO_EXECUTABLE_REFERENCE");
         scope.walk(c, &format!("{}.scope", path), "UNCLASSIFIED_STRING");
         active_when.walk(c, &format!("{}.active_when", path), "UNCLASSIFIED_STRING");
         summary.walk(

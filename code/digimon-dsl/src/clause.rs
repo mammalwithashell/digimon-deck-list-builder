@@ -34,6 +34,9 @@ impl ClauseSpec {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TriggeredClause {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+
     pub when: TimingSet,
 
     #[serde(default, skip_serializing_if = "ClauseScope::is_face_up")]
@@ -414,6 +417,9 @@ impl ClauseScope {
 // whose schema is enforced by Task 9's `typed_body()`. Serde does not allow
 // `deny_unknown_fields` together with `flatten` on the same struct.
 pub struct DeclarativeClause {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+
     pub kind: DeclarativeKind,
 
     #[serde(default, skip_serializing_if = "ClauseScope::is_face_up")]

@@ -99,6 +99,11 @@ Other top-level fields used as needed: `form` and `attribute` (with `traits:` th
 
 ## 4. Clause API
 
+Both triggered and declarative clauses accept `text: "..."`: copy the printed
+sentence verbatim, including any leading timing tags. This optional authoring
+metadata records the printed span the clause implements; it has no runtime
+semantics. The printed-text lint compares it with the official text sections.
+
 Use triggered clauses for effects that fire at a timing:
 
 ```yaml
