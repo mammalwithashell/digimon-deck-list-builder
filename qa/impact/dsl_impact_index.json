@@ -15615,7 +15615,6 @@
       ],
       "verbs": [
         "add_modifier",
-        "add_player_modifier",
         "if",
         "per_selected",
         "return_to_deck",
@@ -48620,7 +48619,6 @@
       "BT20-020",
       "BT23-014",
       "BT23-047",
-      "BT26-050",
       "BT8-097",
       "BT9-084",
       "BT9-103",
