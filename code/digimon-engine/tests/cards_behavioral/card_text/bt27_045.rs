@@ -40,6 +40,25 @@ fn reveal_adds_separate_leomon_name_and_matching_trait_cards() {
 }
 
 #[test]
+fn overlapping_reveal_card_is_reserved_for_the_trait_pick_when_needed() {
+    let mut both = make_test_card("BOTH", "ACCEL Leomon");
+    both.traits.push("ACCEL".into());
+    let mut r = start(
+        builder(CARD)
+            .add_card(both)
+            .add_card(make_test_card("LEO", "Leomon"))
+            .hand(0, &[CARD])
+            .deck(0, &["TEXT-FILLER", "LEO", "BOTH"]),
+    );
+    r.play(0, 0);
+    assert_eq!(candidates(&r), ["LEO"], "the name pick must leave a trait match");
+    r.choose_prompt_card("LEO", None).unwrap();
+    assert_eq!(candidates(&r), ["BOTH"]);
+    r.choose_prompt_card("BOTH", None).unwrap();
+    assert_eq!(ids(&r, &r.game.players[0].hand), ["LEO", "BOTH"]);
+}
+
+#[test]
 fn inherited_battle_win_gains_memory_once_per_turn() {
     let mut r = start(builder(CARD).memory(5));
     let carrier = r.place_stack(0, &[CARD, "TEXT-5"]);
