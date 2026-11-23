@@ -950,7 +950,7 @@ fn validate_predicate(
             errors.push(ValidationError {
                 card_id: card_id.to_string(),
                 path: format!("{prefix}.has_digivolve_candidate.zone"),
-                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal`"
+                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal` / `material`"
                     .to_string(),
             });
         }
@@ -960,12 +960,13 @@ fn validate_predicate(
                 crate::predicate::Zone::Hand
                     | crate::predicate::Zone::Trash
                     | crate::predicate::Zone::Reveal
+                    | crate::predicate::Zone::Material
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.has_digivolve_candidate.zone"),
                     message: format!(
-                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` (got {z:?})"
+                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` / `material` (got {z:?})"
                     ),
                 });
             }
@@ -1093,13 +1094,13 @@ fn validate_step(
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
             if !matches!(
                 args.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "on_deletion"
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
                     path: format!("{prefix}.timing"),
                     message: format!(
-                        "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        "refire_effect only supports timing: on_play, when_digivolving, on_deletion, or on_play_or_when_digivolving, got {}",
                         args.timing
                     ),
                 });

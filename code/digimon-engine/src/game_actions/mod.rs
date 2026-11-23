@@ -4760,7 +4760,11 @@ fn install_assembly_element(
     let can_decline = is_first
         && game.card_data_for_handle(target_card).is_some_and(|card| {
             let cost = params.total_reduction.final_cost(
-                params.cost_delta.resolve(card.play_cost) as i32,
+                i32::from(game.resolve_effect_play_cost(
+                    params.effect_controller.unwrap_or(player),
+                    card.play_cost,
+                    params.cost_delta,
+                )),
                 0,
             );
             game.can_pay_memory_for(player, cost)

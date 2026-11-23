@@ -366,6 +366,12 @@ fn printed_text_timing_tags_after_zone_icons_and_angle_prefixes() {
 
 #[test]
 fn printed_text_main_timing_preserves_the_activation_zone() {
+    let text = "[Main] Draw 1.";
+    assert!(check(&format!("- when: main_on_field\n  text: '{text}'"), text).is_empty());
+    assert_eq!(
+        check(&format!("- when: main_from_trash\n  text: '{text}'"), text),
+        vec!["timing_tag_mismatch"]
+    );
     for (zone, timing) in [
         ("{Hand}", "main_from_hand"),
         ("[Hand]", "main_from_hand"),

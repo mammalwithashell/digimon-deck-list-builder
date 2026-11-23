@@ -1,0 +1,50 @@
+card: BT27-037
+name: Guardromon
+kind: digimon
+level: 4
+color: [yellow, black]
+cost: 5
+dp: 5000
+form: Champion
+attribute: Free
+traits: [Machine, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, any_color: true, any_of: [{ trait_has: Machine }, { trait_has: TS }] }
+    cost: 2
+
+effects:
+  - text: "＜Detach ([TS] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)"
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of: [{ replacement_cause: own_effect }]
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: TS }
+    outcome: prevent
+  - text: "[All Turns] [Once Per Turn] When any of your Digimon get linked, ＜Draw 1＞."
+    when: on_any_link
+    once_per_turn: true
+    trigger_if: { event_target_owner: you, event_target_kind: digimon }
+    process:
+      - draw: { of: you, count: 1 }
+  - text: "＜Detach ([TS] trait)＞ (When this Digimon would leave the battle area other than by your effects, by trashing 1 of its specified link cards, it doesn't leave.)"
+    scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of: [{ replacement_cause: own_effect }]
+    cost:
+      trash_own_link_card: true
+      link_card_filter: { trait_has: TS }
+    outcome: prevent

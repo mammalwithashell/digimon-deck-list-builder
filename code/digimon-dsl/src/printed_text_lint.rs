@@ -239,13 +239,16 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
             ClauseSpec::Triggered(c) => mapped.iter().any(|t| match &c.when {
                 TimingSet::Single(when) => {
                     when == t
-                        || (zones.is_empty() && *t == Timing::Main && *when == Timing::MainFromHand)
+                        || (zones.is_empty()
+                            && *t == Timing::Main
+                            && matches!(when, Timing::MainFromHand | Timing::MainOnField))
                 }
                 TimingSet::Multi(when) => {
                     when.contains(t)
                         || (zones.is_empty()
                             && *t == Timing::Main
-                            && when.contains(&Timing::MainFromHand))
+                            && (when.contains(&Timing::MainFromHand)
+                                || when.contains(&Timing::MainOnField)))
                 }
             }),
             ClauseSpec::Declarative(c) => {

@@ -183,6 +183,7 @@ pub struct ReFireableEffect {
 pub enum TimingFilter {
     OnPlay,
     WhenDigivolving,
+    OnDeletion,
     Either,
 }
 
@@ -201,6 +202,7 @@ impl TimingFilter {
         match key {
             "on_play" => Some(Self::OnPlay),
             "when_digivolving" => Some(Self::WhenDigivolving),
+            "on_deletion" => Some(Self::OnDeletion),
             _ => None,
         }
     }
@@ -209,6 +211,7 @@ impl TimingFilter {
         match self {
             Self::OnPlay => &["on_play"],
             Self::WhenDigivolving => &["when_digivolving"],
+            Self::OnDeletion => &["on_deletion"],
             Self::Either => &["on_play", "when_digivolving"],
         }
     }
@@ -1848,34 +1851,55 @@ pub fn enumerate_refireable_effects(
     else {
         return Vec::new();
     };
-    let top = perm.top_card();
-    let source_card = top.handle();
-    let card_id = top.card_id(&game.card_data).to_string();
-    let source_kind = game.effect_source_kind_for_handle(source_card);
-
-    let Some(effects) = game.effects_for_card(&card_id, source_card) else {
-        return Vec::new();
+    let stack_size = perm.card_sources.len();
+    let is_deletion = timing_key == "on_deletion";
+    let adopted = if is_deletion {
+        game.succession_source_indices(source)
+    } else {
+        Vec::new()
     };
-
-    effects
-        .iter()
-        .enumerate()
-        .filter(|(_, effect)| effect.timing_key() == timing_key)
-        .filter(|(_, effect)| effect.can_be_refired())
-        .map(|(slot, effect)| ReFireableEffect {
-            effect_id: slot as EffectId,
-            source_card,
-            source,
-            source_kind,
-            attribution_source_card: None,
-            attribution_source_kind: None,
-            bypass_once_per_turn: false,
-            controller: source.player,
-            card_id: card_id.clone(),
-            timing: effect.timing,
-            timing_key: timing_key.to_string(),
-        })
-        .collect()
+    let mut candidates = Vec::new();
+    for (index, card) in perm.card_sources.iter().enumerate().rev() {
+        if !is_deletion && index + 1 != stack_size {
+            break;
+        }
+        let source_card = card.handle();
+        let card_id = card.card_id(&game.card_data);
+        let Some(effects) = game.effects_for_card(card_id, source_card) else {
+            continue;
+        };
+        for (slot, effect) in effects.iter().enumerate() {
+            if effect.timing_key() != timing_key {
+                continue;
+            }
+            let eligible = if is_deletion {
+                !effect.security
+                    && !effect.declarative
+                    && !effect.trash_zone
+                    && crate::game::Game::source_effect_is_active(
+                        index, stack_size, adopted.contains(&index), effect,
+                    )
+            } else {
+                effect.can_be_refired()
+            };
+            if eligible {
+                candidates.push(ReFireableEffect {
+                    effect_id: slot as EffectId,
+                    source_card,
+                    source,
+                    source_kind: game.effect_source_kind_for_handle(source_card),
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
+                    controller: source.player,
+                    card_id: card_id.to_string(),
+                    timing: effect.timing,
+                    timing_key: timing_key.to_string(),
+                });
+            }
+        }
+    }
+    candidates
 }
 
 /// The cost kind a `BeforePayCost` reducer keyed on another card's

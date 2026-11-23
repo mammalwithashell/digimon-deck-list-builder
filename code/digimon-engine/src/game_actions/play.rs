@@ -100,7 +100,7 @@ impl Game {
     /// Flow (matches Python):
     /// 1. Validate hand index and field capacity.
     /// 2. Read the card's printed play cost from `card_data`.
-    /// 3. Apply `cost_delta.resolve(printed_cost)` to get the effective cost.
+    /// 3. Resolve the requested cost against restrictions on play-cost reductions.
     /// 4. Call `pay_memory(effective_cost)`; if unaffordable, abort with `None`
     ///    and leave state unchanged.
     /// 5. Remove the card from hand, create a Permanent on the field.
