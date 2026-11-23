@@ -99,7 +99,7 @@ fn lm_067_wd_wa_source_trash_deletes_per_card() {
     assert!(!t.once_per_turn);
     let body = format!("{:?}", t.process);
     assert!(body.contains("SelectOwnSources"), "chooses up to 3 sources");
-    assert!(body.contains("DeletePermanent"), "deletes per trashed card");
+    assert!(body.contains("DeleteBoundPermanents"), "deletes the chosen Digimon simultaneously");
 }
 
 #[test]
@@ -119,4 +119,14 @@ fn lm_067_option_main_de_digivolves_three() {
     let body = format!("{:?}", main.process);
     assert!(body.contains("DeDigivolve"), "<De-Digivolve 3>");
     assert!(body.contains("PlaceAsBottomSource"), "may place a [Three Musketeers] card");
+}
+
+#[test]
+fn lm_067_reveal_pick_requires_a_card_the_effect_can_play_or_use() {
+    let runner = base();
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    let dual = card.dual.as_ref().expect("dual");
+    let t = triggered_with(&dual.digimon.effects, CompiledTiming::WhenDigivolving, CompiledTiming::Counter)
+        .expect("WD/Counter clause");
+    assert!(format!("{:?}", t.process).contains("can_play_from_effect_without_cost: Some(true)"));
 }

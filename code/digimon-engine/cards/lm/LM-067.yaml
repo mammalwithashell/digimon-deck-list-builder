@@ -66,6 +66,7 @@ dual:
                     all_of:
                       - in_text_contains: "Three Musketeers"
                       - play_or_use_cost_lte: 6
+                      - can_play_from_effect_without_cost: true
                       - any_of:
                           - kind: digimon
                           - kind: tamer
@@ -134,11 +135,7 @@ dual:
                           bind_as: doomed
                           prompt: "Delete 1 of your opponent's play cost 7 or lower Digimon"
                           optional_zero: false
-                - per_selected:
-                    selection: doomed
-                    bind_as: d
-                    body:
-                      - delete_permanent: { target: d }
+                - delete_bound_permanents: { binding: doomed }
 
   option:
     use_cost: 6
