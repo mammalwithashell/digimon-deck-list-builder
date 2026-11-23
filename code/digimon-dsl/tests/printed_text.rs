@@ -149,6 +149,50 @@ fn printed_text_option_main_and_delay_timings() {
 }
 
 #[test]
+fn printed_text_timing_tags_after_zone_icons_and_angle_prefixes() {
+    for prefix in [
+        "{Hand}",
+        "{Trash} {Hand}",
+        "＜Use Req. ([Seven Code] trait)＞",
+        "<Use Req. ([Seven Code] trait)>",
+    ] {
+        let text = format!("{prefix} [Main] Draw 1.");
+        assert_eq!(
+            check(&format!("- when: on_play\n  text: '{text}'"), &text),
+            vec!["timing_tag_mismatch"]
+        );
+        assert!(check(&format!("- when: main_from_hand\n  text: '{text}'"), &text).is_empty());
+    }
+    for text in [
+        "{Security} [Main] Draw 1.",
+        "＜Main＞ Draw 1.",
+        "<Main> Draw 1.",
+    ] {
+        assert!(check(&format!("- when: main_from_hand\n  text: '{text}'"), text).is_empty());
+        assert_eq!(
+            check(&format!("- when: on_security\n  text: '{text}'"), text),
+            vec!["timing_tag_mismatch"]
+        );
+    }
+    assert!(check(
+        "- kind: grant_keyword\n  keyword: Blocker\n  text: '＜Blocker＞'",
+        "＜Blocker＞"
+    )
+    .is_empty());
+    for text in ["{Hand", "＜Main", "<Main", ""] {
+        let expected = if text.is_empty() {
+            vec!["text_not_printed"]
+        } else {
+            vec![]
+        };
+        assert_eq!(
+            check(&format!("- when: on_play\n  text: '{text}'"), text),
+            expected
+        );
+    }
+}
+
+#[test]
 fn printed_text_by_payment_requires_declinable_dsl() {
     let text = "[Start of Your Main Phase] By placing 1 Digimon card from your hand under this Tamer, draw 1.";
     let clause = format!("- when: start_of_your_main_phase\n  text: '{text}'\n  process:\n    - select_hand: {{of: you, filter: {{kind: digimon}}, bind_as: stash, prompt: Place}}\n    - place_selected_card_under_tamer: {{card: stash, tamer: source}}\n    - draw: {{of: you, count: 1}}");

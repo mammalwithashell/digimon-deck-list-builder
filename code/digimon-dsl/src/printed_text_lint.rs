@@ -102,10 +102,23 @@ fn leading_tags(mut text: &str) -> Vec<&str> {
     let mut tags = Vec::new();
     loop {
         text = text.trim_start();
-        let Some(rest) = text.strip_prefix('[') else {
+        if let Some(rest) = text.strip_prefix('{') {
+            let Some((_, tail)) = rest.split_once('}') else {
+                break;
+            };
+            text = tail;
+            continue;
+        }
+        let (rest, close) = if let Some(rest) = text.strip_prefix('[') {
+            (rest, ']')
+        } else if let Some(rest) = text.strip_prefix('＜') {
+            (rest, '＞')
+        } else if let Some(rest) = text.strip_prefix('<') {
+            (rest, '>')
+        } else {
             break;
         };
-        let Some((tag, tail)) = rest.split_once(']') else {
+        let Some((tag, tail)) = rest.split_once(close) else {
             break;
         };
         tags.push(tag);
