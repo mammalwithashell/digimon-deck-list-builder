@@ -617,6 +617,45 @@ BT21-092 (`tests/cards_behavioral/bt21/bt21_092.rs`
   `st23_04_two_option_use_reducers_are_both_credited_and_paid`,
   `bt25_088_reducer_that_cannot_make_the_play_payable_stays_declinable`.
 
+## Effect-pick candidate legality, round 4 — added 2026-11-22 (every pick that feeds a play verb, second bug scan)
+
+**Every selection whose binding an effect play verb consumes checks play legality at compile time
+[G-DSL-EFFECT-PLAY-PICK-LEGALITY, CLOSED].** Round 3 covered `select_trash` only. A replay of the same 1,224
+games on the fixed engine found the class still open on the other zones: Proximamon (EX12-077) "play or use 1
+play cost 10 or lower [Gammamon]-text / [VB] card from your Digimon's digivolution cards" offered the Digi-Egg
+Nyaromon (EX12-001) 34 times (no play cost, CR 4.3 7-1-1; DCGO EX12_077.cs requires `(IsOption &&
+!CanNotPlayThisOption) || (HasPlayCost && CanPlayAsNewPermanent(...))`); seven `select_union_zone` ->
+`play_union_bound_free` picks had no leaf (Gankoomon (BT13-019), BT21-090, Unique Emblem: Poseidia Lagoon
+(BT22-096) x2, The Sistermon Sisters Training Gym (BT23-099) x2, Tsunomon (BT24-007)); a `<Decode>` pick was made
+under Pomumon (BT9-047) (WereGarurumon (EX12-032) inherited Decode; DCGO `Decode.cs` filters with
+`CanPlayAsNewPermanent`).
+
+No new vocabulary. `code/digimon-dsl/src/play_candidates.rs` now maps every play verb that consumes a pick
+(`play_from_hand(_free)`, `play_from_trash(_free)`, `play_from_revealed_free`, `play_union_bound_free`,
+`play_from_materials`, `play_selected_sources_free`, `play_under_tamer_source`, `play_cards_free`,
+`play_security_card`, `play_or_use_from_hand`, `play_or_use_from_sources`) to its binding, and adds the leaf to
+every selection that binds it (`select_hand`, `select_trash`, `select_reveal`, `select_security`,
+`select_material(s)`, `select_own_sources`, `select_opponent_sources`, `select_zone_cards`,
+`select_count_capped_multi`, `search_own_security_stack`, `select_reveal_buckets` buckets, and `select_union_zone`
+on its shared filter AND each per-zone override). A binding that is also played-or-used (a `play_or_use_*` verb,
+or a play verb plus a `use_option_*` verb) gets `can_play_or_use_from_effect`, so usable Options stay candidates.
+The engine settles continuous state before ANY step whose filter reads play legality
+(`play_candidates::step_reads_play_legality`, called from `run_leaf_step`), so the round-3 Eye of the Gorgon
+(BT9-108) fix covers the new step shapes too. A `<Decode>` replacement whose only sources are unplayable is now
+not offered at all (its availability check reads the marked `select_material` filter), as in DCGO. 59 picks
+across 44 cards were marked (36 + 4 material picks, 6 `play_under_tamer_source`, 2 `play_selected_sources_free`,
+1 `play_or_use_from_sources`, 7 union, 2 security searches, 1 reveal bucket). Guards: unit tests in the pass;
+the pool tests `every_effect_play_pick_checks_play_legality_after_compilation` (digimon-dsl) and
+`pool_guard_every_effect_play_pick_checks_play_legality` (cards_behavioral) walk the serialized card so a new
+step variant or body the pass misses is named; per-card tests on EX12-077, BT13-019, BT22-096, BT23-099,
+BT24-007, EX12-032.
+
+Still per card (not checked by the leaf): affordability of a PAID play (`affordable_with_cost`; authored for
+Tsunomon (BT24-007) here, `cost_delta: reduce 2` per BT24_007.cs:47); N simultaneous plays checking one free slot;
+picks only a `use_option_*` verb consumes (Option usability, e.g. EX7-048); breeding-area plays; a
+`per_selected` re-binding that is played on one branch and added to hand on another (BT21-087 Vemmon: the pick
+must keep the hand route, so it is left unmarked).
+
 ## Effect-pick candidate legality, round 3 — added 2026-11-21 (play-from-trash picks, bug scan over 1,224 games)
 
 **`select_trash` -> `play_from_trash_free` / `play_from_trash` picks check play legality at compile time

@@ -989,6 +989,8 @@ fn run_leaf_step(
     runtime: &StepRuntime,
 ) -> Option<RunOutcome> {
     let step = &steps[i];
+    // A pick whose filter reads play legality sees the continuous state of NOW, not of the last tick.
+    selections::settle_continuous_state_for_play_pick(step, ctx);
     // `link_cards` (Gap 2) captures the remaining slice itself and drives a
     // pick loop of chained selections. It always either parks on a pending
     // selection or runs the captured tail synchronously — in both cases the

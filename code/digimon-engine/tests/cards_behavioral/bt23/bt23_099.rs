@@ -470,3 +470,51 @@ fn bt23_099_security_decline_still_places() {
 
 #[path = "../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;
+
+// ─── Play-legality of the union pick ────────────────────────────────────────
+//
+// Under "can't play Digimon by effects" (Pomumon (BT9-047)) a [Sistermon] Digimon
+// can't be played, so the <Delay> pick offers only the [Sistermon] Tamer (bug scan
+// 2026-11: the pick fed `play_union_bound_free` with no play-legality leaf). The
+// leaf is added by the DSL lowering (`digimon_dsl::play_candidates`); DCGO
+// BT23_099.cs filters with `CanPlayAsNewPermanent`.
+
+fn lock_effect_digimon_plays(r: &mut DebugRunner, player: u8) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - player,
+        ),
+    );
+}
+
+#[test]
+fn bt23_099_delay_pick_skips_digimon_whose_play_by_effect_is_prohibited() {
+    let mut r = parked(&["HUCK-EVO", "SIS-HAND", "SIS-TAMER"]);
+    push_trash(&mut r, 0, "SIS-TRASH");
+    lock_effect_digimon_plays(&mut r, 0);
+    digivolve_base_into(&mut r, "HUCK-EVO");
+    accept_delay(&mut r);
+    assert_eq!(
+        union_offered(&r, 0),
+        vec![(false, "SIS-TAMER".to_string())],
+        "the Sistermon Digimon can't be played by effects; the Tamer can"
+    );
+}
+
+#[test]
+fn bt23_099_delay_opens_no_pick_when_only_prohibited_digimon_qualify() {
+    let mut r = parked(&["HUCK-EVO", "SIS-HAND"]);
+    lock_effect_digimon_plays(&mut r, 0);
+    digivolve_base_into(&mut r, "HUCK-EVO");
+    accept_delay(&mut r);
+    assert!(union_offered(&r, 0).is_empty(), "no pick for a card the play would refuse");
+    let _ = r.auto_resolve();
+    assert!(!field_ids(&r, 0).contains(&"SIS-HAND".to_string()));
+}

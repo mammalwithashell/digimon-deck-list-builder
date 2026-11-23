@@ -174,3 +174,89 @@ fn ex12_077_when_digivolving_plays_cost_10_vb_source_free() {
         "played source should leave its original stack"
     );
 }
+
+// ---------------------------------------------------------------------------
+// "Play or use" source pick offers only cards the play or use would accept
+// ---------------------------------------------------------------------------
+//
+// Proximamon (EX12-077): "you may play or use 1 play cost 10 or lower [Gammamon]-text
+// or [VB] card from your Digimon's digivolution cards without paying the cost." A
+// Digi-Egg has no play cost and can never be played (CR 4.3 7-1-1), and DCGO
+// EX12_077.cs `CanSelectCardCondition2` requires `(IsOption && !CanNotPlayThisOption)
+// || (HasPlayCost && CanPlayAsNewPermanent(...))`. Bug scan (2026-11): Nyaromon
+// (EX12-001), a [VB] Digi-Egg, was offered 34 times and nothing was played. The leaf
+// is added by the DSL lowering for every pick that feeds a play verb
+// (`digimon_dsl::play_candidates`).
+
+const NYAROMON: &str = "EX12-001";
+
+fn vb_option(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Option;
+    card.level = None;
+    card.dp = None;
+    card.play_cost = 2;
+    card.colors = vec![CardColor::Red];
+    card.traits = vec!["VB".to_string()];
+    card
+}
+
+/// Proximamon on the field with `sources` stacked (bottom first) under a [VB] host,
+/// then its [When Digivolving] fired. Returns the non-PASS source picks offered
+/// (empty when no pick opened).
+fn offered_source_picks(sources: &[&str]) -> usize {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-077 YAML loads")
+        .dsl_card(NYAROMON)
+        .expect("EX12-001 YAML loads")
+        .add_card(vb_digimon("HOST", CardColor::Red, 5, 8000))
+        .add_card(vb_digimon("SRC-DIGI", CardColor::Yellow, 4, 5000))
+        .add_card(vb_option("SRC-OPT"))
+        .memory(10)
+        .start();
+    let mut stack: Vec<&str> = sources.to_vec();
+    stack.push("HOST");
+    runner.place_stack(0, &stack);
+    let prox = runner.place_on_field(0, CARD_ID, Some(0));
+    fire_when_digivolving(&mut runner, prox);
+    drain_trigger_order(&mut runner);
+    if !matches!(runner.pending_kind(), Some(SelectionKind::SourceMulti { .. })) {
+        return 0;
+    }
+    runner
+        .pending_selection_view()
+        .expect("source pick pending")
+        .valid_action_ids
+        .iter()
+        .filter(|&&id| id != PASS)
+        .count()
+}
+
+#[test]
+fn ex12_077_source_pick_does_not_offer_a_digi_egg() {
+    assert_eq!(
+        offered_source_picks(&[NYAROMON]),
+        0,
+        "Nyaromon (EX12-001) has no play cost and can't be played (CR 4.3 7-1-1): no pick opens"
+    );
+}
+
+#[test]
+fn ex12_077_source_pick_offers_the_playable_digimon_but_not_the_egg_beside_it() {
+    let alone = offered_source_picks(&["SRC-DIGI"]);
+    assert!(alone > 0, "a [VB] Digimon source is offered");
+    assert_eq!(
+        offered_source_picks(&[NYAROMON, "SRC-DIGI"]),
+        alone,
+        "the Digi-Egg beside it adds no candidate"
+    );
+}
+
+#[test]
+fn ex12_077_source_pick_keeps_a_usable_option() {
+    assert!(
+        offered_source_picks(&["SRC-OPT"]) > 0,
+        "\"play or use\": a usable [VB] Option source stays a candidate"
+    );
+}

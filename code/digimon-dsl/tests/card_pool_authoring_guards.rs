@@ -8,10 +8,12 @@
 //! 1. the raw-YAML authoring lints (`digimon_dsl::authoring_lint`): an
 //!    unfiltered `card_count_in_zone` over the battle area, and a card's own
 //!    timing mixed with a board-wide observer timing in one `when:` list;
-//! 2. every `select_trash` whose binding feeds a `play_from_trash_free` /
-//!    `play_from_trash` carries a play-legality leaf after compilation
+//! 2. every pick whose binding an effect play verb consumes (trash, hand,
+//!    union zones, digivolution cards, materials, reveal buckets, security)
+//!    carries a play-legality leaf after compilation
 //!    (`digimon_dsl::play_candidates`), so a card the play verb would refuse
-//!    (effect-play lock, trash-play lock, full battle area) is never offered.
+//!    (effect-play lock, trash-play lock, full battle area, no play cost) is
+//!    never offered.
 
 use std::path::{Path, PathBuf};
 
@@ -28,7 +30,7 @@ fn no_card_spec_trips_an_authoring_lint() {
 }
 
 #[test]
-fn every_play_from_trash_pick_checks_play_legality_after_compilation() {
+fn every_effect_play_pick_checks_play_legality_after_compilation() {
     let mut offenders = Vec::new();
     let mut playing_cards = 0usize;
     for file in digimon_dsl::authoring_lint::pool_card_files(&cards_root()) {
@@ -38,20 +40,20 @@ fn every_play_from_trash_pick_checks_play_legality_after_compilation() {
         let Ok(card) = digimon_dsl::compile::compile(&spec) else {
             continue; // likewise for the compiler
         };
-        if digimon_dsl::play_candidates::plays_a_pick_from_trash(&card) {
+        if digimon_dsl::play_candidates::plays_a_pick(&card) {
             playing_cards += 1;
         }
-        for binding in digimon_dsl::play_candidates::unmarked_play_from_trash_picks(&card) {
+        for binding in digimon_dsl::play_candidates::unmarked_play_picks(&card) {
             offenders.push(format!("{} (binding `{binding}`)", card.card));
         }
     }
     assert!(
-        playing_cards > 40,
-        "the pool has dozens of cards that play a pick from the trash; found {playing_cards}"
+        playing_cards > 200,
+        "the pool has hundreds of cards that play a pick; found {playing_cards}"
     );
     assert!(
         offenders.is_empty(),
-        "select_trash picks that feed a play-from-trash verb without a play-legality leaf \
+        "picks that feed an effect play verb without a play-legality leaf \
          (the pick would offer cards the play refuses):\n{}",
         offenders.join("\n")
     );

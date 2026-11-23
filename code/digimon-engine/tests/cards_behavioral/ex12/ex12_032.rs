@@ -390,3 +390,43 @@ fn from_blue_l5(mut c: digimon_engine::card_data::CardData) -> digimon_engine::c
     c.evo_costs = vec![digimon_engine::card_data::EvoCost { card_color: 1, level: 5, memory_cost: 4 }];
     c
 }
+
+/// Play-legality of the `<Decode>` pick: while "can't play Digimon by effects"
+/// holds (Pomumon (BT9-047)), the source can't be played, so DCGO's
+/// `CardEffectCommons/KeyWordEffects/Decode.cs` (`CanPlayAsNewPermanent(..., false,
+/// activateClass)`) offers no Decode at all. Bug scan 2026-11: a Decode pick was
+/// made under Pomumon and nothing was played. The leaf is added by the DSL
+/// lowering (`digimon_dsl::play_candidates`) to every pick that feeds a play verb.
+#[test]
+fn ex12_032_inherited_decode_offers_nothing_while_effects_cannot_play_digimon() {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-032 YAML loads")
+        .add_card(vb_digimon("VB-L4", CardColor::Blue, 4, 4000))
+        .add_card(plain_digimon("HOST-TOP", CardColor::Blue, 6, 11000))
+        .memory(10)
+        .start();
+    let host = runner.place_stack(0, &["VB-L4", CARD_ID, "HOST-TOP"]);
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+
+    runner.game.return_to_hand_from_effect(host, 1);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no Decode window or pick for a source the play would refuse: {:?}",
+        runner.pending_selection_view()
+    );
+    runner.auto_resolve().expect("finish the leave");
+    assert!(!field_contains(&runner, 0, "VB-L4"));
+    assert!(hand_contains(&runner, 0, "HOST-TOP"));
+}

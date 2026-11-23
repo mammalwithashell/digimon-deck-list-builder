@@ -551,3 +551,56 @@ fn bt22_096_security_activates_main_then_places() {
 
 #[path = "../../support/owned_union_fixture.rs"]
 mod owned_union_fixture;
+
+// ─── Play-legality of the union pick ────────────────────────────────────────
+//
+// While "can't play Digimon by effects" holds (Pomumon (BT9-047), Crimson Blaze
+// (BT8-097)), the play of a [Sangomon] would be refused, so the pick must not
+// offer it (bug scan 2026-11: the union pick fed `play_union_bound_free` with no
+// play-legality leaf). The leaf is added by the DSL lowering
+// (`digimon_dsl::play_candidates`). A Tamer stays playable under a Digimon-only
+// lock; "Then, place this card" resolves either way.
+
+fn lock_effect_digimon_plays(r: &mut DebugRunner, player: u8) {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    r.game.modifiers.add_player_modifier(
+        player,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1 - player,
+        ),
+    );
+}
+
+#[test]
+fn bt22_096_main_does_not_offer_a_digimon_whose_play_by_effect_is_prohibited() {
+    let mut r = builder().hand(0, &[CARD_ID, "SANGO"]).memory(10).start();
+    r.set_first_player(0);
+    push_trash(&mut r, 0, "YAO");
+    lock_effect_digimon_plays(&mut r, 0);
+    assert_eq!(start_main(&mut r), OptionPlayResult::Pending);
+    assert_eq!(
+        union_offered(&r, 0),
+        vec![(true, "YAO".to_string())],
+        "Sangomon can't be played by effects; the Tamer can"
+    );
+}
+
+#[test]
+fn bt22_096_main_opens_no_pick_when_nothing_is_playable_and_still_places() {
+    let mut r = builder().hand(0, &[CARD_ID, "SANGO"]).memory(10).start();
+    r.set_first_player(0);
+    lock_effect_digimon_plays(&mut r, 0);
+    let _ = start_main(&mut r);
+    assert!(
+        union_offered(&r, 0).is_empty(),
+        "no pick for a card the play would refuse"
+    );
+    let _ = r.auto_resolve();
+    assert!(hand_ids(&r, 0).contains(&"SANGO".to_string()), "kept");
+    assert!(is_parked_on_suspend(&r, 0), "\"Then, place this card\" still resolves");
+}

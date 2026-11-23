@@ -4196,29 +4196,13 @@ fn install_security_position_choice(
 /// candidates must be read against the current board, not the state of the last tick. Without this
 /// the injected leaf filtered the card out and the printed play was never offered.
 ///
-/// The tick is fingerprint-memoized, so it is a no-op when nothing declarative-relevant changed.
-/// G-ENGINE-PLAY-PICK-STALE-CONTINUOUS-STATE.
-fn settle_continuous_state_for_play_pick(step: &CompiledStep, ctx: &mut EffectContext<'_>) {
-    use digimon_dsl::play_candidates::has_play_leaf;
-    let reads_play_legality = match step {
-        CompiledStep::SelectHand { filter, .. }
-        | CompiledStep::SelectTrash { filter, .. }
-        | CompiledStep::SelectReveal { filter, .. }
-        | CompiledStep::SelectCountCappedMulti { filter, .. } => has_play_leaf(filter),
-        CompiledStep::SelectUnionZone {
-            filter,
-            zone_filters,
-            ..
-        } => {
-            has_play_leaf(filter)
-                || [&zone_filters.hand, &zone_filters.trash, &zone_filters.material]
-                    .into_iter()
-                    .flatten()
-                    .any(has_play_leaf)
-        }
-        _ => false,
-    };
-    if reads_play_legality {
+/// Called by the step dispatcher (`run_leaf_step`) before ANY step installs, so it covers every
+/// selection the pass marks (`digimon_dsl::play_candidates::step_reads_play_legality`: hand, trash,
+/// reveal, reveal buckets, security, union zones, materials, digivolution sources, zone cards), not
+/// only the ones `try_install` dispatches. The tick is fingerprint-memoized, so it is a no-op when
+/// nothing declarative-relevant changed. G-ENGINE-PLAY-PICK-STALE-CONTINUOUS-STATE.
+pub(super) fn settle_continuous_state_for_play_pick(step: &CompiledStep, ctx: &mut EffectContext<'_>) {
+    if digimon_dsl::play_candidates::step_reads_play_legality(step) {
         ctx.game.tick_declarative_effects();
     }
 }
@@ -4236,7 +4220,6 @@ pub fn try_install(
     bindings: Bindings,
     runtime: &StepRuntime,
 ) -> InstallResult {
-    settle_continuous_state_for_play_pick(step, ctx);
     match step {
         CompiledStep::PaySourcePrefix {
             host_filter,
