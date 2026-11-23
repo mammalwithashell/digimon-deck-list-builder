@@ -9950,7 +9950,7 @@
   },
   "BT22-009": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 7,
    "constructs": [
     "verb:delete_permanent",
     "verb:play_from_security",
@@ -9968,7 +9968,7 @@
     "timing:on_security",
     "timing:when_digivolving"
    ],
-   "effect_clause_count": 2,
+   "effect_clause_count": 5,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
@@ -36858,7 +36858,7 @@
   },
   "ST22-08": {
    "behaviourally_covered": true,
-   "clause_count": 4,
+   "clause_count": 6,
    "constructs": [
     "verb:add_this_option_to_hand",
     "verb:delete_permanent",
@@ -36875,7 +36875,7 @@
     "timing:main_from_hand",
     "timing:on_security"
    ],
-   "effect_clause_count": 4,
+   "effect_clause_count": 6,
    "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],

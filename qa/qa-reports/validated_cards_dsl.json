@@ -5395,21 +5395,20 @@
     },
     "BT22-009": {
       "card_name": "Effecmon",
-      "validated_date": "2026-11-22",
-      "report": "printed-clause-authoring-audit-2026-11-22",
-      "status": "PARTIAL",
-      "gap_kind": "missing-printed-clause",
+      "validated_date": "2026-11-23",
+      "report": "mf2-cards-review-2026-11-23",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-009.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_009.rs",
-      "test_count": 4,
-      "tests_passing": 2,
-      "tests_ignored": 2,
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "ROYAL-KNIGHTS-POOL-SLICE"
       ],
-      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): Link box: +3000 DP, <Link> [Appmon] trait: Cost 2, and [When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less. Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented.",
+      "notes": "Link box authored 2026-11-23 (card face BT22-009.webp + official bundle; cards.json drops it): link_condition [Appmon] trait cost 2, scope linked aura +3000 DP, scope linked [When Linking] mandatory delete of 1 opponent Digimon with 4000 DP or less (DCGO BT22_009.cs WhenLinked, not optional, canNoSelect false). YAML trait line gains Appmon and Effect (cards.json form/type). The empty ignored G-LINK-REQUIREMENTS placeholder test is replaced by behavioural link tests.",
       "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified.",
       "previous_status": "IMPLEMENTED",
       "previous_notes": "[Security] end-of-battle play + On Play/WD delete + both digivolve circles (Lv3-red + Stnd.-trait) faithful. [Link]/[When Linking] is the Appmon Link subsystem (separate G-LINK-REQUIREMENTS), not an RK gap."

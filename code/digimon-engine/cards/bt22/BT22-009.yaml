@@ -5,7 +5,10 @@ level: 4
 color: [red]
 cost: 4
 dp: 4000
-traits: ["Effect (App Name)"]
+# Card face trait line: "Sup./Appmon | Entertainment | Effect"; cards.json
+# type_eng carries "Effect (App Name)" and "Effect", form_eng "Sup." and
+# "Appmon" (production reads cards.json).
+traits: ["Effect (App Name)", Effect, Appmon]
 form: Sup.
 attribute: Entertainment
 alt_paths:
@@ -44,7 +47,34 @@ effects:
           prompt: "Delete 1 opponent Digimon with 4000 DP or less"
       - delete_permanent: { target: target }
 
-  # Omitted:
-  # [Link] [Appmon] trait: Cost 2 / [When Linking] Delete 1 opponent Digimon with
-  # 4000 DP or less. Link Requirements are omitted pending Link/plug-in action
-  # support (attachment lifecycle + WhenLinked timing). See # Gap: G-LINK-REQUIREMENTS.
+  # ─── Link box (card face BT22-009.webp; official bundle Link Condition /
+  #     Link DP / Link Effect; cards.json drops it) ─────────────────────────
+  # <Link> [Appmon] trait: Cost 2 -- DCGO BT22_009.cs
+  # AddSelfLinkConditionStaticEffect(TopCard.HasAppmonTraits, linkCost: 2)
+  # (BT21-018 idiom).
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+
+  # Link DP +3000 while linked (scope:linked aura, BT21-018 idiom).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP to the linked Digimon (host)"
+
+  # [When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less.
+  # DCGO WhenLinked, SetIsLinkedEffect(true), not optional, canNoSelect false;
+  # the DP cap is MaxDP_DeleteEffect(4000) (the same cap as [On Play] above).
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: link_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - delete_permanent: { target: link_target }
