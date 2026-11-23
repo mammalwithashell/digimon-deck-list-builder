@@ -2,8 +2,102 @@ use digimon_dsl::compile::compile;
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledClause, CompiledPlayerRef, CompiledStackPosition, CompiledStep,
 };
+use digimon_dsl::raw_rust_registry::StubRegistry;
 use digimon_dsl::spec::CardSpec;
 use digimon_dsl::step::{StackPosition, StepSpec};
+use digimon_dsl::validator::{validate, ValidationContext};
+
+#[test]
+fn bt27_top_two_face_down_placement_lowers_as_one_step() {
+    for (id, name, text, when) in [
+        (
+            "BT27-094",
+            "Reina Sakuya",
+            "[All Turns] When a Digimon attacks, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer.",
+            "[on_ally_attack, on_opponent_attack]",
+        ),
+        (
+            "BT27-096",
+            "Keenan Crier",
+            "[All Turns] When hands are trashed from, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer.",
+            "on_discard_hand",
+        ),
+        (
+            "BT27-097",
+            "Makoto Kuga",
+            "[All Turns] When a Digimon attacks, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer.",
+            "[on_ally_attack, on_opponent_attack]",
+        ),
+        (
+            "BT27-098",
+            "Akihiro Kurata",
+            "[All Turns] When any Digimon are deleted, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer.",
+            "on_any_deletion",
+        ),
+    ] {
+        let yaml = format!(
+            r#"
+card: {id}
+name: {name}
+kind: tamer
+color: [purple]
+cost: 4
+effects:
+  - text: "{text}"
+    when: {when}
+    optional: true
+    process:
+      - activation_cost: {{ suspend_self: true }}
+      - place_deck_top_under: {{ of: you, count: 2, target: source, face_down: true }}
+"#
+        );
+        let spec: CardSpec = serde_yml::from_str(&yaml).unwrap_or_else(|e| panic!("{id}: {e}"));
+        let compiled = compile(&spec).unwrap_or_else(|e| panic!("{id}: {e:?}"));
+        let CompiledClause::Triggered(clause) = &compiled.effects[0] else {
+            panic!("{id}: expected a triggered clause");
+        };
+        assert_eq!(
+            clause.process[1..],
+            [CompiledStep::PlaceDeckTopUnder {
+                of: CompiledPlayerRef::You,
+                count: 2,
+                target: CompiledBindingRef::Source,
+                face_down: true,
+            }],
+            "{id}"
+        );
+    }
+}
+
+#[test]
+fn place_deck_top_under_rejects_zero_and_an_unbound_target() {
+    let registry = StubRegistry::empty();
+    let context = ValidationContext { raw_rust: &registry };
+    for (args, field, message) in [
+        (
+            "{ of: you, count: 0, target: source, face_down: true }",
+            ".count",
+            "place_deck_top_under count must be positive",
+        ),
+        (
+            "{ of: you, count: 2, target: missing, face_down: true }",
+            ".target",
+            "undeclared binding referenced before declaration: missing",
+        ),
+    ] {
+        let yaml = format!(
+            "card: X-ZONE\nname: Zone Verb Test\nkind: tamer\ncolor: [blue]\ncost: 4\neffects:\n  - when: main_on_field\n    process:\n      - place_deck_top_under: {args}\n"
+        );
+        let spec: CardSpec = serde_yml::from_str(&yaml).expect("card YAML parses");
+        let errors = validate(&spec, &context).expect_err(args);
+        assert!(
+            errors
+                .iter()
+                .any(|error| error.path.ends_with(field) && error.message == message),
+            "{args}: {errors:?}"
+        );
+    }
+}
 
 fn compile_steps(yaml_steps: &str) -> Vec<CompiledStep> {
     let yaml = format!(
