@@ -128,12 +128,14 @@ fn imperialdramon_dm_card() -> digimon_engine::card_data::CardData {
         requirement1: DnaRequirement {
             level: 5,
             card_colors: vec![CardColor::Purple],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },
         requirement2: DnaRequirement {
             level: 5,
             card_colors: vec![CardColor::Red],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },

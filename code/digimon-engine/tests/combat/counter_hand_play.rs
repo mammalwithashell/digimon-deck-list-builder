@@ -77,12 +77,14 @@ fn blast_dna_card(id: &str, level: u8, req1_level: u8, req2_level: u8) -> CardDa
         requirement1: DnaRequirement {
             level: req1_level,
             card_colors: Vec::new(),
+            name_is: String::new(),
             name_contains: "HAND-MAT".to_string(),
             text_contains: String::new(),
         },
         requirement2: DnaRequirement {
             level: req2_level,
             card_colors: Vec::new(),
+            name_is: String::new(),
             name_contains: "FIELD-MAT".to_string(),
             text_contains: String::new(),
         },

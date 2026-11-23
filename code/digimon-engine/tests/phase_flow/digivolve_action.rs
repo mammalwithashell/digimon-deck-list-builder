@@ -237,12 +237,14 @@ fn decode_dna_digivolve_installs_material_selection() {
             requirement1: DnaRequirement {
                 level: 2,
                 card_colors: vec![CardColor::Red],
+                name_is: String::new(),
                 name_contains: String::new(),
                 text_contains: String::new(),
             },
             requirement2: DnaRequirement {
                 level: 2,
                 card_colors: vec![CardColor::Red],
+                name_is: String::new(),
                 name_contains: String::new(),
                 text_contains: String::new(),
             },

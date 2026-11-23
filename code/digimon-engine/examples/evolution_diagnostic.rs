@@ -49,6 +49,7 @@ fn fixture(kind: usize) -> (&'static str, Game, u16) {
     let req = |color| DnaRequirement {
         level: 4,
         card_colors: vec![color],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };

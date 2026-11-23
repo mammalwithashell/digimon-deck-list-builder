@@ -124,6 +124,7 @@ fn dna_req_lv4() -> DnaRequirement {
     DnaRequirement {
         level: 4,
         card_colors: vec![],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     }

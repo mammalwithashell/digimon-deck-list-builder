@@ -20,6 +20,35 @@ use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
 
+#[test]
+fn exact_dna_names_replace_the_legacy_substring_recipe_but_keep_other_costs() {
+    use digimon_engine::dsl_bridge::enrich_card_data_with_dsl_alt_paths;
+    use digimon_engine::dsl_registry::from_embedded_cached;
+
+    let mut cards = CardData::load_from_file(
+        &std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/cards.json"),
+    )
+    .unwrap();
+    let legacy = cards["BT27-103"].dna_costs[0].clone();
+    assert_eq!(legacy.requirement1.name_contains, "Alphamon");
+    let mut other_cost = legacy.clone();
+    other_cost.memory_cost = 3;
+    cards
+        .get_mut("BT27-103")
+        .unwrap()
+        .dna_costs
+        .push(other_cost.clone());
+
+    enrich_card_data_with_dsl_alt_paths(&mut cards, from_embedded_cached().unwrap());
+
+    let costs = &cards["BT27-103"].dna_costs;
+    assert!(!costs.contains(&legacy));
+    assert!(costs.contains(&other_cost));
+    let authored = costs.iter().find(|cost| cost.memory_cost == 0).unwrap();
+    assert_eq!(authored.requirement1.name_is, "Alphamon");
+    assert_eq!(authored.requirement2.name_is, "Ouryumon");
+}
+
 /// Source card: [On Play] this Digimon + another of your Digimon may DNA
 /// digivolve into a Digimon card in the hand for its printed DNA cost.
 const SOURCE_YAML: &str = r#"
@@ -66,6 +95,7 @@ fn req(level: u8, color: CardColor) -> DnaRequirement {
     DnaRequirement {
         level,
         card_colors: vec![color],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     }

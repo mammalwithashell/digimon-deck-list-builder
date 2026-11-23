@@ -181,6 +181,7 @@ fn dna_runner(
         let req = DnaRequirement {
             level: 3,
             card_colors: vec![CardColor::Red],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         };

@@ -1783,11 +1783,6 @@ fn material_to_dna_requirement(
             }
         }
     }
-    let name_contains = f
-        .name_is
-        .clone()
-        .or_else(|| f.name_contains.clone())
-        .unwrap_or_default();
     // `in_text_contains` ("w/[X] in text") is the requirement's text match;
     // `effect_text_contains` keeps its historical mapping.
     let text_contains = f
@@ -1798,7 +1793,8 @@ fn material_to_dna_requirement(
     Some(DnaRequirement {
         level: f.level_eq.unwrap_or(0),
         card_colors,
-        name_contains,
+        name_is: f.name_is.clone().unwrap_or_default(),
+        name_contains: f.name_contains.clone().unwrap_or_default(),
         text_contains,
     })
 }
@@ -1934,6 +1930,7 @@ pub fn dna_req_lv(level: u8) -> DnaRequirement {
     DnaRequirement {
         level,
         card_colors: Vec::new(),
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     }

@@ -95,11 +95,12 @@ fn same_length_ordinary_and_dna_cost_changes_do_not_reuse_old_cards() {
     let mut changed = original.clone();
     changed.evo_costs[0].level = 4;
     distinguishes(original, changed);
-    for field in ["name", "text"] {
+    for field in ["name", "exact_name", "text"] {
         let mut original = make_test_card(&format!("CACHE-DNA-{field}"), "DNA");
         let requirement = DnaRequirement {
             level: 4,
             card_colors: vec![CardColor::Red],
+            name_is: String::new(),
             name_contains: "Alpha".into(),
             text_contains: "Alpha".into(),
         };
@@ -109,10 +110,10 @@ fn same_length_ordinary_and_dna_cost_changes_do_not_reuse_old_cards() {
             memory_cost: 0,
         }];
         let mut changed = original.clone();
-        if field == "name" {
-            changed.dna_costs[0].requirement1.name_contains = "Bravo".into();
-        } else {
-            changed.dna_costs[0].requirement2.text_contains = "Bravo".into();
+        match field {
+            "name" => changed.dna_costs[0].requirement1.name_contains = "Bravo".into(),
+            "exact_name" => changed.dna_costs[0].requirement1.name_is = "Bravo".into(),
+            _ => changed.dna_costs[0].requirement2.text_contains = "Bravo".into(),
         }
         distinguishes(original, changed);
     }

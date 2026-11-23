@@ -122,6 +122,29 @@ fn arts_dna_is_not_offered_for_a_single_legal_material_or_a_normal_evolution_bas
 }
 
 #[test]
+fn ouryuken_is_not_alphamon_for_regular_or_arts_dna() {
+    use digimon_engine::action::space::DNA_DIGIVOLVE_START;
+
+    let mut ouryumon = digimon("OURYU", 6, 12000, false);
+    ouryumon.card_name = "Ouryumon".into();
+    let mut r = start(builder(CARD).add_card(ouryumon).hand(0, &[CARD]));
+    r.place_on_field(0, CARD, Some(0));
+    r.place_on_field(0, "OURYU", Some(0));
+    r.place_on_field(1, "TEXT-3", Some(0));
+
+    let regular_dna = digimon_engine::build_action_mask(&r.game, 0)[DNA_DIGIVOLVE_START as usize];
+    action(&mut r, 0, PLAY_HAND_START);
+    r.choose_prompt_card("TEXT-3", None).unwrap();
+    assert!(
+        r.pending_selection().is_none(),
+        "Ouryuken cannot be an Arts material: {:?}",
+        r.pending_selection_view()
+    );
+    assert_eq!(regular_dna, 0.0, "Ouryuken cannot be a regular DNA material");
+    assert_eq!(ids(&r, &r.game.players[0].trash), [CARD]);
+}
+
+#[test]
 fn dna_digivolution_costs_zero_recovers_and_blocks_play_cost_seven_or_more_from_attacking() {
     use digimon_engine::action::space::{encode_attack, DNA_DIGIVOLVE_START};
     use digimon_engine::debug_runner::make_test_card;

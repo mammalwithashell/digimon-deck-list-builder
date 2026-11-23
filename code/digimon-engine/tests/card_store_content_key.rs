@@ -16,6 +16,7 @@ fn base(id: &str) -> CardData {
     let req = DnaRequirement {
         level: 6,
         card_colors: vec![CardColor::Red],
+        name_is: String::new(),
         name_contains: "Alpha".into(),
         text_contains: "Alpha".into(),
     };

@@ -49,12 +49,14 @@ fn setup(hand: &[&str]) -> DebugRunner {
             requirement1: DnaRequirement {
                 level,
                 card_colors: vec![CardColor::Green],
+                name_is: String::new(),
                 name_contains: name_req.into(),
                 text_contains: String::new(),
             },
             requirement2: DnaRequirement {
                 level: 6,
                 card_colors: vec![CardColor::Blue],
+                name_is: String::new(),
                 name_contains: String::new(),
                 text_contains: String::new(),
             },

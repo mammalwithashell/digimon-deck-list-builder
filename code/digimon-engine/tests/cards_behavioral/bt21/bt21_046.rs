@@ -35,6 +35,7 @@ fn setup(hand: &[&str]) -> DebugRunner {
     let req = DnaRequirement {
         level: 4,
         card_colors: vec![CardColor::Green],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };
