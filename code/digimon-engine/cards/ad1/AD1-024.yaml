@@ -197,12 +197,21 @@ effects:
                     - is_suspended: true
                 prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
             - return_to_deck: { target: byeffect_bounce, position: bottom }
-      # DCGO executed-flag: nothing ran -> RemoveUse (W13: keep the OPT).
+      # DCGO executed-flag: nothing ran -> RemoveUse (W13: keep the OPT) --
+      # but only when something could have run. With no opponent Digimon and
+      # this Digimon already unsuspended (and so no suspended opponent Digimon
+      # to return) nothing was possible; DCGO still offers the effect, and
+      # accepting it uses the [Once Per Turn] (CR 4.3 15-14-1-4; row d of the
+      # table in qa/rules/mechanics-gaps-2026-10.md W14). Nothing that ran
+      # leaves both states unchanged, so they are read here.
       - if:
           condition:
             all_of:
               - binding_absent: suspend_target
               - binding_absent: standalone_unsuspend
               - binding_absent: byeffect_bounce
+              - any_of:
+                  - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+                  - any_permanent: { of: you, is_source: true, is_suspended: true }
           then:
             - refund_opt: {}

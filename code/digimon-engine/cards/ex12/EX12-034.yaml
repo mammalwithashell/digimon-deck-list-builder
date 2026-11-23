@@ -56,14 +56,17 @@ effects:
     summary: "[All Turns][OPT] When any own Digimon would leave, play 1 level 5 or lower [SW] from hand or this Digimon's sources free"
     # DCGO EX12_034.cs ActivateCoroutine: offers "Play from hand" only when the
     # hand holds a playable card, "Play from this Digimon's Digivolution Cards"
-    # only when its sources do, plus "Don't play". Here the clause is
-    # `optional: true` ("you may play"), so the player first accepts or
-    # declines the replacement. Declining keeps the [Once Per Turn] (official
-    # Q1818). Accepting is choosing to activate, so it uses the [Once Per Turn]
-    # even if "Don't play" is then chosen or nothing is playable: CR 4.3
-    # 15-14-1-4, "even if the effect's processing can't be executed". DCGO
-    # refunds that use (RemoveUse when nothing was played); the rules text
-    # decides, so there is no refund here (bug scan: 4 turns over the cap).
+    # only when its sources do, plus "Don't play". The accept prompt of this
+    # `optional: true` replacement is DCGO's skippable Yes/No, not printed:
+    # the printed effect is the whole "you may play", so choosing to activate
+    # it is choosing to play (CR 4.3 15-14-1-4). Declining the replacement, or
+    # accepting it and choosing "Don't play" while a card could be played, is
+    # choosing not to play and keeps the [Once Per Turn] (official Q1818,
+    # Q4086, Q6946; DCGO RemoveUse). Picking a card spends it (Q5426; DCGO
+    # isUsed). With nothing playable DCGO still offers the effect and spends
+    # the use (its RemoveUse sits inside `if (validHandCard ||
+    # validDigivolutionCard)`), so the refund below is gated on a zone having
+    # held a playable card (CR 4.3 15-14-1-4: chosen, can't be executed).
     # Both the zone offer and the pick use DCGO's CanSelectCardCondition
     # (EX12_034.cs:146-152), which requires CanPlayAsNewPermanent(payCost:
     # false): a card under a play prohibition or with no free frame is never
@@ -129,3 +132,32 @@ effects:
                 target: source
                 source_index: sw_source
                 cost_delta: free
+      # Row b of the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md
+      # W14): "Don't play" chosen while a zone held a playable card.
+      - if:
+          condition:
+            all_of:
+              - equals: [play_zone, 2]
+              - any_of:
+                  - count_gte:
+                      filter:
+                        of: you
+                        zone: [hand]
+                        all_of:
+                          - kind: digimon
+                          - level_lte: 5
+                          - trait_has: SW
+                          - can_play_from_effect_without_cost: true
+                      n: 1
+                  - count_gte:
+                      filter:
+                        of: you
+                        zone: [material]
+                        all_of:
+                          - kind: digimon
+                          - level_lte: 5
+                          - trait_has: SW
+                          - can_play_from_effect_without_cost: true
+                      n: 1
+          then:
+            - refund_opt: {}

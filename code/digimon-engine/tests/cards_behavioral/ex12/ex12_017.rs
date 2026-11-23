@@ -520,52 +520,93 @@ mod counter_runtime {
     }
 }
 
-/// WarGreymon (EX12-017) "[Counter] [Once Per Turn] 2 of your Digimon may DNA
-/// digivolve ... Then, you may change the attack target to 1 of your Digimon."
-/// [Counter] is a timing for activation-type effects (CR 4.3 15-16-14-1): the
-/// player activates it by declaring it in the counter timing (11-3), and
-/// CR 4.3 15-14-1-4 counts that as the [Once Per Turn] use "even if the
-/// effect's processing can't be executed". Passing both picks afterwards still
-/// uses it. DCGO EX12_017.cs `if (!isUsed) activateClass.RemoveUse()`
-/// refunds it; the rules text decides.
-#[test]
-fn ex12_017_counter_declared_then_nothing_done_spends_the_once_per_turn() {
-    use digimon_engine::action::space::PASS;
+/// Fire WarGreymon's [Counter] directly.
+fn ex12_017_counter_fire(runner: &mut DebugRunner, wargreymon: digimon_engine::permanent::PermanentHandle) {
     use digimon_engine::enums::EffectTiming;
     use digimon_engine::selection::TriggerSource;
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::CounterEffect, TriggerSource::Permanent(wargreymon));
+    runner.game.drain_effect_queue();
+}
 
+/// Drive one [Counter] activation: accept the effect, pass the DNA pick if one
+/// is offered, and answer the redirect pick with `redirect` (PASS declines).
+/// Returns the prompts seen.
+fn ex12_017_counter_run(runner: &mut DebugRunner, redirect: Option<u16>) -> Vec<String> {
+    use digimon_engine::action::space::PASS;
+    let mut prompts = Vec::new();
+    for _ in 0..6 {
+        let Some(sel) = runner.pending_selection() else {
+            break;
+        };
+        let (player, prompt) = (sel.selecting_player, sel.prompt.clone());
+        let first_non_pass = sel.valid_action_ids.iter().copied().find(|&a| a != PASS);
+        prompts.push(prompt.clone());
+        let action = if prompt.contains("attack target") {
+            redirect.unwrap_or(PASS)
+        } else if prompt.contains("DNA") {
+            PASS
+        } else {
+            first_non_pass.unwrap_or(PASS)
+        };
+        runner
+            .execute_action(player, action)
+            .unwrap_or_else(|e| panic!("{e:?} at {prompt:?} (seen {prompts:?})"));
+    }
+    prompts
+}
+
+/// WarGreymon (EX12-017) "[Counter] [Once Per Turn] 2 of your Digimon may DNA
+/// digivolve ... Then, you may change the attack target to 1 of your Digimon."
+/// is the owner-decided W13 shape ("you may A. Then, you may B.",
+/// qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21): with both halves
+/// declined nothing executed and the [Once Per Turn] is kept, at [Counter] as
+/// at any other timing (DCGO EX12_017.cs `if (!isUsed)
+/// activateClass.RemoveUse()`). The effect's accept prompt is DCGO's
+/// (`SetUpActivateClass(..., isOptional: true, ...)`), not printed.
+#[test]
+fn ex12_017_counter_both_halves_declined_keeps_the_once_per_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX12-017 YAML loads")
         .start();
     let wargreymon = runner.place_on_field(0, CARD_ID, Some(0));
-    let fire = |runner: &mut DebugRunner| {
-        runner
-            .game
-            .enqueue_triggered(EffectTiming::CounterEffect, TriggerSource::Permanent(wargreymon));
-        runner.game.drain_effect_queue();
-    };
 
-    fire(&mut runner);
-    // No DNA result card in hand; pass every remaining (optional) pick.
-    for _ in 0..4 {
-        let Some(player) = runner.pending_selection().map(|s| s.selecting_player) else {
-            break;
-        };
-        runner.execute_action(player, PASS).expect("pass the optional pick");
-    }
-    assert!(runner.pending_selection().is_none());
+    ex12_017_counter_fire(&mut runner, wargreymon);
+    let prompts = ex12_017_counter_run(&mut runner, None);
     assert!(
-        runner.game.players[0].battle_area[wargreymon.index as usize]
-            .effect_activations
-            .values()
-            .any(|n| *n == 1),
-        "the declared [Counter] used the [Once Per Turn]"
+        prompts.iter().any(|p| p.contains("attack target")),
+        "the redirect was offered and declined: {prompts:?}"
     );
+    assert!(runner.pending_selection().is_none(), "{prompts:?}");
 
-    fire(&mut runner);
+    ex12_017_counter_fire(&mut runner, wargreymon);
+    assert!(
+        runner.pending_selection().is_some(),
+        "both halves declined kept the [Once Per Turn]: offered again this turn"
+    );
+}
+
+/// Choosing the redirect target executes the second half: the [Once Per Turn]
+/// is spent (W13; CR 4.3 15-14-1-4; DCGO sets `isUsed`).
+#[test]
+fn ex12_017_counter_redirect_chosen_spends_the_once_per_turn() {
+    use digimon_engine::action::space::encode_attack;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-017 YAML loads")
+        .start();
+    let wargreymon = runner.place_on_field(0, CARD_ID, Some(0));
+
+    ex12_017_counter_fire(&mut runner, wargreymon);
+    let pick = encode_attack(wargreymon.player as u16, wargreymon.index as u16);
+    let prompts = ex12_017_counter_run(&mut runner, Some(pick));
+    assert!(runner.pending_selection().is_none(), "{prompts:?}");
+
+    ex12_017_counter_fire(&mut runner, wargreymon);
     assert!(
         runner.pending_selection().is_none(),
-        "a used [Once Per Turn] [Counter] does not activate again this turn"
+        "the redirect was chosen: no second activation this turn"
     );
 }

@@ -33,25 +33,42 @@
 //!   observer's own attack is inside `on_ally_attack`), never `when_attacking`.
 //!
 //! * `refund-after-explicit-accept` -- a `refund_opt` inside a clause whose
-//!   activation is an explicit choice the player has already made: an
-//!   `optional: true` replacement (the "May accept replacement" prompt), an
-//!   `outer_prompt: true` clause, or a [Main] / [Counter] clause (activation-
-//!   type, CR 4.3 15-8-4 / 15-16-14-1: activated by declaring it). CR 4.3
-//!   15-14-1-4: "When a player chooses to activate an [X Per Turn] effect, it
-//!   will count toward 1 use of [X Per Turn], even if the effect's processing
-//!   can't be executed." DCGO's `RemoveUse()` after such a choice is a
-//!   divergence the rules text overrides. Erlangmon (EX12-034) and
-//!   Slayerdramon (EX13-024) refunded an accepted leave replacement that did
-//!   nothing and were used twice in one turn in logged games. A refund stays
-//!   legal where the "may" is folded into the clause's first pick (official
-//!   Q1818: declining it is not activating) and for the owner-decided
-//!   "you may A. Then, you may B." shape (W13); neither has an explicit
-//!   accept. A [When Attacking] [Counter] effect that refunds on its trigger
-//!   arm is authored as two arms sharing an `opt_group` (GraceNovamon
-//!   (BT25-103)). [`REFUND_AFTER_ACCEPT_REVIEWED`] lists the reviewed cards
-//!   whose `outer_prompt` is an unprinted DCGO Yes/No in front of a W13
-//!   "you may A. Then, you may B." body (Imperialdramon: Fighter Mode
-//!   (AD1-024)); there both halves declined keeps the use.
+//!   activation passes an explicit accept: an `optional: true` replacement
+//!   (the "May accept replacement" prompt), an `outer_prompt: true` clause, or
+//!   a [Main] / [Counter] clause (activation-type, CR 4.3 15-8-4 /
+//!   15-16-14-1: activated by declaring it). Whether such a refund is right
+//!   depends on which path reaches it, and the YAML shape cannot tell. The
+//!   [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md W14) decides;
+//!   the accept prompt is DCGO's skippable Yes/No, not printed, and for a
+//!   printed "you may X" the choice to activate is the choice to do X:
+//!   - a. declined at the accept prompt: kept (no refund step needed);
+//!   - b. accepted, X was possible, the player chose not to do X: KEPT
+//!     (official Q1818, Q4086, Q6946) -- the refund is right;
+//!   - W13. "you may A. Then, you may B." with both halves declined: KEPT
+//!     (owner decision W13, 2026-10-21) -- the refund is right;
+//!   - c. the player chose X, whatever then happened to it: SPENT (CR 4.3
+//!     15-14-1-4, official Q5426) -- a refund is wrong;
+//!   - d. nothing was possible but the effect was offered: SPENT (CR 4.3
+//!     15-14-1-4); where DCGO does not offer the effect in that state the
+//!     clause mirrors that with a `condition:` instead -- a refund is wrong;
+//!   - e. mandatory content ran, or an opponent's choice was processed:
+//!     SPENT (official Q4739, Q5056, Q5171, Q5330) -- a refund is wrong;
+//!   - f. accepted, then the optional cost of a "by X, ..." effect was
+//!     declined: KEPT on Slayerdramon (EX13-024) by owner ruling
+//!     (2026-11-23, that card only) -- the refund is right there; on every
+//!     other card the current behaviour (spent) stands until the owner
+//!     rules, so a refund is wrong.
+//!   So every such clause is listed in [`REFUND_AFTER_ACCEPT_REVIEWED`] with
+//!   the row its refund path is reached on (b, W13, or f by owner ruling;
+//!   [`RefundRow`] has no variant for c, d or e), why it is reached on no
+//!   other, and the behavioural tests that prove it. An unlisted clause is an
+//!   error, and the
+//!   pool guards fail on an entry whose clause no longer refunds behind an
+//!   accept ([`stale_refund_reviews`]) or whose named test is gone. The table
+//!   is a review record, not a check of the row: the lint cannot see which
+//!   path reaches a `refund_opt`, so the named tests carry the proof.
+//!   Erlangmon (EX12-034) once refunded on its nothing-playable path (row d)
+//!   and was used twice in one turn in logged games.
 
 use serde_yml::Value;
 
@@ -105,20 +122,211 @@ const OBSERVER_TIMINGS: &[&str] = &[
     "on_any_deletion",
 ];
 
-/// Cards whose explicit-accept clause keeps a `refund_opt` on purpose, each
-/// with the reason. The pool guards fail on an entry the card no longer needs
-/// ([`refund_exemption_is_still_needed`]).
-pub const REFUND_AFTER_ACCEPT_REVIEWED: &[(&str, &str)] = &[(
-    "AD1-024",
-    concat!(
-        "Imperialdramon: Fighter Mode prints \"you may suspend ... Then, ... you may return ...\": ",
-        "the owner-decided W13 shape (qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21), where ",
-        "both halves declined means nothing executed, the effect was not activated and the ",
-        "[Once Per Turn] is kept. Its `outer_prompt` is DCGO's unprinted always-shown Yes/No, ",
-        "not a printed whole-effect \"you may\", so accepting it and then declining both halves ",
-        "is still both halves declined (DCGO AD1_024.cs executed-flag RemoveUse)."
-    ),
-)];
+/// The rows of the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md
+/// W14) on which a refund behind an explicit accept is right. Rows c, d and e
+/// spend the use, so they have no variant: a clause that refunds on them
+/// cannot be listed. Row f is right only by a per-card owner ruling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RefundRow {
+    /// b: accepted, the printed "you may X" was possible, and the player chose
+    /// not to do X (official Q1818, Q4086, Q6946).
+    DeclinedWhilePossible,
+    /// W13: "you may A. Then, you may B." with both halves declined
+    /// (owner decision 2026-10-21).
+    BothHalvesDeclined,
+    /// f: the optional cost of a "by X, ..." effect was declined after the
+    /// accept, on a card the owner has ruled keeps the use then. Only
+    /// Slayerdramon (EX13-024) (owner ruling 2026-11-23, that card only);
+    /// on every other card a declined "by X" cost spends the use today, and
+    /// none may be listed on this row without its own ruling.
+    CostDeclinedByOwnerRuling,
+}
+
+/// One reviewed `refund_opt` behind an explicit accept.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReviewedRefund {
+    pub card: &'static str,
+    /// The clause's path in the spec, as the lint reports it without the
+    /// trailing `.process` (`effects[5]`).
+    pub clause: &'static str,
+    pub row: RefundRow,
+    /// Why the refund path is reached on `row` and on no spending row.
+    pub reason: &'static str,
+    /// The behavioural tests that carry the proof, each as
+    /// `<file under code/digimon-engine/tests>::<test fn>`: the listed row
+    /// keeps the use, choosing X spends it (row c), and the nothing-possible
+    /// state spends it or is not offered (row d). Where one half is always
+    /// possible, so that no row-d state exists, `reason` says which.
+    pub tests: &'static [&'static str],
+}
+
+/// Every production clause with a `refund_opt` behind an explicit accept,
+/// reviewed against the [Once Per Turn] table.
+///
+/// This is a review record, not a proof. The lint sees that a clause refunds
+/// behind an accept; it cannot see which path reaches the refund, so a clause
+/// that also refunds on a spending row (an unconditional `else: refund_opt`
+/// that runs when nothing was possible, row d) could still be listed as row
+/// b. What proves an entry is its `tests`: behavioural tests for the kept
+/// row, for row c and for the row-d state. The pool guards fail on a new
+/// unlisted clause (the lint), on a stale entry ([`stale_refund_reviews`])
+/// and, in `cards_behavioral`, on a named test that no longer exists.
+pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
+    ReviewedRefund {
+        card: "AD1-024",
+        clause: "effects[3]",
+        row: RefundRow::BothHalvesDeclined,
+        reason: concat!(
+            "Imperialdramon: Fighter Mode prints \"you may suspend 1 of your opponent's Digimon and ",
+            "unsuspend this Digimon. Then, if played or digivolved by effects, you may return ...\": ",
+            "W13. Its outer_prompt is DCGO's unprinted skippable Yes/No (AD1_024.cs SetIsSkippable). ",
+            "The refund needs every pick absent, so no half executed, and an opponent Digimon or this ",
+            "Digimon being suspended, so something was possible: with neither, DCGO still offers the ",
+            "effect and accepting it spends the use (row d)."
+        ),
+        tests: &[
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accept_then_decline_everything_keeps_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_is_once_per_turn",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accepted_with_nothing_possible_spends_opt",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT25-103",
+        clause: "effects[4]",
+        row: RefundRow::BothHalvesDeclined,
+        reason: concat!(
+            "GraceNovamon [When Attacking] [Counter] \"you may trash ... Then, you may end this attack\": W13, ",
+            "which the owner decision names (\"DCGO has the Dianamon/GraceNovamon effect correct\"); one clause ",
+            "for both timings (Q1550), as DCGO BT25_103.cs's one shared effect. The refund needs nothing trashed ",
+            "AND \"Don't end the attack\", so no half executed. No row-d state exists: the end-attack half is ",
+            "offered even with nothing to trash.",
+        ),
+        tests: &[
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_when_attacking_declining_everything_keeps_opt",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_counter_declining_everything_keeps_opt",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_when_attacking_trashing_spends_opt_for_counter",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_ending_attack_alone_spends_opt",
+            "cards_behavioral/bt25/bt25_103.rs::bt25_103_no_sources_on_self_skips_trash_still_offers_end",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT26-055",
+        clause: "effects[1]",
+        row: RefundRow::BothHalvesDeclined,
+        reason: concat!(
+            "Giromon [On Play] [When Digivolving] [Counter] \"You may place ... Then, you may delete ...\": W13 at ",
+            "every timing (Q1550; DCGO BT26_055.cs one shared effect). The refund needs nothing placed and ",
+            "\"Don't delete\". No row-d state exists: the delete half is offered even with an empty hand and no ",
+            "opponent Digimon, because Giromon is itself [Ver.3].",
+        ),
+        tests: &[
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_doing_nothing_refunds_once_per_turn",
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_counter_doing_nothing_keeps_once_per_turn",
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_counter_placing_spends_once_per_turn_for_every_timing",
+            "cards_behavioral/bt26/bt26_055.rs::bt26_055_empty_hand_still_offers_the_delete_half",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT26-060",
+        clause: "effects[5]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Chronomon: Destroy Mode prints \"you may delete 1 of your opponent's Digimon\"; the outer prompt is ",
+            "DCGO's skippable Yes/No. The refund runs only when the delete pick is passed; the clause's ",
+            "`condition:` (an opponent Digimon exists, DCGO CanActivateCondition) means a target was always ",
+            "possible (row b, Q1818) and the effect is not offered without one (row d). A chosen target spends ",
+            "it (row c).",
+        ),
+        tests: &[
+            "cards_behavioral/bt26/bt26_060.rs::bt26_060_accepted_then_declined_delete_keeps_the_once_per_turn",
+            "cards_behavioral/bt26/bt26_060.rs::bt26_060_accepted_and_delete_chosen_spends_the_once_per_turn",
+            "cards_behavioral/bt26/bt26_060.rs::bt26_060_not_offered_when_the_opponent_has_no_digimon",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-017",
+        clause: "effects[3]",
+        row: RefundRow::BothHalvesDeclined,
+        reason: concat!(
+            "WarGreymon [Counter] \"2 of your Digimon may DNA digivolve ... Then, you may change the attack ",
+            "target\": W13 (DCGO EX12_017.cs RemoveUse when neither happened). The refund needs both the DNA ",
+            "pair and the redirect pick absent. No row-d state exists: the redirect is offered even without a ",
+            "DNA pair, because WarGreymon is itself a candidate.",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/ex12_017.rs::ex12_017_counter_both_halves_declined_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_017.rs::ex12_017_counter_redirect_chosen_spends_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_017.rs::redirect_is_offered_even_without_a_dna",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-034",
+        clause: "effects[2]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Erlangmon prints \"you may play 1 level 5 or lower [SW] ... card\"; the replacement's accept is DCGO's ",
+            "skippable prompt. The refund runs only on \"Don't play\" while a zone held a playable card (row b, ",
+            "Q1818); with nothing playable it does not run and the use is spent (row d: DCGO offers the effect ",
+            "and its RemoveUse sits inside `if (validHandCard || validDigivolutionCard)`).",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_accepted_then_dont_play_keeps_once_per_turn",
+            "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_accepted_and_card_played_spends_once_per_turn",
+            "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_with_no_playable_card_plays_nothing",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-041",
+        clause: "effects[0]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Thundermon [Main] prints \"You may play or use 1 [Mutant]/[ME] card ...\". The refund runs only when ",
+            "the pick is passed; the clause's `condition:` (a playable card in hand, DCGO CanUseCondition) means ",
+            "one was always possible (row b, Q1818) and the [Main] is not offered without one (row d). A picked ",
+            "card spends it (row c).",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-024",
+        clause: "effects[3]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Slayerdramon \"by suspending 1 of your such Digimon, they don't leave\": owner ruling 2026-11-23 ",
+            "(qa/rules/mechanics-gaps-2026-10.md W14), for this card only: the suspend declined keeps the use ",
+            "(DCGO EX13_024.cs RemoveUse). The replacement is offered only while a payer exists (`active_when`), ",
+            "so the refund runs only on a decline while the suspend was possible; a suspended Digimon spends it.",
+        ),
+        tests: &[
+            "ex13_024_plural_prevention.rs::face_cost_picker_decline_keeps_opt_and_clones",
+            "ex13_024_plural_prevention.rs::successful_face_payment_consumes_opt_with_another_payer_available",
+            "cards_behavioral/ex13/ex13_024.rs::ex13_024_no_unsuspended_text_digimon_means_no_offer",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-024",
+        clause: "effects[4]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Slayerdramon's inherited copy of effects[3]: same ruling, separate [Once Per Turn].",
+        ),
+        tests: &[
+            "ex13_024_plural_prevention.rs::inherited_cost_picker_decline_keeps_opt_and_clones",
+            "ex13_024_plural_prevention.rs::successful_inherited_payment_consumes_opt_with_another_payer_available",
+            "cards_behavioral/ex13/ex13_024.rs::ex13_024_inherited_no_unsuspended_text_digimon_means_no_offer",
+        ],
+    },
+];
+
+/// Whether `finding` is the reviewed refund `entry` of `card`.
+fn reviewed_by(card: &str, finding: &AuthoringFinding, entry: &ReviewedRefund) -> bool {
+    finding.rule == "refund-after-explicit-accept"
+        && entry.card == card
+        && finding.path.strip_suffix(".process").unwrap_or(&finding.path) == entry.clause
+}
 
 fn card_id(value: &Value) -> Option<&str> {
     value.as_mapping()?.get("card")?.as_str()
@@ -133,33 +341,51 @@ pub fn check_authoring_yaml_unexempted(raw: &str) -> Vec<AuthoringFinding> {
     out
 }
 
-/// Lint one card's raw YAML text. A file that does not parse yields no
-/// findings here (the loader reports the parse error).
-pub fn check_authoring_yaml(raw: &str) -> Vec<AuthoringFinding> {
+/// Lint one card's raw YAML text against a reviewed-refund table.
+pub fn check_authoring_yaml_with(raw: &str, reviewed: &[ReviewedRefund]) -> Vec<AuthoringFinding> {
     let mut out = check_authoring_yaml_unexempted(raw);
     let card = serde_yml::from_str::<Value>(raw)
         .ok()
         .and_then(|v| card_id(&v).map(str::to_string));
     if let Some(card) = card {
-        if REFUND_AFTER_ACCEPT_REVIEWED.iter().any(|(id, _)| *id == card) {
-            out.retain(|f| f.rule != "refund-after-explicit-accept");
-        }
+        out.retain(|f| !reviewed.iter().any(|entry| reviewed_by(&card, f, entry)));
     }
     out
 }
 
-/// Whether the reviewed refund exemption for `card` still matches a
-/// `refund-after-explicit-accept` finding in its spec under `cards_root`.
-pub fn refund_exemption_is_still_needed(cards_root: &std::path::Path, card: &str) -> bool {
-    pool_card_files(cards_root)
-        .into_iter()
-        .filter(|f| f.file_stem().and_then(|s| s.to_str()) == Some(card))
-        .filter_map(|f| std::fs::read_to_string(f).ok())
-        .any(|raw| {
-            check_authoring_yaml_unexempted(&raw)
+/// Lint one card's raw YAML text. A file that does not parse yields no
+/// findings here (the loader reports the parse error).
+pub fn check_authoring_yaml(raw: &str) -> Vec<AuthoringFinding> {
+    check_authoring_yaml_with(raw, REFUND_AFTER_ACCEPT_REVIEWED)
+}
+
+/// Whether the spec text `raw` still has the refund `entry` reviews.
+pub fn refund_review_is_live(raw: &str, entry: &ReviewedRefund) -> bool {
+    check_authoring_yaml_unexempted(raw)
+        .iter()
+        .any(|f| reviewed_by(entry.card, f, entry))
+}
+
+/// Entries of `reviewed` whose card spec under `cards_root` no longer has a
+/// `refund_opt` behind an explicit accept at the listed clause; one line each.
+pub fn stale_refund_reviews_with(cards_root: &std::path::Path, reviewed: &[ReviewedRefund]) -> Vec<String> {
+    let files = pool_card_files(cards_root);
+    reviewed
+        .iter()
+        .filter(|entry| {
+            !files
                 .iter()
-                .any(|f| f.rule == "refund-after-explicit-accept")
+                .filter(|f| f.file_stem().and_then(|s| s.to_str()) == Some(entry.card))
+                .filter_map(|f| std::fs::read_to_string(f).ok())
+                .any(|raw| refund_review_is_live(&raw, entry))
         })
+        .map(|entry| format!("{} {} ({:?})", entry.card, entry.clause, entry.row))
+        .collect()
+}
+
+/// [`stale_refund_reviews_with`] over [`REFUND_AFTER_ACCEPT_REVIEWED`].
+pub fn stale_refund_reviews(cards_root: &std::path::Path) -> Vec<String> {
+    stale_refund_reviews_with(cards_root, REFUND_AFTER_ACCEPT_REVIEWED)
 }
 
 /// Every production card spec under `cards_root` (`code/digimon-engine/cards`), sorted. `_examples/` holds DSL
@@ -228,7 +454,7 @@ fn walk(value: &Value, path: &str, out: &mut Vec<AuthoringFinding>) {
                         rule: "refund-after-explicit-accept",
                         path: if path.is_empty() { "process".into() } else { format!("{path}.process") },
                         message: format!(
-                            "`refund_opt` in {why}: CR 4.3 15-14-1-4 counts the [X Per Turn] use as soon as the player chooses to activate, \"even if the effect's processing can't be executed\" (DCGO RemoveUse() diverges here). Drop the refund; a refund belongs only where the \"may\" is folded into the first pick (Q1818) or the W13 \"you may A. Then, you may B.\" shape"
+                            "unreviewed `refund_opt` in {why}. Check which path reaches it against the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md W14): a refund is right only when the player chose not to do a printed \"you may X\" that was possible (row b: Q1818, Q4086, Q6946) or declined both halves of \"you may A. Then, you may B.\" (W13); it is wrong once the player chose X (row c: CR 4.3 15-14-1-4, Q5426), when nothing was possible but the effect was offered (row d), after mandatory content or an opponent's choice (row e: Q4739, Q5056), or when the declined thing is the optional cost of a \"by X, ...\" effect (row f; kept only by a per-card owner ruling). List the clause in REFUND_AFTER_ACCEPT_REVIEWED with its row, reason and tests, or gate or drop the refund"
                         ),
                     });
                 }
@@ -390,22 +616,88 @@ mod tests {
         assert!(rules(raw).is_empty());
     }
 
+    const TEST_REVIEW: &[ReviewedRefund] = &[ReviewedRefund {
+        card: "TEST-1",
+        clause: "effects[0]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: "test",
+        tests: &[],
+    }];
+
+    fn rules_with(raw: &str) -> Vec<&'static str> {
+        check_authoring_yaml_with(raw, TEST_REVIEW).into_iter().map(|f| f.rule).collect()
+    }
+
+    /// A reviewed entry clears exactly its card's clause: the same body on
+    /// another card, or at another clause of the same card, is still flagged.
     #[test]
-    fn reviewed_refund_exemption_applies_to_its_card_only() {
-        let body = format!(
-            "effects:\n  - when: on_play\n    once_per_turn: true\n    optional: true\n    outer_prompt: true\n{REFUND_TAIL}"
+    fn reviewed_refund_applies_to_its_clause_only() {
+        let clause = format!(
+            "  - when: on_add_to_deck\n    once_per_turn: true\n    optional: true\n    outer_prompt: true\n{REFUND_TAIL}"
         );
-        let exempt = format!("card: AD1-024\n{body}");
-        assert!(rules(&exempt).is_empty());
+        let reviewed = format!("card: TEST-1\neffects:\n{clause}");
+        assert!(rules_with(&reviewed).is_empty());
         assert_eq!(
-            check_authoring_yaml_unexempted(&exempt)
+            check_authoring_yaml_unexempted(&reviewed)
                 .into_iter()
                 .map(|f| f.rule)
                 .collect::<Vec<_>>(),
             vec!["refund-after-explicit-accept"]
         );
-        let other = format!("card: AD1-025\n{body}");
-        assert_eq!(rules(&other), vec!["refund-after-explicit-accept"]);
+        let other_card = format!("card: TEST-2\neffects:\n{clause}");
+        assert_eq!(rules_with(&other_card), vec!["refund-after-explicit-accept"]);
+        let other_clause =
+            format!("card: TEST-1\neffects:\n  - when: on_play\n    process: []\n{clause}");
+        assert_eq!(rules_with(&other_clause), vec!["refund-after-explicit-accept"]);
+    }
+
+    /// Liveness: an entry is live while its clause still refunds behind an
+    /// accept, and stale once the refund (or the accept) is gone or the
+    /// clause moved.
+    #[test]
+    fn reviewed_refund_liveness() {
+        let entry = &TEST_REVIEW[0];
+        let live = format!("card: TEST-1\neffects:\n  - when: counter\n    once_per_turn: true\n{REFUND_TAIL}");
+        assert!(refund_review_is_live(&live, entry));
+        let no_refund = "card: TEST-1\neffects:\n  - when: counter\n    once_per_turn: true\n    process:\n      - draw: { of: you, count: 1 }\n";
+        assert!(!refund_review_is_live(no_refund, entry));
+        let no_accept = format!("card: TEST-1\neffects:\n  - when: on_play\n    once_per_turn: true\n{REFUND_TAIL}");
+        assert!(!refund_review_is_live(&no_accept, entry));
+        let moved = format!(
+            "card: TEST-1\neffects:\n  - when: on_play\n    process: []\n  - when: counter\n    once_per_turn: true\n{REFUND_TAIL}"
+        );
+        assert!(!refund_review_is_live(&moved, entry), "the clause moved: re-review it");
+    }
+
+    /// The production table: one entry per clause, each with a reason and
+    /// the tests that prove it.
+    #[test]
+    fn reviewed_refund_table_is_well_formed() {
+        for (i, a) in REFUND_AFTER_ACCEPT_REVIEWED.iter().enumerate() {
+            assert!(!a.reason.trim().is_empty(), "{} {}", a.card, a.clause);
+            assert!(a.clause.starts_with("effects["), "{} {}", a.card, a.clause);
+            assert!(!a.tests.is_empty(), "{} {}: name the tests that prove the row", a.card, a.clause);
+            if a.row == RefundRow::CostDeclinedByOwnerRuling {
+                assert_eq!(a.card, "EX13-024", "row f needs an owner ruling for that card ({})", a.card);
+            }
+            for t in a.tests {
+                let (file, name) = t.split_once("::").unwrap_or(("", ""));
+                assert!(
+                    file.ends_with(".rs") && !name.is_empty(),
+                    "{} {}: `{t}` is not <file>::<test fn>",
+                    a.card,
+                    a.clause
+                );
+            }
+            for b in &REFUND_AFTER_ACCEPT_REVIEWED[i + 1..] {
+                assert!(
+                    (a.card, a.clause) != (b.card, b.clause),
+                    "duplicate entry {} {}",
+                    a.card,
+                    a.clause
+                );
+            }
+        }
     }
 
     #[test]

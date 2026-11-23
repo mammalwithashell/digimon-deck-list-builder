@@ -135,25 +135,50 @@ fn ex12_034_leave_offers_only_zones_with_a_playable_card() {
     assert_eq!(labels, vec!["Hand".to_string(), "Don't play".to_string()]);
 }
 
-/// CR 4.3 15-14-1-4: "When a player chooses to activate an [X Per Turn]
-/// effect, it will count toward 1 use of [X Per Turn], even if the effect's
-/// processing can't be executed." Accepting the replacement is that choice, so
-/// choosing "Don't play" afterwards spends the [Once Per Turn] and the next
-/// leave this turn is not offered it. DCGO EX12_034.cs RemoveUse()s here
-/// instead; the rules text decides (bug scan: 4 turns over the cap).
+/// The replacement's accept prompt is not printed: it is DCGO's skippable
+/// prompt (EX12_034.cs `SetIsSkippable(true)`). The printed effect is the
+/// whole "you may play 1 ... card", so the choice to activate it is the choice
+/// to play. Accepting and then choosing "Don't play" while a card could be
+/// played is choosing not to play, which keeps the [Once Per Turn] (official
+/// Q1818, Q4086, Q6946; CR 4.3 15-14-1-4 counts the use only when the player
+/// chooses to activate). DCGO agrees (`if (!isUsed) activateClass.RemoveUse()`
+/// inside `if (validHandCard || validDigivolutionCard)`).
 #[test]
-fn ex12_034_leave_accepted_then_dont_play_spends_once_per_turn() {
+fn ex12_034_leave_accepted_then_dont_play_keeps_once_per_turn() {
     let (mut runner, _) = leave_setup(&["SW-5"]);
     delete_own(&mut runner, "VICTIM-A");
     runner.accept_optional_trigger().expect("accept the replacement");
+    assert_eq!(choice_labels(&runner), vec!["Hand".to_string(), "Don't play".to_string()]);
     runner.execute_branch(1).expect("choose Don't play");
     let _ = runner.auto_resolve();
     assert!(!field_contains(&runner, 0, "VICTIM-A"), "the first Digimon left");
 
     delete_own(&mut runner, "VICTIM-B");
     assert!(
+        runner.pending_selection().is_some(),
+        "choosing not to play kept the [Once Per Turn]: offered again this turn"
+    );
+}
+
+/// Choosing to play a card spends the [Once Per Turn] (CR 4.3 15-14-1-4;
+/// official Q5426: the use counts as soon as the player chooses the action).
+/// DCGO sets `isUsed` once a card is selected.
+#[test]
+fn ex12_034_leave_accepted_and_card_played_spends_once_per_turn() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    runner.execute_branch(0).expect("choose Hand");
+    let sel = runner.pending_selection().expect("hand pick pending");
+    let (player, pick) = (sel.selecting_player, sel.valid_action_ids[0]);
+    runner.execute_action(player, pick).expect("play SW-5");
+    let _ = runner.auto_resolve();
+    assert!(field_contains(&runner, 0, "SW-5"), "SW-5 was played");
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
         runner.pending_selection().is_none(),
-        "the accepted activation used the [Once Per Turn]: no second offer this turn"
+        "a card was played: no second offer this turn"
     );
     assert!(!field_contains(&runner, 0, "VICTIM-B"), "the second Digimon left");
 }
@@ -192,7 +217,10 @@ fn ex12_034_leave_hand_pick_after_choosing_hand_is_mandatory() {
 /// With nothing playable anywhere, the choice is only "Don't play" (it
 /// auto-binds, no prompt). The player still chose to activate, so the
 /// [Once Per Turn] is spent (CR 4.3 15-14-1-4, "even if the effect's
-/// processing can't be executed").
+/// processing can't be executed"). DCGO offers the effect here too
+/// (`CanActivateCondition` only checks that Erlangmon is on the field) and
+/// spends the use: its `RemoveUse()` sits inside
+/// `if (validHandCard || validDigivolutionCard)`.
 #[test]
 fn ex12_034_leave_with_no_playable_card_plays_nothing() {
     let (mut runner, _) = leave_setup(&[]);
