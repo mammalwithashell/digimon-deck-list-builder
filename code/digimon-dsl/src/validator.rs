@@ -3336,6 +3336,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "DontBattleSecurityDigimon",
     // Digivolution / color / level
     "CannotDigivolve",
+    "CannotDigivolveAsTamer",
     "CanOnlyDigivolveInto",
     "ChangeColor",
     "AddColor",
@@ -3909,6 +3910,20 @@ effects:
 "#
         );
         serde_yml::from_str(&yaml).unwrap()
+    }
+
+    #[test]
+    fn tamer_digivolution_prohibition_validates() {
+        let spec = payload_card(
+            r#"      - add_modifier:
+          target: { of: opponent, is_suspended: true, kind: tamer }
+          modifier: CannotDigivolveAsTamer
+          value: 1
+          expiry: end_of_opponents_turn
+          continuous: true"#,
+        );
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
     }
 
     /// G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD: the EX13-031 shape validates.
