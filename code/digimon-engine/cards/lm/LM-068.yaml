@@ -68,6 +68,7 @@ dual:
 
       - text: "[When Digivolving] [On Deletion] Trash 2 cards in your hand. Then, you may activate 1 [Main] effect on this card's Option side."
         when: [when_digivolving, on_deletion]
+        as_option_effect: true
         summary: "[WD][On Deletion] Trash 2 cards in hand; then you may activate this card's Option [Main]: delete 1 opp Digimon with level >= your hand size"
         process:
           - select_hand:

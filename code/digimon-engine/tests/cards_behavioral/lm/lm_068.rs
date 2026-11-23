@@ -154,3 +154,15 @@ fn lm_068_trash_silent_when_attacker_lacks_trait() {
     );
 }
 
+
+#[test]
+fn lm_068_option_side_main_activation_is_an_option_effect() {
+    let runner = runner_with(&[]);
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    let dual = card.dual.as_ref().expect("dual");
+    assert!(dual.digimon.effects.iter().any(|c| matches!(
+        c,
+        CompiledClause::Triggered(t)
+            if t.when.contains(&CompiledTiming::OnDeletion) && t.as_option_effect
+    )));
+}
