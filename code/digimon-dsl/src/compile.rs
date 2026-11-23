@@ -3304,6 +3304,9 @@ fn compile_step(
         S::TrashBreedingPermanent(a) => CompiledStep::TrashBreedingPermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::PayBreedingDeletion(a) => CompiledStep::PayBreedingDeletion {
+            target: compile_binding_ref(&a.target),
+        },
         S::ReturnAllToHand(a) => CompiledStep::ReturnAllToHand { over: compile_predicate(&a.over, &format!("{prefix}.over"), card_id, errors), selector: a.selector.map(compile_field_selector) },
         S::ReturnAllToDeck(a) => {
             if !matches!(a.position,crate::step::StackPosition::Top|crate::step::StackPosition::Bottom) {

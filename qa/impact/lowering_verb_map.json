@@ -87,6 +87,7 @@
       "delete_bound_permanents",
       "delete_for_cost_reduction",
       "delete_permanent",
+      "pay_breeding_deletion",
       "place_on_security",
       "return_to_deck",
       "return_to_hand",

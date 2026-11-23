@@ -178,6 +178,26 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::PayBreedingDeletion { target } => {
+            let paid = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h))
+                    if h.index == crate::action::space::BREEDING_TARGET as u8
+                        && h.player == ctx.player
+                        && ctx.can_affect_permanent(h) =>
+                {
+                    ctx.game.delete_breeding_digimon_for_payment(h.player)
+                }
+                _ => false,
+            };
+            if !paid {
+                ctx.cost_unpayable = true;
+                if ctx.game.selection_resolution_depth != 0 {
+                    ctx.game.dsl_clause_aborted = true;
+                    ctx.game.reject_parked_play_reduction(ctx.source_card);
+                }
+            }
+            true
+        }
         CompiledStep::ReturnToHand { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
