@@ -171,7 +171,7 @@ fn add_step_categories(flags: &mut EffectCategoryFlags, body: &[CompiledStep]) {
                 flags.bottom_deck = true
             }
             CompiledStep::Draw { .. } | CompiledStep::DrawFn { .. } => flags.draw_search = true,
-            CompiledStep::Suspend { .. } => flags.suspend = true,
+            CompiledStep::Suspend { .. } | CompiledStep::SuspendAsCost { .. } => flags.suspend = true,
             CompiledStep::Unsuspend { .. } => flags.unsuspend = true,
             CompiledStep::AddDpModifier { .. } => flags.dp_change = true,
             CompiledStep::GrantKeyword { .. } | CompiledStep::GrantKeywordContinuous { .. } => {

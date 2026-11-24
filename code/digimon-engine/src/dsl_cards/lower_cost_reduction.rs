@@ -70,7 +70,7 @@ pub fn lower_with_formula(
     condition: Option<CompiledPredicate>,
     once_per_turn: bool,
     amount_fn: Option<CompiledFormula>,
-    pay_cost: Vec<CompiledStep>,
+    mut pay_cost: Vec<CompiledStep>,
     raw: Arc<EngineRawRustRegistry>,
     optional: bool,
     when_playing_this: bool,
@@ -89,6 +89,11 @@ pub fn lower_with_formula(
     let when_any_ally_played = when_any_ally_played.map(Arc::new);
     let when_any_ally_digivolves_into = when_any_ally_digivolves_into.map(Arc::new);
     let amount_fn = amount_fn.map(Arc::new);
+    for step in &mut pay_cost {
+        if let CompiledStep::Suspend { target } = step {
+            *step = CompiledStep::SuspendAsCost { target: target.clone() };
+        }
+    }
     let pay_cost: Arc<[CompiledStep]> = Arc::from(pay_cost);
     let runtime = StepRuntime::new(raw);
     let amount_runtime = runtime.clone();
@@ -367,7 +372,7 @@ fn pay_cost_is_self_suspend(pay_cost: &[CompiledStep]) -> bool {
     use digimon_dsl::compiled::CompiledBindingRef;
     matches!(
         pay_cost,
-        [CompiledStep::Suspend { target }]
+        [CompiledStep::SuspendAsCost { target }]
             if matches!(target, CompiledBindingRef::Source | CompiledBindingRef::SelfRef)
     )
 }

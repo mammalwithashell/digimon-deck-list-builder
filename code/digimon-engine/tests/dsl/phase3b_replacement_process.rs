@@ -1,8 +1,50 @@
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::{EffectSourceKind, Expiry};
+
+#[test]
+fn replacement_cannot_cancel_by_suspending_an_immune_digimon() {
+    let yaml = r#"
+card: DSL-SUSPEND-REPLACE
+name: Suspend Replacement
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    process:
+      - select_any_permanent:
+          bind_as: payer
+          filter: { kind: digimon, other: true }
+          prompt: "By suspending 1 other Digimon, this Digimon doesn't leave"
+      - suspend: { target: payer }
+      - cancel_replacement: {}
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(make_test_card("HELPER", "Helper"))
+        .start();
+    let original = runner.place_on_field(0, "DSL-SUSPEND-REPLACE", Some(0));
+    let immune = runner.place_on_field(1, "HELPER", Some(0));
+    runner.game.modifiers.add(immune, ModifierEntry::cannot_be_affected_by_opponents_source_kind(
+        EffectSourceKind::Digimon, Expiry::EndOfTurn, 1,
+    ));
+
+    runner.game.delete_permanent_with_cause(original, ReplacementCause::OpponentEffect);
+
+    assert!(runner.pending_selection().is_none(), "no payable replacement");
+    assert_eq!(runner.battle_area_size(0), 0, "the original leaves");
+    assert!(!runner.game.players[1].battle_area[immune.index as usize].is_suspended);
+}
 
 #[test]
 fn replacement_body_can_cancel_would_delete() {

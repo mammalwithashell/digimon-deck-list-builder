@@ -2607,25 +2607,28 @@ impl Game {
 
     /// Battle-area field indices of `player`'s unsuspended Digimon — the
     /// legal suspend-cost targets for `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`.
-    fn suspendable_own_digimon(&self, player: PlayerId) -> Vec<usize> {
+    fn suspendable_own_digimon(
+        &self,
+        player: PlayerId,
+        source: crate::card_source::CardHandle,
+    ) -> Vec<usize> {
+        let source_kind = self.effect_source_kind_for_handle(source);
+        let source_identity = self.permanent_with_top_card(source)
+            .and_then(|carrier| self.permanent_effect_identity(carrier));
         self.player(player)
             .battle_area
             .iter()
             .enumerate()
             .filter(|(i, perm)| {
+                let payer = PermanentHandle { player, index: *i as u8 };
                 // Suspend-cost candidacy requires the permanent to actually
                 // be suspendable: a `CannotSuspend` permanent can't pay the
                 // cost (DCGO `CanActivatePermanentSuspendCostEffect` →
                 // `CanSuspend`; prohibition precedence 15-1-3).
                 !perm.is_suspended
                     && perm.is_digimon(&self.card_data)
-                    && !self.modifiers.has(
-                        PermanentHandle {
-                            player,
-                            index: *i as u8,
-                        },
-                        ModifierType::CannotSuspend,
-                    )
+                    && !self.modifiers.has(payer, ModifierType::CannotSuspend)
+                    && self.effect_can_affect_from(payer, player, source_kind, source_identity)
             })
             .map(|(i, _)| i)
             .collect()

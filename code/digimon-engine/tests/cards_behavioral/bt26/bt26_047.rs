@@ -14,7 +14,8 @@
 use super::support::*;
 use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, EffectSourceKind, EffectTiming};
+use digimon_engine::enums::{CardColor, EffectSourceKind, EffectTiming, Expiry};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 
 const CARD_ID: &str = "BT26-047";
@@ -185,6 +186,28 @@ fn bt26_047_suspend_may_target_an_opponent_digimon() {
     assert!(r.game.players[1].battle_area[opp.index as usize].is_suspended);
     assert_eq!(r.effective_dp(h), Some(16000));
     assert_eq!(r.effective_dp(opp), Some(3000), "only YOUR Digimon");
+}
+
+#[test]
+fn bt26_047_immune_digimon_cannot_pay_for_the_buff() {
+    let mut r = setup();
+    let h = r.place_on_field(0, CARD_ID, Some(0));
+    suspend(&mut r, h);
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    r.game.modifiers.add(
+        opp,
+        ModifierEntry::cannot_be_affected_by_opponents_source_kind(
+            EffectSourceKind::Digimon,
+            Expiry::EndOfTurn,
+            1,
+        ),
+    );
+
+    fire(&mut r, EffectTiming::StartOfYourMainPhase, h);
+
+    assert!(r.pending_selection().is_none());
+    assert!(!r.game.players[1].battle_area[opp.index as usize].is_suspended);
+    assert_eq!(r.effective_dp(h), Some(13000));
 }
 
 #[test]

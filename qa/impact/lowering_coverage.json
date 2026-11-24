@@ -49959,6 +49959,9 @@
     "cost_hooks::ally_played_owner_scope.rs::ally_reducer_is_offered_for_its_controllers_play": [
      "yaml_key"
     ],
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended": [
+     "yaml_key"
+    ],
     "cost_hooks::pay_cost_play_delete_reducer.rs::fixed_play_reducer_clone_resolves_park_identically": [
      "yaml_key"
     ],
@@ -51172,6 +51175,9 @@
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security": [
      "yaml_key"
     ],
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon": [
+     "yaml_key"
+    ],
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field": [
      "yaml_key"
     ],
@@ -51296,6 +51302,12 @@
      "yaml_key"
     ],
     "dsl::track_e_reveal_ordering.rs::choose_from_reveal_play_free_routes_picked_tamer_to_battle_area": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
      "yaml_key"
     ],
     "dsl::unpayable_optional_condition.rs::unpayable_union_zone_trash_condition_is_not_offered": [
@@ -51922,6 +51934,7 @@
    "tests": [
     "cost_hooks::ally_played_owner_scope.rs::ally_reducer_does_not_apply_to_the_opponents_play",
     "cost_hooks::ally_played_owner_scope.rs::ally_reducer_is_offered_for_its_controllers_play",
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended",
     "cost_hooks::pay_cost_play_delete_reducer.rs::fixed_play_reducer_clone_resolves_park_identically",
     "cost_hooks::pay_cost_play_delete_reducer.rs::fixed_play_reducer_decline_pays_full_cost",
     "cost_hooks::pay_cost_play_delete_reducer.rs::fixed_play_reducer_deletes_and_credits_reduction",
@@ -52326,6 +52339,7 @@
     "dsl::phase2f2_modifier_formula.rs::add_modifier_filter_target_formula_evaluated_per_match",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_and_select_dna_pair_compile",
     "dsl::phase3b_replacement_process.rs::replacement_cancels_only_when_other_sourceless_digimon_is_placed_in_security",
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_cannot_be_played_to_the_field",
     "dsl::play_and_attack_rule_guards.rs::a_dual_card_is_not_a_play_cost_candidate_for_an_effect_play",
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
@@ -52368,6 +52382,8 @@
     "dsl::source_stack_aggregates.rs::source_stack_count_formula_lowers_inside_count_capped_multi_bound",
     "dsl::source_stack_aggregates.rs::source_stack_steps_compile",
     "dsl::track_e_reveal_ordering.rs::choose_from_reveal_play_free_routes_picked_tamer_to_battle_area",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "dsl::unpayable_optional_condition.rs::unpayable_union_zone_trash_condition_is_not_offered",
     "dsl::use_req_kind_and_breeding.rs::a_matching_digimon_in_the_breeding_area_counts",
     "dsl::use_req_kind_and_breeding.rs::a_matching_digimon_or_tamer_waives_the_colour_requirement",
@@ -55780,6 +55796,9 @@
     "dsl::group6_auras.rs::aura_other_predicate_excludes_source_permanent": [
      "yaml_key"
     ],
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon": [
+     "yaml_key"
+    ],
     "dsl::protect_others_leave_replacement.rs::bt25_039_accept_deletes_self_and_protects_the_other_subject": [
      "yaml_key"
     ],
@@ -55804,6 +55823,12 @@
     "dsl::residual_formula_predicate_vocab.rs::source_stack_dp_sum_source_target_reads_effect_source_stack": [
      "yaml_key"
     ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
+     "yaml_key"
+    ],
     "rules_conformance::ch15_08_effect_categories.rs::immediate_effect_interrupts_before_cause": [
      "fixture"
     ],
@@ -55825,6 +55850,7 @@
     "dsl::constructs/dna_candidate_fixed_pair_and_trash.rs::unfixed_result_stage_still_accepts_any_field_pair",
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates",
     "dsl::group6_auras.rs::aura_other_predicate_excludes_source_permanent",
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon",
     "dsl::protect_others_leave_replacement.rs::bt25_039_accept_deletes_self_and_protects_the_other_subject",
     "dsl::protect_others_leave_replacement.rs::bt25_039_cause_gate_own_effect_does_not_fire",
     "dsl::protect_others_leave_replacement.rs::bt25_039_clone_safe_mid_park",
@@ -55833,6 +55859,8 @@
     "dsl::protect_others_leave_replacement.rs::bt25_039_other_gate_self_leave_does_not_fire",
     "dsl::protect_others_leave_replacement.rs::bt25_039_protects_an_other_tamer_subject",
     "dsl::residual_formula_predicate_vocab.rs::source_stack_dp_sum_source_target_reads_effect_source_stack",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "rules_conformance::ch15_08_effect_categories.rs::immediate_effect_interrupts_before_cause",
     "rules_conformance::ch15_08_effect_categories.rs::immediate_effect_once_per_interrupting_cause"
    ]
@@ -55912,6 +55940,9 @@
    "name": "owner",
    "parsed_only": false,
    "signals": {
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended": [
+     "yaml_key"
+    ],
     "dsl::also_treated_as.rs::name_is_predicate_matches_via_also_treated_as_alias": [
      "yaml_key"
     ],
@@ -56583,6 +56614,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended",
     "dsl::also_treated_as.rs::name_is_predicate_matches_via_also_treated_as_alias",
     "dsl::battle_deleter.rs::battle_observer_waits_for_actual_replacement_outcome_and_clones",
     "dsl::battle_deleter.rs::declared_attack_evade_outcome_and_attack_cleanup_survive_clone",
@@ -65486,6 +65518,12 @@
     "dsl::union_zone_cost.rs::union_cost_without_eligible_card_no_ops": [
      "yaml_key"
     ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
+     "yaml_key"
+    ],
     "dsl::unpayable_optional_condition.rs::unpayable_refired_optional_condition_is_not_offered": [
      "yaml_key"
     ],
@@ -66142,6 +66180,8 @@
     "dsl::union_zone_cost.rs::optional_union_cost_trashes_hand_card_before_gain",
     "dsl::union_zone_cost.rs::optional_union_cost_trashes_own_digimon_source_before_gain",
     "dsl::union_zone_cost.rs::union_cost_without_eligible_card_no_ops",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "dsl::unpayable_optional_condition.rs::unpayable_refired_optional_condition_is_not_offered",
     "dsl::unpayable_optional_condition.rs::unpayable_trigger_order_entry_is_excluded_then_reoffered_when_payable",
     "dsl::validator.rs::validate_invalid_expiry_fails",
@@ -67858,6 +67898,12 @@
     "dsl::source_stack_aggregates.rs::source_stack_count_formula_lowers_inside_count_capped_multi_bound": [
      "yaml_key"
     ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
+     "yaml_key"
+    ],
     "dsl::validator.rs::validate_source_stack_count_unknown_target_fails": [
      "yaml_key"
     ],
@@ -68080,6 +68126,8 @@
     "dsl::source_stack_aggregates.rs::source_color_count_returns_zero_without_source_cards",
     "dsl::source_stack_aggregates.rs::source_stack_count_formula_counts_matching_source_cards",
     "dsl::source_stack_aggregates.rs::source_stack_count_formula_lowers_inside_count_capped_multi_bound",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "dsl::validator.rs::validate_source_stack_count_unknown_target_fails",
     "dsl::validator.rs::validate_unknown_timing_lockout_modifier_fails",
     "effect_context::effect_digivolve_from_zones.rs::effect_digivolve_from_security_fires_security_loss_before_digivolve_triggers",
@@ -69772,6 +69820,9 @@
     "dsl::phase3b_replacement_process.rs::replacement_body_with_nested_selection_resumes_and_sets_outcome": [
      "yaml_key"
     ],
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon": [
+     "yaml_key"
+    ],
     "dsl::replacement_context.rs::replacement_active_when_trait_matches_replacement_subject_not_source": [
      "yaml_key"
     ],
@@ -69816,6 +69867,7 @@
     "dsl::constructs/security_stack.rs::play_security_card_resumed_commit_fires_each_removal_timing_once_and_not_the_new_body",
     "dsl::phase3b_replacement_process.rs::replacement_body_can_cancel_would_delete",
     "dsl::phase3b_replacement_process.rs::replacement_body_with_nested_selection_resumes_and_sets_outcome",
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon",
     "dsl::replacement_context.rs::replacement_active_when_trait_matches_replacement_subject_not_source",
     "dsl::replacement_context.rs::replacement_cause_overclock_predicate_compiles_and_matches",
     "replacements::context_predicates.rs::dsl_active_when_can_gate_bt22_036_style_subject_controller",
@@ -73932,6 +73984,12 @@
     "dsl::union_zone_origin_play.rs::union_zone_origin_play_plays_trash_card_from_trash": [
      "variant"
     ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
+     "yaml_key"
+    ],
     "dsl::unpayable_optional_condition.rs::unpayable_refired_optional_condition_is_not_offered": [
      "yaml_key"
     ],
@@ -74940,6 +74998,8 @@
     "dsl::union_zone_origin_play.rs::union_zone_origin_play_decline_runs_mandatory_tail",
     "dsl::union_zone_origin_play.rs::union_zone_origin_play_plays_hand_card_from_hand",
     "dsl::union_zone_origin_play.rs::union_zone_origin_play_plays_trash_card_from_trash",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "dsl::unpayable_optional_condition.rs::unpayable_refired_optional_condition_is_not_offered",
     "dsl::unpayable_optional_condition.rs::unpayable_trigger_order_entry_is_excluded_then_reoffered_when_payable",
     "dsl::unpayable_optional_condition.rs::unpayable_union_zone_trash_condition_is_not_offered",
@@ -79896,6 +79956,9 @@
    "name": "select_any_permanent",
    "parsed_only": false,
    "signals": {
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended": [
+     "yaml_key"
+    ],
     "dsl::constructs/chronomon_result_protection.rs::stack_trash_blocks_only_opponent_effects_on_the_granted_stack": [
      "yaml_key"
     ],
@@ -80062,6 +80125,15 @@
     "dsl::phase3_reducer_selection.rs::select_any_permanent_can_bind_either_players_field": [
      "variant"
     ],
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
+     "yaml_key"
+    ],
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection": [
      "variant"
     ],
@@ -80072,6 +80144,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended",
     "dsl::constructs/chronomon_result_protection.rs::stack_trash_blocks_only_opponent_effects_on_the_granted_stack",
     "dsl::constructs/chronomon_result_protection.rs::stack_trash_does_not_block_own_source_payment_and_its_paid_tail",
     "dsl::constructs/chronomon_result_protection.rs::stack_trash_does_not_block_source_returns_or_whole_stack_return",
@@ -80127,6 +80200,9 @@
     "dsl::permanent_security_receipt.rs::token_and_egg_rule_routing_meets_condition_without_adding_security",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_and_select_dna_pair_compile",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_can_bind_either_players_field",
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection",
     "rules_conformance::ch03_areas.rs::card_placed_in_an_unnamed_security_stack_goes_to_its_owners_stack"
    ]
@@ -81577,6 +81653,12 @@
     "dsl::source_stack_aggregates.rs::source_stack_steps_compile": [
      "yaml_key"
     ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
+     "yaml_key"
+    ],
     "dsl::xros_reusable_primitives.rs::trash_top_stacked_sources_and_no_source_target_filter_are_authorable": [
      "yaml_key"
     ],
@@ -82053,6 +82135,8 @@
     "dsl::selection_dp_extrema.rs::selector_lowest_play_cost_only_offers_cheapest_candidates",
     "dsl::selection_dp_extrema.rs::selector_with_only_no_dp_candidates_installs_no_selection",
     "dsl::source_stack_aggregates.rs::source_stack_steps_compile",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "dsl::xros_reusable_primitives.rs::trash_top_stacked_sources_and_no_source_target_filter_are_authorable",
     "keyword_phase_e::retaliation.rs::retaliation_survives_a_parked_sibling_on_deletion_clause",
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection",
@@ -84241,6 +84325,9 @@
    "name": "suspend",
    "parsed_only": false,
    "signals": {
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended": [
+     "yaml_key"
+    ],
     "cost_hooks::player_digivolve_reducer.rs::cloned_self_gated_field_payment_decline_gives_no_unpaid_reduction": [
      "yaml_key"
     ],
@@ -84385,10 +84472,19 @@
     "dsl::phase3_reducer_selection.rs::select_dna_pair_chains_two_distinct_permanent_picks": [
      "variant"
     ],
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon": [
+     "yaml_key"
+    ],
     "dsl::selection_dp_extrema.rs::selector_extreme_ignores_progress_excluded_opponent_targets": [
      "yaml_key"
     ],
     "dsl::selection_dp_extrema.rs::selector_highest_dp_recomputes_after_prior_suspend_step": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend": [
+     "yaml_key"
+    ],
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered": [
      "yaml_key"
     ],
     "rules_conformance::ch15_15_unaffected.rs::immunity_granted_mid_effect_covers_later_steps": [
@@ -84428,6 +84524,7 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "cost_hooks::interactive_option_use_reducer.rs::option_reduction_requires_the_selected_digimon_to_be_suspended",
     "cost_hooks::player_digivolve_reducer.rs::cloned_self_gated_field_payment_decline_gives_no_unpaid_reduction",
     "cost_hooks::player_digivolve_reducer.rs::declining_player_gate_does_not_cancel_next_field_payment_hook",
     "dsl::collapse_then_tail.rs::select_own_permanent_then_suspend",
@@ -84476,8 +84573,11 @@
     "dsl::phase2c_permanent_mutations.rs::suspend_then_unsuspend_round_trip",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_can_bind_either_players_field",
     "dsl::phase3_reducer_selection.rs::select_dna_pair_chains_two_distinct_permanent_picks",
+    "dsl::phase3b_replacement_process.rs::replacement_cannot_cancel_by_suspending_an_immune_digimon",
     "dsl::selection_dp_extrema.rs::selector_extreme_ignores_progress_excluded_opponent_targets",
     "dsl::selection_dp_extrema.rs::selector_highest_dp_recomputes_after_prior_suspend_step",
+    "dsl::unpayable_optional_condition.rs::suspend_payment_only_offers_permanents_the_effect_can_suspend",
+    "dsl::unpayable_optional_condition.rs::suspension_cost_rechecks_payment_after_the_pick_was_offered",
     "rules_conformance::ch15_15_unaffected.rs::immunity_granted_mid_effect_covers_later_steps",
     "rules_conformance::ch18_pending_overwrite.rs::choose_one_loop_repeats_until_its_owner_stops_it",
     "rules_conformance::ch18_pending_overwrite.rs::dp_progress_chain_is_not_an_infinite_loop",
@@ -85962,7 +86062,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2308,
+  "behavioural_tests": 2313,
   "cards": {
    "behaviourally_covered": 1277,
    "lowering_covered": 1295,
@@ -86127,7 +86227,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 424,
-  "scanned_tests": 2734,
+  "scanned_tests": 2739,
   "top_untested": [
    {
     "cards_blocked": 3,

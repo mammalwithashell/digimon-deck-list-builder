@@ -18,6 +18,8 @@ use digimon_dsl::compiled::CompiledCardKind;
 use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, EffectTiming, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
+use digimon_engine::{EffectSourceKind, Expiry};
 
 const CARD_ID: &str = "BT26-032";
 
@@ -168,6 +170,28 @@ fn bt26_032_wd_declined_suspend_skips_play() {
     let _ = r.auto_resolve();
     assert!(r.pending_selection_view().is_none());
     assert_eq!(hand_ids(&r, 0), vec!["TS-8".to_string()]);
+}
+
+#[test]
+fn bt26_032_wd_cannot_pay_with_an_opponent_immune_to_digimon_effects() {
+    let mut r = setup();
+    let c = r.place_on_field(0, CARD_ID, Some(0));
+    let immune = r.place_on_field(1, "BIG", Some(0));
+    let debuffed = r.place_on_field(1, "BIG", Some(0));
+    let base_dp = r.effective_dp(debuffed).unwrap();
+    r.game.players[0].battle_area[c.index as usize].is_suspended = true;
+    r.game.players[1].battle_area[debuffed.index as usize].is_suspended = true;
+    r.game.modifiers.add(immune, ModifierEntry::cannot_be_affected_by_opponents_source_kind(
+        EffectSourceKind::Digimon, Expiry::EndOfTurn, 1,
+    ));
+    push_hand(&mut r, 0, "TS-8");
+
+    fire(&mut r, EffectTiming::WhenDigivolving, c);
+
+    assert!(r.pending_selection_view().is_none());
+    assert!(!r.game.players[1].battle_area[immune.index as usize].is_suspended);
+    assert_eq!(hand_ids(&r, 0), vec!["TS-8".to_string()]);
+    assert_eq!(r.effective_dp(debuffed), Some(base_dp - 5000));
 }
 
 // ─── Hand-pick candidate legality (select-hand playability audit) ────────────

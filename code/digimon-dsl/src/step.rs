@@ -191,7 +191,7 @@ pub enum StepSpec {
     ReturnAllToDeck(ReturnAllToDeckArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
-    Suspend(TargetArg),
+    Suspend(SuspendArgs),
     /// Pay one actual suspension, then prevent all matching members of this event.
     SuspendAndCancelAllMatchingLeaves(SuspendAllPreventionArgs),
     Unsuspend(TargetArg),
@@ -1874,6 +1874,15 @@ fn is_zero_u8(n: &u8) -> bool {
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SuspendArgs {
+    pub target: BindingRef,
+    /// Require an actual suspension before continuing the effect.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub cost: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
