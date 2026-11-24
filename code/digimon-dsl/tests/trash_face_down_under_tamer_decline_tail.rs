@@ -84,17 +84,46 @@ fn continue_on_decline_requires_an_optional_pick() {
     );
 }
 
+/// The same step in a triggered clause, whose process the validator checks for
+/// bindings used before they are declared; the `then` branch names the bound
+/// Tamer as a step target.
+fn triggered_spec(step: &str) -> CardSpec {
+    serde_yml::from_str(&format!(
+        "card: TEST-TAMER-DECLINE-T\nname: Test\nkind: digimon\ncolor: [yellow]\nlevel: 5\ncost: 7\ndp: 7000\neffects:\n  - when: when_attacking\n    once_per_turn: true\n    optional: true\n    outer_prompt: true\n    process:\n      - trash_bottom_face_down_source_under_tamer:\n{step}      - if:\n          condition: {{ binding_present: paid_tamer }}\n          then:\n            - suspend: {{ target: paid_tamer }}\n          else:\n            - refund_opt: {{}}\n"
+    ))
+    .unwrap()
+}
+
+fn validate(spec: &CardSpec) -> Result<(), Vec<digimon_dsl::errors::ValidationError>> {
+    digimon_dsl::validator::validate(
+        spec,
+        &digimon_dsl::validator::ValidationContext {
+            raw_rust: &digimon_dsl::raw_rust_registry::StubRegistry::empty(),
+        },
+    )
+}
+
 #[test]
 fn the_bound_tamer_is_visible_to_later_binding_predicates() {
-    // Without the `bind_as`, `binding_present: paid_tamer` names an
-    // undeclared binding.
-    let errors = compile(&spec(
+    let declared = triggered_spec(
+        "          of: you\n          optional: true\n          continue_on_decline: true\n          bind_as: paid_tamer\n",
+    );
+    compile(&declared).expect("compiles");
+    if let Err(errors) = validate(&declared) {
+        assert!(
+            !errors.iter().any(|e| e.message.contains("undeclared binding")),
+            "`bind_as` declares the binding the later steps read: {errors:?}"
+        );
+    }
+    // Without the `bind_as`, `paid_tamer` is an undeclared binding.
+    let errors = validate(&triggered_spec(
         "          of: you\n          optional: true\n          continue_on_decline: true\n",
-        DECLINE_TAIL,
     ))
     .unwrap_err();
     assert!(
-        errors.iter().any(|e| e.message.contains("paid_tamer")),
+        errors
+            .iter()
+            .any(|e| e.message.contains("undeclared binding") && e.message.contains("paid_tamer")),
         "{errors:?}"
     );
 }
