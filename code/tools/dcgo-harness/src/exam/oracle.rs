@@ -198,6 +198,48 @@ fn set_aside(root: &Path, claim: &Path, job_id: &str) -> Result<(), String> {
         .map_err(|e| format!("setting aside {} as {}: {e}", claim.display(), dest.display()))
 }
 
+fn recording_path_on_host(recording: &str) -> Result<PathBuf, String> {
+    #[cfg(target_os = "linux")]
+    if is_windows_drive_path(recording) {
+        use std::os::unix::ffi::OsStringExt;
+
+        let out = std::process::Command::new("winepath")
+            .args(["-0", "-u", recording])
+            .output()
+            .map_err(|e| format!("translating DCGO recording path {recording} with winepath: {e}"))?;
+        if let (true, Some(path)) = (out.status.success(), out.stdout.strip_suffix(&[0])) {
+            let path = PathBuf::from(std::ffi::OsString::from_vec(path.to_vec()));
+            if path.is_absolute() {
+                return Ok(path);
+            }
+        }
+        return Err(format!(
+            "winepath could not map DCGO recording {recording}; use the same WINEPREFIX as the player"
+        ));
+    }
+    Ok(PathBuf::from(recording))
+}
+
+#[cfg(target_os = "linux")]
+fn is_windows_drive_path(path: &str) -> bool {
+    matches!(path.as_bytes(), [drive, b':', b'\\' | b'/', ..] if drive.is_ascii_alphabetic())
+}
+
+fn result_paths(recording: &str) -> Result<(Option<PathBuf>, Option<PathBuf>), String> {
+    let recording = recording.trim();
+    if recording.is_empty() {
+        return Ok((None, None));
+    }
+    let recording = recording_path_on_host(recording)?;
+    let mut sidecar = recording.clone();
+    if sidecar.extension().is_some_and(|ext| ext == "jsonl") {
+        sidecar.set_extension("state.jsonl");
+    } else {
+        sidecar.as_mut_os_string().push(".state.jsonl");
+    }
+    Ok((Some(recording), Some(sidecar)))
+}
+
 /// Write `job_json` to `<root>/jobs/<job_id>.json` (temp file + rename), after
 /// removing any stale `done/<job_id>.json` / `done/<job_id>.result.json` /
 /// `failed/<job_id>.json`; poll for this job's own result until `timeout`.
@@ -284,13 +326,7 @@ pub fn submit_and_wait(
                     continue;
                 }
             };
-            let recording = result.recording_path.trim();
-            let (recording_path, sidecar_path) = if recording.is_empty() {
-                (None, None)
-            } else {
-                let stem = recording.strip_suffix(".jsonl").unwrap_or(recording);
-                (Some(PathBuf::from(recording)), Some(PathBuf::from(format!("{stem}.state.jsonl"))))
-            };
+            let (recording_path, sidecar_path) = result_paths(&result.recording_path)?;
             return Ok(OracleRun {
                 job_id: job_id.to_string(),
                 outcome: result.outcome,
@@ -1005,6 +1041,16 @@ mod mismatch_tests {
 mod tests {
     use super::*;
     use std::time::Duration;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn only_absolute_drive_paths_are_sent_to_winepath() {
+        assert!(is_windows_drive_path(r"C:\users\report.jsonl"));
+        assert!(is_windows_drive_path("z:/home/user/report.jsonl"));
+        assert!(!is_windows_drive_path("/tmp/report.jsonl"));
+        assert!(!is_windows_drive_path("C:report.jsonl"));
+        assert!(!is_windows_drive_path("recordings/report.jsonl"));
+    }
 
     fn root() -> tempfile::TempDir {
         let t = tempfile::tempdir().unwrap();

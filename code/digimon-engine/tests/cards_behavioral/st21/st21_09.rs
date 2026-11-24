@@ -17,7 +17,7 @@
 mod dsl_card_data;
 
 use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost};
-use digimon_engine::action::space::{encode_attack, PASS};
+use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -276,6 +276,39 @@ fn st21_09_on_play_suspends_low_dp_then_bottom_decks_per_two_colors() {
     assert_eq!(runner.game.player(1).battle_area.len(), 2);
     assert_eq!(runner.game.player(1).deck.len(), deck_before + 2);
     assert!(on_field(&runner, "OPP6K"));
+}
+
+#[test]
+fn st21_09_bottom_decks_second_pick_after_sirenmon_protects_first() {
+    let mut runner = builder().dsl_card("BT25-039").unwrap().dsl_card("BT25-033").unwrap().start();
+    runner.game.turn_count = 1;
+    runner.place_on_field(0, "T-RB", None);
+    runner.place_on_field(0, "T-YG", None);
+    let aegiomon = runner.place_on_field(1, "BT25-033", None);
+    let other = runner.place_on_field(1, "OPP3K", None);
+    runner.place_on_field(1, "BT25-039", None);
+    let lilly = runner.place_on_field(0, CARD_ID, None);
+    let deck_before = runner.deck_size(1);
+    fire_on_play(&mut runner, lilly);
+
+    assert!(suspended(&runner, "BT25-033") && suspended(&runner, "OPP3K"));
+    runner.execute_action(0, field_action(aegiomon.index)).unwrap();
+    runner.execute_action(0, field_action(other.index)).unwrap();
+    let protection = runner.pending_selection_view().expect("Sirenmon protects Aegiomon");
+    assert_eq!((protection.kind, protection.selecting_player), (SelectionKind::Replacement, 1));
+    assert_eq!(runner.deck_size(1), deck_before);
+    runner.execute_action(1, REPLACEMENT_ACCEPT).unwrap();
+    let on_deletion = runner.pending_selection_view().expect("Sirenmon's optional On Deletion");
+    assert_eq!((on_deletion.kind, on_deletion.selecting_player), (SelectionKind::Replacement, 1));
+    assert_eq!(on_deletion.prompt, "You may activate BT25-039's triggered effect");
+    runner.execute_action(1, PASS).unwrap();
+
+    assert!(runner.pending_selection_view().is_none());
+    assert!(on_field(&runner, "BT25-033"));
+    assert!(!on_field(&runner, "BT25-039"));
+    assert!(!on_field(&runner, "OPP3K"));
+    assert_eq!(runner.deck_size(1), deck_before + 1);
+    assert_eq!(deck_bottom_ids(&runner, 1)[0], "OPP3K");
 }
 
 /// 1 Tamer colour → suspend only, no return.
