@@ -1,0 +1,88 @@
+# BT27-053 BanchoLeomon — printed text: data/card_bundles/BT27-053.md
+card: BT27-053
+name: BanchoLeomon
+kind: digimon
+level: 6
+color: [green, yellow]
+cost: 13
+dp: 13000
+traits: [Beastkin, Boss, DATA SQUAD]
+form: Mega
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 5
+  - kind: digivolve
+    from:
+      level_eq: 5
+      any_color: true
+      any_of:
+        - name_contains: Leomon
+        - trait_has: DATA SQUAD
+    cost: 4
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_gte: 11000
+    amount: 6
+    summary: "When this card would be played, if your opponent has a Digimon with 11000 DP or more, reduce the cost by 6"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - kind: grant_keyword
+    keyword: Fortitude
+    summary: "<Fortitude>"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    optional: true
+    once_per_turn: true
+    condition:
+      any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+    summary: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] This Digimon may battle 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: battle_target
+          filter: { kind: digimon }
+          prompt: "This Digimon may battle 1 of your opponent's Digimon"
+      - battle:
+          attacker: source
+          defender: battle_target
+
+  - when: on_deletion
+    summary: "[On Deletion] You may play or use 1 Tamer or Option card with the [Boss] or [DATA SQUAD] trait from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: boss_pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: tamer
+                  - kind: option
+              - any_of:
+                  - trait_has: Boss
+                  - trait_has: DATA SQUAD
+              - can_play_or_use_from_effect: true
+          prompt: "You may play or use 1 Tamer or Option card with the [Boss] or [DATA SQUAD] trait from your hand without paying the cost"
+      - if:
+          condition: { binding_present: boss_pick }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: boss_pick
+                cost_delta: free
