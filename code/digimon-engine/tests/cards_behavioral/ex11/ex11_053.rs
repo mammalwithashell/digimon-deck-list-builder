@@ -92,6 +92,9 @@ fn ex11_053_on_play_places_royal_knight_from_hand_under_fielded_king_drasil() {
     let royal_handle = runner.game.players[0].hand[1].handle();
 
     runner.play(0, 0).expect("play Omekamon");
+    runner
+        .accept_optional_trigger()
+        .expect("printed \"By placing\" cost is optional");
     let king_prompt = runner
         .pending_selection_view()
         .expect("King Drasil selection opens");
@@ -539,5 +542,41 @@ fn ex11_053_has_the_name_x_antibody_in_hand_and_as_a_digivolution_card() {
         runner.game.players[0].battle_area[0].card_sources[0]
             .contains_card_name("X Antibody", &runner.game.card_data),
         "as a digivolution card"
+    );
+}
+
+#[test]
+fn ex11_053_on_play_placement_cost_can_be_declined() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-053")
+        .expect("EX11-053 YAML loads")
+        .add_card(digimon("KING", "King Drasil_7D6", &["CS"]))
+        .add_card(digimon("ROYAL", "Magnamon", &["Royal Knight"]))
+        .add_card(make_test_card("DRAW", "Draw Filler"))
+        .hand(0, &["EX11-053", "ROYAL"])
+        .deck(0, &["DRAW"])
+        .memory(20)
+        .start();
+    runner.place_on_field(0, "KING", Some(0));
+
+    runner.play(0, 0).expect("play Omekamon");
+    runner
+        .decline_optional_trigger()
+        .expect("optional On Play prompt opens");
+
+    assert!(runner.pending_selection().is_none());
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "ROYAL"),
+        "declining keeps the Royal Knight in hand"
+    );
+    assert!(
+        runner.game.players[0]
+            .deck
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "DRAW"),
+        "declining skips the draw"
     );
 }

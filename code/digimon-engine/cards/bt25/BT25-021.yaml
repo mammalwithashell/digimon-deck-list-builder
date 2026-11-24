@@ -66,14 +66,14 @@ effects:
           from: revealed
           buckets:
             - bind_as: pick_squad
-              min: 0
+              min: 1
               max: 1
               filter:
                 any_of:
                   - name_is: "Thomas H. Norstein"
                   - trait_has: "DATA SQUAD"
             - bind_as: pick_gaoga
-              min: 0
+              min: 1
               max: 1
               filter:
                 name_contains: "Gaogamon"

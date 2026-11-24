@@ -81,6 +81,7 @@ effects:
   # full cost is paid.
   - text: "[When Digivolving] [When Attacking] By trashing any 3 digivolution cards with the [Mineral] or [Rock] trait from your Digimon, this Digimon unsuspends and gains ＜Security A. +1＞ for the turn."
     when: [when_digivolving, when_attacking]
+    optional: true
     summary: "[WD][WA] Trash 3 Mineral/Rock sources from your Digimon → unsuspend + SecurityA+1 for the turn"
     process:
       - select_own_sources:

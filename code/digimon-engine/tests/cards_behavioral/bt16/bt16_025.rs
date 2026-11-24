@@ -324,7 +324,7 @@ fn bt16_025_dna_lock_is_inside_single_when_digivolving_clause() {
 
 /// [When Attacking][Once Per Turn] triggered clause must exist and be OPT.
 #[test]
-fn bt16_025_has_when_attacking_once_per_turn_optional_clause() {
+fn bt16_025_has_when_attacking_once_per_turn_mandatory_clause() {
     let runner = paildramon_runner();
     let card = runner.compiled_card("BT16-025").expect("BT16-025 compiles");
 
@@ -352,9 +352,8 @@ fn bt16_025_has_when_attacking_once_per_turn_optional_clause() {
         "[When Attacking] clause is [Once Per Turn] per printed text"
     );
     assert!(
-        wa.optional,
-        "[When Attacking] clause is [Once Per Turn] (implied optional — \
-         the player may decline to use it this attack)"
+        !wa.optional,
+        "[When Attacking] clause has no \"you may\": the suspend is mandatory"
     );
 }
 
@@ -553,8 +552,8 @@ fn bt16_025_when_attacking_installs_opp_field_selection_when_targets_exist() {
         "[When Attacking] must offer an OppField selection targeting unsuspended opp Digimon"
     );
     assert!(
-        runner.pending_is_optional(),
-        "[Once Per Turn] (OPT) implies the player may decline the activation"
+        !runner.pending_is_optional(),
+        "printed text has no \"may\": the suspend target pick is mandatory"
     );
 }
 

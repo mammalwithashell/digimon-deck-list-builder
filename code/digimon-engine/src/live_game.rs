@@ -870,6 +870,7 @@ impl LiveGame {
     /// Walk the whole recording under `CheckThenApply`, collecting every
     /// differential [`Divergence`] (recorded oracle action the engine's
     /// mask/actor disagrees with). With `stop_at_first`, halts at the first.
+    /// A full scan stops at a divergence Trust cannot advance past.
     /// Restores the caller's cursor + policy afterward, so a scan never
     /// perturbs the interactive position.
     pub fn scan_divergences(&mut self, stop_at_first: bool) -> Result<ReplayScan, LiveGameError> {
@@ -893,9 +894,13 @@ impl LiveGame {
                     // Advance past the paused step along the oracle's
                     // trajectory (apply the recorded action despite the mask)
                     // so the scan can surface later divergences too.
+                    let paused_cursor = driver.cursor();
                     driver.set_policy(StepPolicy::Trust);
                     driver.step(&mut self.game);
                     driver.set_policy(StepPolicy::CheckThenApply);
+                    if driver.cursor() == paused_cursor {
+                        break;
+                    }
                     continue;
                 }
                 break;
@@ -2328,6 +2333,24 @@ mod tests {
         let noop = lg.scan_panics().unwrap();
         assert_eq!(noop.kind, "no_ops");
         assert_eq!(lg.replay_cursor(), 1, "scan_panics perturbed the cursor");
+    }
+
+    #[test]
+    fn full_divergence_scan_stops_at_an_unpaired_dcgo_defender() {
+        let deck = serde_json::to_string(&vec!["ST1-03"; 45]).unwrap();
+        let raw = format!(
+            r#"{{"type":"game_start","v":1,"game_id":"named-defender","timestamp":"t","my_player_id":0,"first_player":0,"is_ai":true,"my_deck_post_shuffle":{deck},"opp_deck_post_shuffle":{deck}}}
+{{"type":"action","step":0,"actor":0,"action_id":100,"phase":"Main","source":"main_phase","board_p1":["ST1-03","ST1-03"],"attack_target_card_index":55}}
+{{"type":"game_end","winner":0,"reason":"win","total_steps":1}}"#
+        );
+        let recording = crate::dcgo_recording::parse_jsonl(&raw).unwrap();
+        let mut game = LiveGame::from_dcgo_recording(recording, &minimal_db()).unwrap();
+        let scan = game.scan_divergences(false).unwrap();
+        let [finding] = scan.findings.as_slice() else {
+            panic!("expected a single divergence, got {:?}", scan.findings);
+        };
+        assert!(finding.detail.contains("no earlier row paired"), "{finding:?}");
+        assert_eq!(game.replay_cursor(), 0);
     }
 
     #[test]
