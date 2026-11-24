@@ -17,6 +17,7 @@
 use super::bt27_common::*;
 use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::make_test_card;
+use digimon_engine::events::GameEvent;
 use digimon_engine::selection::SelectionKind;
 
 #[test]
@@ -92,10 +93,17 @@ fn end_of_turn_is_optional_and_requires_five_face_down_cards() {
 fn deletion_suspends_kurata_and_places_two_face_down_cards_in_fixed_deck_order() {
     let mut r = start(builder("BT27-098").deck(0, &[HIGH, XT, EVOLUTION]));
     let tamer = r.place_stack(0, &[BOUNDARY, "BT27-098"]);
+    let checkpoint = r.event_checkpoint();
     delete_in_battle(&mut r, GIZMON);
     r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
     r.execute_branch(0).unwrap();
     assert!(r.pending_selection().is_none());
+    assert!(r
+        .events_of_kind(checkpoint, |event| matches!(
+            event,
+            GameEvent::Reveal { .. }
+        ))
+        .is_empty());
 
     let player = &r.game.players[0];
     assert_eq!(ids(&r, &player.deck), [HIGH]);
