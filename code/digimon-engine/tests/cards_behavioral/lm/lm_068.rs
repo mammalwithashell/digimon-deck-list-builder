@@ -32,7 +32,7 @@ fn security_option_filler() -> CardData {
 fn digi(id: &str, level: u8, traits: &[&str]) -> CardData {
     let mut c = make_test_card(id, id);
     c.level = Some(level);
-    // Using a purple/red Option needs a purple and a red Digimon or Tamer.
+    // Purple/red like LM-068's Digimon face; its Option face is purple.
     c.colors = vec![CardColor::Purple, CardColor::Red];
     c.traits = traits.iter().map(|t| t.to_string()).collect();
     c

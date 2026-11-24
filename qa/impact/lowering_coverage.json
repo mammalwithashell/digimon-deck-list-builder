@@ -32907,7 +32907,7 @@
   },
   "LM-068": {
    "behaviourally_covered": true,
-   "clause_count": 7,
+   "clause_count": 8,
    "constructs": [
     "verb:delete_permanent",
     "verb:if",

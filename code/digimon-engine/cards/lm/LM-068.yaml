@@ -14,6 +14,9 @@ alt_paths:
     from: { level_eq: 5, color_is: purple }
     cost: 5
   - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+  - kind: digivolve
     from:
       all_of:
         - any_color: true
@@ -111,7 +114,7 @@ dual:
 
   option:
     use_cost: 6
-    colors: [purple, red]
+    colors: [purple]
     effect_text: |
       [Trash] [Your Turn] When one of your [Evil], [Dark Dragon] or [Evil Dragon] trait Digimon attacks, if your hand has 4 or fewer cards, you may use this card with the cost reduced by 3.
       [Main] Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher.

@@ -21046,6 +21046,134 @@
       "Vortex Warriors",
       "LIBERATOR",
       "Bird Dragon"
-    ]
+    ],
+    "card_kind": 4,
+    "inherited_effect_description_eng": "",
+    "dual": {
+      "digimon": {
+        "colors": [
+          "Green"
+        ],
+        "dp": 13000,
+        "effect_text": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may unsuspend 1 Digimon. Then, this Digimon may battle 1 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by suspending 1 Digimon, it doesn't leave.",
+        "evo_costs": [
+          {
+            "card_color": 3,
+            "level": 5,
+            "memory_cost": 4
+          }
+        ],
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ],
+        "level": 6,
+        "traits": [
+          "Magic Knight",
+          "Vortex Warriors",
+          "LIBERATOR",
+          "Bird Dragon"
+        ]
+      },
+      "option": {
+        "colors": [
+          "Green"
+        ],
+        "effect_text": "When this card would be used, by suspending 2 Digimon, reduce the cost by 2.\r\n[Main] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. Then, for every 2 suspended Digimon, return 1 of their Digimon to the bottom of the deck.",
+        "keywords": [
+          "ArtsDigivolve"
+        ],
+        "security_text": "",
+        "use_cost": 6
+      }
+    }
+  },
+  "LM-067": {
+    "card_kind": 4,
+    "inherited_effect_description_eng": "",
+    "dual": {
+      "digimon": {
+        "colors": [
+          "Black"
+        ],
+        "dp": 13000,
+        "effect_text": "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Fragment (3)＞ (When this Digimon would be deleted, by trashing any 3 of its digivolution cards, it isn't deleted.)\r\n[When Digivolving] [Counter] [Once Per Turn] Reveal the top 6 cards of your deck. You may play or use 1 play or use cost 6 or lower [Three Musketeers] text card among them without paying the cost. Return the rest to the bottom of the deck.\r\n[When Digivolving] [When Attacking] By trashing up to 3 [Three Musketeers] text cards from any of your Digimon's digivolution cards, for each one trashed, delete 1 of your opponent's play cost 7 or lower Digimon.",
+        "evo_costs": [
+          {
+            "card_color": 5,
+            "level": 5,
+            "memory_cost": 4
+          }
+        ],
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ],
+        "level": 6,
+        "traits": [
+          "Machine",
+          "Three Musketeers",
+          "Titan",
+          "TS"
+        ]
+      },
+      "option": {
+        "colors": [
+          "Black"
+        ],
+        "effect_text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.)\r\n[Main] ＜De-Digivolve 3＞ 3 of your opponent's Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.",
+        "keywords": [
+          "ArtsDigivolve"
+        ],
+        "security_text": "",
+        "use_cost": 6
+      }
+    }
+  },
+  "LM-068": {
+    "card_kind": 4,
+    "inherited_effect_description_eng": "",
+    "dual": {
+      "digimon": {
+        "colors": [
+          "Purple",
+          "Red"
+        ],
+        "dp": 13000,
+        "effect_text": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[When Digivolving] [End of Attack] If your hand has 4 or fewer cards, you may play 1 level 4 or lower Digimon card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from your trash to the field without paying the cost.\r\n[When Digivolving] [On Deletion] Trash 2 cards in your hand. Then, you may activate 1 [Main] effect on this card's Option side.",
+        "evo_costs": [
+          {
+            "card_color": 6,
+            "level": 5,
+            "memory_cost": 5
+          },
+          {
+            "card_color": 0,
+            "level": 5,
+            "memory_cost": 5
+          }
+        ],
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ],
+        "level": 6,
+        "traits": [
+          "Evil Dragon",
+          "LIBERATOR"
+        ]
+      },
+      "option": {
+        "colors": [
+          "Purple"
+        ],
+        "effect_text": "[Trash] [Your Turn] When one of your [Evil], [Dark Dragon] or [Evil Dragon] trait Digimon attacks, if your hand has 4 or fewer cards, you may use this card with the cost reduced by 3.\r\n[Main] Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher.",
+        "keywords": [
+          "ArtsDigivolve"
+        ],
+        "security_text": "",
+        "use_cost": 6
+      }
+    }
   }
 }

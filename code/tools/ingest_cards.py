@@ -110,6 +110,10 @@ DUAL_OPTION_COLOR_OVERRIDES = {
     "BT27-084": ["Purple", "Black"], # LordKnightmon (X Antibody) (card Purple/Black)
     "BT27-085": ["Purple"],          # Ravemon: Burst Mode (card Purple/Green)
     "BT27-103": ["Black"],           # Alphamon: Ouryuken (card Black/Yellow/Red)
+    # LM-09 (2026-11-24) — from the official Bandai DB "DUAL Color" field.
+    "LM-066": ["Green"],             # Zephagamon (card Green)
+    "LM-067": ["Black"],             # Gundramon (card Black)
+    "LM-068": ["Purple"],            # HeavyMetaldramon (card Purple/Red)
 }
 
 RARITY_MAP = {
