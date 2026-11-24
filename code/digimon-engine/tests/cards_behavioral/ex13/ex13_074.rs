@@ -36,7 +36,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
 use digimon_engine::action::space::{EFFECTS_PER_PERMANENT, FIELD_EFFECT_START, PASS};
 use digimon_engine::action::{build_action_mask, encode_digivolve};
 use digimon_engine::card_data::CardData;
@@ -166,13 +166,14 @@ fn ex13_074_clause_shape() {
         .find(|t| t.when.contains(&CompiledTiming::MainOnField))
         .expect("[Main] clause");
     assert!(main.once_per_turn);
-    assert!(main.process.iter().any(|s| matches!(
-        s,
-        CompiledStep::EffectInitiatedDigivolve {
-            ignore_requirements: true,
-            ..
-        }
-    )));
+    // The digivolve sits in the `then` of the pick's binding check; the
+    // `else` gives the use back (owner ruling 2026-11-24, DCGO RemoveUse).
+    let debug = format!("{:?}", main.process);
+    assert!(
+        debug.contains("EffectInitiatedDigivolve") && debug.contains("ignore_requirements: true"),
+        "{debug}"
+    );
+    assert!(debug.contains("RefundOpt"), "{debug}");
     assert!(triggered
         .iter()
         .any(|t| t.when.contains(&CompiledTiming::StartOfYourTurn)));
@@ -356,15 +357,57 @@ fn ex13_074_main_needs_three_knightmon_text_cards_under_rie() {
     );
 }
 
+/// Once-per-turn uses recorded on Rie's permanent (a refund leaves no entry).
+fn rie_uses(r: &DebugRunner, h: PermanentHandle) -> u32 {
+    r.game.players[0].battle_area[h.index as usize]
+        .effect_activations
+        .values()
+        .map(|&n| n as u32)
+        .sum()
+}
+
+/// Declared, then the [LordKnightmon] pick declined: the use is given back.
+/// Owner ruling 2026-11-24 "Match dcgo on the main use": DCGO EX13_074.cs
+/// RemoveUse()s on "Don't digivolve" (:218-222) and whenever the effect ends
+/// without digivolving (:245 `if (!digivolved) activateClass.RemoveUse();`).
+/// The owner chose DCGO parity over the CR 4.3 15-14-1-4 / 15-8-4-1/-2
+/// reading. Nothing else changed, so the main-declaration loop guard
+/// withholds the identical declaration.
 #[test]
 fn ex13_074_main_may_decline() {
+    let mut r = builder().hand(0, &["LKM"]).memory(5).start();
+    let rie = rie_with_knights(&mut r, 3);
+    let hand = r.hand_size(0);
+    assert!(r.game.activate_field_main(0, rie.index as usize));
+    assert_eq!(rie_uses(&r, rie), 1, "the declaration records the use");
+    r.execute_action(0, PASS).expect("decline");
+    r.auto_resolve().ok();
+    assert_eq!(stack(&r, rie).last().map(|(id, _)| id.as_str()), Some(CARD_ID));
+    assert_eq!(r.memory(), 5);
+    assert_eq!(r.hand_size(0), hand, "LordKnightmon stays in the hand");
+    assert_eq!(rie_uses(&r, rie), 0, "DCGO RemoveUse: the declined digivolve keeps the use");
+    assert!(!main_offered(&r, rie), "loop guard: withheld while nothing changed");
+}
+
+/// The kept use is real: after a state change the [Main] is offered again,
+/// Rie digivolves, and the use is spent.
+#[test]
+fn ex13_074_main_decline_then_state_change_redeclares_and_spends() {
     let mut r = builder().hand(0, &["LKM"]).memory(5).start();
     let rie = rie_with_knights(&mut r, 3);
     assert!(r.game.activate_field_main(0, rie.index as usize));
     r.execute_action(0, PASS).expect("decline");
     r.auto_resolve().ok();
-    assert_eq!(stack(&r, rie).last().map(|(id, _)| id.as_str()), Some(CARD_ID));
-    assert_eq!(r.memory(), 5);
+    assert!(!main_offered(&r, rie));
+    r.game.set_memory(4);
+    assert!(main_offered(&r, rie), "the state changed: the kept use is offered again");
+    assert!(r.game.activate_field_main(0, rie.index as usize));
+    let a = first_non_pass(&r);
+    r.execute_action(0, a).expect("pick LordKnightmon");
+    r.auto_resolve().ok();
+    assert_eq!(stack(&r, rie).last().map(|(id, _)| id.as_str()), Some("LKM"));
+    assert_eq!(r.memory(), 1, "fixed digivolution cost 3");
+    assert_eq!(rie_uses(&r, rie), 1, "digivolving spends the use");
 }
 
 #[test]
@@ -382,13 +425,36 @@ fn ex13_074_main_only_offers_lordknightmon() {
     assert_eq!(non_pass, 1, "only the [LordKnightmon] card is a candidate");
 }
 
+/// No [LordKnightmon] in hand or trash: DCGO does not offer the [Main]
+/// (EX13_074.cs CanUseCondition), so no use is ever counted. Ours offers it
+/// (the condition is the printed one) and the empty pick gives the use back
+/// (owner ruling 2026-11-24, DCGO :245); the loop guard then withholds the
+/// identical declaration, and a [LordKnightmon] arriving offers it again.
 #[test]
-fn ex13_074_main_is_once_per_turn() {
+fn ex13_074_main_without_lordknightmon_keeps_the_once_per_turn() {
     let mut r = builder().memory(5).start();
     let rie = rie_with_knights(&mut r, 3);
     assert!(r.game.activate_field_main(0, rie.index as usize));
-    // No LordKnightmon anywhere → the pick self-skips; the activation is spent.
     r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "nothing to choose");
+    assert_eq!(rie_uses(&r, rie), 0, "the use is not counted");
+    assert!(!main_offered(&r, rie), "loop guard: withheld while nothing changed");
+    r.inject_trash(0, "LKM");
+    assert!(main_offered(&r, rie), "a [LordKnightmon] arrived: offered again");
+}
+
+/// Digivolving spends the [Once Per Turn] (DCGO keeps the use once
+/// `digivolved` is set).
+#[test]
+fn ex13_074_main_is_once_per_turn() {
+    let mut r = builder().hand(0, &["LKM"]).memory(5).start();
+    let rie = rie_with_knights(&mut r, 3);
+    assert!(r.game.activate_field_main(0, rie.index as usize));
+    let a = first_non_pass(&r);
+    r.execute_action(0, a).expect("pick LordKnightmon");
+    r.auto_resolve().ok();
+    assert_eq!(rie_uses(&r, rie), 1);
+    r.inject_trash(0, "LKM");
     assert!(!main_offered(&r, rie), "[Once Per Turn]");
 }
 
@@ -531,3 +597,4 @@ fn ex13_074_main_offers_lordknightmon_only_when_three_can_be_paid() {
     let mine = if r.game.turn_player() == 0 { r.memory() } else { -r.memory() };
     assert_eq!(mine, -10, "3 paid from -7");
 }
+

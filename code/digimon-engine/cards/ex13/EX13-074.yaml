@@ -36,6 +36,8 @@
 #    THIS Tamer with `ignore_requirements: true` + fixed cost 3. The engine
 #    accepts a level-less (Tamer) base only when requirements are waived
 #    (G-TAMER-DIGIVOLVE-INTO-DIGIMON, resolved 2026-10-01).
+#    [Once Per Turn]: a declined or empty pick gives the use back (owner
+#    ruling 2026-11-24, DCGO EX13_074.cs RemoveUse; see the clause).
 #    Face-down cards under the Tamer are counted by their printed text like
 #    any other source (DCGO `CardSource.HasText` does not consult
 #    `IsFlipped`); unverified against general_rule.pdf (not in this checkout).
@@ -107,11 +109,22 @@ effects:
               - kind: digimon
               - name_is: LordKnightmon
           prompt: "This Tamer may digivolve into a [LordKnightmon] in your hand or trash for a digivolution cost of 3, ignoring digivolution requirements"
-      - effect_initiated_digivolve:
-          target: source
-          source: lordknightmon
-          cost: 3
-          ignore_requirements: true
+      # [Once Per Turn]: KEPT when Rie does not digivolve (DCGO EX13_074.cs
+      # RemoveUse on "Don't digivolve" :218-222 and `if (!digivolved)` :245),
+      # spent when she does. Owner ruling 2026-11-24 "Match dcgo on the main
+      # use"; the owner chose DCGO parity over the CR 4.3 15-14-1-4 /
+      # 15-8-4-1/-2 reading. The main-declaration loop guard withholds the
+      # identical declaration until the state changes.
+      - if:
+          condition: { binding_present: lordknightmon }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: lordknightmon
+                cost: 3
+                ignore_requirements: true
+          else:
+            - refund_opt: {}
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
