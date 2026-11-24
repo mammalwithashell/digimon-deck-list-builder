@@ -782,6 +782,81 @@ fn bt25_103_counter_on_attack_on_player_can_end_it() {
     assert!(r.game.pending_attack.is_none(), "no attack in progress");
 }
 
+/// Answer every remaining decision of the current attack (PASS where
+/// optional, else the first legal action); true if GraceNovamon's [Counter]
+/// (`declare`) was offered again in the counter timing.
+fn finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
+    use digimon_engine::enums::GamePhase;
+    let mut reoffered = false;
+    for _ in 0..16 {
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
+        if r.current_phase() == GamePhase::CounterTiming && v.valid_action_ids.contains(&declare) {
+            reoffered = true;
+        }
+        let action = if v.valid_action_ids.contains(&PASS) { PASS } else { v.valid_action_ids[0] };
+        r.execute_action(v.selecting_player, action).unwrap();
+    }
+    let _ = r.auto_resolve();
+    reoffered
+}
+
+/// Real combat. Only 1 [Counter] effect can be activated per attack (CR 4.3
+/// 11-3-2; official Q6717). Declaring GraceNovamon's [Counter], trashing
+/// nothing and not ending the attack keeps the [Once Per Turn] (W13), but the
+/// counter timing of that attack is over: it is not offered again in the same
+/// attack, so there is no declare-and-pass cycle. The kept use is offered at
+/// the next attack's counter timing that turn; ending that attack spends it,
+/// and a third attack opens no counter timing for it.
+#[test]
+fn bt25_103_real_counter_declare_and_pass_closes_the_window_and_keeps_the_use() {
+    use digimon_engine::enums::GamePhase;
+    let mut r = builder()
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
+        .security(0, &["FILL"; 5])
+        .security(1, &["FILL"; 3])
+        .memory(0)
+        .start();
+    r.set_first_player(1);
+    r.set_turn(3);
+    let me = r.place_stack(0, &["SRC", "RED-L6", CARD_ID]); // 2 sources
+    let declare = encode_attack(0, me.index as u16);
+    let first = r.place_stack(1, &["OPP-S", "OPP-A"]);
+    let second = r.place_stack(1, &["OPP-S", "OPP-B"]);
+
+    let _ = r.attack_player(first, 0, false);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    assert!(r.pending_selection_view().unwrap().valid_action_ids.contains(&declare));
+    r.execute_action(0, declare).unwrap();
+    finish_source_picks(&mut r); // trash nothing
+    answer_end_attack(&mut r, false);
+    assert!(
+        !finish_attack(&mut r, declare),
+        "CR 4.3 11-3-2: one [Counter] per attack, so the declaration is not offered again"
+    );
+    assert!(r.game.pending_attack.is_none(), "the first attack finished");
+    assert_eq!(sources(&r, first), 1, "nothing was trashed");
+    assert_eq!(r.security_count(0), 4, "the attack was not ended");
+
+    assert_ne!(r.attack_player(second, 0, false), digimon_engine::combat::AttackResult::Invalid);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming, "the kept use is offered at the next attack");
+    r.execute_action(0, declare).unwrap();
+    finish_source_picks(&mut r);
+    answer_end_attack(&mut r, true);
+    finish_attack(&mut r, declare);
+    assert_eq!(r.security_count(0), 4, "the second attack was ended");
+
+    r.game.players[1].battle_area[first.index as usize].is_suspended = false;
+    assert_ne!(r.attack_player(first, 0, false), digimon_engine::combat::AttackResult::Invalid, "the third attack is declared");
+    assert!(
+        !(r.current_phase() == GamePhase::CounterTiming
+            && r.pending_selection_view().is_some_and(|v| v.valid_action_ids.contains(&declare))),
+        "ending the attack spent the [Once Per Turn]"
+    );
+}
+
 #[test]
 fn bt25_103_opt_resets_next_turn() {
     let mut r = start(&[], 5);
