@@ -31,7 +31,9 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
     CompiledTiming, CompiledZone,
 };
-use digimon_engine::action::space::{ATTACK_START, PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::{
+    ATTACK_START, PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT, TRASH_EFFECT_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
@@ -332,23 +334,58 @@ fn ex13_015_own_effect_removal_is_not_replaced() {
 #[test]
 fn ex13_015_battle_removal_is_replaced() {
     let (mut runner, me) = replacement_board();
-    runner.place_on_field(1, "SMALL", Some(0));
+    let small = runner.place_on_field(1, "SMALL", Some(0));
     runner
         .game
         .delete_permanent_with_cause(me, ReplacementCause::Battle);
     assert!(runner.pending_selection().is_some(), "battle is 'other than by your effects'");
+    accept_and_pay(&mut runner, small);
     let _ = runner.auto_resolve();
     assert_eq!(runner.battle_area_size(0), 1);
+}
+
+/// Accept Gallantmon's replacement and pay with `target`. The cost pick is
+/// declinable (owner ruling 2026-11-23, DCGO parity), so the payment is
+/// chosen explicitly rather than by `auto_resolve`.
+fn accept_and_pay(runner: &mut DebugRunner, target: PermanentHandle) {
+    pick_replacement(runner, false);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+    pick_field(runner, target);
+}
+
+/// While <Evade> can also answer the deletion, the engine first asks which
+/// immediate replacement effect applies next (CR 4.3 15-8-5); pick <Evade>
+/// (`evade`) or Gallantmon's clause. With one candidate left, its own accept
+/// prompt is already pending.
+fn pick_replacement(runner: &mut DebugRunner, evade: bool) {
+    let v = runner.pending_selection_view().expect("replacement prompt");
+    if v.kind == SelectionKind::EffectChoice && v.prompt.contains("immediate replacement") {
+        let row = v
+            .effect_choices
+            .as_ref()
+            .and_then(|rows| rows.iter().find(|c| c.label.contains("Evade") == evade))
+            .unwrap_or_else(|| panic!("replacement order rows: {:?}", v.effect_choices))
+            .action_id;
+        runner.execute_action(v.selecting_player, row).expect("order pick");
+    }
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+/// PASS is legal at the pending prompt (the action mask, not the raw ids).
+fn pass_legal(runner: &DebugRunner) -> bool {
+    let p = runner.pending_selection().expect("prompt").selecting_player;
+    digimon_engine::action::build_action_mask(&runner.game, p)[PASS as usize] == 1.0
 }
 
 #[test]
 fn ex13_015_replacement_is_once_per_turn() {
     let (mut runner, me) = replacement_board();
-    runner.place_on_field(1, "SMALL", Some(0));
+    let small = runner.place_on_field(1, "SMALL", Some(0));
     runner.place_on_field(1, "TINY", Some(0));
     runner
         .game
         .delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    accept_and_pay(&mut runner, small);
     let _ = runner.auto_resolve();
     assert_eq!(runner.battle_area_size(0), 1);
     assert_eq!(runner.battle_area_size(1), 1);
@@ -356,8 +393,133 @@ fn ex13_015_replacement_is_once_per_turn() {
     runner
         .game
         .delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection().is_none(),
+        "spent: not offered for a second removal this turn though TINY could pay"
+    );
     let _ = runner.auto_resolve();
     assert_eq!(runner.battle_area_size(0), 0, "second removal this turn is not replaced");
+}
+
+// ─── [All Turns][OPT] replacement: a declined cost keeps the use ────────────
+//
+// Owner ruling 2026-11-23 ("parity with DCGO"; qa/rules/mechanics-gaps-2026-10.md
+// W14 row (f)). DCGO EX13_015.cs: offered only while an opponent 9000-DP-or-
+// lower Digimon exists (`CanActivateCondition`); after the accept, a
+// `SelectPermanentEffect` with canNoSelect true. No Digimon chosen ->
+// `RemoveUse()`, Gallantmon leaves. A Digimon chosen -> `isUsed` (spent), and
+// it doesn't leave only if that Digimon was deleted (Q7247).
+//
+// <Evade> on Gallantmon keeps it on the field after the would-leave window so
+// the use can be observed on a later removal the same turn; it is suspended
+// afterwards, so <Evade> is not offered again.
+
+fn grant_evade(runner: &mut DebugRunner, h: PermanentHandle) {
+    runner
+        .game
+        .modifiers
+        .grant_keyword(h, Keyword::Evade, digimon_engine::enums::Expiry::Permanent, 0);
+}
+
+/// Accept <Evade> for the same deletion; nothing else is asked, so the
+/// declined clause is not offered again for this event.
+fn accept_evade(runner: &mut DebugRunner) {
+    pick_replacement(runner, true);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept <Evade>");
+    assert!(
+        runner.pending_selection().is_none(),
+        "the same removal does not offer the declined clause again"
+    );
+}
+
+#[test]
+fn ex13_015_replacement_outer_decline_keeps_opt() {
+    let (mut runner, me) = replacement_board();
+    runner.place_on_field(1, "SMALL", Some(0));
+    grant_evade(&mut runner, me);
+    runner.game.delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut runner, false);
+    runner.execute_action(0, PASS).expect("decline the replacement");
+    accept_evade(&mut runner);
+    let me = runner.perm_handle(0, 0);
+    runner.game.delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "declined at the accept prompt: offered again this turn"
+    );
+}
+
+#[test]
+fn ex13_015_replacement_accept_then_decline_cost_keeps_opt() {
+    let (mut runner, me) = replacement_board();
+    let small = runner.place_on_field(1, "SMALL", Some(0));
+    grant_evade(&mut runner, me);
+    runner.game.delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut runner, false);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+    let v = runner.pending_selection_view().expect("cost pick");
+    assert!(v.valid_action_ids.contains(&(ATTACK_START + small.index as u16)));
+    assert!(
+        pass_legal(&runner),
+        "DCGO EX13_015.cs canNoSelect: the deletion may be declined after the accept"
+    );
+    runner.execute_action(0, PASS).expect("decline the cost");
+    assert_eq!(field_ids(&runner, 1), vec!["SMALL".to_string()], "nothing deleted");
+    accept_evade(&mut runner);
+    let me = runner.perm_handle(0, 0);
+    runner.game.delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept again");
+    let v = runner.pending_selection_view().expect("Gallantmon's cost pick again");
+    assert!(v.valid_action_ids.contains(&(ATTACK_START + small.index as u16)));
+}
+
+#[test]
+fn ex13_015_replacement_declined_cost_lets_it_leave() {
+    let (mut runner, me) = replacement_board();
+    runner.place_on_field(1, "SMALL", Some(0));
+    runner.game.delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+    assert!(pass_legal(&runner), "the deletion may be declined after the accept");
+    runner.execute_action(0, PASS).expect("decline the cost");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.battle_area_size(0), 0, "not paid: Gallantmon leaves");
+    assert_eq!(field_ids(&runner, 1), vec!["SMALL".to_string()]);
+}
+
+/// A chosen Digimon whose deletion is prevented spends the use (DCGO sets
+/// `isUsed` on the pick) and Gallantmon leaves that removal (Q7247: the "by"
+/// condition wasn't met; here <Evade> keeps it instead).
+#[test]
+fn ex13_015_replacement_prevented_payment_spends_opt() {
+    let (mut runner, me) = replacement_board();
+    let small = runner.place_on_field(1, "SMALL", Some(0));
+    runner.place_on_field(1, "TINY", Some(0));
+    runner.game.modifiers.add(
+        small,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotBeDestroyedByEffect,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            1,
+        ),
+    );
+    grant_evade(&mut runner, me);
+    runner.game.delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    accept_and_pay(&mut runner, small);
+    assert!(field_ids(&runner, 1).contains(&"SMALL".to_string()), "its deletion was prevented");
+    accept_evade(&mut runner);
+    let me = runner.perm_handle(0, 0);
+    runner.game.delete_permanent_with_cause(me, ReplacementCause::OpponentEffect);
+    assert!(
+        runner.pending_selection().is_none(),
+        "a Digimon was chosen: the use is spent though TINY could pay"
+    );
 }
 
 // ─── Section 3 — Assembly ────────────────────────────────────────────────────

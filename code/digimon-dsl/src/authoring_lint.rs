@@ -159,6 +159,7 @@ pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("EX13-024", "effects[4]"),
     ("BT25-084", "effects[1]"),
     ("BT26-044", "effects[2]"),
+    ("EX13-015", "effects[4]"),
 ];
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -368,6 +369,23 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_accept_then_decline_cost_keeps_opt",
             "cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_paid_spends_opt",
             "cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_not_offered_without_a_face_down_tamer_card",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-015",
+        clause: "effects[4]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Gallantmon \"by deleting 1 of your opponent's 9000 DP or lower Digimon, it doesn't leave\": owner ruling ",
+            "2026-11-23, parity with DCGO (EX13_015.cs: canNoSelect pick, RemoveUse unless a Digimon was chosen). ",
+            "Offered only while such a Digimon exists (leading-pick preflight), so the refund runs only on a declined ",
+            "pick; a chosen Digimon spends the use even when its deletion is prevented (Q7247: it then leaves).",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_015.rs::ex13_015_replacement_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_015.rs::ex13_015_replacement_is_once_per_turn",
+            "cards_behavioral/ex13/ex13_015.rs::ex13_015_replacement_prevented_payment_spends_opt",
+            "cards_behavioral/ex13/ex13_015.rs::ex13_015_no_9000_or_lower_target_means_it_leaves",
         ],
     },
 ];

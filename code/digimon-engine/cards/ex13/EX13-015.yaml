@@ -23,7 +23,9 @@
 #     "12000 DP or higher". Printed text governs: `dp_gte: 12000`.
 #   - WhenRemoveField OPT, skippable: not by owner's effect; canNoSelect: true
 #     pick over opponent Digimon with DP ≤ 9000; on successful delete,
-#     `willBeRemoveField = false`; `if (!isUsed) RemoveUse()`.
+#     `willBeRemoveField = false`; `if (!isUsed) RemoveUse()`. Owner ruling
+#     2026-11-23: this clause follows DCGO, so declining the pick after
+#     accepting keeps the [Once Per Turn] (W14 row (f)).
 #   - Assembly: 3 elements (Lv.5/Lv.4/Lv.3) each ContainsCardName Guilmon or
 #     Growlmon; reduceCost 5.
 #
@@ -113,16 +115,31 @@ effects:
       none_of:
         - replacement_cause: own_effect
     summary: "[All Turns][OPT] When this Digimon would leave other than by your effects, by deleting 1 opponent 9000 DP or lower Digimon, it doesn't leave"
+    # DCGO flow (EX13_015.cs), followed by owner ruling 2026-11-23 ("parity
+    # with DCGO", qa/rules/mechanics-gaps-2026-10.md W14 row (f)): offered only
+    # while an opponent 9000-DP-or-lower Digimon exists (`CanActivateCondition`;
+    # here the leading pick's candidate preflight); after the accept, a pick
+    # with canNoSelect true. None chosen -> `RemoveUse()`: the use is kept and
+    # Gallantmon leaves. One chosen -> `isUsed` (spent); it doesn't leave only
+    # if that Digimon was deleted (Q7247).
     process:
       - select_opponent_permanent:
           bind_as: cost_target
+          optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
               - dp_lte: 9000
           prompt: "Delete 1 of your opponent's 9000 DP or lower Digimon so this Digimon doesn't leave"
-      - delete_permanent: { target: cost_target }
       - if:
-          condition: { effect_deleted_any_opponent_digimon: true }
+          condition: { binding_present: cost_target }
           then:
-            - cancel_replacement: {}
+            - delete_permanent: { target: cost_target }
+            - if:
+                condition: { effect_deleted_any_opponent_digimon: true }
+                then:
+                  - cancel_replacement: {}
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}
