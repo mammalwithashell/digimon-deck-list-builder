@@ -4064,12 +4064,11 @@ event (BT27-094/096/097/098):
 ```
 
 `of` is the deck owner. `target` resolves to a permanent (a Tamer or a
-Digimon, including a binding from an earlier selection). `count` is 1–4,
-and a short deck moves only the available cards. If at least two cards
-move, the effect card's owner uses an `EffectChoice` menu to choose their
-order from top to bottom, using deck positions only (1 is the deck top).
-The cards are not revealed while choosing, and the moved cards contribute
-to one `OnAddDigivolutionCards` batch. `face_down` defaults to `false`.
+Digimon, including a binding from an earlier selection). A positive
+`count` moves as many of the requested cards as the deck has, preserving
+their relative order at the bottom of the stack. No card is revealed or
+chosen in this step, and the moved cards contribute to one
+`OnAddDigivolutionCards` batch. `face_down` defaults to `false`.
 
 **`trash_bottom_face_down_source_under_tamer` verb.** A cost-form verb for
 text such as "by trashing the bottom face-down card from under any of your

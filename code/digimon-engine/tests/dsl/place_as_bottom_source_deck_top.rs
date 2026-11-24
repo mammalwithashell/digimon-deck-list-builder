@@ -12,13 +12,11 @@
 
 use std::sync::Arc;
 
-use digimon_engine::action::{mask::build_action_mask, space::HAND_EFFECT_START};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::DslCardEffect;
 use digimon_engine::effect::CardEffect;
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::selection::SelectionKind;
 
 const YAML: &str = r#"
 card: TST-PABS-DT
@@ -70,13 +68,7 @@ effects:
 // "The card is placed on the bottom of the cards under the Tamer."
 #[test]
 fn bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline() {
-    for (deck_size, accept, order) in [
-        (3, true, Some(0)),
-        (3, true, Some(1)),
-        (1, true, None),
-        (0, true, None),
-        (3, false, None),
-    ] {
+    for (deck_size, accept) in [(3, true), (1, true), (0, true), (3, false)] {
         let mut runner = DebugRunner::builder()
             .from_dsl_yaml(KURATA_PLACEMENT)
             .expect("Kurata placement compiles")
@@ -100,22 +92,10 @@ fn bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline() {
         } else {
             runner.decline_optional_trigger().unwrap();
         }
-        if let Some(order) = order {
-            assert_two_card_order_menu(&runner, 0);
-            assert_eq!(runner.game.players[0].deck.len(), deck_size);
-            if order == 1 {
-                runner.game = runner.game.clone();
-            }
-            runner.execute_action(0, HAND_EFFECT_START + order).unwrap();
-        }
         assert!(runner.game.pending_selection.is_none());
 
         let moved = if accept { deck_size.min(2) } else { 0 };
         let (remaining, placed) = deck_before.split_at(deck_size - moved);
-        let mut placed = placed.to_vec();
-        if order == Some(1) {
-            placed.reverse();
-        }
         let player = &runner.game.players[0];
         assert_eq!(player.deck.iter().map(|c| c.handle()).collect::<Vec<_>>(), remaining);
         let tamer = &player.battle_area[kurata.index as usize];
@@ -132,31 +112,11 @@ fn bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline() {
     }
 }
 
-fn assert_two_card_order_menu(runner: &DebugRunner, chooser: u8) {
-    let pending = runner.game.pending_selection.as_ref().expect("order prompt");
-    assert!(matches!(pending.kind, SelectionKind::EffectChoice));
-    assert_eq!(pending.selecting_player, chooser);
-    assert!(pending.card_choice.is_none());
-    let choices = pending.effect_choices.as_ref().unwrap();
-    assert_eq!(
-        choices.iter().map(|choice| choice.label.as_str()).collect::<Vec<_>>(),
-        ["1 → 2", "2 → 1"],
-    );
-    assert!(choices.iter().all(|choice| choice.source_card == Some(pending.source_card)));
-    let legal: Vec<_> = build_action_mask(&runner.game, chooser)
-        .iter()
-        .enumerate()
-        .filter_map(|(action, &legal)| (legal > 0.0).then_some(action as u16))
-        .collect();
-    assert_eq!(legal, [HAND_EFFECT_START, HAND_EFFECT_START + 1]);
-    assert!(build_action_mask(&runner.game, 1 - chooser).iter().all(|&legal| legal == 0.0));
-}
-
 #[test]
 fn place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck() {
     let yaml = YAML.replace(
         "      - place_as_bottom_source:\n          source: { deck_top: you }\n          target: source\n          face_down: true",
-        "      - select_own_permanent:\n          bind_as: recipient\n          filter: { kind: digimon }\n          prompt: Choose a Digimon to receive the cards\n      - place_deck_top_under: { of: opponent, count: 2, target: recipient, face_down: true }\n      - gain_memory: 1",
+        "      - select_own_permanent:\n          bind_as: recipient\n          filter: { kind: digimon }\n          prompt: Choose a Digimon to receive the cards\n      - place_deck_top_under: { of: opponent, count: 2, target: recipient, face_down: true }",
     );
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(&yaml)
@@ -170,12 +130,7 @@ fn place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck() {
     let recipient = runner.place_on_field(0, "TST-PABS-RECIPIENT", None);
     runner.game.fire_on_play(0, source.index as usize);
     assert_eq!(runner.game.players[1].deck.len(), 2);
-    let memory = runner.game.memory;
     runner.choose_prompt_card("TST-PABS-RECIPIENT", None).unwrap();
-    assert_two_card_order_menu(&runner, 0);
-    assert_eq!(runner.game.memory, memory);
-    runner.execute_action(0, HAND_EFFECT_START).unwrap();
-    assert_eq!(runner.game.memory, memory + 1);
     let player = &runner.game.players[0];
     assert_eq!(player.deck.len(), 1);
     assert!(runner.game.players[1].deck.is_empty());
@@ -183,26 +138,6 @@ fn place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck() {
     let stack = &player.battle_area[recipient.index as usize].card_sources;
     assert_eq!(stack.len(), 3);
     assert!(stack[..2].iter().all(|c| c.face_down));
-}
-
-#[test]
-fn deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller() {
-    let spec: digimon_dsl::CardSpec = serde_yml::from_str(KURATA_PLACEMENT).unwrap();
-    let compiled = digimon_dsl::compile::compile(&spec).unwrap();
-    let mut runner = DebugRunner::builder()
-        .from_dsl_yaml(KURATA_PLACEMENT)
-        .unwrap()
-        .add_card(make_test_card("TST-PABS-DECK", "Deck Card"))
-        .deck(0, &["TST-PABS-DECK"; 2])
-        .start();
-    let kurata = runner.place_on_field(1, "BT27-098", None);
-    let source = runner.game.players[1].battle_area[kurata.index as usize].top_card().handle();
-    let effect = DslCardEffect::new(Arc::new(compiled)).effects(source).remove(0);
-    (effect.process.unwrap())(&mut EffectContext::new(&mut runner.game, source, Some(kurata), 0));
-    assert_two_card_order_menu(&runner, 1);
-    runner.execute_action(1, HAND_EFFECT_START).unwrap();
-    assert!(runner.game.players[0].deck.is_empty());
-    assert_eq!(runner.game.players[1].battle_area[kurata.index as usize].card_sources.len(), 3);
 }
 
 #[test]

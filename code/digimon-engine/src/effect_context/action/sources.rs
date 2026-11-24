@@ -945,18 +945,19 @@ impl<'a> EffectContext<'a> {
         }
     }
 
-    /// Move the selected permutation of deck-top positions under `target`
-    /// as one batch. Both the input positions and result order are top first.
-    pub(crate) fn place_deck_top_cards_under_permanent(
+    /// Move up to `count` cards from `owner`'s deck top to the bottom of
+    /// `target`'s stack, keeping their relative order. Records one placement
+    /// batch, without revealing the cards or prompting to order them.
+    pub fn place_deck_top_cards_under_permanent(
         &mut self,
         owner: PlayerId,
-        order: &[usize],
+        count: u8,
         target: PermanentHandle,
         face_down: bool,
     ) -> usize {
         let cause = self.placing_effect_attribution();
         self.game
-            .place_deck_top_cards_under_permanent(owner, order, target, face_down, cause)
+            .place_deck_top_cards_under_permanent(owner, count, target, face_down, cause)
     }
 
     /// Remove a single digivolution source card from `perm`'s stack and route

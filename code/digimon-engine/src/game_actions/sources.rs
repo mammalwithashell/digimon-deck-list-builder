@@ -22,19 +22,10 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
-    pub(crate) fn deck_top_source_count(&self, owner: PlayerId, count: u8) -> usize {
-        let deck = self.player(owner);
-        let available = deck
-            .opaque_deck_state
-            .as_ref()
-            .map_or(deck.deck.len(), |state| state.total_remaining());
-        usize::from(count).min(available)
-    }
-
     pub(crate) fn place_deck_top_cards_under_permanent(
         &mut self,
         owner: PlayerId,
-        order: &[usize],
+        count: u8,
         target: PermanentHandle,
         face_down: bool,
         cause: EffectAttribution,
@@ -42,30 +33,32 @@ impl Game {
         if self.stable_top_card_of(target).is_none() || self.is_token_source_destination(target) {
             return 0;
         }
-        let mut cards = Vec::with_capacity(order.len());
-        for _ in order {
+        let deck = self.player(owner);
+        let available = deck
+            .opaque_deck_state
+            .as_ref()
+            .map_or(deck.deck.len(), |state| state.total_remaining());
+        let count = usize::from(count).min(available);
+        let mut cards = Vec::with_capacity(count);
+        for _ in 0..count {
             let Some(taken) = self.take_card_source_ref(CardSourceRef::DeckTop(owner)) else {
                 break;
             };
             let mut card = taken.card;
             card.face_down = face_down;
-            cards.push(Some(card));
+            cards.push(card);
         }
         if cards.is_empty() {
             return 0;
         }
-        let ordered: Vec<_> = order
-            .iter()
-            .filter_map(|&index| cards.get_mut(index)?.take())
-            .collect();
-        let placed: Vec<_> = ordered.iter().map(CardSource::handle).collect();
+        let placed: Vec<_> = cards.iter().map(CardSource::handle).collect();
         let player = self.player_mut(target.player);
         let host = if target.index == crate::action::space::BREEDING_TARGET as u8 {
             player.breeding_area.as_mut().expect("validated target")
         } else {
             &mut player.battle_area[target.index as usize]
         };
-        host.card_sources.splice(0..0, ordered.into_iter().rev());
+        host.card_sources.splice(0..0, cards.into_iter().rev());
         let moved = placed.len();
         self.note_effect_added_sources(target, placed, cause);
         moved

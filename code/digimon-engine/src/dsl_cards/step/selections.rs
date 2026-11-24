@@ -1142,28 +1142,6 @@ pub(crate) fn run_resume(
                                 &runtime,
                             );
                         }
-                        Some(crate::resume::EffectChoicePostAction::OrderDeckTopSources {
-                            deck_owner,
-                            target_top,
-                            face_down,
-                            orders,
-                        }) => {
-                            if let (Some(target), Some(order)) = (
-                                ctx.game.permanent_handle_by_top_card(target_top),
-                                orders.get(choice_index),
-                            ) {
-                                ctx.place_deck_top_cards_under_permanent(
-                                    deck_owner, order, target, face_down,
-                                );
-                            }
-                            run_tail_preserving_trigger_context(
-                                &mut ctx,
-                                trigger_context,
-                                &inner_tail,
-                                &mut b,
-                                &runtime,
-                            );
-                        }
                     }
                 }
                 ResumeSelectKind::DnaPairLeft {
@@ -4260,23 +4238,6 @@ pub fn try_install(
 ) -> InstallResult {
     settle_continuous_state_for_play_pick(step, ctx);
     match step {
-        CompiledStep::PlaceDeckTopUnder {
-            of,
-            count,
-            target,
-            face_down,
-        } => {
-            use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
-            let Some(ResolvedBinding::Permanent(target)) =
-                resolve_binding_ref(target, ctx, &bindings)
-            else {
-                return InstallResult::Continue;
-            };
-            let deck_owner = resolve_player(ctx, *of);
-            install_deck_top_order(
-                ctx, deck_owner, *count, target, *face_down, tail, bindings, runtime,
-            )
-        }
         CompiledStep::PaySourcePrefix {
             host_filter,
             minimum,
@@ -8581,101 +8542,6 @@ fn install_count_capped_permanent_step(
             }
         })),
     });
-}
-
-#[allow(clippy::too_many_arguments)]
-fn install_deck_top_order(
-    ctx: &mut EffectContext<'_>,
-    deck_owner: PlayerId,
-    count: u8,
-    target: PermanentHandle,
-    face_down: bool,
-    tail: &[CompiledStep],
-    bindings: Bindings,
-    runtime: &StepRuntime,
-) -> InstallResult {
-    use crate::resume::{
-        EffectChoicePostAction, ResumeDecline, ResumeFrame, ResumeProvenance, ResumeSelectKind,
-        ResumeStack,
-    };
-
-    let Some(target_top) = ctx.game.stable_top_card_of(target) else {
-        return InstallResult::Continue;
-    };
-    if ctx.game.is_token_source_destination(target)
-        || count > digimon_dsl::step::PlaceDeckTopUnderArgs::MAX_COUNT
-    {
-        return InstallResult::Continue;
-    }
-    let available = ctx.game.deck_top_source_count(deck_owner, count);
-    if available <= 1 {
-        if available == 1 {
-            ctx.place_deck_top_cards_under_permanent(deck_owner, &[0], target, face_down);
-        }
-        return InstallResult::Continue;
-    }
-
-    let orders = deck_top_orders(available);
-    let labels = orders
-        .iter()
-        .map(|order| {
-            order.iter().map(|i| (i + 1).to_string()).collect::<Vec<_>>().join(" → ")
-        })
-        .collect();
-    let prov = ResumeProvenance {
-        source_card: ctx.source_card,
-        source_permanent: ctx.source_permanent,
-        source_kind: ctx.source_kind,
-        controller: ctx.player,
-        override_pin: ctx.override_selecting_player(),
-    };
-    let chooser = ctx
-        .game
-        .card_source_for_handle(ctx.source_card)
-        .map_or(ctx.player, |source| source.owner);
-    ctx.set_override_selecting_player(Some(chooser));
-    ctx.select_effect_choice(
-        "Choose the order under the permanent, top to bottom (1 = deck top)",
-        labels,
-        |_, _| unreachable!("deck-top order requires its resume frame"),
-    );
-    ctx.set_override_selecting_player(prov.override_pin);
-    ctx.game.pending_selection_resume = Some(ResumeStack {
-        frames: vec![ResumeFrame::RunTail {
-            prov,
-            select_kind: ResumeSelectKind::EffectChoice {
-                post: Some(EffectChoicePostAction::OrderDeckTopSources {
-                    deck_owner,
-                    target_top,
-                    face_down,
-                    orders,
-                }),
-            },
-            bind_as: None,
-            inner_tail: Arc::new(tail.to_vec()),
-            outer_conts: Vec::new(),
-            bindings,
-            runtime: runtime.clone(),
-            trigger_context: ctx.game.current_trigger_context.clone(),
-            decline: ResumeDecline::None,
-        }],
-    });
-    InstallResult::Parked
-}
-
-fn deck_top_orders(count: usize) -> Vec<Vec<usize>> {
-    if count == 0 {
-        return vec![Vec::new()];
-    }
-    (0..count)
-        .flat_map(|first| {
-            deck_top_orders(count - 1).into_iter().map(move |tail| {
-                std::iter::once(first)
-                    .chain(tail.into_iter().map(|i| i + usize::from(i >= first)))
-                    .collect()
-            })
-        })
-        .collect()
 }
 
 fn install_select_effect_choice(

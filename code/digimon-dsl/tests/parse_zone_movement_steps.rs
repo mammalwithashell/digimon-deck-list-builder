@@ -70,7 +70,7 @@ effects:
 }
 
 #[test]
-fn place_deck_top_under_rejects_counts_outside_the_menu_and_an_unbound_target() {
+fn place_deck_top_under_rejects_zero_and_an_unbound_target() {
     let registry = StubRegistry::empty();
     let context = ValidationContext { raw_rust: &registry };
     for (args, field, message) in [
@@ -78,11 +78,6 @@ fn place_deck_top_under_rejects_counts_outside_the_menu_and_an_unbound_target() 
             "{ of: you, count: 0, target: source, face_down: true }",
             ".count",
             "place_deck_top_under count must be positive",
-        ),
-        (
-            "{ of: you, count: 5, target: source, face_down: true }",
-            ".count",
-            "place_deck_top_under count must be at most 4; more permutations exceed the effect-choice menu capacity",
         ),
         (
             "{ of: you, count: 2, target: missing, face_down: true }",

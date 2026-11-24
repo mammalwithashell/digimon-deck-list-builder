@@ -199,7 +199,7 @@ pub enum StepSpec {
     PlaceOnSecurity(PlaceOnSecurityArgs),
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
-    /// Move deck-top cards together to the bottom of a permanent's stack. Count must be 1–4; if at least two cards move, the effect card owner chooses their order by deck position without seeing any card identities.
+    /// Move the top cards of a deck together to the bottom of a permanent's stack.
     PlaceDeckTopUnder(PlaceDeckTopUnderArgs),
     /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05): place a card as
     /// `target`'s TOP digivolution source — inserted directly beneath the
@@ -2630,10 +2630,6 @@ pub struct PlaceDeckTopUnderArgs {
     pub target: BindingRef,
     #[serde(default)]
     pub face_down: bool,
-}
-
-impl PlaceDeckTopUnderArgs {
-    pub const MAX_COUNT: u8 = 4;
 }
 
 /// Args for `place_as_top_source` — same shape as
