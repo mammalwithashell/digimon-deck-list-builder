@@ -21174,6 +21174,18 @@
         "security_text": "",
         "use_cost": 6
       }
-    }
+    },
+    "evo_costs": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ]
   }
 }
