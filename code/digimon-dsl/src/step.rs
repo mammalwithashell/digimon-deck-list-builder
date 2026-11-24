@@ -1698,6 +1698,20 @@ pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     /// the suspend. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Requires `optional`. On a declined Tamer pick the steps AFTER this one
+    /// still run, with `bind_as` unbound, instead of being dropped; a pick
+    /// trashes the card, binds `bind_as` to the Tamer and runs them as usual.
+    /// Lets a clause tell "the cost was declined" from "paid" with
+    /// `binding_present` / `binding_absent`, e.g. to `refund_opt` on the
+    /// decline (DCGO `canNoSelect` + `RemoveUse()`: BT26-044 Lilamon's
+    /// inherited save, EX13-032 Chirinmon; owner ruling 2026-11-23).
+    /// `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-DECLINE-TAIL`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continue_on_decline: bool,
+    /// Binds the chosen Tamer for the steps after this one (see
+    /// `continue_on_decline`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 /// Args for `trash_bottom_face_down_sources_under_tamers` — the multi-count /

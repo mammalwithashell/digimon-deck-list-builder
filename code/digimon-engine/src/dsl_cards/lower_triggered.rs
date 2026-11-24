@@ -1667,6 +1667,8 @@ mod tests {
             CompiledStep::TrashBottomFaceDownSourceUnderTamer {
                 of: CompiledPlayerRef::You,
                 optional: false,
+                continue_on_decline: false,
+                bind_as: None,
             }
         ]));
         assert!(body_first_step_installs_selection(&[

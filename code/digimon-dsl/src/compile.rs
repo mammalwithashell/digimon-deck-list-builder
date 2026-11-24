@@ -3473,6 +3473,8 @@ fn compile_step(
             CompiledStep::TrashBottomFaceDownSourceUnderTamer {
                 of: compile_player_ref(a.of),
                 optional: a.optional,
+                continue_on_decline: a.continue_on_decline,
+                bind_as: a.bind_as.clone(),
             }
         }
         S::TrashBottomFaceDownSourcesUnderTamers(a) => {

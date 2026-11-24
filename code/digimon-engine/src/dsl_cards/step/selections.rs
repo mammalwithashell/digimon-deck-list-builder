@@ -4358,7 +4358,12 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
-        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of, optional } => {
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+            of,
+            optional,
+            continue_on_decline,
+            bind_as,
+        } => {
             // Bundled activation cost: "pick one of `of`'s Tamers with a
             // face-down card under it â†’ trash its bottom (lowest) face-down
             // card". Payable iff the shared count
@@ -4384,14 +4389,32 @@ pub fn try_install(
                 ctx.cost_unpayable = true;
                 return InstallResult::TailAlreadyRan;
             }
+            // `continue_on_decline` (G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-
+            // DECLINE-TAIL): a PASS runs the same tail with `bind_as` unbound,
+            // so the clause can tell a declined cost from a paid one (DCGO
+            // `canNoSelect` + `RemoveUse()`, owner ruling 2026-11-23).
+            let decline_tail = (*optional && *continue_on_decline).then(|| {
+                (
+                    Arc::new(tail.to_vec()),
+                    bindings.clone(),
+                    runtime.clone(),
+                    ctx.game.current_trigger_context.clone(),
+                )
+            });
             install_trash_bottom_face_down_source_under_tamer(
                 ctx,
                 filter,
                 *optional,
+                bind_as.clone(),
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
             );
+            if let Some((d_tail, d_bindings, d_runtime, d_trigger)) = decline_tail {
+                attach_any_permanent_continue_on_decline(
+                    ctx, d_tail, d_bindings, d_runtime, d_trigger,
+                );
+            }
             // With â‰¥1 candidate, `select_own_permanent` always installs a
             // pending selection (even a single candidate is exposed as a
             // 1-option selection â€” no auto-resolve; `optional` adds a PASS), so
@@ -6589,6 +6612,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
     optional: bool,
+    bind_as: Option<String>,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -6600,6 +6624,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
     // Resumable-VM: capture for the FieldPermanent{post:TrashBottomFaceDownSource}
     // frame before the closures consume tail/bindings/runtime/trigger. of_player =
     // ctx.player (select_own_permanent selects own field).
@@ -6639,6 +6664,9 @@ fn install_trash_bottom_face_down_source_under_tamer(
             // tail must not run.
             if trashed {
                 let mut b = bindings.clone();
+                if let Some(name) = &bind_as {
+                    bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
+                }
                 run_tail_preserving_trigger_context(
                     cb_ctx,
                     trigger_context,
@@ -6667,7 +6695,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
                     of_player: player,
                     post: Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource),
                 },
-                bind_as: None,
+                bind_as: bind_as_for_resume,
                 inner_tail: tail_for_resume,
                 outer_conts: Vec::new(),
                 bindings: bindings_for_resume,

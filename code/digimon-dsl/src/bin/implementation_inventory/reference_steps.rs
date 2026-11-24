@@ -2046,9 +2046,16 @@ impl Walk for digimon_dsl::step::TrashBottomFaceDownSourceUnderTamerArgs {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::step::TrashBottomFaceDownSourceUnderTamerArgs { of, optional } = self;
+        let digimon_dsl::step::TrashBottomFaceDownSourceUnderTamerArgs {
+            of,
+            optional,
+            continue_on_decline,
+            bind_as,
+        } = self;
         of.walk(c, &format!("{}.of", path), "UNCLASSIFIED_STRING");
         optional.walk(c, &format!("{}.optional", path), "UNCLASSIFIED_STRING");
+        continue_on_decline.walk(c, &format!("{}.continue_on_decline", path), "UNCLASSIFIED_STRING");
+        bind_as.walk(c, &format!("{}.bind_as", path), "BINDING_DEFINITION");
     }
 }
 impl Walk for digimon_dsl::step::TrashBottomFaceDownSourcesUnderTamersArgs {
@@ -5624,7 +5631,7 @@ digimon_dsl::compiled::CompiledStep::PlaceTopSourceAsBottom{target} => { c.node(
 digimon_dsl::compiled::CompiledStep::TrashTopSource{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashTopSource"));target.walk(c, &format!("{}.target", &format!("{}@TrashTopSource",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::TrashBottomSources{target,count} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomSources"));target.walk(c, &format!("{}.target", &format!("{}@TrashBottomSources",path)), "EXISTING_INSTANCE_BINDING");count.walk(c, &format!("{}.count", &format!("{}@TrashBottomSources",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::TrashAllSources{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashAllSources"));target.walk(c, &format!("{}.target", &format!("{}@TrashAllSources",path)), "EXISTING_INSTANCE_BINDING");},
-digimon_dsl::compiled::CompiledStep::TrashBottomFaceDownSourceUnderTamer{of,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomFaceDownSourceUnderTamer"));of.walk(c, &format!("{}.of", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::TrashBottomFaceDownSourceUnderTamer{of,optional,continue_on_decline,bind_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomFaceDownSourceUnderTamer"));of.walk(c, &format!("{}.of", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "UNCLASSIFIED_STRING");continue_on_decline.walk(c, &format!("{}.continue_on_decline", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "UNCLASSIFIED_STRING");bind_as.walk(c, &format!("{}.bind_as", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "BINDING_DEFINITION");},
 digimon_dsl::compiled::CompiledStep::TrashBottomFaceDownSourcesUnderTamers{of,count} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomFaceDownSourcesUnderTamers"));of.walk(c, &format!("{}.of", &format!("{}@TrashBottomFaceDownSourcesUnderTamers",path)), "UNCLASSIFIED_STRING");count.walk(c, &format!("{}.count", &format!("{}@TrashBottomFaceDownSourcesUnderTamers",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::TrashLinkCardOfOwnDigimon{of,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashLinkCardOfOwnDigimon"));of.walk(c, &format!("{}.of", &format!("{}@TrashLinkCardOfOwnDigimon",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@TrashLinkCardOfOwnDigimon",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::TrashOptionFromOwnStacks{of,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashOptionFromOwnStacks"));of.walk(c, &format!("{}.of", &format!("{}@TrashOptionFromOwnStacks",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@TrashOptionFromOwnStacks",path)), "UNCLASSIFIED_STRING");},

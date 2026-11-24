@@ -1,3 +1,31 @@
+## G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-DECLINE-TAIL — resolved 2026-11-23
+
+`trash_bottom_face_down_source_under_tamer` with `optional: true` dropped the
+rest of the clause on a declined Tamer pick, so a clause could not refund its
+[Once Per Turn] when the cost was declined after the accept. DCGO does that on
+BT26-044 Lilamon's inherited save and EX13-032 Chirinmon's Tamer cost (a
+`canNoSelect` Tamer pick, then `RemoveUse()` when none was chosen), and the
+owner ruled on 2026-11-23 that those clauses follow DCGO
+(qa/rules/mechanics-gaps-2026-10.md W14 row (f)).
+
+Closed by two fields on the verb: `continue_on_decline: true` (requires
+`optional: true`) runs the following steps on a decline with the binding
+unbound, and `bind_as` binds the chosen Tamer when the card was trashed. A
+clause then branches on `binding_present` / `binding_absent` (`else:
+refund_opt`). Both default off, so every existing card keeps its shape. The
+compiled layout grew two fields: `PACK_FORMAT_VERSION` 0.38.0.
+
+Proof: `code/digimon-dsl/tests/trash_face_down_under_tamer_decline_tail.rs`
+(compile, pack round trip, validation); behavioural
+`tests/cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_accept_then_decline_cost_keeps_opt`
+and `tests/cards_behavioral/ex13/ex13_032.rs::ex13_032_tamer_cost_declined_at_the_tamer_pick_keeps_opt`.
+
+The other nine clauses of that ruling needed no new vocabulary: an optional
+`select_*_permanent` / `select_hand` with `continue_on_decline` (or a non-cost
+optional hand pick) followed by `binding_present` / `binding_absent`, and
+`select_effect_choice` with `legal_when` and an always-legal "Don't pay the
+cost" row for Chirinmon's three-way cost choice.
+
 ## Player-directed forced attacks — resolved 2026-11-09
 
 `force_attack.affects_player: true` implements an instruction to the selected

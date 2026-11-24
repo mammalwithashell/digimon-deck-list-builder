@@ -1032,6 +1032,15 @@ pub(crate) fn validate_scoped_step_modes(
                 });
             }
         }
+        StepSpec::TrashBottomFaceDownSourceUnderTamer(args) => {
+            if args.continue_on_decline && !args.optional {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.continue_on_decline"),
+                    message: "continue_on_decline requires optional: true (a mandatory Tamer pick has no decline)".into(),
+                });
+            }
+        }
         _ => {}
     }
 }
@@ -2035,6 +2044,9 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::TrashBottomFaceDownSourceUnderTamer(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectOwnSources(args) | StepSpec::SelectUnderTamerSources(args) => {

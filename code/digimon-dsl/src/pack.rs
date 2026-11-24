@@ -58,7 +58,10 @@ use std::collections::BTreeSet;
 // 0.37.0 removes the `windowed` field from the compiled `may_attack_now` step
 // (an effect's "may attack" is declared inside the effect). Rebuild packs;
 // bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.37.0";
+// 0.38.0 adds `continue_on_decline` and `bind_as` to the compiled
+// `trash_bottom_face_down_source_under_tamer` step. Rebuild packs; bincode
+// layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.38.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

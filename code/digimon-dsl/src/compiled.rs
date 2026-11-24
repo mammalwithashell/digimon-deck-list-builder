@@ -2088,6 +2088,15 @@ pub enum CompiledStep {
         /// (non-self-describing), so every field must occupy a fixed slot.
         #[serde(default)]
         optional: bool,
+        /// With `optional`: a declined pick runs the following steps with
+        /// `bind_as` unbound instead of dropping them.
+        /// `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-DECLINE-TAIL`. Plain, like
+        /// `optional`.
+        #[serde(default)]
+        continue_on_decline: bool,
+        /// The chosen Tamer, bound for the following steps.
+        #[serde(default)]
+        bind_as: Option<String>,
     },
     /// Multi-count / multi-Tamer sibling of
     /// `TrashBottomFaceDownSourceUnderTamer`. Trash `count` bottom-face-down
