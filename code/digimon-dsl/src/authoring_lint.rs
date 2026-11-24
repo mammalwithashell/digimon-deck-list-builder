@@ -158,6 +158,7 @@ pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("EX13-024", "effects[3]"),
     ("EX13-024", "effects[4]"),
     ("BT25-084", "effects[1]"),
+    ("BT26-044", "effects[2]"),
 ];
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -351,6 +352,22 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/bt25/bt25_084.rs::bt25_084_leave_prevention_accept_then_decline_cost_keeps_opt",
             "cards_behavioral/bt25/bt25_084.rs::bt25_084_leave_prevention_paid_spends_opt_and_second_pick_is_mandatory",
             "cards_behavioral/bt25/bt25_084.rs::bt25_084_leave_prevention_not_offered_with_one_hand_card",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT26-044",
+        clause: "effects[2]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Lilamon's inherited \"by trashing the bottom face-down card from under any of your Tamers, it doesn't ",
+            "leave\": owner ruling 2026-11-23, parity with DCGO (BT26_044.cs: canNoSelect Tamer pick, RemoveUse when ",
+            "none chosen). Offered only while a Tamer has a face-down card (the step's 15-7-4 guard), so the refund ",
+            "runs only on a declined Tamer pick; a chosen Tamer spends the use.",
+        ),
+        tests: &[
+            "cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_paid_spends_opt",
+            "cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_not_offered_without_a_face_down_tamer_card",
         ],
     },
 ];
