@@ -8,6 +8,7 @@ traits: [General, Xros Heart, Hero]
 effects:
   - text: "[Start of Your Main Phase] By placing 1 Digimon card with the [Xros Heart], [Blue Flare] or [Hero] trait from your hand under this Tamer, ＜Draw 1＞ and gain 1 memory."
     when: start_of_your_main_phase
+    optional: true
     summary: "[Start of Main] Place 1 Xros Heart/Blue Flare/Hero Digimon from hand under this Tamer, draw 1, gain 1 memory"
     process:
       - select_hand:

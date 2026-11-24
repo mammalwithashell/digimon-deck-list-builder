@@ -61,47 +61,8 @@
 # |----------------------------------------------------------------------------|--------|
 # | [On Play][When Digivolving] reveal-4 + add 2 [Garurumon]/[X Antibody]      | IMPLEMENTED via select_reveal_buckets (single bucket, max 2) |
 # | "Place the rest at the bottom of the deck"                                 | IMPLEMENTED via place_remainder_on_deck { position: bottom } |
-# | "If you added cards, trash 1 card in your hand"                            | PARTIAL — see G-DSL-BIND-PRESENT workaround below |
+# | "If you added cards, trash 1 card in your hand"                            | IMPLEMENTED via binding_count_eq gate on pick_a (mandatory trash) |
 # | [All Turns][OPT] inherited Substitute (return 2 trash, prevent deletion)   | IMPLEMENTED — G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH CLOSED (see Clause C) |
-#
-# ─── DSL-GAP — bind-presence in conditional trash-from-hand  [G-DSL-BIND-PRESENT] ──
-#
-# Printed: "If you added cards, trash 1 card in your hand."
-#
-# DCGO sets a local `added` flag inside `RevealedCardsCoroutine` based on
-# whether the revealed pool contained at least one matching card; the
-# subsequent SelectHandEffect runs only if `added && Owner.HandCards.Count
-# >= 1`. The DSL has no `binding_present: <name>` predicate
-# (G-DSL-BIND-PRESENT, qa/dsl-vocab-gaps.md filed 2026-05-03 from EX9-066),
-# so we cannot mirror DCGO's `added` flag through a single-pass select.
-#
-# Workaround:
-#
-# After `select_reveal_buckets` resolves, we always present a binary
-# `select_effect_choice` ["Trash 1 from hand", "Skip"]. The Trash branch
-# runs `select_hand` (mandatory pick when hand is non-empty) +
-# `trash_from_hand_by_index`; the Skip branch is a no-op.
-#
-# Mapping vs DCGO's branches:
-#
-#   A. Reveal contained matching cards + added to hand + hand non-empty
-#      DCGO: SelectHandEffect (canNoSelect: false) — MUST pick 1 to trash.
-#      DSL:  player picks "Trash 1 from hand"; `select_hand` then forces a
-#            pick. Faithful to printed mandatory cost.
-#   B. Reveal contained NO matching cards (no add) — printed says no trash.
-#      DCGO: skips SelectHandEffect entirely.
-#      DSL:  player picks "Skip" branch; no trash. Player COULD pick the
-#            Trash branch and lose a card unnecessarily — divergence noted.
-#   C. Hand empty — printed text implies no trash possible.
-#      DCGO: `Owner.HandCards.Count >= 1` gate skips SelectHandEffect.
-#      DSL:  Trash branch's `select_hand` has zero candidates; degrades to
-#            no-op. Skip branch is also valid.
-#
-# Case B is the one structural divergence: the DSL trusts the player not to
-# pick the cost-paying branch when no add occurred. The action mask still
-# surfaces both choices so RL learns to skip dead branches. No
-# auto-selection is performed on the agent's behalf — the
-# no-approximations policy is preserved (sister case to EX9-066).
 #
 # ─── DSL-GAP — Inherited Substitute with multi-pick trash-to-deck cost  [G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH] ──
 #
@@ -251,63 +212,55 @@ effects:
   #     added to hand. Splitting into two single-card buckets sidesteps
   #     that shape mismatch.
   #
-  #     min:0 on each bucket lets the bucket resolve gracefully when no
-  #     eligible card is present — DCGO `SimplifiedRevealDeckTopCardsAndSelect`
-  #     has the same behavior. Sister BT22-094 uses single-bucket min:1
-  #     because that card's printed text forces a pick when an eligible
-  #     card exists; EX5-015's "add 2 cards" is at most 2, not strictly
-  #     2, so min:0 fits the printed semantic.
+  #     min:1 on each bucket: printed "Add 2" forces picks while eligible
+  #     cards remain; a bucket with no candidates is skipped by the engine
+  #     (same idiom as BT22-094).
   #
   #   - add_to_hand_from_reveal for each bucket binding.
   #   - place_remainder_on_deck position: bottom.
-  #   - select_effect_choice ["Trash 1 from hand", "Skip"] — workaround
-  #     for G-DSL-BIND-PRESENT (see header docs).
-  #   - Branch 0: select_hand (any card) + trash_from_hand_by_index.
-  #   - Branch 1: no-op.
+  #   - If pick_a is non-empty (something was added): mandatory select_hand
+  #     + trash_from_hand_by_index.
   #
   # Outer `optional` not set — DCGO `SetUpActivateClass(..., false, ...)`,
-  # printed text has no "you may". The inner trash-cost choice is the
-  # only opt-in surface, modelling DCGO's `added` flag indirectly.
+  # printed text has no "you may". The trash is gated on cards having
+  # been added, mirroring DCGO's `added` flag.
   - text: "[On Play][When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon] or [X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand."
     when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Reveal 4; add up to 2 [Garurumon]/[X Antibody]; bottom rest; if added, trash 1 from hand"
+    summary: "[On Play][When Digivolving] Reveal 4; add 2 [Garurumon]/[X Antibody]; bottom rest; if added, trash 1 from hand"
     process:
       - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
       - select_reveal_buckets:
           from: revealed
           buckets:
             - bind_as: pick_a
-              min: 0
+              min: 1
               max: 1
               filter:
                 any_of:
                   - name_contains: "Garurumon"
                   - name_contains: "X Antibody"
             - bind_as: pick_b
-              min: 0
+              min: 1
               max: 1
               filter:
                 any_of:
                   - name_contains: "Garurumon"
                   - name_contains: "X Antibody"
           no_duplicate_cards: true
-          prompt: "Select up to 2 [Garurumon] or [X Antibody] cards to add to hand"
+          prompt: "Select 2 [Garurumon] or [X Antibody] cards to add to hand"
       - add_to_hand_from_reveal: { of: you, card: pick_a }
       - add_to_hand_from_reveal: { of: you, card: pick_b }
       - place_remainder_on_deck: { of: you, position: bottom }
-      # G-DSL-BIND-PRESENT workaround — surface the conditional trash as a
-      # binary choice. RL agent learns to pick "Skip" when no add occurred.
-      - select_effect_choice:
-          labels: ["Trash 1 from hand", "Skip"]
-          bind_as: trash_branch
-          prompt: "If you added cards, trash 1 card in your hand"
       - if:
-          condition: { equals: [trash_branch, 0] }
+          # Both buckets share one filter with min:1, so an empty pick_a means
+          # nothing was added.
+          condition:
+            not: { binding_count_eq: { binding: pick_a, n: 0 } }
           then:
             - select_hand:
                 of: you
                 bind_as: discard
-                optional: true
+                optional: false
                 filter: {}
                 prompt: "Trash 1 card from your hand"
             - trash_from_hand_by_index: { of: you, hand_index: discard }

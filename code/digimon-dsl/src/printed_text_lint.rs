@@ -35,10 +35,41 @@ fn has_may(text: &str) -> bool {
         .split(|c: char| !c.is_alphanumeric() && c != '_')
         .filter(|s| !s.is_empty())
         .collect();
-    words
-        .iter()
-        .enumerate()
-        .any(|(i, w)| *w == "may" && words.get(i + 1) != Some(&"not"))
+    words.iter().enumerate().any(|(i, w)| {
+        *w == "may"
+                && words.get(i + 1) != Some(&"not")
+                // Use-requirement flood gates ("you may ignore this card's color
+                // requirements") describe a play permission, not a prompt.
+                && !(words.get(i + 1) == Some(&"ignore")
+                    && words[i + 1..].iter().take(6).any(|w| *w == "color"))
+    })
+}
+
+/// Printed wording without parenthesized reminder text, which explains keyword
+/// machinery rather than the clause's own choices.
+fn without_reminders(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    let mut depth = 0usize;
+    for c in text.chars() {
+        match c {
+            '(' | '（' => depth += 1,
+            ')' | '）' => depth = depth.saturating_sub(1),
+            _ if depth == 0 => out.push(c),
+            _ => (),
+        }
+    }
+    out
+}
+
+/// "Activate this card's [Main] effects" style clauses delegate their wording,
+/// and so their optionality, to the referenced effect.
+fn references_other_effect(text: &str) -> bool {
+    text.contains("activate this card's [main] effect")
+        || text.contains("activate 1 [main] effect on this card's option side")
+}
+
+fn has_up_to(text: &str) -> bool {
+    text.contains("up to")
 }
 
 fn has_optional_payment(text: &str) -> bool {
@@ -60,6 +91,9 @@ fn has_optional_payment(text: &str) -> bool {
                     | "attacking"
                     | "digivolving"
                     | "revealing"
+                    | "adding"
+                    | "choosing"
+                    | "unsuspending"
             )
     })
 }
@@ -72,6 +106,9 @@ fn has_optional(value: &Value) -> bool {
                     ((key == "optional" && (v == &Value::Bool(true) || v.is_array()))
                         || (matches!(key.as_str(), "outer_prompt" | "optional_zero")
                             && v == &Value::Bool(true)))
+                        || (key.starts_with("may_") && v.is_object())
+                        || key == "arm_digivolve_cost_reducer"
+                        || (key == "link_cards" && v["count"].get("up_to").is_some())
                         || (key == "select_zone_cards" && v["min"].as_u64().unwrap_or(0) == 0)
                         || (matches!(
                             key.as_str(),
@@ -203,7 +240,8 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
         let keyword = matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::GrantKeyword)
             && (text.starts_with('<') || text.starts_with('＜'));
         // Keyword machinery owns the choices described by keyword reminder text.
-        if !keyword {
+        if !keyword && !references_other_effect(&text) {
+            let text = without_reminders(&text);
             let activated_payment = has_optional_payment(&text)
                 && !has_may(&text)
                 && matches!(clause, ClauseSpec::Triggered(c) if match &c.when {
@@ -215,7 +253,7 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
                 || matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::Delay);
             match (text_optional, has_optional(&value) || activated_payment) {
                 (true, false) => report("may_without_optional"),
-                (false, true) => report("optional_without_may"),
+                (false, true) if !has_up_to(&text) => report("optional_without_may"),
                 _ => (),
             }
         }
