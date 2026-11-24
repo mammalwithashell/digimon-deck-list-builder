@@ -494,3 +494,24 @@ fn printed_text_zero_minimum_source_selections_are_declinable() {
         }
     }
 }
+
+#[test]
+fn printed_text_optionality_wording_exemptions() {
+    for (clause, printed, expected) in [
+        // Parenthesized reminder text describes keyword machinery.
+        ("- when: on_play\n  text: 'Trigger <Blitz>. (This Digimon may attack.)'", "Trigger <Blitz>. (This Digimon may attack.)", vec![]),
+        // Use-requirement flood gates are play permissions, not prompts.
+        ("- kind: flood_gate\n  text: You may ignore this card's color requirements.", "You may ignore this card's color requirements.", vec![]),
+        // "up to" already permits zero.
+        ("- when: on_play\n  text: Delete up to 2 Digimon.\n  optional: true", "Delete up to 2 Digimon.", vec![]),
+        ("- when: on_play\n  text: By adding your top security card to the hand, draw 1.\n  optional: true", "By adding your top security card to the hand, draw 1.", vec![]),
+        ("- when: on_play\n  text: By unsuspending this Digimon, draw 1.\n  optional: true", "By unsuspending this Digimon, draw 1.", vec![]),
+        // Delegating clauses inherit the referenced effect's optionality.
+        ("- when: on_security\n  text: \"[Security] Activate this card's [Main] effects.\"\n  optional: true", "[Security] Activate this card's [Main] effects.", vec![]),
+        ("- when: on_play\n  text: You may link 1 card.\n  process:\n    - link_cards: {from: [trash], to: own_digimon, count: {up_to: 1}, cost: free}", "You may link 1 card.", vec![]),
+        ("- when: on_play\n  text: You may add your top security card to the hand.\n  process:\n    - may_add_top_security_to_hand: {of: you}", "You may add your top security card to the hand.", vec![]),
+        ("- when: on_play\n  text: You may draw 1.\n  process:\n    - draw: {of: you, count: 1}", "You may draw 1.", vec!["may_without_optional"]),
+    ] {
+        assert_eq!(check(clause, printed), expected, "{clause}");
+    }
+}

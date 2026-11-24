@@ -26,9 +26,9 @@
 //!   bucket reveal pattern, scaled to reveal=4 / max=2 instead of reveal=3 /
 //!   max=1, and with a name-based filter (Garurumon OR X Antibody) instead
 //!   of trait-based.
-//! - **Conditional trash-from-hand cost via select_effect_choice** — the
-//!   "If you added cards, trash 1 card in your hand" sub-step is modelled as
-//!   a binary choice (G-DSL-BIND-PRESENT workaround, sister to EX9-066).
+//! - **Conditional trash-from-hand** — "If you added cards, trash 1 card in
+//!   your hand" is gated on the first bucket's binding being non-empty and
+//!   then forces the hand pick.
 //! - **Inherited [All Turns][OPT] Substitute on battle deletion** — Clause C.
 //!   OMITTED from YAML (G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH stacked
 //!   gaps); structural absence test pinned with `#[ignore]`'d behavioral
@@ -38,13 +38,6 @@
 //!   Tsunomon-name pattern).
 //!
 //! # Known engine/DSL gaps affecting these tests
-//!
-//! - **G-DSL-BIND-PRESENT** (filed 2026-05-03 from EX9-066): no
-//!   `binding_present: <name>` predicate. The "If you added cards, trash 1"
-//!   sub-step is modelled as a binary `select_effect_choice` instead. The
-//!   action mask still surfaces both choices so the RL agent learns to pick
-//!   "Skip" when no add occurred — no auto-selection, no-approximations
-//!   policy preserved.
 //!
 //! - **G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH** (new gap, EX5-015 sister
 //!   case to BT24-018): inherited replacement clauses requiring a multi-pick
@@ -71,7 +64,7 @@ use digimon_dsl::compiled::{
     CompiledTriggeredClause,
 };
 use digimon_dsl::{compile::compile, spec::CardSpec};
-use digimon_engine::action::space::SEL_REVEAL_START;
+use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -307,7 +300,7 @@ fn ex5_015_total_clause_count_matches_full_implementation() {
 /// an X-Antibody-trait-named card) plus 2 fillers. Player picks both
 /// eligible cards across the two single-pick buckets (with `no_duplicate_cards`
 /// so a single card can't fill both); both land in hand; the 2 fillers go to
-/// deck bottom; then the player picks "Skip" for the conditional trash.
+/// deck bottom; then one of the added cards must be trashed from hand.
 #[test]
 fn ex5_015_on_play_picks_two_eligible_and_bottoms_remainder() {
     let mut runner = DebugRunner::builder()
@@ -338,10 +331,13 @@ fn ex5_015_on_play_picks_two_eligible_and_bottoms_remainder() {
 
     // After both buckets resolve, place_remainder_on_deck sends the 2 fillers
     // to the bottom (may need to walk a remainder-order prompt). Then the
-    // select_effect_choice [Trash 1 from hand / Skip] installs. Pick the
-    // LAST legal action (favours Skip / PASS for binary choices and
-    // remainder ordering).
+    // mandatory trash-from-hand pick installs over the 2 added cards.
     while let Some(view) = runner.pending_selection_view() {
+        assert!(
+            !view.valid_action_ids.contains(&PASS),
+            "no prompt in this effect is declinable: {:?}",
+            view.valid_action_ids
+        );
         let action = view
             .valid_action_ids
             .last()
@@ -352,13 +348,13 @@ fn ex5_015_on_play_picks_two_eligible_and_bottoms_remainder() {
     let _ = runner.auto_resolve();
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
-    assert!(
-        hand_ids.contains(&"GARU".to_string()),
-        "GARU must be added to hand; hand={hand_ids:?}"
-    );
-    assert!(
-        hand_ids.contains(&"XANT".to_string()),
-        "XANT must be added to hand; hand={hand_ids:?}"
+    assert_eq!(
+        hand_ids
+            .iter()
+            .filter(|id| *id == "GARU" || *id == "XANT")
+            .count(),
+        1,
+        "both cards are added, then 1 hand card is trashed; hand={hand_ids:?}"
     );
     assert!(
         !hand_ids.contains(&"FILLER1".to_string()) && !hand_ids.contains(&"FILLER2".to_string()),
@@ -367,8 +363,7 @@ fn ex5_015_on_play_picks_two_eligible_and_bottoms_remainder() {
 }
 
 /// No eligible cards in reveal — bucket has zero candidates and silently
-/// resolves; all 4 revealed cards bottom-deck. Player can pick "Skip" for
-/// the conditional trash branch.
+/// resolves; all 4 revealed cards bottom-deck and nothing is trashed from hand.
 #[test]
 fn ex5_015_on_play_no_eligible_cards_bottoms_all_four() {
     let mut runner = DebugRunner::builder()
@@ -378,17 +373,17 @@ fn ex5_015_on_play_no_eligible_cards_bottoms_all_four() {
         .add_card(make_test_card("FILLER2", "Filler2"))
         .add_card(make_test_card("FILLER3", "Filler3"))
         .add_card(make_test_card("FILLER4", "Filler4"))
+        .add_card(make_test_card("KEEP", "Keep"))
         .deck(0, &["FILLER1", "FILLER2", "FILLER3", "FILLER4"])
         .deck(1, &["FILLER1"])
-        .hand(0, &[CARD_ID])
+        .hand(0, &[CARD_ID, "KEEP"])
         .memory(10)
         .start();
 
     runner.play(0, 0).expect("play EX5-015");
 
     // Walk all subsequent prompts — for the empty bucket, the engine should
-    // skip to remainder-placement; then the select_effect_choice [Trash/Skip]
-    // installs. Pick the last valid action throughout to favour Skip / PASS.
+    // skip to remainder-placement; no trash-from-hand pick installs.
     while let Some(view) = runner.pending_selection_view() {
         let action = view
             .valid_action_ids
@@ -400,6 +395,10 @@ fn ex5_015_on_play_no_eligible_cards_bottoms_all_four() {
     let _ = runner.auto_resolve();
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
+    assert!(
+        hand_ids.contains(&"KEEP".to_string()),
+        "nothing was added, so nothing is trashed; hand={hand_ids:?}"
+    );
     for filler in ["FILLER1", "FILLER2", "FILLER3", "FILLER4"] {
         assert!(
             !hand_ids.contains(&filler.to_string()),
@@ -417,9 +416,8 @@ fn ex5_015_on_play_no_eligible_cards_bottoms_all_four() {
     );
 }
 
-/// Conditional-trash branch (positive): when the player picks "Trash 1
-/// from hand" after adding cards, the select_hand prompt installs and the
-/// chosen hand card is trashed.
+/// Conditional trash (positive): after adding cards, the select_hand prompt
+/// installs and the chosen hand card is trashed.
 #[test]
 fn ex5_015_on_play_trash_branch_trashes_chosen_hand_card() {
     let mut runner = DebugRunner::builder()
@@ -445,10 +443,8 @@ fn ex5_015_on_play_trash_branch_trashes_chosen_hand_card() {
     pick_revealed_by_id(&mut runner, 0, "GARU", "pick GARU bucket A");
     pick_revealed_by_id(&mut runner, 0, "XANT", "pick XANT bucket B");
 
-    // Walk subsequent prompts: prefer the FIRST legal action (which is the
-    // "Trash" branch label = action 0 for select_effect_choice). Then for
-    // the select_hand prompt that follows, pick the only hand card
-    // (HANDDISCARD).
+    // Walk subsequent prompts with the FIRST legal action; for the
+    // select_hand prompt that is HANDDISCARD at hand index 0.
     let mut steps = 0;
     while let Some(view) = runner.pending_selection_view() {
         steps += 1;
@@ -470,8 +466,7 @@ fn ex5_015_on_play_trash_branch_trashes_chosen_hand_card() {
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert!(
         !hand_ids.contains(&"HANDDISCARD".to_string()),
-        "HANDDISCARD must be trashed from hand when player picks Trash branch; \
-         hand={hand_ids:?}"
+        "HANDDISCARD must be trashed from hand; hand={hand_ids:?}"
     );
 
     // GARU + XANT should be in hand (replacing the trashed card and

@@ -8,6 +8,7 @@ traits: [LIBERATOR]
 effects:
   - text: "[Start of Your Main Phase] [On Play] By trashing 1 card in your hand, gain 1 memory."
     when: [start_of_your_main_phase, on_play]
+    optional: true
     summary: "[Start of Your Main Phase][On Play] Trash 1 card in hand to gain 1 memory"
     condition:
       count_gte:

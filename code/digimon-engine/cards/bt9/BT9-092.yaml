@@ -12,7 +12,7 @@ effects:
       # collapse §2.4 parity fixture — the reveal→pick→bottom searcher idiom as
       # one `reveal_search`. Disjoint digimon/option bucket filters make the
       # cross-bucket de-dup a no-op, so this is behaviorally identical to the
-      # former two-`select_reveal` longhand. Each bucket stays an optional pick.
+      # former two-`select_reveal` longhand. Each bucket is a mandatory pick when an eligible card is revealed.
       - reveal_search:
           of: you
           count: 3
@@ -23,7 +23,7 @@ effects:
                   - trait_has: "X Antibody"
               to: hand
               max: 1
-              optional: true
+              optional: false
               prompt: "Add 1 X Antibody Digimon card"
             - filter:
                 all_of:
@@ -31,7 +31,7 @@ effects:
                   - trait_has: "X Antibody"
               to: hand
               max: 1
-              optional: true
+              optional: false
               prompt: "Add 1 X Antibody Option card"
           remainder: bottom
 

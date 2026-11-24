@@ -73,7 +73,6 @@ effects:
   - text: "[When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less."
     when: when_attacking
     scope: inherited
-    once_per_turn: true
     summary: "Inherited [When Attacking] Delete 1 opp Digimon with <=4000 DP"
     process:
       - select_opponent_permanent:

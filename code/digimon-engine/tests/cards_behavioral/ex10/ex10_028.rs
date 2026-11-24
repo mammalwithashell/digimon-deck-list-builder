@@ -699,16 +699,8 @@ fn ex10_028_when_digivolving_grants_all_buffs() {
 /// Negative: no Mineral/Rock source available → the cost cannot be paid, so
 /// no cost selection installs and no buffs are granted.
 ///
-/// The accept/decline prompt itself still installs: §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] gives the player
-/// the choice "regardless of whether or not the content of the conditions can
-/// be executed", and the lowering deliberately attaches no candidate guard to
-/// a `select_own_sources` first step (see `first_step_candidate_guard`'s NOTE
-/// in `lower_triggered.rs` — the designed behavior is to fire and silently
-/// skip the trash). Sibling EX10-034 is tested to the same shape.
-///
-/// This assertion previously read `pending_selection().is_none()` directly
-/// after the play — correct only while the clause was mandatory (the auto-pay
-/// bug). Corrected: accept, then assert the cost selection never installs.
+/// §15-7-4 (rules 4.3) forbids offering an unpayable optional cost, so no
+/// accept/decline prompt installs either.
 #[test]
 fn ex10_028_on_play_no_selection_when_no_mineral_rock_source() {
     let plain_digi = make_mineral_digimon("PLAIN-HOST");
@@ -726,7 +718,7 @@ fn ex10_028_on_play_no_selection_when_no_mineral_rock_source() {
 
     runner.play(0, 0).expect("play EX10-028");
 
-    accept_optional_cost(&mut runner);
+    // §15-7-4 (4.3): an unpayable optional cost is not offered.
 
     assert!(
         runner.pending_selection().is_none(),
@@ -737,9 +729,8 @@ fn ex10_028_on_play_no_selection_when_no_mineral_rock_source() {
 /// Negative: source host has only a plain (non-Mineral/non-Rock) source
 /// → the filter excludes it, SourceMulti silently skips.
 ///
-/// As above, the §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] accept/decline prompt still installs (no candidate
-/// guard exists for a `select_own_sources` first step); the assertion is that
-/// nothing follows the accept.
+/// §15-7-4 (rules 4.3) forbids offering an unpayable optional cost, so no
+/// accept/decline prompt installs either.
 #[test]
 fn ex10_028_on_play_no_selection_when_source_has_wrong_trait() {
     let mineral_digi = make_mineral_digimon("M-WRONGSRC");
@@ -759,7 +750,7 @@ fn ex10_028_on_play_no_selection_when_source_has_wrong_trait() {
 
     runner.play(0, 0).expect("play EX10-028");
 
-    accept_optional_cost(&mut runner);
+    // §15-7-4 (4.3): an unpayable optional cost is not offered.
 
     assert!(
         runner.pending_selection().is_none(),
