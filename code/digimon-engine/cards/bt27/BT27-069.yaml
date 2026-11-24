@@ -1,0 +1,85 @@
+# Source: data/card_bundles/BT27-069.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Black/BT27_069.cs
+# Q&A: with any opposing Digimon, you must delete one of the lowest play cost.
+card: BT27-069
+name: QueenChessmon
+kind: digimon
+level: 6
+color: [black, yellow]
+cost: 12
+dp: 12000
+traits: [Puppet, DATA SQUAD]
+form: Mega
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      level_eq: 5
+      any_color: true
+      any_of:
+        - name_contains: Chessmon
+        - trait_has: DATA SQUAD
+    cost: 3
+  - kind: assembly
+    materials:
+      - { kind: digimon, level_eq: 5, name_contains: Chessmon, zones: [trash], stack_under: true }
+      - { kind: digimon, level_eq: 4, name_contains: Chessmon, zones: [trash], stack_under: true }
+      - { kind: digimon, level_eq: 3, name_contains: Chessmon, zones: [trash], stack_under: true }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter: { name_contains: Chessmon }
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: [on_play, when_digivolving]
+    condition:
+      any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+    summary: "[On Play] [When Digivolving] <De-Digivolve 3> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dedigi_target
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dedigi_target, amount: 3, stop_at_level: 3 }
+
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns] [Once Per Turn] When any of your other [Chessmon] Digimon are deleted, delete 1 of your opponent's lowest play cost Digimon. If this effect didn't delete, trash their top security card"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_target_name_contains: Chessmon
+        - event_permanent_is_source: false
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte:
+                  aggregate:
+                    selector: lowest_play_cost
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's lowest play cost Digimon"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - trash_top_security: { of: opponent }
