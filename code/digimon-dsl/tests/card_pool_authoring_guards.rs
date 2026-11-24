@@ -109,3 +109,21 @@ fn refund_after_accept_reviews_are_live() {
         stale.join("\n")
     );
 }
+
+/// Declared [Main] refunds (owner ruling 2026-11-24, "Match dcgo on the main
+/// use"): the pool's [Main] clauses with a `refund_opt` are exactly
+/// `MAIN_REFUND_BY_OWNER_RULING`. A [Main] that refunds without being listed,
+/// or a listed clause that no longer refunds, fails here.
+#[test]
+fn main_refunds_are_exactly_the_owner_ruling_list() {
+    let found = digimon_dsl::authoring_lint::pool_main_refunds(&cards_root());
+    let mut listed: Vec<(String, String)> = digimon_dsl::authoring_lint::MAIN_REFUND_BY_OWNER_RULING
+        .iter()
+        .map(|(c, k)| (c.to_string(), k.to_string()))
+        .collect();
+    listed.sort();
+    assert_eq!(
+        found, listed,
+        "[Main] refunds in the pool (left) must equal MAIN_REFUND_BY_OWNER_RULING (right)"
+    );
+}
