@@ -14792,6 +14792,7 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -14996,6 +14997,7 @@
         "add_modifier",
         "if",
         "play_from_trash",
+        "refund_opt",
         "select_hand",
         "select_opponent_permanent",
         "select_own_permanent",
@@ -20469,6 +20471,7 @@
         "affordable_with_cost",
         "all_of",
         "any_of",
+        "binding_present",
         "can_play_or_use_from_effect",
         "color_is",
         "count_gte",
@@ -20483,7 +20486,9 @@
         "main_on_field"
       ],
       "verbs": [
+        "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand"
       ]
     },
@@ -21131,6 +21136,7 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -21159,6 +21165,7 @@
       "predicates": [
         "affordable_with_cost",
         "all_of",
+        "binding_present",
         "can_play_or_use_from_effect",
         "color_is",
         "count_gte",
@@ -21171,7 +21178,9 @@
         "main_on_field"
       ],
       "verbs": [
+        "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand"
       ]
     },
@@ -24124,6 +24133,7 @@
         "if",
         "place_as_bottom_source",
         "play_from_security",
+        "refund_opt",
         "select_union_zone",
         "set_memory"
       ]
@@ -35682,6 +35692,7 @@
       "EX12-006",
       "EX12-008",
       "EX12-012",
+      "EX12-013",
       "EX12-015",
       "EX12-017",
       "EX12-018",
@@ -35691,6 +35702,7 @@
       "EX12-036",
       "EX12-038",
       "EX12-041",
+      "EX12-043",
       "EX12-054",
       "EX12-056",
       "EX12-059",
@@ -50564,6 +50576,7 @@
       "EX12-006",
       "EX12-008",
       "EX12-012",
+      "EX12-013",
       "EX12-015",
       "EX12-017",
       "EX12-018",
@@ -50575,6 +50588,7 @@
       "EX12-037",
       "EX12-038",
       "EX12-041",
+      "EX12-043",
       "EX12-045",
       "EX12-047",
       "EX12-054",
@@ -52080,8 +52094,10 @@
       "BT25-089",
       "BT25-103",
       "BT26-007",
+      "BT26-012",
       "BT26-015",
       "BT26-016",
+      "BT26-021",
       "BT26-025",
       "BT26-035",
       "BT26-036",
@@ -52096,9 +52112,12 @@
       "BT26-069",
       "BT26-074",
       "BT26-086",
+      "EX12-013",
       "EX12-017",
       "EX12-021",
       "EX12-034",
+      "EX12-041",
+      "EX12-043",
       "EX13-004",
       "EX13-005",
       "EX13-012",
@@ -52121,6 +52140,7 @@
       "EX13-059",
       "EX13-060",
       "EX13-061",
+      "EX13-074",
       "EX13-076",
       "EX8-060",
       "P-247"

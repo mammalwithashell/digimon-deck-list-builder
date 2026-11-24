@@ -47012,13 +47012,13 @@
     "untested_card": 17,
     "untested_lowering": 3210
   },
-  "generated_at": "2026-11-24T02:27:53+00:00",
+  "generated_at": "2026-11-24T22:26:42+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "7ce1cb566db59854601bda0482e4e220ef7aab8ae3d37f4e18db8df67618099f",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
     "lowering_coverage_sha256": "48b267d0684f26986bac83c208a0943a0001c7936e6b051e8c0004bf5ed6d2bd",
-    "validated_cards_dsl_sha256": "193ec6410ea2bba471cc04b5755d9eb082f312da8dfb9aa9b93d3f070aa5f2e9",
+    "validated_cards_dsl_sha256": "a9a457faebc38623a7fb22be2c9e1c7ba0d459116e52ac1822569baac47eb827",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
   "version": 2
