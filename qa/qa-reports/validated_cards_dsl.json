@@ -11600,7 +11600,7 @@
       "archetype": "Chronomon support / Ceresmon / Bacchusmon",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_021.rs",
-      "notes": "OP/WD own [TS] Digimon CannotSwitchAttackTarget for the turn; [Main][OPT] play [TS] Tamer from trash cost-2 with refund_opt on decline (needed engine fix G-ENGINE-FIELD-MAIN-OPT-KEY); inherited any-Digimon-attacks (on_attack+on_ally_attack+on_opponent_attack, one shared OPT) trash 1 hand -> trash bottom 2 sources of 1 opp Digimon. Traits include Titan (official DB)."
+      "notes": "OP/WD own [TS] Digimon CannotSwitchAttackTarget for the turn; [Main][OPT] play [TS] Tamer from trash cost-2 with refund_opt on decline (needed engine fix G-ENGINE-FIELD-MAIN-OPT-KEY); inherited any-Digimon-attacks (on_attack+on_ally_attack+on_opponent_attack, one shared OPT) trash 1 hand -> trash bottom 2 sources of 1 opp Digimon. Traits include Titan (official DB). 2026-11-24: owner ruling \"Match dcgo on the main use\": a passed or empty [Main] pick keeps the use again (refund_opt on binding_absent; DCGO BT26_021.cs:184 RemoveUse), a chosen Tamer spends it; the main-declaration loop guard withholds the identical re-declaration until the state changes."
     },
     "BT26-096": {
       "card_name": "Kosuke Misono",
@@ -11756,7 +11756,7 @@
       "archetype": "Toho Braves",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_012.rs",
-      "notes": "[Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; corrected 2026-10-25 to spend the use on activation even if processing is declined (CR 4.3 15-14-1-1/4). The local DCGO source's RemoveUse refund conflicts with that rule; no installed-DCGO replay certification claimed. Regression: capped cloud game 340 plus per-card decline/copy isolation. Inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom)."
+      "notes": "[Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; corrected 2026-10-25 to spend the use on activation even if processing is declined (CR 4.3 15-14-1-1/4). The local DCGO source's RemoveUse refund conflicts with that rule; no installed-DCGO replay certification claimed. Regression: capped cloud game 340 plus per-card decline/copy isolation. Inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom). 2026-11-24: owner ruling \"Match dcgo on the main use\" reverses the 2026-10-25 correction: a passed [Main] pick now keeps the use (refund_opt in the else of binding_present; DCGO BT26_012.cs:138 RemoveUse), a picked card spends it; the main-declaration loop guard withholds the identical re-declaration until the state changes."
     },
     "BT26-013": {
       "card_name": "Musyamon",
@@ -12336,7 +12336,7 @@
         "F",
         "C"
       ],
-      "notes": "No DCGO script (BT22_090.cs analogue). [Start of Your Turn] memory floor 3; [All Turns][OPT] own [Knightmon]-text Digimon played or deleted (one clause, shared OPT) -> optional: place 1 [Knightmon]-text card from hand/trash face up under this Tamer (bottom), then Draw 1; [Main][OPT] with >=3 [Knightmon]-text cards under it -> optional hand/trash [LordKnightmon] digivolve onto this Tamer, fixed cost 3, ignoring requirements (G-TAMER-DIGIVOLVE-INTO-DIGIMON resolved 2026-10-01: the Tamer + its under-cards become digivolution cards, draw + [When Digivolving] fire); [Security] play self. Face-down under-cards are counted by printed text (DCGO HasText ignores IsFlipped) - unverified vs general_rule.pdf."
+      "notes": "No DCGO script (BT22_090.cs analogue). [Start of Your Turn] memory floor 3; [All Turns][OPT] own [Knightmon]-text Digimon played or deleted (one clause, shared OPT) -> optional: place 1 [Knightmon]-text card from hand/trash face up under this Tamer (bottom), then Draw 1; [Main][OPT] with >=3 [Knightmon]-text cards under it -> optional hand/trash [LordKnightmon] digivolve onto this Tamer, fixed cost 3, ignoring requirements (G-TAMER-DIGIVOLVE-INTO-DIGIMON resolved 2026-10-01: the Tamer + its under-cards become digivolution cards, draw + [When Digivolving] fire); [Security] play self. Face-down under-cards are counted by printed text (DCGO HasText ignores IsFlipped) - unverified vs general_rule.pdf. 2026-11-24: owner ruling \"Match dcgo on the main use\": the [Main] keeps its use when Rie does not digivolve (declined or empty pick; refund_opt in the else of binding_present; DCGO EX13_074.cs RemoveUse on \"Don't digivolve\" and if (!digivolved)); a digivolve spends it. DCGO EX13_074.cs now exists: it does not offer the [Main] without a [LordKnightmon] in hand or trash and counts only face-up [Knightmon] cards under Rie (both left for the owner)."
     },
     "EX13-050": {
       "card_name": "Bokomon",

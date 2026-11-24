@@ -1065,7 +1065,10 @@ Contract:
 - **Data, not closures.** The guard is plain data on `Game`: it clones, and it
   is hashed into `verification_digest()` as a `main_declare_guard` section only
   while non-empty (digests of states without a kept use are unchanged).
-  `guard_free_verification_digest()` is the same digest without that section.
+  `guard_free_verification_digest()` is the same digest without that section
+  and without the card-choice id allocator (`next_card_choice_id`): a passed
+  card-choice pick (a hand-or-trash union pick, Rie Kishibe (EX13-074)) bumps
+  that counter and nothing else, and must still be proven a no-op.
 - **A refund leaves no residue.** `Permanent::unrecord_activation` and
   `Player::unrecord_security_activation` remove an entry that reaches 0 (an
   absent key reads as 0), so a refunded use is digest-identical to no use.
@@ -1085,6 +1088,11 @@ Contract:
   nothing was executed; a refund after an executed step is not a no-op, the
   guard does not park it, and two such `[Main]`s could undo each other in a
   cycle the guard cannot see.
+
+Cards on the ruling (2026-11-24): Thundermon (EX12-041), BetelGammamon
+(EX12-013), Hakubamon (EX12-043), Manekimon (BT26-012), Gekomon (BT26-021) and
+Rie Kishibe (EX13-074), the closed list
+`authoring_lint::MAIN_REFUND_BY_OWNER_RULING`.
 
 Tests: `tests/mask_and_tensor/main_declare_guard.rs`,
 `tests/replay_dcgo_int_and_order_folds.rs` (section 4), and the within-turn
