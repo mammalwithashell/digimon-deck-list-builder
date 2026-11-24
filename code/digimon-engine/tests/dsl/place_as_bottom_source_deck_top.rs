@@ -112,6 +112,45 @@ fn bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline() {
     }
 }
 
+// Bandai Q6413 (BT25-087): "You place them 1 at a time under the Tamer starting with the top card of your deck."
+#[test]
+fn q6413_tucks_in_fixed_deck_order_without_a_prompt() {
+    let yaml = r#"
+card: TST-Q6413
+name: Face-down Placement
+kind: tamer
+color: [purple]
+cost: 4
+effects:
+  - when: on_play
+    process:
+      - place_deck_top_under: { of: you, count: 5, target: source, face_down: true }
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(make_test_card("TST-TOP", "Deck Top"))
+        .add_card(make_test_card("TST-SECOND", "Second from Top"))
+        .add_card(make_test_card("TST-THIRD", "Third from Top"))
+        .add_card(make_test_card("TST-FOURTH", "Fourth from Top"))
+        .add_card(make_test_card("TST-FIFTH", "Fifth from Top"))
+        .add_card(make_test_card("TST-PABS-OLD", "Existing Source"))
+        .deck(0, &["TST-FIFTH", "TST-FOURTH", "TST-THIRD", "TST-SECOND", "TST-TOP"])
+        .start();
+    let tamer = runner.place_stack(0, &["TST-PABS-OLD", "TST-Q6413"]);
+
+    runner.game.fire_on_play(0, tamer.index as usize);
+
+    assert!(runner.game.pending_selection.is_none());
+    assert!(runner.game.players[0].deck.is_empty());
+    let sources = &runner.game.players[0].battle_area[tamer.index as usize].card_sources;
+    assert_eq!(
+        sources.iter().rev().map(|c| c.card_id(&runner.game.card_data)).collect::<Vec<_>>(),
+        ["TST-Q6413", "TST-PABS-OLD", "TST-TOP", "TST-SECOND", "TST-THIRD", "TST-FOURTH", "TST-FIFTH"],
+    );
+    assert!(sources[..5].iter().all(|c| c.face_down));
+}
+
 #[test]
 fn place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck() {
     let yaml = YAML.replace(

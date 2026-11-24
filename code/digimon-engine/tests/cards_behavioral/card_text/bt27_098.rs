@@ -89,27 +89,24 @@ fn end_of_turn_is_optional_and_requires_five_face_down_cards() {
 }
 
 #[test]
-fn deletion_can_suspend_kurata_and_put_the_two_deck_cards_face_down_at_the_bottom() {
-    let mut r = start(builder("BT27-098"));
+fn deletion_suspends_kurata_and_places_two_face_down_cards_in_fixed_deck_order() {
+    let mut r = start(builder("BT27-098").deck(0, &[HIGH, XT, EVOLUTION]));
     let tamer = r.place_stack(0, &[BOUNDARY, "BT27-098"]);
-    let deck = &r.game.players[0].deck;
-    let mut expected = deck[deck.len() - 2..]
-        .iter()
-        .map(|c| c.handle())
-        .collect::<Vec<_>>();
     delete_in_battle(&mut r, GIZMON);
     r.assert_prompt(SelectionKind::TriggerOrder, true, 0);
     r.execute_branch(0).unwrap();
-    let tamer = &r.game.players[0].battle_area[tamer.index as usize];
+    assert!(r.pending_selection().is_none());
+
+    let player = &r.game.players[0];
+    assert_eq!(ids(&r, &player.deck), [HIGH]);
+    let tamer = &player.battle_area[tamer.index as usize];
     assert!(tamer.is_suspended);
     assert_eq!(tamer.card_sources.len(), 4);
     assert!(tamer.card_sources[..2].iter().all(|c| c.face_down));
-    for c in &tamer.card_sources[..2] {
-        let pos = expected.iter().position(|&h| h == c.handle()).unwrap();
-        expected.remove(pos);
-    }
-    assert_eq!(tamer.card_sources[2].card_id(&r.game.card_data), BOUNDARY);
-    assert!(r.pending_selection().is_none());
+    assert_eq!(
+        ids(&r, &tamer.card_sources),
+        [XT, EVOLUTION, BOUNDARY, "BT27-098"]
+    );
 }
 
 #[test]
