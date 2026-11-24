@@ -1330,6 +1330,7 @@ namespace DcgoRecorder
                   // `root` is DCGO's SelectCardEffect.Root naming the zone the play came from (PlayCardClass.Root).
                   .Append(",\"card_indexes\":").Append(pc == null ? "null" : CardIndexes(pc.CardSources))
                   .Append(",\"root\":").Append(PlayRoot(pc))
+                  .Append(PlayProvenanceJson(pc))
                   .Append(",\"pay_cost\":").Append(pc != null && pc.PayCost ? "true" : "false")
                   .Append(",\"breeding_area\":").Append(pc != null && pc._isBreedingArea ? "true" : "false")
                   .Append(",\"target\":").Append(pc == null || pc._targetPermanent == null ? "null" : CardJson(pc._targetPermanent.TopCard))
@@ -2451,6 +2452,33 @@ namespace DcgoRecorder
         {
             try { return pc == null ? "null" : Quote(pc.Root.ToString()); }
             catch { return "null"; }
+        }
+
+        static string PlayProvenanceJson(Il2Cpp.PlayCardClass pc)
+        {
+            try
+            {
+                if (pc == null) return "";
+                const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+                var type = typeof(Il2Cpp.PlayCardClass);
+                var property = type.GetProperty("_hashtable", flags);
+                var field = type.GetField("_hashtable", flags);
+                if (property == null && field == null) return "";
+                var context = property != null ? property.GetValue(pc) : field.GetValue(pc);
+                if (context is Il2CppSystem.Collections.Hashtable table
+                    && Il2Cpp.CardEffectCommons.GetCardEffectFromHashtable(table) != null)
+                    return ",\"play_provenance\":\"effect\"";
+                if (context == null && pc.PayCost && pc.CardSources?.Count == 1)
+                {
+                    var tsm = Il2Cpp.GManager.instance?.turnStateMachine;
+                    var direct = ReadMember(tsm, "PlayCard") as Il2Cpp.CardSource;
+                    var played = pc.CardSources[0];
+                    if (direct != null && played != null && direct.Pointer == played.Pointer)
+                        return ",\"play_provenance\":\"direct\"";
+                }
+            }
+            catch { }
+            return "";
         }
 
         static string Ids(Il2CppSystem.Collections.Generic.List<Il2Cpp.CardSource> list)

@@ -17135,6 +17135,60 @@
       "tests_ignored": 0,
       "notes": "inherited [When Attacking][OPT] may digivolve into a [Dinosaur]/[Tyrannomon]-named hand card with the printed cost; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
       "integration_verification": "limited"
+    },
+    "LM-063": {
+      "card_name": "Endurance Training",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — Training options",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_063.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (red/purple), twin of LM-062 per DCGO LM_063.cs: name-gated color bypass, [Main] reveal 2 add 1 red/purple + bottom + place as Delay, <Delay> optional cost -2 digivolve into red/purple Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "LM-064": {
+      "card_name": "Bobbing Training",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — Training options",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_064.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (yellow/blue), twin of LM-062 per DCGO LM_064.cs: name-gated color bypass, [Main] reveal 2 add 1 yellow/blue + bottom + place as Delay, <Delay> optional cost -2 digivolve into yellow/blue Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "LM-065": {
+      "card_name": "Weight Training",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — Training options",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-065.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_065.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (black/green), twin of LM-062 per DCGO LM_065.cs: name-gated color bypass, [Main] reveal 2 add 1 black/green + bottom + place as Delay, <Delay> optional cost -2 digivolve into black/green Digimon in hand (legal-target gated), [Security] mirror + placement."
     }
   }
 }

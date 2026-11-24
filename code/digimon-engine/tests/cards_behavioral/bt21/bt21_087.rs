@@ -185,7 +185,7 @@ fn bt21_087_has_exactly_three_triggered_clauses() {
 }
 
 /// The On Play clause must reveal top 3, install exactly one reveal bucket
-/// (min:0, max:1, `in_text_contains: Vemmon`), gate the Play/Add choice on
+/// (min:1, max:1, `in_text_contains: Vemmon`), gate the Play/Add choice on
 /// `binding_card_name_is`, and trash the remainder.
 #[test]
 fn bt21_087_on_play_clause_shape() {
@@ -215,11 +215,11 @@ fn bt21_087_on_play_clause_shape() {
 
     let bucket_ok = on_play.process.iter().any(|s| {
         matches!(s, CompiledStep::SelectRevealBuckets { buckets, .. }
-            if buckets.len() == 1 && buckets[0].min == 0 && buckets[0].max == 1)
+            if buckets.len() == 1 && buckets[0].min == 1 && buckets[0].max == 1)
     });
     assert!(
         bucket_ok,
-        "must offer exactly one optional single-pick reveal bucket (select_reveal_buckets)"
+        "must offer exactly one mandatory single-pick reveal bucket (select_reveal_buckets)"
     );
 
     let bucket_filter_ok = on_play.process.iter().any(|s| {
@@ -355,9 +355,10 @@ fn bt21_087_start_of_turn_does_not_change_memory_when_above_3() {
 
 // ─── Clause 2: [On Play] reveal-3 / play-or-hand / trash-rest behavioral ──────
 
-/// A Vemmon in the reveal pool installs an optional reveal-bucket selection.
+/// A Vemmon in the reveal pool installs a mandatory reveal-bucket selection:
+/// the printed "play 1 ... or add 1 ..." has no "may".
 #[test]
-fn bt21_087_on_play_installs_optional_reveal_bucket_with_vemmon_eligible() {
+fn bt21_087_on_play_installs_mandatory_reveal_bucket_with_vemmon_eligible() {
     let mut runner = base()
         .add_card(make_vemmon("VEMMON"))
         .add_card(make_filler("FILL-1"))
@@ -375,8 +376,8 @@ fn bt21_087_on_play_installs_optional_reveal_bucket_with_vemmon_eligible() {
         .expect("reveal bucket selection installs");
     assert!(matches!(view.kind, SelectionKind::RevealBucket { .. }));
     assert!(
-        runner.pending_is_optional(),
-        "'canNoSelect: true' → optional"
+        !runner.pending_is_optional(),
+        "printed text has no \"may\": the pick is mandatory"
     );
     assert!(
         view.valid_action_ids.contains(&SEL_REVEAL_START),
@@ -567,10 +568,9 @@ fn bt21_087_unrelated_card_not_eligible() {
     }
 }
 
-/// Declining the optional reveal-bucket pick still trashes all 3 revealed
-/// cards.
+/// With an eligible Vemmon revealed, the pick cannot be passed.
 #[test]
-fn bt21_087_decline_reveal_pick_trashes_all_three() {
+fn bt21_087_reveal_pick_cannot_be_passed_when_vemmon_eligible() {
     let mut runner = base()
         .add_card(make_vemmon("VEMMON"))
         .add_card(make_filler("FILL-1"))
@@ -580,26 +580,15 @@ fn bt21_087_decline_reveal_pick_trashes_all_three() {
         .start();
 
     let zenith = runner.place_on_field(0, CARD_ID, Some(0));
-    let trash_before = runner.trash_size(0);
     fire_timing(&mut runner, EffectTiming::OnPlay, zenith);
 
-    if runner.pending_selection_view().is_some() {
-        let _ = runner.execute_action(0, PASS);
-        runner.game.drain_effect_queue();
-    }
-    let _ = runner.auto_resolve();
-
+    let view = runner
+        .pending_selection_view()
+        .expect("reveal bucket selection installs");
     assert!(
-        runner.trash_size(0) >= trash_before + 3,
-        "declining the pick trashes all 3 revealed cards"
-    );
-    assert!(
-        !battle_area_contains(&runner, 0, "VEMMON"),
-        "nothing is played when the optional pick is declined"
-    );
-    assert!(
-        !hand_contains(&runner, 0, "VEMMON"),
-        "nothing is added to hand when the optional pick is declined"
+        !view.valid_action_ids.contains(&PASS),
+        "PASS must not be legal: {:?}",
+        view.valid_action_ids
     );
 }
 

@@ -13,10 +13,10 @@
 //! opponent's side purely by the `OppField` kind.
 
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::encode_attack;
+use digimon_engine::action::space::{encode_attack, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::enums::{CardColor, CardKind, Keyword};
 use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 fn opp_digimon(card_id: &str, name: &str, dp: i32) -> CardData {
@@ -178,4 +178,40 @@ fn st1_15_usable_with_empty_opponent_field() {
         mask[0], 1.0,
         "ST1-15 must be usable from hand even when the opponent controls no Digimon"
     );
+}
+
+#[test]
+fn st1_15_deletes_second_pick_after_decoy_protects_first() {
+    let mut decoy = opp_digimon("DECOY", "Red Decoy", 6000);
+    decoy.keywords.push(Keyword::Decoy(1 << CardColor::Red as u8));
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST1-15")
+        .unwrap()
+        .add_card(opp_digimon("SMALL", "Small Opp", 2000))
+        .add_card(opp_digimon("RED", "Red Provider", 3000))
+        .add_card(decoy)
+        .hand(0, &["ST1-15"])
+        .memory(10)
+        .start();
+    let decoy = runner.place_on_field(1, "DECOY", None);
+    let first = runner.place_on_field(1, "SMALL", None);
+    let second = runner.place_on_field(1, "SMALL", None);
+    let field = &runner.game.players[1].battle_area;
+    let decoy_card = field[decoy.index as usize].top_card().handle();
+    let saved = field[first.index as usize].top_card().handle();
+    let deleted = field[second.index as usize].top_card().handle();
+    use_fixture_option(&mut runner, "RED");
+
+    runner.execute_action(0, encode_attack(0, first.index as u16)).unwrap();
+    runner.execute_action(0, encode_attack(0, second.index as u16)).unwrap();
+    let protection = runner.pending_selection_view().expect("Decoy protects first pick");
+    assert_eq!((protection.kind, protection.selecting_player), (SelectionKind::Replacement, 1));
+    runner.execute_action(1, REPLACEMENT_ACCEPT).unwrap();
+
+    assert!(runner.pending_selection().is_none());
+    let opponent = &runner.game.players[1];
+    assert_eq!(opponent.battle_area.len(), 1);
+    assert_eq!(opponent.battle_area[0].top_card().handle(), saved);
+    assert!(opponent.trash.iter().any(|card| card.handle() == decoy_card));
+    assert!(opponent.trash.iter().any(|card| card.handle() == deleted));
 }

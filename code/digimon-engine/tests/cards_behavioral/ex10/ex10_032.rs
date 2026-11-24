@@ -538,14 +538,8 @@ fn ex10_032_on_play_prompts_source_selection_with_rock_source() {
 /// Negative: firing on_play when no Mineral/Rock source is available installs
 /// no cost selection (silent skip).
 ///
-/// The §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] accept/decline prompt itself still installs — the player gets
-/// the choice "regardless of whether or not the content of the conditions can
-/// be executed", and the lowering deliberately attaches no candidate guard to
-/// a `select_own_sources` first step (see `first_step_candidate_guard`'s NOTE
-/// in `lower_triggered.rs`). The assertion below is that nothing follows the
-/// accept; it previously read `pending_selection().is_none()` straight after
-/// the drain, which was correct only while the clause was mandatory (the
-/// auto-pay bug this test file now covers a decline branch for).
+/// §15-7-4 (rules 4.3) forbids offering an unpayable optional cost, so no
+/// accept/decline prompt installs either.
 #[test]
 fn ex10_032_on_play_no_selection_when_no_mineral_rock_source() {
     let plain_host = make_test_card("PLAIN-H-OP", "Plain Host");
@@ -568,9 +562,7 @@ fn ex10_032_on_play_no_selection_when_no_mineral_rock_source() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
-    // condition — accept it before the cost selection (see `accept_optional_cost`).
-    accept_optional_cost(&mut runner);
+    // §15-7-4 (4.3): an unpayable optional cost is not offered.
 
     assert!(
         runner.pending_selection().is_none(),
@@ -581,14 +573,8 @@ fn ex10_032_on_play_no_selection_when_no_mineral_rock_source() {
 /// Negative: firing on_play when there are no digivolution sources at all
 /// installs no cost selection.
 ///
-/// The §15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md] accept/decline prompt itself still installs — the player gets
-/// the choice "regardless of whether or not the content of the conditions can
-/// be executed", and the lowering deliberately attaches no candidate guard to
-/// a `select_own_sources` first step (see `first_step_candidate_guard`'s NOTE
-/// in `lower_triggered.rs`). The assertion below is that nothing follows the
-/// accept; it previously read `pending_selection().is_none()` straight after
-/// the drain, which was correct only while the clause was mandatory (the
-/// auto-pay bug this test file now covers a decline branch for).
+/// §15-7-4 (rules 4.3) forbids offering an unpayable optional cost, so no
+/// accept/decline prompt installs either.
 #[test]
 fn ex10_032_on_play_no_selection_when_no_sources_at_all() {
     let mineral_host = make_mineral_source("MIN-ALONE");
@@ -610,9 +596,7 @@ fn ex10_032_on_play_no_selection_when_no_sources_at_all() {
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(proganomon));
     runner.game.drain_effect_queue();
 
-    // §15-7-1/§15-7-4 [4.3 REVERSED — see changelog-3.6-to-4.3.md]: the "By trashing ..." cost is an optional processing
-    // condition — accept it before the cost selection (see `accept_optional_cost`).
-    accept_optional_cost(&mut runner);
+    // §15-7-4 (4.3): an unpayable optional cost is not offered.
 
     assert!(
         runner.pending_selection().is_none(),
