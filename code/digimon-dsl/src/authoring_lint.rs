@@ -164,6 +164,7 @@ pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("EX13-028", "effects[2]"),
     ("EX13-032", "effects[0]"),
     ("EX13-048", "effects[1]"),
+    ("EX13-052", "effects[2]"),
 ];
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -455,6 +456,21 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_accept_then_decline_cost_keeps_opt",
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_once_per_turn",
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_not_offered_without_other_knightmon_text_digimon",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-052",
+        clause: "effects[2]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Gladimon's inherited copy of Kotemon's clause: owner ruling 2026-11-23, parity with DCGO (EX13_052.cs: ",
+            "canNoSelect pick, RemoveUse when none chosen). Offered only while another of your [Knightmon]-text ",
+            "Digimon exists, so the refund runs only on a declined pick; a chosen Digimon spends the use.",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_once_per_turn",
+            "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_not_offered_without_other_knightmon",
         ],
     },
 ];
