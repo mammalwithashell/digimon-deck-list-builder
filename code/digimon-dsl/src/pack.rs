@@ -61,7 +61,11 @@ use std::collections::BTreeSet;
 // 0.38.0 adds `continue_on_decline` and `bind_as` to the compiled
 // `trash_bottom_face_down_source_under_tamer` step. Rebuild packs; bincode
 // layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.38.0";
+// 0.39.0 is the merge of main's unbumped 0.36.0-era layout changes
+// (`TrashBottomSources.bind_trashed_as`, the `LowestMaterialCountRedirection`
+// field selector) with 0.37.0 and 0.38.0 above. Rebuild packs; bincode
+// layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.39.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

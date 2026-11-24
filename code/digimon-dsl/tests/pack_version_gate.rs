@@ -60,7 +60,7 @@ effects:
 "#).unwrap();
     let card = digimon_dsl::compile::compile(&spec).unwrap();
     let pack = CardPack::new("royal-knights", vec![card]);
-    assert_eq!(pack.manifest.pack_version, "0.38.0");
+    assert_eq!(pack.manifest.pack_version, "0.39.0");
     assert_eq!(CardPack::from_bytes(&pack.to_bytes().unwrap()).unwrap(), pack);
 }
 
