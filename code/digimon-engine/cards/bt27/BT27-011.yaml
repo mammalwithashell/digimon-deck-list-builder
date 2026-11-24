@@ -1,0 +1,47 @@
+card: BT27-011
+name: Liskmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+traits: [Bird Dragon, ALYSION]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+  - kind: digivolve
+    from: { any_color: true, level_eq: 3, in_text_contains: Gemmon }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    text: "＜Raid＞"
+    keyword: Raid
+
+  - when: [on_move, when_digivolving]
+    text: "[When Moving] [When Digivolving] 1 of your Digimon gets +3000 DP for the turn. Then, if you have a Digimon with 8000 DP or more, ＜Draw 1＞."
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][When Digivolving] Give 1 of your Digimon +3000 DP for the turn, then draw 1 if you have an 8000 DP or higher Digimon"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gets +3000 DP for the turn"
+      - add_dp_modifier: { target: boosted, value: 3000, expiry: end_of_turn }
+      - if:
+          condition:
+            any_permanent: { of: you, zone: [battle_area], kind: digimon, dp_gte: 8000 }
+          then:
+            - draw: { of: you, count: 1 }
+
+  - scope: inherited
+    text: "＜Raid＞"
+    kind: grant_keyword
+    keyword: Raid

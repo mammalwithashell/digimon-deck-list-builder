@@ -1,0 +1,73 @@
+card: BT27-033
+name: Yukinamon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: [Ice-Snow, ALYSION]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter: { kind: digimon, level_eq: 5, trait_has: Ice-Snow }
+        zones: [trash]
+        stack_under: true
+      - filter: { kind: digimon, level_eq: 4, trait_has: Ice-Snow }
+        zones: [trash]
+        stack_under: true
+      - filter: { kind: digimon, level_eq: 3, trait_has: Ice-Snow }
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    text: "＜Iceclad＞"
+    keyword: Iceclad
+  - kind: grant_keyword
+    text: "＜Piercing＞"
+    keyword: Piercing
+  - kind: grant_keyword
+    text: "＜Blocker＞"
+    keyword: Blocker
+
+  - when: [on_play, when_digivolving]
+    text: "[On Play] [When Digivolving] Trash the top 2 digivolution cards of all of your opponent's Digimon. Then, until their turn ends, none of their Digimon without digivolution cards can digivolve or suspend."
+    summary: "[On Play][When Digivolving] Trash the top 2 sources of all opposing Digimon; until their turn ends their sourceless Digimon cannot digivolve or suspend"
+    process:
+      - trash_top_n_digivolution_cards_of_each: { of: opponent, n: 2 }
+      - add_modifier:
+          target: { of: opponent, kind: digimon, materials_count_lte: 0 }
+          modifier: CannotDigivolve
+          value: 1
+          expiry: end_of_opponents_turn
+          continuous: true
+      - add_modifier:
+          target: { of: opponent, kind: digimon, materials_count_lte: 0 }
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+          continuous: true
+
+  - when: end_of_your_turn
+    text: "[End of Your Turn] [Once Per Turn] If your opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] trait Digimon may gain ＜Rush＞ for the turn and attack."
+    once_per_turn: true
+    optional: true
+    condition:
+      not:
+        any_permanent: { of: opponent, zone: [battle_area], kind: digimon, materials_count_gte: 1 }
+    summary: "[End of Your Turn][OPT] If no opposing Digimon has sources, 1 of your Ice-Snow Digimon may gain Rush for the turn and attack"
+    process:
+      - select_own_permanent:
+          bind_as: attacker
+          optional: true
+          filter: { kind: digimon, trait_has: Ice-Snow }
+          prompt: "Choose 1 of your Ice-Snow Digimon to gain Rush and attack"
+      - grant_keyword: { target: attacker, keyword: Rush, expiry: end_of_turn }
+      - may_attack_now: { attacker: attacker, targets: any, optional: false }

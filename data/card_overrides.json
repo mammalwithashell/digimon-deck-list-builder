@@ -19742,6 +19742,11 @@
     ]
   },
   "BT27-022": {
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ],
     "evo_costs": [
       {
         "card_color": 1,
@@ -19803,6 +19808,11 @@
     "inherited_effect_description_eng": ""
   },
   "BT27-027": {
+    "type_eng": [
+      "Mysterious Beast",
+      "ALYSION",
+      "Ice-Snow"
+    ],
     "evo_costs": [
       {
         "card_color": 1,
@@ -19821,6 +19831,11 @@
     ]
   },
   "BT27-029": {
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ],
     "evo_costs": [
       {
         "card_color": 1,

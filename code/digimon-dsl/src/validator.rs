@@ -2309,6 +2309,9 @@ fn validate_step_binding_scope(
         StepSpec::RevealTopDeck(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::TrashBottomSources(args) => {
+            declare_optional_binding(scope, &args.bind_trashed_as);
+        }
         // `bind_placed_as` names the placed card ONLY on a successful
         // placement — it is a legitimate optional binding for a downstream
         // `if { binding_present }` "If this effect placed" gate (EX7-044).
@@ -3295,6 +3298,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotBeDestroyed",
     "CannotBeDestroyedByBattle",
     "CannotBeDestroyedByEffect",
+    "CannotBeDestroyedOutsideBattle",
     "CannotBeRemoved",
     "CannotBeReturnedToDeck",
     "CannotBeReturnedToHand",
