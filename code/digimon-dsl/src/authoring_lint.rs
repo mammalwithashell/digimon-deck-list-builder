@@ -54,10 +54,11 @@
 //!   - e. mandatory content ran, or an opponent's choice was processed:
 //!     SPENT (official Q4739, Q5056, Q5171, Q5330) -- a refund is wrong;
 //!   - f. accepted, then the optional cost of a "by X, ..." effect was
-//!     declined: KEPT on Slayerdramon (EX13-024) by owner ruling
-//!     (2026-11-23, that card only) -- the refund is right there; on every
-//!     other card the current behaviour (spent) stands until the owner
-//!     rules, so a refund is wrong.
+//!     declined: KEPT on the closed list [`COST_DECLINED_BY_OWNER_RULING`]
+//!     by owner rulings of 2026-11-23 ("parity with DCGO": Slayerdramon
+//!     (EX13-024) and ten clauses where DCGO `RemoveUse()`s a declined cost)
+//!     -- the refund is right there; on every other card the current
+//!     behaviour (spent) stands until the owner rules, so a refund is wrong.
 //!   So every such clause is listed in [`REFUND_AFTER_ACCEPT_REVIEWED`] with
 //!   the row its refund path is reached on (b, W13, or f by owner ruling;
 //!   [`RefundRow`] has no variant for c, d or e), why it is reached on no
@@ -135,12 +136,28 @@ pub enum RefundRow {
     /// (owner decision 2026-10-21).
     BothHalvesDeclined,
     /// f: the optional cost of a "by X, ..." effect was declined after the
-    /// accept, on a card the owner has ruled keeps the use then. Only
-    /// Slayerdramon (EX13-024) (owner ruling 2026-11-23, that card only);
-    /// on every other card a declined "by X" cost spends the use today, and
-    /// none may be listed on this row without its own ruling.
+    /// accept, on a clause the owner has ruled keeps the use then. Only the
+    /// clauses in [`COST_DECLINED_BY_OWNER_RULING`] (owner rulings
+    /// 2026-11-23: Slayerdramon (EX13-024), then "parity with DCGO" for ten
+    /// more); on every other card a declined "by X" cost spends the use
+    /// today, and none may be listed on this row without its own ruling.
     CostDeclinedByOwnerRuling,
 }
+
+/// The closed list of `(card, clause)` the owner has ruled onto row f: a
+/// declined "by X" cost after the accept keeps the [Once Per Turn] there.
+/// Owner rulings of 2026-11-23 ("keep parity with dcgo"): Slayerdramon
+/// (EX13-024), whose DCGO script `RemoveUse()`s an unpaid suspend, and the
+/// ten clauses below, where DCGO likewise lets the cost be declined after the
+/// accept and `RemoveUse()`s it. It is not a pool-wide rule: Ogremon (X
+/// Antibody) (P-250), Hyogamon (BT24-026), MetalEtemon (EX5-054), Apocalymon
+/// (BT15-102) and DemiMeramon (EX8-006) keep "a declined cost spends the
+/// use", which DCGO does there too. A new card needs its own ruling before it
+/// is added here (qa/rules/mechanics-gaps-2026-10.md W14 row (f)).
+pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
+    ("EX13-024", "effects[3]"),
+    ("EX13-024", "effects[4]"),
+];
 
 /// One reviewed `refund_opt` behind an explicit accept.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -669,6 +686,28 @@ mod tests {
         assert!(!refund_review_is_live(&moved, entry), "the clause moved: re-review it");
     }
 
+    /// Row f is a closed list: exactly Slayerdramon (EX13-024)'s two clauses
+    /// and the ten "parity with DCGO" clauses of 2026-11-23, each reviewed on
+    /// row f. An eleventh card fails here until it has its own ruling.
+    #[test]
+    fn owner_ruling_row_is_the_closed_list() {
+        let on_row_f: Vec<(&str, &str)> = REFUND_AFTER_ACCEPT_REVIEWED
+            .iter()
+            .filter(|a| a.row == RefundRow::CostDeclinedByOwnerRuling)
+            .map(|a| (a.card, a.clause))
+            .collect();
+        for ruled in COST_DECLINED_BY_OWNER_RULING {
+            assert!(on_row_f.contains(ruled), "{ruled:?} is ruled onto row f but not reviewed there");
+        }
+        assert_eq!(on_row_f.len(), COST_DECLINED_BY_OWNER_RULING.len());
+        for idiom in ["P-250", "BT24-026", "EX5-054", "BT15-102", "EX8-006"] {
+            assert!(
+                !COST_DECLINED_BY_OWNER_RULING.iter().any(|(c, _)| *c == idiom),
+                "{idiom} keeps \"a declined cost spends the use\" (DCGO spends there too)"
+            );
+        }
+    }
+
     /// The production table: one entry per clause, each with a reason and
     /// the tests that prove it.
     #[test]
@@ -678,7 +717,13 @@ mod tests {
             assert!(a.clause.starts_with("effects["), "{} {}", a.card, a.clause);
             assert!(!a.tests.is_empty(), "{} {}: name the tests that prove the row", a.card, a.clause);
             if a.row == RefundRow::CostDeclinedByOwnerRuling {
-                assert_eq!(a.card, "EX13-024", "row f needs an owner ruling for that card ({})", a.card);
+                assert!(
+                    COST_DECLINED_BY_OWNER_RULING.contains(&(a.card, a.clause)),
+                    "row f needs an owner ruling for that clause ({} {}): add it to \
+                     COST_DECLINED_BY_OWNER_RULING only with the ruling",
+                    a.card,
+                    a.clause
+                );
             }
             for t in a.tests {
                 let (file, name) = t.split_once("::").unwrap_or(("", ""));
