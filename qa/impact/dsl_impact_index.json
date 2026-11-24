@@ -33366,7 +33366,7 @@
       ]
     }
   },
-  "cards_root": "/home/ubuntu/repos/digimon-deck-list-builder/code/digimon-engine/cards",
+  "cards_root": "code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost": [
       "AD1-019",
