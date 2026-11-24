@@ -55,7 +55,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
                         ctx.player,
                         false,
                         *optional,
-                        *target_attribution,
+                        *target_attribution || filter == TimingFilter::OptionMain,
                     );
                 }
             }

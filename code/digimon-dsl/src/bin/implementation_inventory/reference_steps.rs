@@ -2220,9 +2220,10 @@ impl Walk for digimon_dsl::step::TrashBottomSourcesArgs {
             "COMPOSITE",
             serde_json::Value::Null,
         );
-        let digimon_dsl::step::TrashBottomSourcesArgs { target, count } = self;
+        let digimon_dsl::step::TrashBottomSourcesArgs { target, count, bind_trashed_as } = self;
         target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
         count.walk(c, &format!("{}.count", path), "UNCLASSIFIED_STRING");
+        bind_trashed_as.walk(c, &format!("{}.bind_trashed_as", path), "NEW_INSTANCE_BINDING");
     }
 }
 impl Walk for digimon_dsl::step::PermanentProperty {
@@ -4409,6 +4410,12 @@ impl Walk for digimon_dsl::step::FieldSelector {
                 "ENUM_SCALAR",
                 serde_json::json!("LowestMaterialCount"),
             ),
+            digimon_dsl::step::FieldSelector::LowestMaterialCountRedirection => c.node(
+                path,
+                "digimon_dsl::step::FieldSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("LowestMaterialCountRedirection"),
+            ),
         }
     }
 }
@@ -5666,7 +5673,7 @@ digimon_dsl::compiled::CompiledStep::PlaceAsBottomSource{source,target,face_down
 digimon_dsl::compiled::CompiledStep::PlaceAsTopSource{source,target,face_down} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceAsTopSource"));source.walk(c, &format!("{}.source", &format!("{}@PlaceAsTopSource",path)), "EXISTING_INSTANCE_BINDING");target.walk(c, &format!("{}.target", &format!("{}@PlaceAsTopSource",path)), "EXISTING_INSTANCE_BINDING");face_down.walk(c, &format!("{}.face_down", &format!("{}@PlaceAsTopSource",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlaceTopSourceAsBottom{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceTopSourceAsBottom"));target.walk(c, &format!("{}.target", &format!("{}@PlaceTopSourceAsBottom",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::TrashTopSource{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashTopSource"));target.walk(c, &format!("{}.target", &format!("{}@TrashTopSource",path)), "EXISTING_INSTANCE_BINDING");},
-digimon_dsl::compiled::CompiledStep::TrashBottomSources{target,count} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomSources"));target.walk(c, &format!("{}.target", &format!("{}@TrashBottomSources",path)), "EXISTING_INSTANCE_BINDING");count.walk(c, &format!("{}.count", &format!("{}@TrashBottomSources",path)), "UNCLASSIFIED_STRING");},
+digimon_dsl::compiled::CompiledStep::TrashBottomSources{target,count,bind_trashed_as} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomSources"));target.walk(c, &format!("{}.target", &format!("{}@TrashBottomSources",path)), "EXISTING_INSTANCE_BINDING");count.walk(c, &format!("{}.count", &format!("{}@TrashBottomSources",path)), "UNCLASSIFIED_STRING");bind_trashed_as.walk(c, &format!("{}.bind_trashed_as", &format!("{}@TrashBottomSources",path)), "NEW_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::TrashAllSources{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashAllSources"));target.walk(c, &format!("{}.target", &format!("{}@TrashAllSources",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::TrashBottomFaceDownSourceUnderTamer{of,optional} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomFaceDownSourceUnderTamer"));of.walk(c, &format!("{}.of", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "UNCLASSIFIED_STRING");optional.walk(c, &format!("{}.optional", &format!("{}@TrashBottomFaceDownSourceUnderTamer",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::TrashBottomFaceDownSourcesUnderTamers{of,count} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBottomFaceDownSourcesUnderTamers"));of.walk(c, &format!("{}.of", &format!("{}@TrashBottomFaceDownSourcesUnderTamers",path)), "UNCLASSIFIED_STRING");count.walk(c, &format!("{}.count", &format!("{}@TrashBottomFaceDownSourcesUnderTamers",path)), "UNCLASSIFIED_STRING");},

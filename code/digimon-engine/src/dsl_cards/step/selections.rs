@@ -178,7 +178,8 @@ pub(crate) fn field_value(
             // highest- nor a lowest-play-cost candidate. Deck audit 2026-11-10.
             .filter(|perm| top_card_has_play_cost(perm, &game.card_data))
             .map(|perm| i32::from(perm.top_card().play_cost(&game.card_data))),
-        CompiledFieldSelector::LowestMaterialCount => game
+        CompiledFieldSelector::LowestMaterialCount
+        | CompiledFieldSelector::LowestMaterialCountRedirection => game
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
@@ -212,7 +213,8 @@ pub(crate) fn selected_field_extreme(
     match selector {
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
         CompiledFieldSelector::HighestDp | CompiledFieldSelector::HighestPlayCost => values.max(),
-        CompiledFieldSelector::LowestMaterialCount => values.min(),
+        CompiledFieldSelector::LowestMaterialCount
+        | CompiledFieldSelector::LowestMaterialCountRedirection => values.min(),
     }
 }
 
@@ -260,6 +262,22 @@ impl CompiledFieldFilter {
     }
 }
 
+pub(crate) fn is_eligible_field_selector_target(
+    game: &crate::game::Game,
+    handle: PermanentHandle,
+    selector: CompiledFieldSelector,
+) -> bool {
+    if selector != CompiledFieldSelector::LowestMaterialCountRedirection {
+        return true;
+    }
+    let Some(attacker) = game.live_attack_attacker() else {
+        return false;
+    };
+    let (current, removed) = game.attack_target_for_switch();
+    let target = crate::selection::AttackTarget::Digimon(handle);
+    (removed || current != target) && game.validate_attack_redirect_target(attacker, target).is_ok()
+}
+
 fn matches_selected_field(
     game: &crate::game::Game,
     handle: PermanentHandle,
@@ -269,6 +287,7 @@ fn matches_selected_field(
     match selected {
         SelectedField::Any => true,
         SelectedField::Exact(want) => selector
+            .filter(|&selector| is_eligible_field_selector_target(game, handle, selector))
             .and_then(|selector| field_value(game, handle, selector))
             .is_some_and(|candidate| candidate == want),
         SelectedField::None => false,

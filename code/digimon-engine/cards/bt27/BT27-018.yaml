@@ -1,0 +1,69 @@
+card: BT27-018
+name: Rubeusdramon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Dragon Warrior, ALYSION]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, level_eq: 5, in_text_contains: Gemmon }
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter: { kind: digimon, level_eq: 5, color_is: red, in_text_contains: Gemmon }
+        zones: [trash]
+        stack_under: true
+      - filter: { kind: digimon, level_eq: 4, color_is: red, in_text_contains: Gemmon }
+        zones: [trash]
+        stack_under: true
+      - filter: { kind: digimon, level_eq: 3, color_is: red, in_text_contains: Gemmon }
+        zones: [trash]
+        stack_under: true
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    text: "＜Rush＞"
+    keyword: Rush
+  - kind: grant_keyword
+    text: "＜Progress＞"
+    keyword: Progress
+
+  - when: [when_digivolving, when_attacking]
+    text: "[When Digivolving] [When Attacking] [Once Per Turn] For every 8000 DP this Digimon has, you may activate the effect below: ・Delete 1 of your opponent's lowest DP Digimon."
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition:
+      all_of:
+        - dp_gte: 8000
+        - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+    summary: "[When Digivolving][When Attacking][OPT] For every 8000 DP this Digimon has, you may delete 1 of your opponent's lowest DP Digimon"
+    process:
+      - repeat_effect_choice:
+          count: { floor_div: [{ source_dp: {} }, 8000] }
+          labels: []
+          body:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter: { kind: digimon }
+                selector: lowest_dp
+                prompt: "Delete 1 of your opponent's lowest DP Digimon"
+            - delete_permanent: { target: victim }
+
+  - when: on_any_deletion
+    text: "[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted, trash their top security card."
+    once_per_turn: true
+    trigger_if: { event_target_owner: opponent, event_target_kind: digimon }
+    summary: "[All Turns][OPT] When any of your opponent's Digimon are deleted, trash their top security card"
+    process:
+      - trash_top_security: { of: opponent }

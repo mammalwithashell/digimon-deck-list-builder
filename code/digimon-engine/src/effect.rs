@@ -183,6 +183,7 @@ pub struct ReFireableEffect {
 pub enum TimingFilter {
     OnPlay,
     WhenDigivolving,
+    OptionMain,
     Either,
 }
 
@@ -201,6 +202,7 @@ impl TimingFilter {
         match key {
             "on_play" => Some(Self::OnPlay),
             "when_digivolving" => Some(Self::WhenDigivolving),
+            "option_main" => Some(Self::OptionMain),
             _ => None,
         }
     }
@@ -209,6 +211,7 @@ impl TimingFilter {
         match self {
             Self::OnPlay => &["on_play"],
             Self::WhenDigivolving => &["when_digivolving"],
+            Self::OptionMain => &["option_main"],
             Self::Either => &["on_play", "when_digivolving"],
         }
     }
@@ -649,16 +652,19 @@ impl Effect {
             EffectTiming::OnPlay => "on_play",
             EffectTiming::WhenAttacking => "when_attacking",
             EffectTiming::OnDeletion => "on_deletion",
+            EffectTiming::OptionMain => "option_main",
             _ => "",
         }
     }
 
     pub fn can_be_refired(&self) -> bool {
-        matches!(
-            self.timing,
-            EffectTiming::OnPlay | EffectTiming::WhenDigivolving
-        ) && (self.on_play || self.when_digivolving)
-            && !self.inherited
+        let eligible = match self.timing {
+            EffectTiming::OnPlay => self.on_play,
+            EffectTiming::WhenDigivolving => self.when_digivolving,
+            EffectTiming::OptionMain => self.option_main,
+            _ => false,
+        };
+        eligible && !self.inherited
             && !self.security
             && !self.declarative
             && !self.linked
@@ -1855,6 +1861,16 @@ pub fn enumerate_refireable_effects(
     let source_card = top.handle();
     let card_id = top.card_id(&game.card_data).to_string();
     let source_kind = game.effect_source_kind_for_handle(source_card);
+    let source_kind = if timing_key == "option_main" {
+        if source_kind != crate::enums::EffectSourceKind::Digimon
+            || !game.card_data_for_handle(source_card).is_some_and(|card| card.dual.is_some())
+        {
+            return Vec::new();
+        }
+        crate::enums::EffectSourceKind::Option
+    } else {
+        source_kind
+    };
 
     let Some(effects) = game.effects_for_card(&card_id, source_card) else {
         return Vec::new();

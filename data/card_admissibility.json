@@ -21245,14 +21245,12 @@
       "untested_constructs": []
     },
     "BT27-006": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-007": {
@@ -21300,14 +21298,12 @@
       "untested_constructs": []
     },
     "BT27-011": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-012": {
@@ -21333,14 +21329,12 @@
       "untested_constructs": []
     },
     "BT27-014": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-015": {
@@ -21375,14 +21369,12 @@
       "untested_constructs": []
     },
     "BT27-018": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-019": {
@@ -21419,14 +21411,12 @@
       "untested_constructs": []
     },
     "BT27-022": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-023": {
@@ -21472,14 +21462,12 @@
       "untested_constructs": []
     },
     "BT27-027": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-028": {
@@ -21494,14 +21482,12 @@
       "untested_constructs": []
     },
     "BT27-029": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-030": {
@@ -21538,14 +21524,12 @@
       "untested_constructs": []
     },
     "BT27-033": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
+      "needs_card_test": true,
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-034": {
@@ -22107,14 +22091,12 @@
       "untested_constructs": []
     },
     "BT27-086": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-087": {
@@ -22129,14 +22111,12 @@
       "untested_constructs": []
     },
     "BT27-088": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-089": {
@@ -48100,21 +48080,21 @@
     }
   },
   "counts": {
-    "admissible": 1254,
+    "admissible": 1264,
     "diverged_no_quirk": 0,
     "failed_verdict": 17,
     "registered": 4587,
     "unregistered": 0,
     "untested_card": 17,
-    "untested_lowering": 3299
+    "untested_lowering": 3289
   },
-  "generated_at": "2026-11-24T05:17:47+00:00",
+  "generated_at": "2026-11-24T06:40:11+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "59a381ef1bb253cc96400883264839e428dc0dde6e515bd6e4eae6dc62bca684",
+    "behavioral_test_modules_sha256": "93bec781fdd80cf00bceb4d1d2ecf65f84e2dad22f3db1d0c5c50a7f783219f3",
     "card_registry_sha256": "76d299f56767401907be0c9d0206557ec7e668d9f8748677c3e586e80a6a85e2",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "1132822465941342a63dc5fad0e97534da660fcc73a7eaa544e20a76580217ea",
-    "validated_cards_dsl_sha256": "cd46d018ad6d911c2234d462cac0afe40e0b15de214ff3a99b2c442c40bc5f38",
+    "lowering_coverage_sha256": "51711891fbe5f6b510897e606998f8234a654b67fc8eeff566d672c7ee8d6169",
+    "validated_cards_dsl_sha256": "32ad88e776c9ba5f1cffe42074cb573f3bc93ad42c68d475256453376857644d",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
   "version": 2

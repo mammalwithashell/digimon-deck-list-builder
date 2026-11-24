@@ -1909,6 +1909,8 @@ pub struct SuspendAllPreventionArgs {
 pub struct TrashBottomSourcesArgs {
     pub target: BindingRef,
     pub count: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_trashed_as: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -3576,6 +3578,7 @@ pub enum FieldSelector {
     /// "delete 1 of your opponent's Digimon with the fewest digivolution
     /// cards".
     LowestMaterialCount,
+    LowestMaterialCountRedirection,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
