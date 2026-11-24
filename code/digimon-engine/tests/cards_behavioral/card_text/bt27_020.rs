@@ -32,6 +32,7 @@ fn runner(hand: &[&str]) -> DebugRunner {
         .add_card(mon("B", "B", 4, 5, &[]))
         .add_card(mon("TOP", "Top", 5, 7, &[]))
         .add_card(mon("FILL", "Fill", 3, 3, &[]))
+        .add_card(token())
         .deck(0, &["FILL"; 10])
         .deck(1, &["FILL"; 10])
         .security(1, &["FILL"; 5])
@@ -71,6 +72,27 @@ fn on_play_places_as_bottom_digivolution_card_of_a_digimon_and_draws() {
     assert_eq!(source_ids(&r, host), vec!["AQ4", "A"]);
     assert_eq!(face_down(&r, host), vec![false, false]);
     assert_eq!(hand_ids(&r, 0), vec!["FILL"]);
+}
+
+fn token() -> digimon_engine::card_data::CardData {
+    let mut c = mon("TOK", "Token", 3, 3, &[]);
+    c.card_kind = digimon_engine::enums::CardKind::Token;
+    c
+}
+
+#[test]
+fn a_digimon_token_cannot_take_the_card() {
+    let mut r = runner(&[CARD, "AQ4"]);
+    let host = r.place_stack(0, &["A", "HOST"]);
+    r.place_on_field(0, "TOK", Some(0));
+    play_hand(&mut r, CARD);
+    r.choose_prompt_card("AQ4", None).unwrap();
+    let mut c = candidates(&r);
+    c.sort();
+    assert_eq!(c, vec!["BT27-020", "HOST"], "cards can't be placed under a token");
+    r.choose_prompt_card("HOST", None).unwrap();
+    no_prompt(&r);
+    assert_eq!(source_ids(&r, host), vec!["AQ4", "A"]);
 }
 
 #[test]

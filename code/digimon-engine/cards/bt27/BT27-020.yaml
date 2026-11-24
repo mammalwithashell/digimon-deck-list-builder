@@ -54,7 +54,10 @@ effects:
                   - select_own_permanent:
                       optional: false
                       bind_as: host
-                      filter: { kind: digimon }
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - not: { kind: token }
                       prompt: "Choose 1 of your Digimon to place the card as its bottom digivolution card"
                   - place_as_bottom_source:
                       source: placed
