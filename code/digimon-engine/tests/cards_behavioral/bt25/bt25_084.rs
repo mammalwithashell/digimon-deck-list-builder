@@ -466,8 +466,9 @@ fn bt25_084_leave_prevention_trashes_two_and_stays_then_deletes_lowest() {
 /// execute them." With 1 card in hand, "by trashing 2 cards in your hand"
 /// can't be executed, so the leave-prevention is not offered and Titamon
 /// leaves (DCGO BT25_084.cs `CanActivateCondition`: `HandCards.Count() >= 2`).
-/// The engine derives this from the two leading hand picks
-/// (`leading_cost_guard`); the YAML carries no hand-count gate.
+/// Since the DCGO-parity change (owner ruling 2026-11-23) the first hand pick
+/// is a declinable non-cost pick, so the YAML gates the offer itself with
+/// `active_when: count_gte 2` hand cards.
 /// G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
 #[test]
 fn bt25_084_leave_prevention_not_offered_with_one_hand_card() {
