@@ -20551,7 +20551,7 @@
    "untested_constructs": []
   },
   "BT27-103": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 8,
    "constructs": [
     "verb:add_modifier",
@@ -20578,14 +20578,12 @@
    ],
    "effect_clause_count": 7,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [
     "clause:partition"
    ],
-   "untested_constructs": [
-    "keyword:ArtsDnaDigivolve"
-   ]
+   "untested_constructs": []
   },
   "BT3-002": {
    "behaviourally_covered": true,
@@ -39842,12 +39840,18 @@
   "keyword:ArtsDnaDigivolve": {
    "kind": "keyword",
    "name": "ArtsDnaDigivolve",
-   "near_miss_files": [],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "keyword_semantics_matrix::main.rs::synthetic_cards_instantiate_every_engine_keyword_row": [
+     "keyword",
+     "literal"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "keyword_semantics_matrix::main.rs::synthetic_cards_instantiate_every_engine_keyword_row"
+   ]
   },
   "keyword:Ascension": {
    "kind": "keyword",
@@ -86486,20 +86490,20 @@
  "summary": {
   "behavioural_tests": 2309,
   "cards": {
-   "behaviourally_covered": 1290,
-   "lowering_covered": 1308,
-   "not_covered": 52,
+   "behaviourally_covered": 1291,
+   "lowering_covered": 1309,
+   "not_covered": 51,
    "total": 1360
   },
   "constructs": {
    "keyword": {
     "parsed_only": 0,
-    "tested": 39,
-    "tested_behaviourally": 39,
+    "tested": 40,
+    "tested_behaviourally": 40,
     "total": 40,
-    "untested": 1,
+    "untested": 0,
     "used_by_cards": 32,
-    "used_untested": 1
+    "used_untested": 0
    },
    "predicate": {
     "parsed_only": 7,
@@ -86778,11 +86782,6 @@
    {
     "cards_blocked": 2,
     "construct": "predicate:security_count",
-    "ex13_lists_blocked": 0
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "keyword:ArtsDnaDigivolve",
     "ex13_lists_blocked": 0
    },
    {

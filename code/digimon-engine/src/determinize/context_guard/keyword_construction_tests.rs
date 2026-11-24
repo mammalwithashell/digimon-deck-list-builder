@@ -47,7 +47,7 @@ fn callback_shape(e: &Effect) -> [bool; 17] {
 #[test]
 fn every_keyword_payload_constructs_and_preserves_reviewed_metadata() {
     let values=keywords(true);
-    assert_eq!(values.len(),2334);
+    assert_eq!(values.len(),2335);
     let mut cases=0;let mut effects=0;
     for keyword in values { for card in [CardHandle(0),CardHandle(42),CardHandle(u16::MAX)] {
         let original=keyword_to_auto_effect_inner(keyword,card);
@@ -70,8 +70,8 @@ fn every_keyword_payload_constructs_and_preserves_reviewed_metadata() {
         }
         cases+=1;
     } }
-    assert_eq!(cases,7002);assert_eq!(effects,2370);
-    println!("constructor_cases={cases} returned_effects={effects} all39variants all_payload_values");
+    assert_eq!(cases,7005);assert_eq!(effects,2370);
+    println!("constructor_cases={cases} returned_effects={effects} all40variants all_payload_values");
 }
 fn reject<T>(run:impl FnOnce()->T) {
     let error=match catch_unwind(AssertUnwindSafe(run)) {
@@ -128,6 +128,6 @@ fn every_emitted_keyword_callback_rejects_world_direct_and_nested_contexts() {
             cases+=1;
         }}
     }}
-    assert_eq!(cases,684);assert!(invocations>0);
-    println!("guard_factory_cases={cases} callback_invocations={invocations} all39variants payload_min_one_max");
+    assert_eq!(cases,696);assert!(invocations>0);
+    println!("guard_factory_cases={cases} callback_invocations={invocations} all40variants payload_min_one_max");
 }

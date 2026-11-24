@@ -22280,17 +22280,13 @@
       "untested_constructs": []
     },
     "BT27-103": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
-      "untested_constructs": [
-        "keyword:ArtsDnaDigivolve"
-      ]
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
     },
     "BT27-104": {
       "admissible": false,
@@ -48100,20 +48096,20 @@
     }
   },
   "counts": {
-    "admissible": 1255,
+    "admissible": 1256,
     "diverged_no_quirk": 0,
     "failed_verdict": 17,
     "registered": 4587,
     "unregistered": 0,
     "untested_card": 17,
-    "untested_lowering": 3298
+    "untested_lowering": 3297
   },
-  "generated_at": "2026-11-23T22:54:21+00:00",
+  "generated_at": "2026-11-24T00:04:17+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "e837cfaf74b30bec5a4f6cf9c347be9ef423c1c00c28d160103b32cb649924b9",
     "card_registry_sha256": "76d299f56767401907be0c9d0206557ec7e668d9f8748677c3e586e80a6a85e2",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "2ae732a27932276be35119419a4522eeceaa9c13edd5db65bba48f758cd5669b",
+    "lowering_coverage_sha256": "4bb56574565260c634774c48de4b9823fc0f67a166eed69cdd47497484909ce4",
     "validated_cards_dsl_sha256": "de618bedb9357db4afa5fc945a52bc0b95b6ba74593825c25531442629562e10",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
