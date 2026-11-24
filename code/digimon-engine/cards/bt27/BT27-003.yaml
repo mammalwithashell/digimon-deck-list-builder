@@ -1,0 +1,31 @@
+card: BT27-003
+name: Frimon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+form: In-Training
+traits: [Lesser, ACCEL]
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Leomon] in its name or the [ACCEL] trait in the hand."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], all_of: [{ all_of: [{ kind: digimon }, { any_of: [{ name_contains: Leomon }, { trait_has: ACCEL }] }, { can_digivolve_from_source: true }] }] }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: evolution
+          optional: false
+          filter: { all_of: [{ kind: digimon }, { any_of: [{ name_contains: Leomon }, { trait_has: ACCEL }] }, { can_digivolve_from_source: true }] }
+          prompt: "Choose a Leomon-name or ACCEL Digimon to digivolve into"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evolution
+          cost:
+            reduce: 0

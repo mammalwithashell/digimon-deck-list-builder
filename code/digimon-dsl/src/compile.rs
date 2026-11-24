@@ -1220,7 +1220,7 @@ fn compile_predicate(
         has_refireable_effect: p.has_refireable_effect.as_ref().and_then(|timing| {
             if matches!(
                 timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "on_deletion"
             ) {
                 Some(timing.clone())
             } else {
@@ -1228,7 +1228,7 @@ fn compile_predicate(
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.has_refireable_effect"),
                     message: format!(
-                        "unknown refire timing `{timing}`: expected `on_play`, `when_digivolving` or \
+                        "unknown refire timing `{timing}`: expected `on_play`, `when_digivolving`, `on_deletion` or \
                          `on_play_or_when_digivolving`"
                     ),
                 });
@@ -4858,7 +4858,11 @@ fn compile_step(
                 source: compile_binding_ref(&a.source),
                 timing: if matches!(
                     a.timing.as_str(),
-                    "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "option_main"
+                    "on_play"
+                        | "when_digivolving"
+                        | "on_play_or_when_digivolving"
+                        | "on_deletion"
+                        | "option_main"
                 ) {
                     a.timing.clone()
                 } else {

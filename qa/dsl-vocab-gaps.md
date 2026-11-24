@@ -1,3 +1,15 @@
+## G-DSL-REFIRE-CARRIER-ON-DELETION — activate an On Deletion effect without deleting the Digimon
+
+- **Drivers:** BT27-010 and BT27-012. The paid Main effect can choose an On Deletion effect on the carrier, including one contributed by a digivolution card.
+- **Resolution:** `refire_effect` and `has_refireable_effect` accept `on_deletion` for a permanent. The refire lists active face, inherited, and link effects on that permanent, retains physical source identity, and runs the chosen effect without a deletion trigger.
+- **Acceptance:** Surface the carrier's eligible face and inherited On Deletion effects as distinct candidates and process the chosen effect without deleting the carrier or emitting an actual deletion event. Preserve its physical source, carrier and normal optionality. Test face-only and stacked candidates, declining selection, cost payment, and the Main effect's once-per-turn limit.
+
+## G-DSL-DIGIVOLVE-CANDIDATE-UNDER-SOURCE-TAMER — qualify a Digimon pick by its legal result cards under this Tamer
+
+- **Driver:** BT27-104. The Digimon pick in the optional end-of-turn branch must have a legal Royal Knight digivolution result under the activating Tamer, after the printed cost reduction.
+- **Resolution:** `has_digivolve_candidate: { zone: [material], ... }` scans only the cards beneath the effect's source permanent and uses the same affordability preflight as the subsequent result selection.
+- **Acceptance:** Check matching source cards beneath the specified host, with the consuming effect's cost, and expose only legal targets and matching sources. Cover a matching card under another Tamer, an unaffordable route, and a legal discounted digivolution.
+
 ## Player-directed forced attacks — resolved 2026-11-09
 
 `force_attack.affects_player: true` implements an instruction to the selected

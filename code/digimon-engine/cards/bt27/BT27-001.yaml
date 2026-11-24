@@ -1,0 +1,21 @@
+card: BT27-001
+name: Gurimon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+form: In-Training
+traits: [Lesser]
+
+effects:
+  - text: "[Your Turn] [Once Per Turn] When any of your Digimon with [Huckmon] in their texts suspend, ＜Draw 1＞."
+    scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      event_target_owner: you
+      event_target_kind: digimon
+      event_target_in_text_contains: Huckmon
+    process:
+      - draw: { of: you, count: 1 }

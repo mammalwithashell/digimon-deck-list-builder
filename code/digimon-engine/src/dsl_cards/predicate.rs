@@ -4555,7 +4555,7 @@ fn this_card_can_digivolve_onto(
 }
 
 /// `has_digivolve_candidate` â€” permanent-subject probe: does any card in the
-/// listed hand/trash/reveal zones of `of` satisfy `filter` AND have a normal-digivolve
+/// listed zones of `of` satisfy `filter` AND have a normal-digivolve
 /// route onto `handle`? DCGO BT25_092 `CanDigivolveDigimon(permanent)` =
 /// `HasMatchConditionOwnersHand(ValidTarget(â€¦, Root.Hand, permanent)) ||
 /// HasMatchConditionOwnersCardInTrash(ValidTarget(â€¦, Root.Trash, permanent))`.
@@ -4586,6 +4586,16 @@ fn permanent_has_digivolve_candidate(
                 CompiledZone::Hand => &state.hand,
                 CompiledZone::Trash => &state.trash,
                 CompiledZone::Reveal => &rctx.game.revealed_cards,
+                CompiledZone::Material => {
+                    let Some(source) = rctx.source_permanent.filter(|source| source.player == player)
+                    else {
+                        continue;
+                    };
+                    let Some(perm) = permanent_for_handle(rctx, source) else {
+                        continue;
+                    };
+                    &perm.card_sources[..perm.card_sources.len().saturating_sub(1)]
+                }
                 // Validated away at compile time; defensively contribute
                 // nothing rather than scanning an unsupported zone.
                 _ => continue,
@@ -5949,7 +5959,12 @@ fn card_cost_affordable(
             })
             .unwrap_or(0),
     };
-    let pay = (i32::from(delta.resolve(base)) - credit).max(0);
+    let adjusted = if is_use {
+        delta.resolve(base)
+    } else {
+        rctx.game.resolve_effect_play_cost(rctx.player, base, delta)
+    };
+    let pay = (i32::from(adjusted) - credit).max(0);
     rctx.game.payer_can_pay(rctx.player, pay)
 }
 

@@ -950,7 +950,7 @@ fn validate_predicate(
             errors.push(ValidationError {
                 card_id: card_id.to_string(),
                 path: format!("{prefix}.has_digivolve_candidate.zone"),
-                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal`"
+                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal` / `material`"
                     .to_string(),
             });
         }
@@ -960,12 +960,13 @@ fn validate_predicate(
                 crate::predicate::Zone::Hand
                     | crate::predicate::Zone::Trash
                     | crate::predicate::Zone::Reveal
+                    | crate::predicate::Zone::Material
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.has_digivolve_candidate.zone"),
                     message: format!(
-                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` (got {z:?})"
+                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` / `material` (got {z:?})"
                     ),
                 });
             }
@@ -1093,7 +1094,11 @@ fn validate_step(
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
             if !matches!(
                 args.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "option_main"
+                "on_play"
+                    | "when_digivolving"
+                    | "on_play_or_when_digivolving"
+                    | "on_deletion"
+                    | "option_main"
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
