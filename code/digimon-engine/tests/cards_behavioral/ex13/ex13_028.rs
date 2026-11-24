@@ -307,7 +307,9 @@ fn ex13_028_inherited_deletes_other_sukamon_and_carrier_stays() {
     assert!(accept.is_optional);
     r.execute_action(0, accept.valid_action_ids[0]).expect("accept");
     let cost = r.pending_selection_view().expect("cost prompt");
-    assert_eq!(cost.kind, SelectionKind::OwnField);
+    // "1 other Digimon" (no "your"): either player's Digimon (Q7288), so the
+    // pick spans both battle areas.
+    assert_eq!(cost.kind, SelectionKind::AnyField);
     let offered: Vec<_> = cost
         .valid_action_ids
         .iter()
@@ -363,4 +365,147 @@ fn ex13_028_inherited_once_per_turn() {
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
     assert!(r.pending_selection_view().is_none(), "OPT");
     assert!(!field_ids(&r, 0).contains(&"CARRIER".to_string()));
+}
+
+// ─── Inherited [OPT]: DCGO parity (owner ruling 2026-11-23) ──────────────────
+//
+// DCGO EX13_028.cs (same body as EX13_027.cs): offered only while another
+// [Sukamon]-named Digimon exists on EITHER battle area (Q7288); after the
+// accept, a `SelectPermanentEffect` with canNoSelect true. None chosen ->
+// `RemoveUse()` and the carrier leaves. One chosen -> `isUsed` (spent).
+// qa/rules/mechanics-gaps-2026-10.md W14 row (f). <Evade> on the carrier keeps
+// it after the would-leave window so the use can be observed on a later
+// removal the same turn.
+
+fn grant_evade(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.modifiers.grant_keyword(
+        h,
+        digimon_engine::enums::Keyword::Evade,
+        digimon_engine::enums::Expiry::Permanent,
+        0,
+    );
+}
+
+/// While <Evade> can also answer the deletion, the engine first asks which
+/// immediate replacement effect applies next (CR 4.3 15-8-5); pick <Evade>
+/// (`evade`) or the carrier's inherited clause. With one candidate left, its
+/// own accept prompt is already pending.
+fn pick_replacement(r: &mut DebugRunner, evade: bool) {
+    let v = r.pending_selection_view().expect("replacement prompt");
+    if v.kind == SelectionKind::EffectChoice && v.prompt.contains("immediate replacement") {
+        let row = v
+            .effect_choices
+            .as_ref()
+            .and_then(|rows| rows.iter().find(|c| c.label.contains("Evade") == evade))
+            .unwrap_or_else(|| panic!("replacement order rows: {:?}", v.effect_choices))
+            .action_id;
+        r.execute_action(v.selecting_player, row).expect("order pick");
+    }
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+/// PASS is legal at the pending prompt (the action mask, not the raw ids).
+fn pass_legal(r: &DebugRunner) -> bool {
+    let p = r.pending_selection().expect("prompt").selecting_player;
+    digimon_engine::action::build_action_mask(&r.game, p)[PASS as usize] == 1.0
+}
+
+fn accept_evade(r: &mut DebugRunner) {
+    pick_replacement(r, true);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept <Evade>");
+    assert!(
+        r.pending_selection().is_none(),
+        "the same removal does not offer the declined clause again"
+    );
+}
+
+#[test]
+fn ex13_028_inherited_outer_decline_keeps_opt() {
+    let (mut r, carrier) = inherited_setup();
+    r.place_on_field(0, "OTHER-SUKA", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, PASS).expect("decline the replacement");
+    accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "declined at the accept prompt: offered again this turn"
+    );
+}
+
+#[test]
+fn ex13_028_inherited_accept_then_decline_cost_keeps_opt() {
+    let (mut r, carrier) = inherited_setup();
+    r.place_on_field(0, "OTHER-SUKA", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(
+        pass_legal(&r),
+        "DCGO EX13_028.cs canNoSelect: the deletion may be declined after the accept"
+    );
+    r.execute_action(0, PASS).expect("decline the cost");
+    assert!(field_ids(&r, 0).contains(&"OTHER-SUKA".to_string()), "nothing deleted");
+    accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex13_028_inherited_declined_cost_lets_carrier_leave() {
+    let (mut r, carrier) = inherited_setup();
+    r.place_on_field(0, "OTHER-SUKA", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(pass_legal(&r), "the cost may be declined");
+    r.execute_action(0, PASS).expect("decline the cost");
+    let _ = r.auto_resolve();
+    let field = field_ids(&r, 0);
+    assert!(!field.contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
+    assert!(field.contains(&"OTHER-SUKA".to_string()));
+}
+
+/// Q7288: "1 other Digimon with [Sukamon] in its name" may be the opponent's.
+#[test]
+fn ex13_028_inherited_opponent_sukamon_is_a_legal_cost() {
+    let (mut r, carrier) = inherited_setup();
+    let opp = r.place_on_field(1, "OTHER-SUKA", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "an opponent's [Sukamon]-named Digimon can pay the cost (Q7288)"
+    );
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let id = digimon_engine::action::space::encode_attack(1, opp.index as u16);
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(cost.valid_action_ids.contains(&id), "{cost:?}");
+    r.execute_action(0, id).expect("delete the opponent's Sukamon");
+    let _ = r.auto_resolve();
+    assert!(field_ids(&r, 0).contains(&"CARRIER".to_string()), "the carrier stays");
+    assert!(field_ids(&r, 1).is_empty(), "the opponent's Sukamon was deleted");
 }

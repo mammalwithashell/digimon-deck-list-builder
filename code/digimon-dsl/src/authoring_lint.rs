@@ -161,6 +161,7 @@ pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("BT26-044", "effects[2]"),
     ("EX13-015", "effects[4]"),
     ("EX13-027", "effects[1]"),
+    ("EX13-028", "effects[2]"),
 ];
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -403,6 +404,21 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_accept_then_decline_cost_keeps_opt",
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_once_per_turn_and_resets",
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_not_offered_without_other_sukamon",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-028",
+        clause: "effects[2]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Sukamon's inherited copy of Chuumon's clause: owner ruling 2026-11-23, parity with DCGO (EX13_028.cs, ",
+            "same body as EX13_027.cs; Q7288). Offered only while another [Sukamon]-named Digimon exists, so the ",
+            "refund runs only on a declined pick; a chosen Digimon spends the use.",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_once_per_turn",
+            "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_not_offered_without_other_sukamon",
         ],
     },
 ];
