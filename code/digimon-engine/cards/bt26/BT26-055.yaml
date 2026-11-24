@@ -75,7 +75,6 @@ effects:
   # [On Play] / [When Digivolving] (DCGO BT26_055.cs runs one shared effect).
   # The second half is always possible while this [Ver.3] Digimon is on the
   # field, so "nothing possible" does not arise.
-  - when: [on_play, when_digivolving, counter]
   - text: "[On Play] [When Digivolving] [Counter] [Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your Digimon with the [Ver.3] trait and all of your opponent's Digimon with the lowest play cost."
     when: [on_play, when_digivolving, counter]
     once_per_turn: true
