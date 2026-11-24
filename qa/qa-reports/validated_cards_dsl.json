@@ -7297,7 +7297,7 @@
       "archetype": "Titans / Plutomon",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_084.rs",
-      "notes": "Was PARTIAL. Added [All Turns] on-hand-trashed delete opp lowest DP, '[Titamon] w/o 3 colors' cost-2 path (self_color_count_lte), Red/Green circles; colours fixed to Purple/Red/Green (+card_colors override). Fixed leave-prevention gate (owner: you hand count never matched, so it never fired)."
+      "notes": "Was PARTIAL. Added [All Turns] on-hand-trashed delete opp lowest DP, '[Titamon] w/o 3 colors' cost-2 path (self_color_count_lte), Red/Green circles; colours fixed to Purple/Red/Green (+card_colors override). Fixed leave-prevention gate (owner: you hand count never matched, so it never fired). 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the leave-prevention's 2-card hand cost may now be declined after the accept (DCGO BT25_084.cs canNoSelect: 2 cards or none); declining keeps the [Once Per Turn] (refund_opt) and Titamon leaves. Not offered with fewer than 2 cards in hand (active_when); once the first card is chosen the second pick is mandatory (Q6398)."
     },
     "BT25-075": {
       "status": "IMPLEMENTED",
@@ -11380,7 +11380,7 @@
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-044.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_044.rs",
-      "notes": "TDD vs DCGO BT26_044.cs. DCGO checks the inherited Rosemon/DATA SQUAD gate on the inherited card itself (always true); we follow the printed carrier reading, so expect an oracle divergence on a non-DS carrier."
+      "notes": "TDD vs DCGO BT26_044.cs. DCGO checks the inherited Rosemon/DATA SQUAD gate on the inherited card itself (always true); we follow the printed carrier reading, so expect an oracle divergence on a non-DS carrier. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited save's Tamer pick may now be declined after the accept (DCGO canNoSelect); declining keeps the [Once Per Turn] (refund_opt) and the carrier leaves. Uses the new trash_bottom_face_down_source_under_tamer continue_on_decline / bind_as."
     },
     "BT26-076": {
       "card_name": "Crowmon",
@@ -12404,7 +12404,7 @@
         "E",
         "F"
       ],
-      "notes": "No DCGO script. [WD][OD] reveal 3 → optional free play cost<=7 Digimon w/[Mamemon] name or [Mutant] (cap on both, official Q&A), trash rest; [EoYT][OPT] optional processing condition (outer_prompt) delete own [Mamemon]-named Digimon (self allowed; payable without opp Digimon per §15-7-4) → delete 1 opp lowest play cost (selector, ties = choice); inherited [EoYT][OPT] same cost → delete ALL opp lowest (BT23-058 sweep)."
+      "notes": "No DCGO script. [WD][OD] reveal 3 → optional free play cost<=7 Digimon w/[Mamemon] name or [Mutant] (cap on both, official Q&A), trash rest; [EoYT][OPT] optional processing condition (outer_prompt) delete own [Mamemon]-named Digimon (self allowed; payable without opp Digimon per §15-7-4) → delete 1 opp lowest play cost (selector, ties = choice); inherited [EoYT][OPT] same cost → delete ALL opp lowest (BT23-058 sweep). 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): both [End of Your Turn] [Mamemon] picks may now be declined after the accept (DCGO EX13_059.cs canNoSelect); declining keeps that clause's [Once Per Turn] (refund_opt). The opponent's Digimon are deleted only when the chosen [Mamemon] was deleted (was unconditional)."
     },
     "EX13-063": {
       "card_name": "PrinceMamemon",
@@ -12503,7 +12503,7 @@
         "E2",
         "F"
       ],
-      "notes": "IMPLEMENTED 2026-10-01: [WD][WA][OPT] two-cost optional processing condition -> unsuspend + opp Digimon CannotActivateWhenDigivolvingEffects; [All Turns] would-leave save and inherited [OPT] [Kentaurosmon]-carrier save both place the TOP card (security_place_top_stacked_card, fixed to card_sources[len-1] = DCGO TopCard; G-TOP-STACKED-CARD-TO-SECURITY RESOLVED) as top security face-down, then cancel_replacement."
+      "notes": "IMPLEMENTED 2026-10-01: [WD][WA][OPT] two-cost optional processing condition -> unsuspend + opp Digimon CannotActivateWhenDigivolvingEffects; [All Turns] would-leave save and inherited [OPT] [Kentaurosmon]-carrier save both place the TOP card (security_place_top_stacked_card, fixed to card_sources[len-1] = DCGO TopCard; G-TOP-STACKED-CARD-TO-SECURITY RESOLVED) as top security face-down, then cancel_replacement. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): after the accept, one choice lists each payable cost plus \"Don't pay the cost\" (DCGO EX13_032.cs SetIntSelection), and the Tamer cost's Tamer pick may be declined; either decline keeps the [Once Per Turn] (refund_opt). Previously one payable cost was paid without a choice."
     },
     "EX13-071": {
       "card_name": "Richard Sampson",
@@ -12590,7 +12590,7 @@
         "E3",
         "C-assembly"
       ],
-      "notes": "OP/WD/WA/Counter OPT delete 1 opp ≥12000 (DCGO filter is inverted ≤12000 — printed text governs), else trash their top security (result-log predicate); [All Turns][OPT] leave-replacement (not own effects) by deleting opp ≤9000; Assembly Guilmon/Growlmon line."
+      "notes": "OP/WD/WA/Counter OPT delete 1 opp ≥12000 (DCGO filter is inverted ≤12000 — printed text governs), else trash their top security (result-log predicate); [All Turns][OPT] leave-replacement (not own effects) by deleting opp ≤9000; Assembly Guilmon/Growlmon line. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the leave-replacement's deletion pick may now be declined after the accept (DCGO EX13_015.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt) and Gallantmon leaves. A chosen Digimon spends the use even if its deletion is prevented."
     },
     "EX13-036": {
       "card_name": "Kentaurosmon",
@@ -12897,7 +12897,7 @@
         "F3",
         "G-inherited-replacement"
       ],
-      "notes": "[When Moving][On Play] reveal_search (hand bucket then trash bucket, de-dup; lone match -> hand per Q&A); inherited [All Turns][OPT] self-scoped leave-prevention by deleting another [Sukamon]-named Digimon (cost-gated, not own effects)."
+      "notes": "[When Moving][On Play] reveal_search (hand bucket then trash bucket, de-dup; lone match -> hand per Q&A); inherited [All Turns][OPT] self-scoped leave-prevention by deleting another [Sukamon]-named Digimon (cost-gated, not own effects). 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_027.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt). The pick now spans both battle areas (Q7287, DCGO IsPermanentExistsOnBattleArea), was own-only."
     },
     "EX13-028": {
       "card_name": "Sukamon",
@@ -12915,7 +12915,7 @@
         "F3",
         "G-inherited-replacement"
       ],
-      "notes": "<Blocker>; [On Deletion] reveal 3, may play 1 cost<=3 [Chuumon]/[Sukamon]-named Digimon free, trash rest (EX13-059 idiom); inherited identical to EX13-027."
+      "notes": "<Blocker>; [On Deletion] reveal 3, may play 1 cost<=3 [Chuumon]/[Sukamon]-named Digimon free, trash rest (EX13-059 idiom); inherited identical to EX13-027. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_028.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt). The pick now spans both battle areas (Q7288), was own-only."
     },
     "EX13-038": {
       "card_name": "Salamon",
@@ -12981,7 +12981,7 @@
         "A3",
         "F3"
       ],
-      "notes": "On Play reveal_search two hand buckets ([Knightmon] in text, [Knightmon] in name; cross-bucket de-dup) + inherited OPT leave-prevention by deleting another own [Knightmon]-text Digimon, not vs own-effect removal. No DCGO file."
+      "notes": "On Play reveal_search two hand buckets ([Knightmon] in text, [Knightmon] in name; cross-bucket de-dup) + inherited OPT leave-prevention by deleting another own [Knightmon]-text Digimon, not vs own-effect removal. No DCGO file. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_048.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt)."
     },
     "EX13-068": {
       "card_name": "Takato Matsuki",
@@ -13271,7 +13271,7 @@
         "F4",
         "G4"
       ],
-      "notes": "<Guard>; OP/OD De-Digivolve 1 (Guard self-deletion fires OD); inherited OPT replacement by deleting another [Knightmon]-text Digimon. No DCGO script."
+      "notes": "<Guard>; OP/OD De-Digivolve 1 (Guard self-deletion fires OD); inherited OPT replacement by deleting another [Knightmon]-text Digimon. No DCGO script. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_052.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt)."
     },
     "EX13-012": {
       "card_name": "SaviorHuckmon",
