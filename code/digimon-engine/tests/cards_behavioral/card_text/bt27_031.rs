@@ -46,6 +46,7 @@ fn runner() -> DebugRunner {
         .add_card(mon("O5", "Op5", 5, 7, &[]))
         .add_card(mon("O6", "Op6", 6, 12, &[]))
         .add_card(mon("F", "Fill", 3, 4, &[]))
+        .add_card(token())
         .add_card(wall())
         .deck(0, &["F"; 10])
         .deck(1, &["F"; 10])
@@ -151,6 +152,26 @@ fn declining_places_nothing_and_without_another_permanent_it_cannot_activate() {
     r.place_on_field(1, "O3", Some(0));
     jumbo_over(&mut r, "B5");
     assert!(r.pending_selection().is_none(), "no other Digimon or Tamer to place");
+}
+
+fn token() -> CardData {
+    let mut c = mon("TOK", "Token", 3, 3, &[]);
+    c.card_kind = digimon_engine::enums::CardKind::Token;
+    c
+}
+
+#[test]
+fn a_token_placed_as_the_cost_is_removed_but_still_pays_it() {
+    let mut r = runner();
+    r.place_on_field(0, "TOK", Some(0));
+    r.place_on_field(1, "O3", Some(0));
+    jumbo_over(&mut r, "B5");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["TOK"], "TOK");
+    assert!(!field_ids(&r, 0).contains(&"TOK".to_string()), "the token is removed");
+    assert_eq!(source_ids(&r, jumbo(&r)), vec!["B5"], "cards can't be stacked with tokens");
+    pick_from(&mut r, vec!["O3"], "O3");
+    assert!(field_ids(&r, 1).is_empty(), "CR 15-1-9: the placement still counts");
 }
 
 #[test]
