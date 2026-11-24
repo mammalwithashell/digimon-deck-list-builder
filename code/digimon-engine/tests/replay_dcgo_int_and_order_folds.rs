@@ -33,6 +33,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::game::Game;
 use digimon_engine::runners::replay::{DivergenceKind, RecordingSource, ReplayError, ReplaySession, StepPolicy, StepSpec};
+use digimon_engine::selection::SelectionKind;
 use digimon_engine::TriggerSource;
 
 struct StagedDcgo {
@@ -187,6 +188,15 @@ fn chirinmon_gate(security: usize, face_down_tamer: bool) -> Game {
     r.game
 }
 
+/// Is Chirinmon's own cost choice ("Will you pay the cost?") still waiting? The
+/// paid branch then asks the [When Digivolving] lock pick, which the staged
+/// rows do not answer, so "nothing parked" is not the check.
+fn cost_choice_parked(game: &Game) -> bool {
+    game.pending_selection
+        .as_ref()
+        .is_some_and(|p| matches!(p.kind, SelectionKind::EffectChoice))
+}
+
 fn chirinmon_suspended(game: &Game) -> bool {
     game.players[0]
         .battle_area
@@ -229,13 +239,16 @@ fn ex13_032_trash_face_down_card_pays_the_tamer_cost() {
     assert!(!chirinmon_suspended(&s.game), "the paid cost unsuspends this Digimon");
 }
 
-/// Only the security cost is payable: DCGO's menu lists 1 and 3 only, so the 1
-/// is forced and accepting the gate is the whole answer.
+/// Only the security cost is payable: DCGO's menu lists 1 and 3 only. The 1
+/// accepts the gate and answers the engine's cost choice, which still offers
+/// "Don't pay the cost" beside the one payable cost (W14 row (f) parity,
+/// 076608011), so the accept alone is not the answer.
 #[test]
 fn ex13_032_security_only_menu_value_one_accepts() {
     let s = run(chirinmon_gate(2, false), vec![menu(1)]);
     assert!(s.divergences().is_empty(), "{:?}", s.divergences());
     assert!(s.is_complete());
+    assert!(!cost_choice_parked(&s.game), "the one row answered the gate and the cost choice");
     assert_eq!(s.game.players[0].security.len(), 1, "the top security card was trashed");
     assert!(!chirinmon_suspended(&s.game));
 }
@@ -251,8 +264,9 @@ fn ex13_032_a_cost_nobody_can_pay_is_refused() {
     assert_eq!(s.game.players[0].security.len(), 2, "nothing paid");
 }
 
-/// Only the face-down cost is payable: 2 accepts, and the Tamer pick that
-/// follows is the next row's.
+/// Only the face-down cost is payable: 2 accepts the gate and answers the
+/// engine's cost choice ("Don't pay the cost" is still offered beside it), and
+/// the Tamer pick that follows is the next row's.
 #[test]
 fn ex13_032_face_down_only_menu_value_two_accepts() {
     let s = run(
@@ -263,6 +277,8 @@ fn ex13_032_face_down_only_menu_value_two_accepts() {
     );
     assert!(s.divergences().is_empty(), "{:?}", s.divergences());
     assert!(s.is_complete());
+    assert!(!cost_choice_parked(&s.game), "the menu row answered the cost choice");
+    assert!(under(&s.game, "TAMER").is_empty(), "the Tamer row answered the Tamer pick: its face-down card was trashed");
     assert!(!chirinmon_suspended(&s.game), "the paid cost unsuspends this Digimon");
 }
 
