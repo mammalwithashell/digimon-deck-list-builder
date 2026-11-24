@@ -115,7 +115,7 @@ effects:
           filter:
             all_of:
               - kind: tamer
-              - name_contains: "Marcus Damon"
+              - name_is: "Marcus Damon"
               # DCGO BT13_015.cs:36-47: CanPlayAsNewPermanent(payCost:false).
               - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Marcus Damon] from your hand without paying its cost"
@@ -153,7 +153,7 @@ effects:
           optional: false
           of: you
           bind_as: marcus_in_trash
-          filter: { name_contains: "Marcus Damon" }
+          filter: { name_is: "Marcus Damon" }
           prompt: "Place 1 [Marcus Damon] from your trash on top of your security stack face down"
       - if:
           condition: { binding_present: marcus_in_trash }
@@ -185,7 +185,7 @@ effects:
           optional: false
           of: you
           bind_as: marcus_in_trash
-          filter: { name_contains: "Marcus Damon" }
+          filter: { name_is: "Marcus Damon" }
           prompt: "Place 1 [Marcus Damon] from your trash on top of your security stack face down"
       - if:
           condition: { binding_present: marcus_in_trash }
