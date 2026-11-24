@@ -78,20 +78,24 @@ effects:
             - place_as_bottom_source:
                 source: { permanent: placed }
                 target: source
-            - select_opponent_permanent:
-                optional: false
-                bind_as: bottomed
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - materials_count_lte:
-                        formula:
-                          source_material_count: {}
-                prompt: "Return 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer to the bottom of the deck"
-            - return_to_deck:
-                target: bottomed
-                position: bottom
-                include_sources: false
+                bind_placed_as: placed_ok
+            - if:
+                condition: { binding_present: placed_ok }
+                then:
+                  - select_opponent_permanent:
+                      optional: false
+                      bind_as: bottomed
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - materials_count_lte:
+                              formula:
+                                source_material_count: {}
+                      prompt: "Return 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer to the bottom of the deck"
+                  - return_to_deck:
+                      target: bottomed
+                      position: bottom
+                      include_sources: false
 
   - when: on_add_digivolution_cards
     text: "[All Turns] [Once Per Turn] When effects add to this Digimon's digivolution cards, you may play 1 play cost 5 or lower blue card from its digivolution cards without paying the cost."

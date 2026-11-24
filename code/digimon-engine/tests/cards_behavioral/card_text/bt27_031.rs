@@ -32,6 +32,8 @@ fn runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card(CARD)
         .unwrap()
+        .dsl_card("BT27-030")
+        .unwrap()
         .add_card(colored(mon("B5", "Blue5", 5, 7, &[]), CardColor::Blue))
         .add_card(colored(mon("SQ5", "Squad5", 5, 7, &["DATA SQUAD"]), CardColor::Red))
         .add_card(colored(mon("AQ5", "Aqua5", 5, 7, &["Aquatic"]), CardColor::Red))
@@ -149,6 +151,26 @@ fn declining_places_nothing_and_without_another_permanent_it_cannot_activate() {
     r.place_on_field(1, "O3", Some(0));
     jumbo_over(&mut r, "B5");
     assert!(r.pending_selection().is_none(), "no other Digimon or Tamer to place");
+}
+
+#[test]
+fn if_the_chosen_digimon_does_not_leave_nothing_is_returned() {
+    let mut r = runner();
+    stocked(&mut r, "TAM", &["F"]);
+    r.place_stack(0, &["BT27-030", "SQ5"]);
+    r.place_on_field(1, "O3", Some(0));
+    jumbo_over(&mut r, "B5");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["SQ5", "TAM"], "SQ5");
+    assert!(activate_prompt(&r), "MachGaogamon's inherited effect may keep it on the field");
+    accept_offer(&mut r);
+    if r.pending_selection().is_some() {
+        pick_from(&mut r, vec!["TAM"], "TAM");
+    }
+    no_prompt(&r);
+    assert!(field_ids(&r, 0).contains(&"SQ5".to_string()), "it didn't leave");
+    assert_eq!(source_ids(&r, jumbo(&r)), vec!["B5"], "nothing was placed");
+    assert_eq!(field_ids(&r, 1), vec!["O3"], "the cost wasn't paid, so nothing returns");
 }
 
 #[test]
