@@ -70,6 +70,11 @@
 //!   path reaches a `refund_opt`, so the named tests carry the proof.
 //!   Erlangmon (EX12-034) once refunded on its nothing-playable path (row d)
 //!   and was used twice in one turn in logged games.
+//!   A declared [Main] is not an unprinted accept: the declaration is the
+//!   activation and spends the use even when its "you may" pick is passed
+//!   (CR 4.3 15-8-4-1/-2, 15-14-1-1, 15-14-1-4; the 2026-10-25 record in
+//!   docs/RUST_ENGINE_GAPS.md, Manekimon (BT26-012) and Thundermon
+//!   (EX12-041)), so no [Main] clause belongs in the table.
 
 use serde_yml::Value;
 
@@ -300,21 +305,6 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_accepted_then_dont_play_keeps_once_per_turn",
             "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_accepted_and_card_played_spends_once_per_turn",
             "cards_behavioral/ex12/ex12_034.rs::ex12_034_leave_with_no_playable_card_plays_nothing",
-        ],
-    },
-    ReviewedRefund {
-        card: "EX12-041",
-        clause: "effects[0]",
-        row: RefundRow::DeclinedWhilePossible,
-        reason: concat!(
-            "Thundermon [Main] prints \"You may play or use 1 [Mutant]/[ME] card ...\". The refund runs only when ",
-            "the pick is passed; the clause's `condition:` (a playable card in hand, DCGO CanUseCondition) means ",
-            "one was always possible (row b, Q1818) and the [Main] is not offered without one (row d). A picked ",
-            "card spends it (row c).",
-        ),
-        tests: &[
-            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn",
-            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait",
         ],
     },
     ReviewedRefund {

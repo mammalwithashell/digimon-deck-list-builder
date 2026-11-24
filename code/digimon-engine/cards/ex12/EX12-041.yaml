@@ -20,14 +20,22 @@
 #   - Main (OnDeclaration, OPT, hash EX12_041_Main): hand pick canNoSelect:true
 #     of a [Mutant]/[ME] card that is an Option (not CanNotPlayThisOption) or a
 #     Digimon/Tamer with a play cost that can be played for cost-2; the chosen
-#     card is then played/used paying the reduced cost. Nothing picked ->
-#     RemoveUse() (the once-per-turn is not consumed) -> `refund_opt`. The
-#     printed effect is the whole "you may play or use", so declaring the
-#     [Main] and passing the pick while a card could be played is choosing not
-#     to, which keeps the use (official Q1818, Q4086, Q6946; CR 4.3 15-14-1-4).
-#     Picking a card spends it (Q5426). With no playable card DCGO does not
-#     offer the [Main] (CanUseCondition) and neither does the `condition:`.
-#     Mirrors EX12-013 (BetelGammamon).
+#     card is then played/used paying the reduced cost. With no playable card
+#     DCGO does not offer the [Main] (CanUseCondition) and neither does the
+#     `condition:`.
+#   - [Once Per Turn] on a passed pick: a [Main] is activation-type; the player
+#     activates it by declaring it in the main phase (CR 4.3 15-8-4-1/-2),
+#     each activation counts as one use (CR 4.3 15-14-1-1), and it counts
+#     "even if the effect's processing can't be executed" (CR 4.3 15-14-1-4).
+#     So declaring the [Main] spends the use whether a card is then picked or
+#     the pick is passed. DCGO EX12_041.cs RemoveUse()s when nothing is picked
+#     (`if (!isUsed) activateClass.RemoveUse()`); we follow the rules text, as
+#     for Manekimon (BT26-012), the same printed shape, in the 2026-10-25
+#     record (docs/RUST_ENGINE_GAPS.md "Explicit Main-declaration correction
+#     (2026-10-25)"; declare-then-pass was a free repeatable no-op cycle).
+#     The W14 table in qa/rules/mechanics-gaps-2026-10.md covers unprinted
+#     accept prompts on triggered effects, not a declared [Main].
+#     Mirrors EX12-013 (BetelGammamon) and EX12-043 (Hakubamon).
 #   - Inherited: OnAllyAttack, OPT (hash EX12_041_Inherited), mandatory target.
 
 card: EX12-041
@@ -95,10 +103,6 @@ effects:
                 of: you
                 hand_index: pick
                 cost_delta: { reduce: 2 }
-          else:
-            # DCGO `if (!isUsed) activateClass.RemoveUse()`. Row b of the
-            # [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md W14).
-            - refund_opt: {}
 
   - scope: inherited
     when: when_attacking

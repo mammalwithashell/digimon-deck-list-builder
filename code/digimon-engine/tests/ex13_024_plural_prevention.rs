@@ -138,3 +138,62 @@ fn success_consumes_use(inherited:bool){
  if let Some(d)=digest{assert_eq!(r.game.verification_digest(),d);}else{digest=Some(r.game.verification_digest());}
  }
 }
+
+/// Slayerdramon (EX13-024) with another Slayerdramon under it: the face-up
+/// clause and the inherited clause are separate effects with separate
+/// [Once Per Turn] uses (CR 4.3 15-14-1-3; each immediate-type effect can be
+/// activated once per interrupting cause, 15-8-5-4). Accepting one, then
+/// declining its suspend (owner ruling 2026-11-23: the use is kept) leaves the
+/// other offered for the same would-leave event; paying it protects the group
+/// and spends only that clause's use.
+/// Answer the choice between the two simultaneous Slayerdramon replacements
+/// (which one to apply first) with the first, up to the accept prompt.
+fn to_replacement(r:&mut DebugRunner){
+ for _ in 0..3 {if r.pending_selection_view().map(|v|v.kind)==Some(SelectionKind::EffectChoice){r.execute_branch(0).unwrap();}}
+ assert_eq!(r.pending_selection_view().map(|v|v.kind),Some(SelectionKind::Replacement));
+}
+#[test]
+fn declined_cost_on_one_copy_leaves_the_other_copy_offered_for_the_same_event(){
+ let mut b=DebugRunner::builder().dsl_card("EX13-024").unwrap().from_dsl_yaml(PRODUCER).unwrap();
+ for (id,name,level) in [("Q7272-A","Dracomon A",4),("Q7272-B","Dracomon B",4),("Q7272-PAY","Dracomon payer",3),("Q7272-FILL","Filler",3)]{let mut c=make_test_card(id,name);c.level=Some(level);c.dp=Some(4000);b=b.add_card(c);}
+ let mut r=b.hand(0,&["Q7272-RETURN"]).deck(0,&["Q7272-FILL";20]).deck(1,&["Q7272-FILL";20]).memory(10).start();r.skip_mulligan();r.game.current_phase=GamePhase::Main;
+ r.place_stack(1,&["EX13-024","EX13-024"]);
+ r.game.players[1].battle_area[0].is_suspended=true;
+ r.place_on_field(1,"Q7272-PAY",None);
+ let mut group=Vec::new();for id in ["Q7272-A","Q7272-B"]{let h=r.place_on_field(1,id,None);group.push(r.game.players[1].battle_area[h.index as usize].top_card().handle());r.game.players[1].battle_area[h.index as usize].is_suspended=true;}
+ r.game.decode_action(PLAY_HAND_START,0);
+ to_replacement(&mut r);
+ act(&mut r,REPLACEMENT_ACCEPT);
+ assert_eq!(r.pending_selection_view().unwrap().kind,SelectionKind::OwnField);
+ act(&mut r,PASS);
+ assert!(r.game.pending_selection.is_some(),"the other copy is still offered for the same event");
+ to_replacement(&mut r);
+ act(&mut r,REPLACEMENT_ACCEPT);
+ assert_eq!(r.pending_selection_view().unwrap().kind,SelectionKind::OwnField);
+ act(&mut r,encode_attack(0,1));
+ assert!(r.game.pending_selection.is_none());
+ assert!(group.iter().all(|h|field(&r).contains(h)),"the paid copy protects the group");
+ let used:u32=r.game.players[1].battle_area[0].effect_activations.values().map(|n|*n as u32).sum();
+ assert_eq!(used,1,"only the paid copy's [Once Per Turn] is used");
+}
+
+/// Game::clone at each decision of one accept-then-decline line: a clone taken
+/// at the replacement prompt and one taken at the suspend pick, driven with the
+/// same remaining decisions, reach the same state as the original after every
+/// decision, including the next event's offer of the kept use.
+fn accept_then_decline_clones_at_every_decision(inherited:bool){
+ let(mut r,_,_)=setup(inherited,false);
+ let at_prompt=r.game.clone();
+ act(&mut r,REPLACEMENT_ACCEPT);let after_accept=r.game.verification_digest();
+ let at_pick=r.game.clone();
+ act(&mut r,PASS);let after_decline=r.game.verification_digest();
+ for (start,accept) in [(at_prompt,true),(at_pick,false)] {
+  r.game=start;
+  if accept {act(&mut r,REPLACEMENT_ACCEPT);assert_eq!(r.game.verification_digest(),after_accept);}
+  act(&mut r,PASS);assert_eq!(r.game.verification_digest(),after_decline);
+  assert!(r.game.pending_selection.is_none());
+  assert!(r.game.players[1].battle_area[0].effect_activations.values().all(|n|*n==0),"the use is kept in every copy");
+ }
+}
+#[test]fn face_accept_then_decline_clones_at_every_decision(){accept_then_decline_clones_at_every_decision(false);}
+#[test]fn inherited_accept_then_decline_clones_at_every_decision(){accept_then_decline_clones_at_every_decision(true);}
