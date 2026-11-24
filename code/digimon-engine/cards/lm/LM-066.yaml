@@ -51,6 +51,7 @@ dual:
         process:
           - select_any_permanent:
               optional: true
+              continue_on_decline: true
               bind_as: wake_target
               filter:
                 all_of:

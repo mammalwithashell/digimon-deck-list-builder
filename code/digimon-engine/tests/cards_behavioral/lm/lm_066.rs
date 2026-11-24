@@ -167,6 +167,22 @@ fn lm_066_unsuspend_offers_unsuspended_digimon_but_not_ones_that_cannot_unsuspen
 }
 
 #[test]
+fn lm_066_declining_unsuspend_still_offers_the_battle() {
+    let mut runner = base();
+    let zeph = runner.place_stack(0, &["LM-066"]);
+    runner.place_stack(1, &["LM-066"]);
+    runner.attack_player(zeph, 1, false);
+    runner.pending_selection_view().expect("unsuspend prompt installs");
+    runner.decline_prompt().expect("unsuspend is optional");
+    let view = runner
+        .pending_selection_view()
+        .expect("\"Then, this Digimon may battle\" is offered after declining the unsuspend");
+    assert!(view.prompt.contains("battle"), "battle prompt, got {:?}", view.prompt);
+    assert_eq!(view.valid_action_ids.len(), 1, "the opponent's Digimon");
+    assert!(view.is_optional, "the battle is optional");
+}
+
+#[test]
 fn lm_066_suspension_costs_require_a_digimon_that_can_suspend() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
