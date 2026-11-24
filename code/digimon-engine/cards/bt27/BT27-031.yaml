@@ -1,0 +1,114 @@
+# Source: data/card_bundles/BT27-031.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Blue/BT27_031.cs
+# Q&A: only 1 [Counter] effect can be activated per attack.
+card: BT27-031
+name: JumboGamemon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 13000
+traits: [Cyborg, DATA SQUAD, Aquatic]
+form: Mega
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, any_color: true, trait_has: DATA SQUAD }
+    cost: 4
+
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Lv.5 w/[Aquatic]/[DATA SQUAD] trait)> play 1 such card from sources when this would leave outside battle"
+    process:
+      - select_material:
+          optional: false
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 5
+              - any_of:
+                  - trait_has: Aquatic
+                  - trait_has: DATA SQUAD
+          prompt: "Choose a Lv.5 [Aquatic] or [DATA SQUAD] trait source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - when: [on_play, when_digivolving, counter]
+    optional: true
+    once_per_turn: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [battle_area]
+          any_of:
+            - kind: digimon
+            - kind: tamer
+          other: true
+        n: 1
+    summary: "[On Play] [When Digivolving] [Counter] [Once Per Turn] By placing 1 of your other Digimon or Tamers as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer to the bottom of the deck"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: placed
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - other: true
+          prompt: "Place 1 of your other Digimon or Tamers as this Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: placed }
+          then:
+            - place_as_bottom_source:
+                source: { permanent: placed }
+                target: source
+            - select_opponent_permanent:
+                optional: false
+                bind_as: bottomed
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - materials_count_lte:
+                        formula:
+                          source_material_count: {}
+                prompt: "Return 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer to the bottom of the deck"
+            - return_to_deck:
+                target: bottomed
+                position: bottom
+                include_sources: false
+
+  - when: on_add_digivolution_cards
+    active_when: { all_turns: true }
+    optional: true
+    once_per_turn: true
+    trigger_if:
+      event_host_permanent_is_source: true
+    summary: "[All Turns] [Once Per Turn] When effects add to this Digimon's digivolution cards, you may play 1 play cost 5 or lower blue card from its digivolution cards without paying the cost"
+    process:
+      - select_own_sources:
+          from: source
+          filter:
+            all_of:
+              - color_is: blue
+              - play_cost_lte: 5
+              - can_play_from_effect_without_cost: true
+          min: 0
+          max: 1
+          bind_as: freed
+          prompt: "You may play 1 play cost 5 or lower blue card from this Digimon's digivolution cards without paying the cost"
+          then:
+            - play_selected_sources_free: { source_refs: freed }
