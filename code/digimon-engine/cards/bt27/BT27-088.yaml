@@ -1,0 +1,42 @@
+card: BT27-088
+name: Valner Dragnogh
+kind: tamer
+color: [blue]
+cost: 3
+traits: [ALYSION]
+
+effects:
+  - when: start_of_your_main_phase
+    text: "[Start of Your Main Phase] If you have a Digimon with the [Ice-Snow] trait, gain 1 memory."
+    condition:
+      any_permanent: { of: you, zone: [battle_area], kind: digimon, trait_has: Ice-Snow }
+    summary: "[Start of Your Main Phase] If you have an Ice-Snow Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: [on_ally_played, on_digivolve]
+    text: "[All Turns] When your Digimon are played or digivolve, if any of them have the [Ice-Snow] trait, by suspending this Tamer, trash the bottom 2 digivolution cards from 1 of your opponent's Digimon. After, if they don't have a Digimon with digivolution cards, gain 1 memory."
+    optional: true
+    outer_prompt: true
+    trigger_if: { event_target_owner: you, event_target_kind: digimon, event_target_trait_has: Ice-Snow }
+    condition: { source_is_unsuspended: true }
+    summary: "[All Turns] When your Ice-Snow Digimon is played or digivolves, suspend this Tamer to trash the bottom 2 sources of 1 opposing Digimon, then gain 1 memory if none have sources"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon, materials_count_gte: 1 }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 2 }
+      - if:
+          condition:
+            not:
+              any_permanent: { of: opponent, zone: [battle_area], kind: digimon, materials_count_gte: 1 }
+          then:
+            - gain_memory: 1
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}

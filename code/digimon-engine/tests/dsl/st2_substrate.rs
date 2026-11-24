@@ -37,6 +37,7 @@ fn run_trash_bottom_sources(
     let steps = vec![CompiledStep::TrashBottomSources {
         target: CompiledBindingRef::Named("target".to_string()),
         count,
+        bind_trashed_as: None,
     }];
 
     let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
@@ -168,6 +169,7 @@ effects:
         CompiledStep::TrashBottomSources {
             target: CompiledBindingRef::Source,
             count: 2,
+            bind_trashed_as: None,
         }
     );
 }

@@ -112,6 +112,9 @@ fn compile_field_selector(s: crate::step::FieldSelector) -> CompiledFieldSelecto
         crate::step::FieldSelector::LowestMaterialCount => {
             CompiledFieldSelector::LowestMaterialCount
         }
+        crate::step::FieldSelector::LowestMaterialCountRedirection => {
+            CompiledFieldSelector::LowestMaterialCountRedirection
+        }
     }
 }
 
@@ -3471,6 +3474,7 @@ fn compile_step(
         S::TrashBottomSources(a) => CompiledStep::TrashBottomSources {
             target: compile_binding_ref(&a.target),
             count: a.count,
+            bind_trashed_as: a.bind_trashed_as.clone(),
         },
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),
@@ -4860,7 +4864,7 @@ fn compile_step(
                 source: compile_binding_ref(&a.source),
                 timing: if matches!(
                     a.timing.as_str(),
-                    "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                    "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "option_main"
                 ) {
                     a.timing.clone()
                 } else {
@@ -4868,7 +4872,7 @@ fn compile_step(
                         card_id: card_id.to_string(),
                         path: format!("{prefix}.refire_effect.timing"),
                         message: format!(
-                            "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                            "unsupported refire_effect timing: {}",
                             a.timing
                         ),
                     });

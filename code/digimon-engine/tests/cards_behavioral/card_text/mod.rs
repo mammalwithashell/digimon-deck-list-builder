@@ -2,6 +2,14 @@
 
 mod bt17_015;
 mod bt25_057;
+mod bt27_006;
+mod bt27_011;
+mod bt27_014;
+mod bt27_018;
+mod bt27_022;
+mod bt27_027;
+mod bt27_029;
+mod bt27_033;
 mod bt27_044;
 mod bt27_046;
 mod bt27_050;
@@ -14,9 +22,12 @@ mod bt27_073;
 mod bt27_077;
 mod bt27_080;
 mod bt27_082;
+mod bt27_086;
+mod bt27_088;
 mod bt27_091;
 mod bt27_094;
 mod bt27_097;
+mod bt27_gemmon_fixtures;
 mod common;
 mod st23_01;
 mod st23_03;
