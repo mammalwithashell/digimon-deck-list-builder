@@ -493,3 +493,189 @@ fn bt25_084_leave_prevention_not_offered_with_one_hand_card() {
         "Titamon left the battle area"
     );
 }
+
+// ─── [All Turns][OPT] leave prevention: a declined cost keeps the use ───────
+//
+// Owner ruling 2026-11-23 ("parity with DCGO"; qa/rules/mechanics-gaps-2026-10.md
+// W14 row (f)). DCGO BT25_084.cs: the replacement is offered only while the
+// hand holds 2 cards (`CanActivateCondition` `HandCards.Count() >= 2`); after
+// the accept, one `SelectHandEffect` (maxCount 2, canNoSelect true,
+// canEndNotMax false) asks for 2 cards or none. Fewer than 2 chosen ->
+// `RemoveUse()` and Titamon leaves. 2 chosen -> spent, it doesn't leave.
+// Official Q6398: trashing only 1 of the 2 cards can't meet the condition.
+//
+// To observe the kept use on a later event of the same turn, Titamon carries
+// <Evade>: the would-be-deleted window is offered after the declined
+// would-leave window and keeps it on the field, suspended (so <Evade> itself
+// is not offered on the next deletion).
+
+fn titamon_board(hand: &[&str]) -> (DebugRunner, PermanentHandle) {
+    let mut runner = base().hand(0, hand).memory(13).start();
+    runner.set_first_player(0);
+    let titamon = runner.place_on_field(0, CARD_ID, Some(0));
+    (runner, titamon)
+}
+
+fn titamon_handle(runner: &DebugRunner) -> Option<PermanentHandle> {
+    runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+}
+
+fn grant_evade(runner: &mut DebugRunner, h: PermanentHandle) {
+    runner.game.modifiers.grant_keyword(
+        h,
+        digimon_engine::enums::Keyword::Evade,
+        digimon_engine::enums::Expiry::Permanent,
+        0,
+    );
+}
+
+fn remove_by_opponent(runner: &mut DebugRunner, h: PermanentHandle) {
+    runner
+        .game
+        .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+}
+
+/// While <Evade> can also answer the deletion, the engine first asks which
+/// immediate replacement effect applies next (CR 4.3 15-8-5); pick <Evade>
+/// (`evade`) or Titamon's clause. With one candidate left, its own accept
+/// prompt is already pending.
+fn pick_replacement(runner: &mut DebugRunner, evade: bool) {
+    let v = runner.pending_selection_view().expect("replacement prompt");
+    if v.kind == SelectionKind::EffectChoice && v.prompt.contains("immediate replacement") {
+        let row = v
+            .effect_choices
+            .as_ref()
+            .and_then(|rows| rows.iter().find(|c| c.label.contains("Evade") == evade))
+            .unwrap_or_else(|| panic!("replacement order rows: {:?}", v.effect_choices))
+            .action_id;
+        runner.execute_action(v.selecting_player, row).expect("order pick");
+    }
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+/// Accept <Evade> for the same deletion. It asks for nothing more, so the
+/// declined clause was not offered again for this event.
+fn accept_evade(runner: &mut DebugRunner) {
+    pick_replacement(runner, true);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept <Evade>");
+    assert!(
+        runner.pending_selection().is_none(),
+        "the same deletion does not offer the declined clause again"
+    );
+}
+
+/// PASS is legal at the pending prompt (the action mask, not the raw ids).
+fn pass_legal(runner: &DebugRunner) -> bool {
+    let p = runner.pending_selection().expect("prompt").selecting_player;
+    build_action_mask(&runner.game, p)[digimon_engine::action::space::PASS as usize] == 1.0
+}
+
+fn hand_pick_ids(runner: &DebugRunner) -> Vec<u16> {
+    runner
+        .pending_selection_view()
+        .expect("hand pick")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .collect()
+}
+
+#[test]
+fn bt25_084_leave_prevention_outer_decline_keeps_opt() {
+    let (mut runner, titamon) = titamon_board(&["PAD", "PAD", "PAD", "PAD"]);
+    grant_evade(&mut runner, titamon);
+    remove_by_opponent(&mut runner, titamon);
+    pick_replacement(&mut runner, false);
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the replacement");
+    accept_evade(&mut runner);
+    assert_eq!(runner.game.players[0].hand.len(), 4, "nothing trashed");
+    let titamon = titamon_handle(&runner).expect("<Evade> kept Titamon");
+    remove_by_opponent(&mut runner, titamon);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "declined at the accept prompt: offered again this turn"
+    );
+}
+
+#[test]
+fn bt25_084_leave_prevention_accept_then_decline_cost_keeps_opt() {
+    let (mut runner, titamon) = titamon_board(&["PAD", "PAD", "PAD", "PAD"]);
+    grant_evade(&mut runner, titamon);
+    remove_by_opponent(&mut runner, titamon);
+    pick_replacement(&mut runner, false);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    assert!(
+        pass_legal(&runner),
+        "DCGO BT25_084.cs SelectHandEffect canNoSelect: the 2-card cost may be declined after the accept"
+    );
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the cost");
+    assert_eq!(runner.game.players[0].hand.len(), 4, "nothing trashed");
+    accept_evade(&mut runner);
+    let titamon = titamon_handle(&runner).expect("<Evade> kept Titamon");
+    remove_by_opponent(&mut runner, titamon);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept again");
+    assert_eq!(hand_pick_ids(&runner).len(), 4, "Titamon's own hand pick");
+}
+
+#[test]
+fn bt25_084_leave_prevention_declined_cost_lets_it_leave() {
+    let (mut runner, titamon) = titamon_board(&["PAD", "PAD", "PAD"]);
+    remove_by_opponent(&mut runner, titamon);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    assert!(pass_legal(&runner), "the 2-card cost may be declined after the accept");
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the cost");
+    let _ = runner.auto_resolve();
+    assert!(titamon_handle(&runner).is_none(), "the cost was not paid: Titamon leaves");
+    assert_eq!(runner.game.players[0].hand.len(), 3, "nothing trashed");
+}
+
+/// Choosing the first card commits to the 2-card cost: the second pick
+/// offers no decline (DCGO `canEndNotMax: false`, 2 cards or none; Q6398).
+/// Both trashed: spent, and a later removal this turn is not offered it even
+/// with 2 more cards in hand.
+#[test]
+fn bt25_084_leave_prevention_paid_spends_opt_and_second_pick_is_mandatory() {
+    let (mut runner, titamon) = titamon_board(&["PAD", "PAD", "PAD", "PAD"]);
+    remove_by_opponent(&mut runner, titamon);
+    runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+    let first = hand_pick_ids(&runner)[0];
+    runner.execute_action(0, first).expect("first card");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand), "second hand pick");
+    assert!(
+        !pass_legal(&runner),
+        "one of the two cards is not a partial payment the player may stop at"
+    );
+    let second = hand_pick_ids(&runner)[0];
+    runner.execute_action(0, second).expect("second card");
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.game.players[0].hand.len(), 2, "2 of 4 trashed");
+    let titamon = titamon_handle(&runner).expect("Titamon did not leave");
+    remove_by_opponent(&mut runner, titamon);
+    assert!(
+        runner
+            .pending_selection_view()
+            .is_none_or(|v| v.kind != SelectionKind::Replacement),
+        "spent: not offered again this turn"
+    );
+    let _ = runner.auto_resolve();
+    assert!(titamon_handle(&runner).is_none());
+}

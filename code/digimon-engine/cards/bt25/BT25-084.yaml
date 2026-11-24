@@ -26,7 +26,10 @@
 #     (canNoSelect:true). If discarded → delete all opp highest-DP Digimon; then
 #     if EnteredByEffect (OP/WD by effect) → trash opp top security.
 #   All Turns WhenRemoveField (OPT, skippable, requires Hand>=2): SelectHand
-#     Discard 2; if 2 discarded → willBeRemoveField=false (doesn't leave).
+#     Discard 2 (canNoSelect, 2 or none); if 2 discarded → willBeRemoveField=
+#     false (doesn't leave), else RemoveUse(). Owner ruling 2026-11-23: this
+#     clause follows DCGO, so declining the 2-card cost after accepting keeps
+#     the [Once Per Turn] (W14 row (f)).
 #   All Turns OnDiscardHand (not optional, no per-turn cap; CanUseCondition
 #     IsExistOnBattleArea && CanTriggerOnTrashHand(owner == you), either turn):
 #     mandatory (canNoSelect:false) Destroy pick of 1 opp IsMinDP Digimon.
@@ -121,24 +124,44 @@ effects:
     # A face-up replacement clause is anchored to its own carrier
     # (`replacement_subject` = this Digimon), as in BT23-032. With fewer than
     # 2 cards in hand the "by trashing 2 cards" condition can't be executed,
-    # so the engine does not offer the replacement (§15-7-4, Ver. 4.3: the two
-    # leading hand picks are the optional processing condition;
-    # `leading_cost_guard`; DCGO `HandCards.Count() >= 2`).
+    # so the replacement is not offered (§15-7-4, Ver. 4.3; DCGO
+    # `CanActivateCondition` `HandCards.Count() >= 2`): `active_when` below.
+    #
+    # DCGO flow (BT25_084.cs), followed by owner ruling 2026-11-23 ("parity
+    # with DCGO", qa/rules/mechanics-gaps-2026-10.md W14 row (f)): after the
+    # accept, one `SelectHandEffect` (maxCount 2, canNoSelect true,
+    # canEndNotMax false) takes 2 cards or none. None -> `RemoveUse()`: the use
+    # is kept and Titamon leaves. 2 -> spent, it doesn't leave. 1 of 2 is not
+    # a choice the player can stop at (Q6398), so once the first card is
+    # chosen the second pick is mandatory (the hand held 2). The two cards are
+    # one hand-trash event (Q6401).
+    active_when:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 2
     summary: "[All Turns][OPT] When this Digimon would leave, by trashing 2 cards in your hand, it doesn't leave"
     process:
+      # Non-cost optional pick: a decline runs the `if` below with c1 unbound.
       - select_hand:
           of: you
           bind_as: c1
+          optional: true
           filter: {}
           prompt: "Trash 1st of 2 cards from your hand"
-      - trash_from_hand_by_index: { of: you, hand_index: c1 }
-      - select_hand:
-          of: you
-          bind_as: c2
-          filter: {}
-          prompt: "Trash 2nd of 2 cards from your hand"
-      - trash_from_hand_by_index: { of: you, hand_index: c2 }
-      - cancel_replacement: {}
+      - if:
+          condition: { binding_present: c1 }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: c1 }
+            - select_hand:
+                of: you
+                bind_as: c2
+                filter: {}
+                prompt: "Trash 2nd of 2 cards from your hand"
+            - trash_from_hand_by_index: { of: you, hand_index: c2 }
+            - cancel_replacement: {}
+          else:
+            # DCGO `RemoveUse()`: the cost declined keeps the use.
+            - refund_opt: {}
 
   # ─── [All Turns] your hand is trashed from -> delete 1 opp lowest DP ───────
   - when: on_discard_hand

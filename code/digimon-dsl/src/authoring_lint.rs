@@ -157,6 +157,7 @@ pub enum RefundRow {
 pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("EX13-024", "effects[3]"),
     ("EX13-024", "effects[4]"),
+    ("BT25-084", "effects[1]"),
 ];
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -334,6 +335,22 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "ex13_024_plural_prevention.rs::inherited_cost_picker_decline_keeps_opt_and_clones",
             "ex13_024_plural_prevention.rs::successful_inherited_payment_consumes_opt_with_another_payer_available",
             "cards_behavioral/ex13/ex13_024.rs::ex13_024_inherited_no_unsuspended_text_digimon_means_no_offer",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT25-084",
+        clause: "effects[1]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "Titamon \"by trashing 2 cards in your hand, it doesn't leave\": owner ruling 2026-11-23, parity with DCGO ",
+            "(BT25_084.cs: 2 cards or none, RemoveUse when fewer than 2 were discarded). Offered only with 2 cards in ",
+            "hand (`active_when`, DCGO CanActivateCondition), so the refund runs only on a decline of a payable cost; ",
+            "once the first card is chosen the second pick is mandatory (Q6398), and 2 trashed spends the use.",
+        ),
+        tests: &[
+            "cards_behavioral/bt25/bt25_084.rs::bt25_084_leave_prevention_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/bt25/bt25_084.rs::bt25_084_leave_prevention_paid_spends_opt_and_second_pick_is_mandatory",
+            "cards_behavioral/bt25/bt25_084.rs::bt25_084_leave_prevention_not_offered_with_one_hand_card",
         ],
     },
 ];
