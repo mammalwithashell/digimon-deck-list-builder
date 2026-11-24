@@ -70,15 +70,15 @@ effects:
           condition: { equals: [branch, 1] }
           then:
             - select_own_permanent:
-                optional: false
+                optional: true
                 bind_as: base
-                filter: { name_contains: "Agumon" }
+                filter: { name_is: "Agumon" }
                 prompt: "Choose Agumon"
             - select_hand:
                 optional: false
                 of: you
                 bind_as: evo
-                filter: { name_contains: "WarGreymon" }
+                filter: { name_is: "WarGreymon" }
                 prompt: "Digivolve into..."
             - effect_initiated_digivolve:
                 target: base
