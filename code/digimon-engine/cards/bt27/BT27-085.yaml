@@ -1,0 +1,119 @@
+card: BT27-085
+name: 'Ravemon: Burst Mode'
+kind: dual
+level: 7
+color: [purple, green]
+dp: 15000
+traits: [Cyborg, DATA SQUAD]
+form: Mega
+attribute: Vaccine
+dual:
+  digimon:
+    level: 7
+    dp: 15000
+    colors: [purple, green]
+    traits: [Cyborg, DATA SQUAD]
+    effect_text: "<Piercing> <Blocker> [When Digivolving] [When Attacking] You may activate 1 [Main] effect on this card's Option side. [All Turns] [Once Per Turn] When your opponent's hand is trashed from, this Digimon may unsuspend."
+  option:
+    use_cost: 6
+    colors: [purple]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
+        trait_has: DATA SQUAD
+    effect_text: "<Use Req. ([DATA SQUAD] trait)> [Main] Your opponent trashes any 1 card from their hand or security stack. Then, delete 1 of their Digimon with a level as high as the number of cards in their hand or higher. <Arts Digivolve>"
+    keywords: [ArtsDigivolve]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, any_color: true, trait_has: DATA SQUAD }
+    cost: 5
+  - kind: burst_digivolve
+    from: { name_is: Ravemon }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: keenan
+          optional: false
+          filter: { kind: tamer, name_is: Keenan Crier }
+          prompt: 'Return Keenan Crier to the hand'
+      - return_to_hand: { target: keenan }
+    on_burst_turn_end:
+      - trash_top_source: { target: carrier }
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+  - kind: grant_keyword
+    keyword: Blocker
+  - when: [when_digivolving, when_attacking]
+    optional: true
+    outer_prompt: true
+    summary: "[When Digivolving] [When Attacking] You may activate 1 [Main] effect on this card's Option side"
+    process:
+      - refire_effect: { source: source, timing: option_main, optional: false }
+  - when: on_discard_hand
+    active_when: { all_turns: true }
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    timing_conditions:
+      - when: on_discard_hand
+        condition:
+          event_discard_player: opponent
+    condition: { source_is_unsuspended: false }
+    summary: "[All Turns] [Once Per Turn] When your opponent's hand is trashed from, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }
+  - when: main_from_hand
+    summary: "[Main] Your opponent trashes any 1 card from their hand or security stack. Then, delete 1 of their Digimon with a level as high as the number of cards in their hand or higher"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_effect_choice:
+                labels: ["Trash 1 card from your hand", "Trash 1 of your security cards"]
+                legal_when:
+                  - count_gte: { filter: { of: opponent, zone: [hand] }, n: 1 }
+                  - opponent_security_count_gte: 1
+                bind_as: where
+                prompt: "Trash any 1 card from your hand or security stack"
+            - if:
+                condition: { equals: [where, 0] }
+                then:
+                  - select_hand:
+                      optional: false
+                      of: opponent
+                      bind_as: discard
+                      filter: {}
+                      prompt: "Trash 1 card from your hand"
+                  - trash_from_hand_by_index: { of: opponent, hand_index: discard }
+            - if:
+                condition: { equals: [where, 1] }
+                then:
+                  - select_security:
+                      optional: false
+                      of: opponent
+                      bind_as: sec
+                      filter: {}
+                      prompt: "Trash 1 of your security cards"
+                  - trash_selected_security: { of: opponent, card: sec }
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter:
+            kind: digimon
+            level_gte:
+              formula:
+                base: 0
+                per: { card_count_in_zone: { of: opponent, zone: hand } }
+                delta: 1
+          prompt: "Delete 1 of their Digimon with a level as high as the number of cards in their hand or higher"
+      - delete_permanent: { target: victim }
