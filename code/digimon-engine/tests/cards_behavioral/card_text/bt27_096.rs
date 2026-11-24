@@ -33,8 +33,10 @@ fn runner(hand: &[&str]) -> DebugRunner {
         .add_card(mon("Y", "Y", 3, 3, &[]))
         .add_card(mon("FD", "Fd", 3, 3, &[]))
         .add_card(mon("D1", "D1", 3, 3, &[]))
+        .add_card(mon("D2", "D2", 3, 3, &[]))
+        .add_card(mon("D3", "D3", 3, 3, &[]))
         .add_card(mon("FILL", "Fill", 3, 3, &[]))
-        .deck(0, &["D1"; 10])
+        .deck(0, &["D1", "D1", "D1", "D1", "D1", "D1", "D1", "D1", "D2", "D3"])
         .deck(1, &["FILL"; 10])
         .hand(0, hand)
         .memory(5)
@@ -70,12 +72,17 @@ fn hand_trash_suspends_this_tamer_to_place_the_top_two_cards_face_down() {
     trash_from_hand(&mut r);
     let v = r.pending_selection_view().expect("optional trigger");
     assert!(v.is_optional);
+    let deck = ids_of(&r, &r.game.players[0].deck);
+    let (top, second) = (deck[deck.len() - 1].clone(), deck[deck.len() - 2].clone());
+    assert_ne!(top, second);
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
     no_prompt(&r);
     assert!(r.game.players[0].battle_area[t.index as usize].is_suspended);
-    let mut s = source_ids(&r, t);
-    s.sort();
-    assert_eq!(s, vec!["D1", "D1", "X"], "Falcomon's card plus the top 2");
+    assert_eq!(
+        source_ids(&r, t),
+        vec![second, top, "X".to_string()],
+        "Q6413: the deck-top card ends up above the second card, both below the existing card"
+    );
     assert_eq!(face_down(&r, t), vec![true, true, true]);
 }
 

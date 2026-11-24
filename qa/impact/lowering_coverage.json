@@ -66360,6 +66360,9 @@
     "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::q6413_tucks_in_fixed_deck_order_without_a_prompt": [
+     "yaml_key"
+    ],
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_omitted_defaults_face_up": [
      "yaml_key"
     ],
@@ -67132,6 +67135,7 @@
     "dsl::phase3a_cost_delta.rs::effect_initiated_dna_digivolve_cost_accepts_reduce_delta",
     "dsl::place_as_bottom_source_deck_top.rs::place_as_bottom_source_deck_top_stashes_deck_top_face_down",
     "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck",
+    "dsl::place_as_bottom_source_deck_top.rs::q6413_tucks_in_fixed_deck_order_without_a_prompt",
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_omitted_defaults_face_up",
     "dsl::place_as_bottom_source_face_down.rs::place_as_bottom_source_face_down_true_marks_bottom_source_face_down",
     "dsl::play_or_use_from_sources.rs::play_or_use_from_sources_compiles_from_yaml",
@@ -78374,13 +78378,17 @@
     ],
     "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
      "yaml_key"
+    ],
+    "dsl::place_as_bottom_source_deck_top.rs::q6413_tucks_in_fixed_deck_order_without_a_prompt": [
+     "yaml_key"
     ]
    },
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
-    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck"
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck",
+    "dsl::place_as_bottom_source_deck_top.rs::q6413_tucks_in_fixed_deck_order_without_a_prompt"
    ]
   },
   "verb:place_on_security": {
@@ -87044,7 +87052,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2310,
+  "behavioural_tests": 2311,
   "cards": {
    "behaviourally_covered": 1300,
    "lowering_covered": 1319,
@@ -87208,7 +87216,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 424,
-  "scanned_tests": 2736,
+  "scanned_tests": 2737,
   "top_untested": [
    {
     "cards_blocked": 3,

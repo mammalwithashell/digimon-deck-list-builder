@@ -4065,9 +4065,10 @@ event (BT27-094/096/097/098):
 
 `of` is the deck owner. `target` resolves to a permanent (a Tamer or a
 Digimon, including a binding from an earlier selection). A positive
-`count` moves as many of the requested cards as the deck has, preserving
-their relative order at the bottom of the stack. No card is revealed or
-chosen in this step, and the moved cards contribute to one
+`count` moves as many of the requested cards as the deck has. Per Bandai
+Q6413, place the deck-top card first and each subsequent card below it;
+the original top card ends up above the other moved cards. There is no
+reveal or ordering prompt, and the moved cards contribute to one
 `OnAddDigivolutionCards` batch. `face_down` defaults to `false`.
 
 **`trash_bottom_face_down_source_under_tamer` verb.** A cost-form verb for
