@@ -1,0 +1,48 @@
+card: BT27-014
+name: Reptilimon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Dragon Warrior, ALYSION]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, level_eq: 4, in_text_contains: Gemmon }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    text: "＜Engage＞"
+    keyword: Engage
+
+  - when: [on_play, when_digivolving]
+    text: "[On Play] [When Digivolving] 1 of your Digimon gains ＜Piercing＞ and +3000 DP for the turn."
+    summary: "[On Play][When Digivolving] 1 of your Digimon gains <Piercing> and +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gains <Piercing> and +3000 DP for the turn"
+      - grant_keyword: { target: boosted, keyword: Piercing, expiry: end_of_turn }
+      - add_dp_modifier: { target: boosted, value: 3000, expiry: end_of_turn }
+
+  - kind: grant_keyword
+    text: "[Your Turn] This Digimon with 12000 DP or more gains ＜Rush＞."
+    keyword: Rush
+    active_when: { your_turn: true, dp_gte: 12000 }
+    summary: "[Your Turn] This Digimon with 12000 DP or more gains <Rush>"
+
+  - scope: inherited
+    text: "[Your Turn] This Digimon with [Gemmon] in its text gains ＜Engage＞."
+    kind: grant_keyword
+    keyword: Engage
+    active_when: { your_turn: true, in_text_contains: Gemmon }
+    summary: "Inherited [Your Turn] This Digimon with [Gemmon] in its text gains <Engage>"
