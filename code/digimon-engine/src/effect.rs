@@ -184,6 +184,7 @@ pub enum TimingFilter {
     OnPlay,
     WhenDigivolving,
     OnDeletion,
+    OptionMain,
     Either,
 }
 
@@ -203,6 +204,7 @@ impl TimingFilter {
             "on_play" => Some(Self::OnPlay),
             "when_digivolving" => Some(Self::WhenDigivolving),
             "on_deletion" => Some(Self::OnDeletion),
+            "option_main" => Some(Self::OptionMain),
             _ => None,
         }
     }
@@ -212,6 +214,7 @@ impl TimingFilter {
             Self::OnPlay => &["on_play"],
             Self::WhenDigivolving => &["when_digivolving"],
             Self::OnDeletion => &["on_deletion"],
+            Self::OptionMain => &["option_main"],
             Self::Either => &["on_play", "when_digivolving"],
         }
     }
@@ -650,16 +653,19 @@ impl Effect {
             EffectTiming::OnPlay => "on_play",
             EffectTiming::WhenAttacking => "when_attacking",
             EffectTiming::OnDeletion => "on_deletion",
+            EffectTiming::OptionMain => "option_main",
             _ => "",
         }
     }
 
     pub fn can_be_refired(&self) -> bool {
-        matches!(
-            self.timing,
-            EffectTiming::OnPlay | EffectTiming::WhenDigivolving
-        ) && (self.on_play || self.when_digivolving)
-            && !self.inherited
+        let eligible = match self.timing {
+            EffectTiming::OnPlay => self.on_play,
+            EffectTiming::WhenDigivolving => self.when_digivolving,
+            EffectTiming::OptionMain => self.option_main,
+            _ => false,
+        };
+        eligible && !self.inherited
             && !self.security
             && !self.declarative
             && !self.linked
@@ -1876,6 +1882,19 @@ pub fn enumerate_refireable_effects(
             continue;
         }
         let source_card = card.handle();
+        let source_kind = game.effect_source_kind_for_handle(source_card);
+        let source_kind = if timing_key == "option_main" {
+            if source_kind != crate::enums::EffectSourceKind::Digimon
+                || !game
+                    .card_data_for_handle(source_card)
+                    .is_some_and(|card| card.dual.is_some())
+            {
+                continue;
+            }
+            crate::enums::EffectSourceKind::Option
+        } else {
+            source_kind
+        };
         let card_id = card.card_id(&game.card_data);
         let Some(effects) = game.effects_for_card(card_id, source_card) else {
             continue;
@@ -1902,7 +1921,7 @@ pub fn enumerate_refireable_effects(
                     effect_id: slot as EffectId,
                     source_card,
                     source,
-                    source_kind: game.effect_source_kind_for_handle(source_card),
+                    source_kind,
                     attribution_source_card: None,
                     attribution_source_kind: None,
                     bypass_once_per_turn: false,

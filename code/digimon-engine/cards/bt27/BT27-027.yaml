@@ -1,0 +1,54 @@
+card: BT27-027
+name: Tenkomon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 5000
+traits: [Mysterious Beast, Ice-Snow, ALYSION]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    text: "＜Iceclad＞"
+    keyword: Iceclad
+
+  - when: [on_play, when_digivolving]
+    text: "[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, you may place 1 level 4 or lower [Ice-Snow] trait Digimon card from your hand as any of your Digimon's bottom digivolution card."
+    summary: "[On Play][When Digivolving] Trash the bottom 2 sources of 1 opposing Digimon; then you may place a level 4 or lower Ice-Snow Digimon from hand as an ally's bottom source"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 2 }
+      - select_hand:
+          of: you
+          bind_as: material
+          optional: true
+          filter: { kind: digimon, level_lte: 4, trait_has: Ice-Snow }
+          prompt: "You may choose 1 level 4 or lower Ice-Snow Digimon card from your hand"
+      - if:
+          condition: { binding_present: material }
+          then:
+            - select_own_permanent:
+                bind_as: host
+                optional: false
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to place the chosen card under"
+            - place_as_bottom_source: { source: material, target: host }
+
+  - scope: inherited
+    text: "[End of Attack] [Once Per Turn] Gain 1 memory."
+    when: end_of_attack
+    once_per_turn: true
+    summary: "Inherited [End of Attack][OPT] Gain 1 memory"
+    process:
+      - gain_memory: 1

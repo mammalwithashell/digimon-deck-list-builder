@@ -38,13 +38,15 @@ fn run_repeated_effect_choice(
     }
 
     let mut steps = Vec::with_capacity(body.len() + 2);
-    steps.push(CompiledStep::SelectEffectChoice {
-        labels: labels.to_vec(),
-        legal_when: None,
-        bind_as: bind_as.clone(),
-        prompt: prompt.to_string(),
-        prompt_key: prompt_key.clone(),
-    });
+    if !labels.is_empty() {
+        steps.push(CompiledStep::SelectEffectChoice {
+            labels: labels.to_vec(),
+            legal_when: None,
+            bind_as: bind_as.clone(),
+            prompt: prompt.to_string(),
+            prompt_key: prompt_key.clone(),
+        });
+    }
     steps.extend_from_slice(body);
     if remaining > 1 {
         steps.push(CompiledStep::RepeatEffectChoiceRemaining {
