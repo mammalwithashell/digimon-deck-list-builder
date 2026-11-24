@@ -521,3 +521,21 @@ fn printed_text_optionality_wording_exemptions() {
         assert_eq!(check(clause, printed), expected, "{clause}");
     }
 }
+
+#[test]
+fn printed_detach_requires_an_optional_replacement() {
+    let printed = "＜Detach ([TS] trait)＞ (When this Digimon would leave the battle area, by trashing 1 of its specified link cards, it doesn't leave.)";
+    for optional in [true, false] {
+        let clause = format!(
+            "- kind: replacement\n  text: \"{printed}\"\n  trigger: when_would_leave_battle_area\n  optional: {optional}\n  outcome: prevent"
+        );
+        assert_eq!(
+            check(&clause, printed),
+            if optional {
+                vec![]
+            } else {
+                vec!["may_without_optional"]
+            }
+        );
+    }
+}
