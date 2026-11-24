@@ -10,8 +10,10 @@
 //! DCGO: BT26/Yellow/BT26_083.cs.
 
 use super::support::*;
+use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, EffectTiming, ModifierType};
+use digimon_engine::enums::{CardColor, EffectTiming, Keyword, ModifierType};
+use digimon_engine::selection::SelectionKind;
 
 const CARD_ID: &str = "BT26-083";
 
@@ -87,6 +89,40 @@ fn bt26_083_delete_count_capped_by_opponent_digimon() {
     }
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 1).is_empty());
+    assert_eq!(r.security_count(0), 3);
+}
+
+#[test]
+fn bt26_083_finishes_selected_deletions_before_recovery_after_decoy_prompts() {
+    let mut decoy = digimon("DECOY", "Decoy", CardColor::Red, 5, 7, &[]);
+    decoy.keywords.push(Keyword::Decoy(1 << CardColor::Red as u8));
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .unwrap()
+        .add_card(filler("FILLER"))
+        .add_card(digimon("OPP", "Opp", CardColor::Red, 5, 7, &[]))
+        .add_card(decoy)
+        .deck(0, &["FILLER"; 8])
+        .security(0, &["FILLER"; 2])
+        .start();
+    let source = r.place_on_field(0, CARD_ID, None);
+    let first = r.place_on_field(1, "OPP", None);
+    let second = r.place_on_field(1, "OPP", None);
+    r.place_on_field(1, "DECOY", None);
+    fire(&mut r, EffectTiming::OnPlay, source);
+    for target in [first, second] {
+        r.execute_action(0, encode_attack(0, target.index as u16)).unwrap();
+    }
+
+    for expected_field_size in [3, 2] {
+        let protection = r.pending_selection_view().expect("Decoy protects each threatened pick");
+        assert_eq!((protection.kind, protection.selecting_player), (SelectionKind::Replacement, 1));
+        assert_eq!(r.battle_area_size(1), expected_field_size);
+        assert_eq!(r.security_count(0), 0, "recovery waits for both chosen Digimon");
+        r.execute_action(1, PASS).unwrap();
+    }
+    assert!(r.pending_selection_view().is_none());
+    assert_eq!(field_ids(&r, 1), vec!["DECOY"]);
     assert_eq!(r.security_count(0), 3);
 }
 
