@@ -21128,7 +21128,6 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
-        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -52061,7 +52060,6 @@
       "EX12-017",
       "EX12-021",
       "EX12-034",
-      "EX12-041",
       "EX13-004",
       "EX13-005",
       "EX13-012",
