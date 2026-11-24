@@ -47476,13 +47476,17 @@
     ],
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
      "yaml_key"
+    ],
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller": [
+     "yaml_key"
     ]
    },
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
     "dsl::event_card_kind.rs::event_card_kind_reads_the_played_card_instead_of_the_observer",
-    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline"
+    "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller"
    ]
   },
   "predicate:event_card_level_eq": {
@@ -62404,6 +62408,9 @@
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller": [
+     "yaml_key"
+    ],
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event": [
      "yaml_key"
     ],
@@ -62465,6 +62472,7 @@
     "dsl::constructs/zone_moves.rs::union_hand_top_trash_bottom_and_pass_receipts_are_not_discards",
     "dsl::name_standardization.rs::permanent_effective_name_and_deleted_snapshot_apply_exclusions",
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller",
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event",
     "dsl::predicate_leaves_ii.rs::event_target_source_count_leaves_compile_from_yaml",
     "dsl::royal_knights_training_gate.rs::event_target_level_lte_uses_deleted_snapshot_not_observer_level",
@@ -68334,6 +68342,9 @@
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller": [
+     "yaml_key"
+    ],
     "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones": [
      "variant"
     ],
@@ -68367,6 +68378,7 @@
     "dsl::activation_cost.rs::validator_rejects_activation_cost_with_both_kinds_set",
     "dsl::activation_cost.rs::validator_rejects_activation_cost_with_no_kind_set",
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller",
     "lib::src/dsl_cards/step/mod.rs::first_typed_tail_reparks_then_second_sees_both_bindings_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_accept_executes_bound_enclosing_tail_in_clones",
     "lib::src/dsl_cards/step/mod.rs::optional_security_decline_does_not_leave_legacy_tail_for_unrelated_selection",
@@ -73654,6 +73666,9 @@
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
      "yaml_key"
     ],
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
+     "yaml_key"
+    ],
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event": [
      "yaml_key"
     ],
@@ -74798,6 +74813,7 @@
     "dsl::phase3e_scheduled_reentry.rs::scheduled_drain_resumes_after_selection_and_continues_remaining_effects",
     "dsl::phase3e_scheduled_reentry.rs::scheduled_during_the_pool_waits_for_the_next_boundary",
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
+    "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck",
     "dsl::play_cost_budget.rs::delete_bound_permanents_deletes_the_picks_as_one_event",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
@@ -77230,12 +77246,15 @@
   "verb:place_deck_top_under": {
    "kind": "verb",
    "lowering_files": [
-    "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs"
+    "code/digimon-engine/src/dsl_cards/step/selections.rs"
    ],
    "name": "place_deck_top_under",
    "parsed_only": false,
    "signals": {
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline": [
+     "yaml_key"
+    ],
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller": [
      "yaml_key"
     ],
     "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck": [
@@ -77246,6 +77265,7 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::place_as_bottom_source_deck_top.rs::bt27_098_deletion_stashes_top_two_in_one_batch_or_does_nothing_on_decline",
+    "dsl::place_as_bottom_source_deck_top.rs::deck_top_order_uses_the_effect_card_owner_even_with_a_different_controller",
     "dsl::place_as_bottom_source_deck_top.rs::place_deck_top_under_uses_the_chosen_digimon_and_the_named_deck"
    ]
   },
@@ -85902,7 +85922,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2309,
+  "behavioural_tests": 2310,
   "cards": {
    "behaviourally_covered": 1274,
    "lowering_covered": 1292,
@@ -86067,7 +86087,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 424,
-  "scanned_tests": 2735,
+  "scanned_tests": 2736,
   "top_untested": [
    {
     "cards_blocked": 3,

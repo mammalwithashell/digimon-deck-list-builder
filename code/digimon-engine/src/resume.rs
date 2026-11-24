@@ -372,6 +372,12 @@ pub enum EffectChoicePostAction {
     RunTailBranch {
         branches: Vec<Arc<Vec<CompiledStep>>>,
     },
+    OrderDeckTopSources {
+        deck_owner: PlayerId,
+        target_top: crate::card_source::CardHandle,
+        face_down: bool,
+        orders: Vec<Vec<usize>>,
+    },
 }
 
 /// Post-action run on a `Security` resolve before the `inner_tail`. Plain data —

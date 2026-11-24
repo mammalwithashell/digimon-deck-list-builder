@@ -1073,6 +1073,12 @@ fn validate_step(
                     path: format!("{prefix}.count"),
                     message: "place_deck_top_under count must be positive".into(),
                 });
+            } else if args.count > crate::step::PlaceDeckTopUnderArgs::MAX_COUNT {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.count"),
+                    message: "place_deck_top_under count must be at most 4; more permutations exceed the effect-choice menu capacity".into(),
+                });
             }
         }
         StepSpec::PaySourcePrefix(args) => {

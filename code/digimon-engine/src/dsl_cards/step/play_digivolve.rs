@@ -1481,20 +1481,6 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlaceDeckTopUnder {
-            of,
-            count,
-            target,
-            face_down,
-        } => {
-            if let Some(ResolvedBinding::Permanent(target)) =
-                resolve_binding_ref(target, ctx, bindings)
-            {
-                let owner = resolve_player(ctx, *of);
-                ctx.place_deck_top_cards_under_permanent(owner, *count, target, *face_down);
-            }
-            true
-        }
         // Top-position sibling of PlaceAsBottomSource — the card lands as
         // `target`'s TOP digivolution source (directly beneath the active
         // top card). DCGO `AddDigivolutionCardsTop` explicitly cannot place
