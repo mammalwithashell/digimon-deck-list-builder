@@ -15,6 +15,7 @@ also_treated_as: [X Antibody]
 effects:
   - text: "[On Play] By placing 1 [Royal Knight] trait Digimon card from your hand as the bottom digivolution card of any of your [King Drasil_7D6]s on the field, ＜Draw 1＞."
     when: on_play
+    optional: true
     summary: "[On Play] Place 1 Royal Knight from hand under fielded King Drasil_7D6 to Draw 1"
     condition:
       all_of:

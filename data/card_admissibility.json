@@ -41583,36 +41583,30 @@
       "untested_constructs": []
     },
     "LM-063": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "LM-064": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "LM-065": {
-      "admissible": false,
-      "dsl": false,
-      "has_card_test": false,
+      "admissible": true,
+      "dsl": true,
+      "has_card_test": true,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "LM-066": {
@@ -48106,21 +48100,21 @@
     }
   },
   "counts": {
-    "admissible": 1251,
+    "admissible": 1254,
     "diverged_no_quirk": 0,
     "failed_verdict": 17,
     "registered": 4587,
     "unregistered": 0,
     "untested_card": 17,
-    "untested_lowering": 3302
+    "untested_lowering": 3299
   },
-  "generated_at": "2026-11-23T23:53:11+00:00",
+  "generated_at": "2026-11-24T05:17:47+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "10541e5a5950f2989518f8e6ae3a241293d84a66290372a221a1bed4719f8e9a",
+    "behavioral_test_modules_sha256": "59a381ef1bb253cc96400883264839e428dc0dde6e515bd6e4eae6dc62bca684",
     "card_registry_sha256": "76d299f56767401907be0c9d0206557ec7e668d9f8748677c3e586e80a6a85e2",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "5fb2d1eb809df994d322c9bf672ae4ef08563f2a299c321ba94ce557b467c3d0",
-    "validated_cards_dsl_sha256": "6098e13ab47e492e20b67a0f6dee6607335cc03ea735e4917bc3f494227dc5e0",
+    "lowering_coverage_sha256": "1132822465941342a63dc5fad0e97534da660fcc73a7eaa544e20a76580217ea",
+    "validated_cards_dsl_sha256": "cd46d018ad6d911c2234d462cac0afe40e0b15de214ff3a99b2c442c40bc5f38",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
   "version": 2

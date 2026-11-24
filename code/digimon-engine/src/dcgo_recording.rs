@@ -201,6 +201,9 @@ pub struct ActionRow {
     /// Where `operand_card_index` came from; see [`CardIndexSource`] and docs/DCGO_RECORDING_SCHEMA.md.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub operand_card_index_source: Option<CardIndexSource>,
+    /// Recorded CardIndex of a main-phase attack's target among duplicate opposing permanents.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack_target_card_index: Option<i32>,
     /// [Diagnostic, added post-v1] Identical read to `memory`, under its
     /// own key — see `memory`'s doc for the perspective convention. Exists
     /// so a reader never has to know that, specifically for an `action`

@@ -118,7 +118,7 @@ effects:
     process:
       - select_any_permanent:
           bind_as: del_target
-          optional: true
+          optional: false
           filter:
             all_of:
               - kind: digimon

@@ -116,7 +116,7 @@ effects:
           filter:
             all_of:
               - kind: tamer
-              - name_contains: "Marcus Damon"
+              - name_is: "Marcus Damon"
               # DCGO BT13_020.cs:111-122: CanPlayAsNewPermanent(payCost:false).
               - can_play_from_effect_without_cost: true
           prompt: "You may play 1 [Marcus Damon] from your hand without paying its cost"

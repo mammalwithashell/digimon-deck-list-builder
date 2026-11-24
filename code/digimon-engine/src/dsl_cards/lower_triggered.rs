@@ -1113,6 +1113,9 @@ pub enum CostGuard {
         min: usize,
         filter: CompiledPredicate,
         trash_cost: bool,
+        /// Untargeted pick ("from your Digimon"): count across every own
+        /// battle-area permanent, as the picker does, not just the source.
+        any_own_permanent: bool,
     },
     /// "By trashing the bottom face-down card / N bottom face-down cards from
     /// under your Tamers": N face-down cards under your Tamers. "The bottom
@@ -1162,7 +1165,8 @@ pub enum CostPickZone {
 ///   `place_selected_card_under_tamer` (the run's first pick `cost: true` or
 ///   mandatory) ⇒ one distinct hand card per pick; the same for own-trash
 ///   picks consumed by `return_trash_list_to_deck_bottom`.
-/// - `select_own_sources { target: source }` ⇒ `min` matching sources.
+/// - `select_own_sources { target: source }` ⇒ `min` matching sources;
+///   untargeted ⇒ `min` matching sources across all your permanents.
 /// - `trash_bottom_face_down_source(s)_under_tamer(s)` ⇒ that many face-down
 ///   cards under your Tamers (any face-down card; the trash takes the lowest).
 /// - `select_union_zone { of: you }` (`cost: true` or mandatory; material
@@ -1242,7 +1246,7 @@ pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
             (!filters.is_empty()).then_some(CostGuard::ZonePicks { zone, filters })
         }
         CompiledStep::SelectOwnSources {
-            target: Some(CompiledBindingRef::Source),
+            target: target @ (Some(CompiledBindingRef::Source) | None),
             min,
             filter,
             bind_as,
@@ -1255,6 +1259,7 @@ pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
                 then,
                 bind_as.as_deref(),
             ),
+            any_own_permanent: target.is_none(),
         }),
         CompiledStep::TrashBottomFaceDownSourceUnderTamer {
             of: CompiledPlayerRef::You,
@@ -1429,38 +1434,52 @@ impl CostGuard {
                 min,
                 filter,
                 trash_cost,
-            } => rctx.source_permanent.is_some_and(|host| {
-                game.player(host.player)
-                    .battle_area
-                    .get(host.index as usize)
-                    .is_some_and(|perm| {
-                        perm.card_sources
-                            .iter()
-                            .take(perm.card_sources.len().saturating_sub(1))
-                            .enumerate()
-                            .filter(|(index, card)| {
-                                let source = crate::selection::SourceSelectionRef {
-                                    permanent: host,
-                                    field_index: host.index,
-                                    source_index: *index,
-                                    card: card.handle(),
-                                };
-                                (!trash_cost
-                                    || !game.source_card_trash_blocked(
-                                        host,
-                                        card.handle(),
-                                        rctx.player,
-                                    ))
-                                    && eval_predicate(
-                                        filter,
-                                        rctx,
-                                        PredicateSubject::Source(source),
-                                    )
-                            })
-                            .count()
-                            >= *min
-                    })
-            }),
+                any_own_permanent,
+            } => {
+                let hosts: Vec<crate::permanent::PermanentHandle> = if *any_own_permanent {
+                    (0..game.player(rctx.player).battle_area.len())
+                        .map(|i| crate::permanent::PermanentHandle {
+                            player: rctx.player,
+                            index: i as u8,
+                        })
+                        .collect()
+                } else {
+                    rctx.source_permanent.into_iter().collect()
+                };
+                let matching = |host: crate::permanent::PermanentHandle| {
+                    game.player(host.player)
+                        .battle_area
+                        .get(host.index as usize)
+                        .map_or(0, |perm| {
+                            perm.card_sources
+                                .iter()
+                                .take(perm.card_sources.len().saturating_sub(1))
+                                .enumerate()
+                                .filter(|(index, card)| {
+                                    let source = crate::selection::SourceSelectionRef {
+                                        permanent: host,
+                                        field_index: host.index,
+                                        source_index: *index,
+                                        card: card.handle(),
+                                    };
+                                    (!trash_cost
+                                        || !game.source_card_trash_blocked(
+                                            host,
+                                            card.handle(),
+                                            rctx.player,
+                                        ))
+                                        && eval_predicate(
+                                            filter,
+                                            rctx,
+                                            PredicateSubject::Source(source),
+                                        )
+                                })
+                                .count()
+                        })
+                };
+                (*any_own_permanent || !hosts.is_empty())
+                    && hosts.into_iter().map(matching).sum::<usize>() >= *min
+            }
             CostGuard::FaceDownUnderTamers { n } => {
                 crate::dsl_cards::step::selections::face_down_sources_under_tamers(
                     rctx,
