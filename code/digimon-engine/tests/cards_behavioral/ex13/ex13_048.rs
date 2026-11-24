@@ -492,3 +492,122 @@ fn ex13_048_inherited_lockout_clears_next_turn() {
         "OPT resets on the next turn"
     );
 }
+
+// ─── Inherited [OPT]: DCGO parity (owner ruling 2026-11-23) ──────────────────
+//
+// DCGO EX13_048.cs: offered only while another of your [Knightmon]-text
+// Digimon exists (`CanActivateCondition`); after the accept, a
+// `SelectPermanentEffect` with canNoSelect true. None chosen -> `RemoveUse()`
+// and the carrier leaves. One chosen -> `isUsed` (spent); the carrier stays
+// only if it was deleted. qa/rules/mechanics-gaps-2026-10.md W14 row (f).
+// <Evade> on the carrier keeps it after the would-leave window so the use can
+// be observed on a later removal the same turn.
+
+fn grant_evade(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.modifiers.grant_keyword(
+        h,
+        digimon_engine::enums::Keyword::Evade,
+        digimon_engine::enums::Expiry::Permanent,
+        0,
+    );
+}
+
+/// While <Evade> can also answer the deletion, the engine first asks which
+/// immediate replacement effect applies next (CR 4.3 15-8-5); pick <Evade>
+/// (`evade`) or the carrier's inherited clause. With one candidate left, its
+/// own accept prompt is already pending.
+fn pick_replacement(r: &mut DebugRunner, evade: bool) {
+    let v = r.pending_selection_view().expect("replacement prompt");
+    if v.kind == SelectionKind::EffectChoice && v.prompt.contains("immediate replacement") {
+        let row = v
+            .effect_choices
+            .as_ref()
+            .and_then(|rows| rows.iter().find(|c| c.label.contains("Evade") == evade))
+            .unwrap_or_else(|| panic!("replacement order rows: {:?}", v.effect_choices))
+            .action_id;
+        r.execute_action(v.selecting_player, row).expect("order pick");
+    }
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+/// PASS is legal at the pending prompt (the action mask, not the raw ids).
+fn pass_legal(r: &DebugRunner) -> bool {
+    let p = r.pending_selection().expect("prompt").selecting_player;
+    digimon_engine::action::build_action_mask(&r.game, p)[PASS as usize] == 1.0
+}
+
+fn accept_evade(r: &mut DebugRunner) {
+    pick_replacement(r, true);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept <Evade>");
+    assert!(
+        r.pending_selection().is_none(),
+        "the same removal does not offer the declined clause again"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_outer_decline_keeps_opt() {
+    let (mut r, carrier) = inherited_setup();
+    r.place_on_field(0, "ALLY-TEXT", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, PASS).expect("decline the replacement");
+    accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "declined at the accept prompt: offered again this turn"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_accept_then_decline_cost_keeps_opt() {
+    let (mut r, carrier) = inherited_setup();
+    r.place_on_field(0, "ALLY-TEXT", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(
+        pass_legal(&r),
+        "DCGO EX13_048.cs canNoSelect: the deletion may be declined after the accept"
+    );
+    r.execute_action(0, PASS).expect("decline the cost");
+    assert!(field_ids(&r, 0).contains(&"ALLY-TEXT".to_string()), "nothing deleted");
+    accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_declined_cost_lets_carrier_leave() {
+    let (mut r, carrier) = inherited_setup();
+    r.place_on_field(0, "ALLY-TEXT", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(pass_legal(&r), "the cost may be declined");
+    r.execute_action(0, PASS).expect("decline the cost");
+    let _ = r.auto_resolve();
+    let field = field_ids(&r, 0);
+    assert!(!field.contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
+    assert!(field.contains(&"ALLY-TEXT".to_string()));
+}
