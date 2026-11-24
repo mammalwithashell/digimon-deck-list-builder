@@ -7,7 +7,10 @@
 //! (data/cards.json), DCGO `EX12_0xx.cs` and CR 4.3.
 
 use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost, CompiledPredicate};
-use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, SEL_REVEAL_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::enums::{CardColor, Keyword, PlaySource};
 use digimon_engine::selection::SelectionKind;
@@ -502,37 +505,68 @@ fn ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait() {
     );
 }
 
-/// Thundermon (EX12-041) prints "[Main] [Once Per Turn] You may play or use 1
-/// card ...": the whole effect is the "you may", so the choice to activate it
-/// is the choice to play or use a card. Declaring the [Main] and then passing
-/// the pick while a card could be played is choosing not to, which keeps the
-/// [Once Per Turn] (official Q1818, Q4086, Q6946; CR 4.3 15-14-1-4 counts the
-/// use only when the player chooses to activate). DCGO agrees
-/// (EX12_041.cs `if (!isUsed) activateClass.RemoveUse()`). Playing a card
-/// then spends it (Q5426). With no playable card the [Main] is not offered
-/// (`ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait`; DCGO
-/// `CanUseCondition` needs one).
+fn thundermon_main_action(field_index: u8) -> usize {
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN)
+        as usize
+}
+
+/// Thundermon (EX12-041) "[Main] [Once Per Turn] You may play or use 1 card
+/// ...": a [Main] is activation-type (CR 4.3 15-8-4-1/-2); the player
+/// activates it by declaring it in the main phase, each activation counts as
+/// one use (CR 4.3 15-14-1-1), and a chosen activation counts "even if the
+/// effect's processing can't be executed" (CR 4.3 15-14-1-4). Passing the
+/// card pick after declaring it therefore still uses it, and the [Main] is
+/// not offered again that turn. Same rule as Manekimon (BT26-012)
+/// (`bt26_012_declining_after_activation_spends_once_per_turn`;
+/// docs/RUST_ENGINE_GAPS.md "Explicit Main-declaration correction
+/// (2026-10-25)"). DCGO EX12_041.cs `if (!isUsed) activateClass.RemoveUse()`
+/// refunds it; the rules text decides. A second Thundermon has its own use
+/// (CR 4.3 15-14-1-3).
 #[test]
-fn ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn() {
+fn ex12_041_main_declared_then_pick_passed_spends_the_once_per_turn() {
     let mut r = thundermon_runner(&["MUTANT-3"]);
     let t = r.place_on_field(0, "EX12-041", Some(0));
+    let other = r.place_on_field(0, "EX12-041", Some(0));
+    let memory_before = r.memory();
+    assert_eq!(build_action_mask(&r.game, 0)[thundermon_main_action(t.index)], 1.0);
     assert!(r.game.activate_field_main(0, t.index as usize));
     r.execute_action(0, PASS).expect("pass the pick");
     let _ = r.auto_resolve();
-    assert!(
-        r.game.players[0].hand.iter().any(|c| c.card_id(&r.game.card_data) == "MUTANT-3"),
-        "nothing was played"
+    assert!(r.game.pending_selection.is_none(), "the effect ended");
+    assert_eq!(hand_ids(&r, 0), vec!["MUTANT-3"], "nothing was played");
+    assert_eq!(r.memory(), memory_before, "no cost was paid");
+    assert_eq!(
+        build_action_mask(&r.game, 0)[thundermon_main_action(t.index)],
+        0.0,
+        "CR 4.3 15-14-1-4: the declared [Main] used the [Once Per Turn]; it is not offered again"
     );
-    assert!(
-        r.game.activate_field_main(0, t.index as usize),
-        "choosing not to play kept the [Once Per Turn] available"
-    );
-    select_hand_card(&mut r, 0, "MUTANT-3");
-    r.auto_resolve().expect("resolve Thundermon Main");
     assert!(
         !r.game.activate_field_main(0, t.index as usize),
-        "a card was played: the [Once Per Turn] is now used"
+        "the declared [Main] used the [Once Per Turn]"
     );
+    assert_eq!(
+        build_action_mask(&r.game, 0)[thundermon_main_action(other.index)],
+        1.0,
+        "CR 4.3 15-14-1-3: the other Thundermon still has its own use"
+    );
+}
+
+/// Thundermon (EX12-041): declaring the [Main] and playing a card spends the
+/// [Once Per Turn] (CR 4.3 15-14-1-1/-4).
+#[test]
+fn ex12_041_main_pick_chosen_spends_the_once_per_turn() {
+    let mut r = thundermon_runner(&["MUTANT-3", "ME-4"]);
+    let t = r.place_on_field(0, "EX12-041", Some(0));
+    assert!(r.game.activate_field_main(0, t.index as usize));
+    select_hand_card(&mut r, 0, "MUTANT-3");
+    r.auto_resolve().expect("resolve Thundermon Main");
+    assert!(!hand_contains(&r, 0, "MUTANT-3"), "the picked card was played");
+    assert_eq!(
+        build_action_mask(&r.game, 0)[thundermon_main_action(t.index)],
+        0.0,
+        "a card was played: the [Once Per Turn] is used although ME-4 is still playable"
+    );
+    assert!(!r.game.activate_field_main(0, t.index as usize));
 }
 
 #[test]
