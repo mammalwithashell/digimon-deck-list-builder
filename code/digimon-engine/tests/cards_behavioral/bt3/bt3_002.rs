@@ -23,7 +23,7 @@
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
 //! - G4: Inherited When Attacking on DigiEgg (OPT, no cost, no branch selection)
-//! - E2: OPT + optional (per printed text: the draw is gated, not unconditional)
+//! - E2: OPT + mandatory (no "may" in printed text; gated only by the Jamming condition)
 //! - H2: Jamming keyword check as condition gate on carrier
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
@@ -115,9 +115,9 @@ fn bt3_002_yaml_compiles_and_is_in_pack() {
     );
 }
 
-/// Exactly one triggered clause: inherited When Attacking, OPT, optional.
+/// Exactly one triggered clause: inherited When Attacking, OPT, mandatory.
 #[test]
-fn bt3_002_has_exactly_one_inherited_when_attacking_opt_optional_clause() {
+fn bt3_002_has_exactly_one_inherited_when_attacking_opt_mandatory_clause() {
     let runner = demiveemon_runner();
     let compiled = runner
         .compiled_card("BT3-002")
@@ -147,9 +147,8 @@ fn bt3_002_has_exactly_one_inherited_when_attacking_opt_optional_clause() {
             );
             assert!(clause.once_per_turn, "printed text is [Once Per Turn]");
             assert!(
-                clause.optional,
-                "clause must be optional (player may decline per DCGO isOptional=false \
-                 applies inside the effect; the overall clause allows skipping via gap)"
+                !clause.optional,
+                "printed text has no \"you may\": the Draw 1 is mandatory"
             );
         }
         other => panic!("BT3-002 effect must be a Triggered clause; got {other:?}"),

@@ -2439,7 +2439,6 @@
     "predicate:event_target_owner",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
     "predicate:name_is",
     "timing:on_any_deletion",
     "timing:when_digivolving"
@@ -2495,7 +2494,6 @@
     "predicate:event_target_owner",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
     "predicate:name_is",
     "predicate:your_turn",
     "timing:on_suspend",
@@ -4473,6 +4471,7 @@
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
+    "predicate:name_is",
     "predicate:owner",
     "predicate:source_name_contains",
     "predicate:zone",
@@ -5540,7 +5539,7 @@
     "verb:select_own_sources",
     "verb:trash_from_hand_by_index",
     "predicate:kind",
-    "predicate:name_contains",
+    "predicate:name_is",
     "predicate:source_is_unsuspended",
     "predicate:your_turn",
     "timing:on_ally_attack",
@@ -8682,7 +8681,6 @@
     "predicate:event_target_owner",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
     "predicate:name_is",
     "predicate:owner",
     "predicate:zone",
@@ -10734,7 +10732,6 @@
     "predicate:in_text_contains",
     "predicate:kind",
     "predicate:level_eq",
-    "predicate:name_contains",
     "predicate:name_is",
     "predicate:other",
     "predicate:owner",
@@ -21408,7 +21405,7 @@
     "predicate:level_eq",
     "predicate:owner",
     "predicate:stack_size_gte",
-    "predicate:trait_has",
+    "predicate:trait_contains",
     "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
@@ -21657,7 +21654,7 @@
     "predicate:kind",
     "predicate:not",
     "predicate:owner",
-    "predicate:trait_has",
+    "predicate:trait_contains",
     "predicate:zone",
     "timing:main_from_hand",
     "timing:on_security"
@@ -29346,21 +29343,21 @@
     "verb:return_trash_list_to_deck_bottom",
     "verb:reveal_top_deck",
     "verb:select_count_capped_multi",
-    "verb:select_effect_choice",
     "verb:select_hand",
     "verb:select_reveal_buckets",
     "verb:trash_from_hand_by_index",
     "predicate:all_of",
     "predicate:all_turns",
     "predicate:any_of",
+    "predicate:binding_count_eq",
     "predicate:color_is",
-    "predicate:equals",
     "predicate:is_source",
     "predicate:kind",
     "predicate:level_eq",
     "predicate:name_contains",
     "predicate:name_is",
     "predicate:none_of",
+    "predicate:not",
     "predicate:replacement_cause",
     "predicate:source_name_contains",
     "timing:on_play",
@@ -32710,6 +32707,102 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "LM-063": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:effect_initiated_digivolve",
+    "verb:place_remainder_on_deck",
+    "verb:place_self_as_delay_option",
+    "verb:reveal_top_deck",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_digivolve_onto",
+    "predicate:color_is",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:name_is",
+    "predicate:no_permanent",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "LM-064": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:effect_initiated_digivolve",
+    "verb:place_remainder_on_deck",
+    "verb:place_self_as_delay_option",
+    "verb:reveal_top_deck",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_digivolve_onto",
+    "predicate:color_is",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:name_is",
+    "predicate:no_permanent",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "LM-065": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:effect_initiated_digivolve",
+    "verb:place_remainder_on_deck",
+    "verb:place_self_as_delay_option",
+    "verb:reveal_top_deck",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_digivolve_onto",
+    "predicate:color_is",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:name_is",
+    "predicate:no_permanent",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "P-035": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -34316,6 +34409,7 @@
     "verb:suspend",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:count_gte",
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_gte",
@@ -35263,7 +35357,7 @@
     "verb:trash_from_reveal",
     "predicate:any_of",
     "predicate:name_contains",
-    "predicate:trait_has",
+    "predicate:trait_contains",
     "timing:main_from_hand",
     "timing:on_security"
    ],
@@ -51071,6 +51165,9 @@
     "dsl::phase2d_for_each.rs::for_each_scans_across_both_players": [
      "variant"
     ],
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail": [
+     "yaml_key"
+    ],
     "dsl::phase2e_distinct_by.rs::distinct_by_color_yaml_parses_and_lowers": [
      "yaml_key"
     ],
@@ -52235,6 +52332,7 @@
     "dsl::phase2d_for_each.rs::for_each_owner_you_only_matches_self_permanents",
     "dsl::phase2d_for_each.rs::for_each_runs_body_per_battle_area_match",
     "dsl::phase2d_for_each.rs::for_each_scans_across_both_players",
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail",
     "dsl::phase2e_distinct_by.rs::distinct_by_color_yaml_parses_and_lowers",
     "dsl::phase2f2_modifier_formula.rs::add_modifier_filter_target_formula_evaluated_per_match",
     "dsl::phase3_reducer_selection.rs::select_any_permanent_and_select_dna_pair_compile",
@@ -65192,6 +65290,9 @@
     "dsl::phase2b_end_to_end.rs::select_opponent_permanent_filter_uses_original_effect_controller": [
      "yaml_key"
     ],
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail": [
+     "yaml_key"
+    ],
     "dsl::phase2e_select_effect_choice.rs::legal_when_parses_and_compiles_parallel_to_labels": [
      "yaml_key"
     ],
@@ -65995,6 +66096,7 @@
     "dsl::phase2b_end_to_end.rs::dsl_select_trash_empty_trash_installs_selection_with_no_valid_actions",
     "dsl::phase2b_end_to_end.rs::dsl_select_trash_then_add_to_hand_from_trash_round_trip",
     "dsl::phase2b_end_to_end.rs::select_opponent_permanent_filter_uses_original_effect_controller",
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail",
     "dsl::phase2e_select_effect_choice.rs::legal_when_parses_and_compiles_parallel_to_labels",
     "dsl::phase2f1_end_to_end.rs::revival_card_pulls_from_trash_into_battle_area",
     "dsl::phase2f1_play_steps.rs::suppress_on_play_flag_defaults_to_false_when_omitted",
@@ -73382,6 +73484,9 @@
     "dsl::phase2d_per_selected.rs::per_selected_drives_body_once_per_pick": [
      "variant"
     ],
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail": [
+     "yaml_key"
+    ],
     "dsl::phase2d_run_steps_propagation.rs::outer_steps_wait_for_inner_park": [
      "variant"
     ],
@@ -74710,6 +74815,7 @@
     "dsl::phase2d_for_each.rs::for_each_runs_body_per_battle_area_match",
     "dsl::phase2d_for_each.rs::for_each_scans_across_both_players",
     "dsl::phase2d_per_selected.rs::per_selected_drives_body_once_per_pick",
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail",
     "dsl::phase2d_run_steps_propagation.rs::outer_steps_wait_for_inner_park",
     "dsl::phase2d_select_count_capped_multi.rs::empty_multi_pick_runs_tail_once_synchronously",
     "dsl::phase2d_select_count_capped_multi.rs::multi_pick_binds_card_list_for_per_selected",
@@ -76930,6 +77036,9 @@
     "dsl::phase2d_per_selected.rs::per_selected_drives_body_once_per_pick": [
      "variant"
     ],
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail": [
+     "yaml_key"
+    ],
     "dsl::phase2d_select_count_capped_multi.rs::multi_pick_binds_card_list_for_per_selected": [
      "variant"
     ],
@@ -76959,6 +77068,7 @@
     "dsl::constructs/reveal_digivolve_candidate.rs::reveal_candidates_surface_two_hosts_and_two_results_for_either_controller",
     "dsl::phase2d_end_to_end.rs::multi_pick_then_per_selected_then_for_each_round_trip",
     "dsl::phase2d_per_selected.rs::per_selected_drives_body_once_per_pick",
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail",
     "dsl::phase2d_select_count_capped_multi.rs::multi_pick_binds_card_list_for_per_selected",
     "dsl::select_materials.rs::select_materials_breeding_carrier_distinct_by_exercises_recursive_path",
     "dsl::select_materials.rs::select_materials_breeding_carrier_installs_real_pending_selection",
@@ -79128,6 +79238,9 @@
     "dsl::phase2c_permanent_mutations.rs::return_to_hand_moves_permanent_to_owner_hand": [
      "variant"
     ],
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail": [
+     "yaml_key"
+    ],
     "dsl::zone_movement_verbs.rs::for_each_merges_body_result_log_into_parent_bindings": [
      "yaml_key"
     ],
@@ -79224,6 +79337,7 @@
     "dsl::folded_may_opt_refund.rs::then_may_clause_refunds_when_both_halves_are_empty",
     "dsl::parse_alt_paths.rs::parse_burst_digivolve_with_extra_cost_and_teardown",
     "dsl::phase2c_permanent_mutations.rs::return_to_hand_moves_permanent_to_owner_hand",
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail",
     "dsl::zone_movement_verbs.rs::for_each_merges_body_result_log_into_parent_bindings",
     "rules_conformance::ch15_04_effect_states.rs::pending_on_play_lost_when_card_leaves_before_activation",
     "rules_conformance::ch15_08_effect_categories.rs::trigger_condition_qualifier_read_in_triggered_state_after_attacker_leaves",
@@ -80115,6 +80229,9 @@
     "dsl::phase2d_per_selected.rs::per_selected_drives_body_once_per_pick": [
      "variant"
     ],
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail": [
+     "yaml_key"
+    ],
     "dsl::phase2d_select_count_capped_multi.rs::empty_multi_pick_runs_tail_once_synchronously": [
      "variant"
     ],
@@ -80160,6 +80277,7 @@
     "dsl::group7_predicate_batch.rs::scalar_threshold_predicates_accept_formula_threshold_yaml",
     "dsl::phase2d_end_to_end.rs::multi_pick_then_per_selected_then_for_each_round_trip",
     "dsl::phase2d_per_selected.rs::per_selected_drives_body_once_per_pick",
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail",
     "dsl::phase2d_select_count_capped_multi.rs::empty_multi_pick_runs_tail_once_synchronously",
     "dsl::phase2d_select_count_capped_multi.rs::multi_pick_binds_card_list_for_per_selected",
     "dsl::phase2e_distinct_by.rs::distinct_by_card_number_filters_duplicates_after_pick",
@@ -80237,6 +80355,9 @@
     "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry": [
      "yaml_key"
     ],
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail": [
+     "yaml_key"
+    ],
     "dsl::phase2e_end_to_end.rs::select_reveal_then_effect_choice_then_gain_memory": [
      "variant"
     ],
@@ -80296,6 +80417,7 @@
     "dsl::constructs/zone_moves.rs::departed_inherited_source_keeps_controller_tail_without_retargeting_new_slot",
     "dsl::constructs/zone_moves.rs::inherited_loop_continuation_re_resolves_compacted_carrier_and_keeps_actor",
     "dsl::deck_trash_event.rs::already_enqueued_deck_trash_source_cannot_revive_after_reentry",
+    "dsl::phase2d_per_selected.rs::per_selected_resumes_each_parked_member_before_running_the_outer_tail",
     "dsl::phase2e_end_to_end.rs::select_reveal_then_effect_choice_then_gain_memory",
     "dsl::phase2e_select_effect_choice.rs::legal_when_masks_illegal_branches_out_of_the_prompt",
     "dsl::phase2e_select_effect_choice.rs::legal_when_no_legal_branch_binds_nothing_and_continues",
@@ -85910,12 +86032,12 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2310,
+  "behavioural_tests": 2311,
   "cards": {
-   "behaviourally_covered": 1274,
-   "lowering_covered": 1292,
+   "behaviourally_covered": 1277,
+   "lowering_covered": 1295,
    "not_covered": 51,
-   "total": 1343
+   "total": 1346
   },
   "constructs": {
    "keyword": {
@@ -86075,7 +86197,7 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 424,
-  "scanned_tests": 2736,
+  "scanned_tests": 2737,
   "top_untested": [
    {
     "cards_blocked": 3,

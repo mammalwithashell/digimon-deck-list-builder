@@ -188,6 +188,11 @@ pub fn health(root: &Path, build: Option<&Path>) -> Health {
             format!("pid file names {pid} but no such process (normal after a crash)"),
             "`dcgo-harness node up` will relaunch",
         )),
+        None if daemon::heartbeat_age(root)
+            .is_some_and(|age| age <= daemon::DEFAULT_STALE_SECONDS) =>
+        {
+            checks.push(Check::ok("player", "fresh heartbeat (externally managed player)".into()));
+        }
         None => checks.push(Check::warn(
             "player",
             "not running".into(),
@@ -294,6 +299,18 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         let h = health(&root, None);
         assert!(h.checks.iter().any(|c| c.name == "harness_enabled"));
+    }
+
+    #[test]
+    fn a_fresh_heartbeat_identifies_an_externally_managed_player() {
+        let root = tempfile::tempdir().unwrap();
+        std::fs::write(root.path().join(daemon::HEARTBEAT_FILE), "idle").unwrap();
+        let health = health(root.path(), None);
+        assert!(health.checks.iter().any(|check| {
+            check.name == "player"
+                && matches!(check.status, CheckStatus::Ok)
+                && check.detail.contains("externally managed")
+        }));
     }
 
     #[test]
