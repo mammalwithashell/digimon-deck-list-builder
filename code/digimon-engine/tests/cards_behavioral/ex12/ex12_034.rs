@@ -372,6 +372,31 @@ fn ex12_034_leave_offers_no_hand_zone_when_battle_area_full() {
     assert!(super::support::hand_contains(&runner, 0, "SW-5"), "SW-5 stays in hand");
 }
 
+/// "Don't play" when the only [SW] card cannot be played (no free frame) is
+/// row d of the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md
+/// W14), not row b: nothing was possible, so the accepted activation spends
+/// the use (CR 4.3 15-14-1-4; DCGO's RemoveUse sits inside
+/// `if (validHandCard || validDigivolutionCard)`). VICTIM-A's departure frees
+/// a frame, so SW-5 would be playable at the second leave: the effect is not
+/// offered there because the use is spent, not because nothing is playable.
+#[test]
+fn ex12_034_leave_dont_play_with_only_unplayable_candidates_spends_once_per_turn() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    assert!(!choice_labels(&runner).contains(&"Hand".to_string()));
+    let _ = runner.auto_resolve();
+    assert!(!field_contains(&runner, 0, "VICTIM-A"), "VICTIM-A left");
+    assert!(super::support::hand_contains(&runner, 0, "SW-5"));
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
+        runner.pending_selection().is_none(),
+        "row d: the accepted activation with nothing playable used the [Once Per Turn]"
+    );
+}
+
 /// The digivolution-card zone uses the same filter: with a play prohibition
 /// covering Erlangmon's only level 5 [SW] source, "Sources" isn't offered.
 #[test]
