@@ -494,3 +494,167 @@ fn ex13_059_inherited_eot_does_not_apply_face_up() {
     let _ = runner.auto_resolve();
     assert_eq!(runner.battle_area_size(1), 1, "only 1 deleted face-up");
 }
+
+// ─── [End of Your Turn][OPT], both copies: DCGO parity (owner ruling 2026-11-23)
+//
+// DCGO EX13_059.cs (face-up `EX13_059_EOT` and inherited `EX13_059_ESS_EOT`,
+// separate uses): offered only while one of your [Mamemon]-named Digimon
+// exists (`CanActivateCondition`); skippable; then a `SelectPermanentEffect`
+// with canNoSelect true. None chosen -> `RemoveUse()`. One chosen -> spent;
+// the opponent's Digimon are deleted only if the chosen one was deleted
+// (`DeletePeremanentAndProcessAccordingToResult` success process).
+// qa/rules/mechanics-gaps-2026-10.md W14 row (f).
+//
+// A second [End of Your Turn] trigger the same turn is staged as in
+// `ex13_059_eot_is_once_per_turn_and_resets_next_turn`: one trigger fired by
+// hand, then the real one at the end of the turn.
+
+fn fire_eot(runner: &mut DebugRunner, source: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(source));
+    runner.game.drain_effect_queue();
+}
+
+/// A board with BigMamemon face-up (`inherited = false`) or as a source under
+/// TOP-MAME6, one ally [Mamemon] and two opponent Digimon. Returns the
+/// permanent that carries the clause.
+fn opt_board(inherited: bool) -> (DebugRunner, PermanentHandle) {
+    let mut runner = builder().deck(0, &["FILL"; 6]).memory(2).start();
+    runner.skip_mulligan();
+    let host = if inherited {
+        runner.place_stack(0, &[CARD_ID, "TOP-MAME6"])
+    } else {
+        runner.place_on_field(0, CARD_ID, Some(0))
+    };
+    runner.place_on_field(0, "OWN-MAME", Some(0));
+    runner.place_on_field(1, "OPP-C3", Some(0));
+    runner.place_on_field(1, "OPP-C5", Some(0));
+    (runner, host)
+}
+
+fn outer_decline_keeps_opt(inherited: bool) {
+    let (mut runner, host) = opt_board(inherited);
+    fire_eot(&mut runner, host);
+    runner.decline_optional_trigger().expect("decline");
+    assert!(runner.pending_selection().is_none());
+    runner.pass_turn();
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "declined at the accept prompt: offered again at this turn's end"
+    );
+}
+
+fn accept_then_decline_cost_keeps_opt(inherited: bool) {
+    let (mut runner, host) = opt_board(inherited);
+    fire_eot(&mut runner, host);
+    runner.accept_optional_trigger().expect("accept");
+    let v = runner.pending_selection_view().expect("own [Mamemon] pick");
+    assert_eq!(v.kind, SelectionKind::OwnField);
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&runner.game, 0)[PASS as usize],
+        1.0,
+        "DCGO EX13_059.cs canNoSelect: the deletion may be declined after the accept"
+    );
+    runner.execute_action(0, PASS).expect("decline the cost");
+    assert!(
+        runner.pending_selection().is_none(),
+        "the same trigger does not offer the clause again"
+    );
+    assert_eq!(runner.battle_area_size(0), 2, "nothing of yours deleted");
+    assert_eq!(runner.battle_area_size(1), 2, "no reward");
+    runner.pass_turn();
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+}
+
+/// The chosen [Mamemon]'s deletion is prevented: the cost was not paid, so no
+/// opponent's Digimon is deleted, and a Digimon was chosen, so the use is
+/// spent.
+fn prevented_payment_spends_opt_without_reward(inherited: bool) {
+    let (mut runner, host) = opt_board(inherited);
+    let ally = handle_of(&runner, 0, "OWN-MAME");
+    runner.game.modifiers.add(
+        ally,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotBeDestroyedByEffect,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            0,
+        ),
+    );
+    fire_eot(&mut runner, host);
+    runner.accept_optional_trigger().expect("accept");
+    pick_id(&mut runner, 0, "OWN-MAME");
+    let _ = runner.auto_resolve();
+    assert!(field_ids(&runner, 0).contains(&"OWN-MAME".to_string()), "its deletion was prevented");
+    assert_eq!(runner.battle_area_size(1), 2, "the cost was not paid: no reward");
+    runner.pass_turn();
+    assert!(
+        runner.pending_selection().is_none(),
+        "a Digimon was chosen: the use is spent"
+    );
+}
+
+#[test]
+fn ex13_059_eot_outer_decline_keeps_opt() {
+    outer_decline_keeps_opt(false);
+}
+
+#[test]
+fn ex13_059_inherited_eot_outer_decline_keeps_opt() {
+    outer_decline_keeps_opt(true);
+}
+
+#[test]
+fn ex13_059_eot_accept_then_decline_cost_keeps_opt() {
+    accept_then_decline_cost_keeps_opt(false);
+}
+
+#[test]
+fn ex13_059_inherited_eot_accept_then_decline_cost_keeps_opt() {
+    accept_then_decline_cost_keeps_opt(true);
+}
+
+#[test]
+fn ex13_059_eot_prevented_payment_spends_opt_without_reward() {
+    prevented_payment_spends_opt_without_reward(false);
+}
+
+#[test]
+fn ex13_059_inherited_eot_prevented_payment_spends_opt_without_reward() {
+    prevented_payment_spends_opt_without_reward(true);
+}
+
+/// Paid: the next trigger this turn is not offered it, with another [Mamemon]
+/// still able to pay.
+#[test]
+fn ex13_059_inherited_eot_paid_spends_opt() {
+    let (mut runner, host) = opt_board(true);
+    runner.place_on_field(0, "OWN-MAME", Some(0));
+    fire_eot(&mut runner, host);
+    runner.accept_optional_trigger().expect("accept");
+    let ally = handle_of(&runner, 0, "OWN-MAME");
+    pick_field(&mut runner, ally);
+    let _ = runner.auto_resolve();
+    assert_eq!(field_ids(&runner, 1), vec!["OPP-C5".to_string()], "reward ran");
+    runner.pass_turn();
+    assert!(runner.pending_selection().is_none(), "spent");
+}
+
+/// No [Mamemon]-named Digimon of yours: not offered (DCGO
+/// `CanActivateCondition`).
+#[test]
+fn ex13_059_inherited_eot_not_offered_without_a_mamemon() {
+    let mut runner = builder().deck(0, &["FILL"; 6]).memory(2).start();
+    runner.skip_mulligan();
+    runner.place_stack(0, &[CARD_ID, "OWN-OTHER"]);
+    runner.place_on_field(1, "OPP-C3", Some(0));
+    runner.pass_turn();
+    assert!(runner.pending_selection().is_none(), "no payable cost: not offered");
+    assert_eq!(runner.battle_area_size(1), 1);
+}

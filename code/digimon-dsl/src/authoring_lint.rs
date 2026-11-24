@@ -165,6 +165,8 @@ pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("EX13-032", "effects[0]"),
     ("EX13-048", "effects[1]"),
     ("EX13-052", "effects[2]"),
+    ("EX13-059", "effects[1]"),
+    ("EX13-059", "effects[2]"),
 ];
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -471,6 +473,38 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_accept_then_decline_cost_keeps_opt",
             "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_once_per_turn",
             "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_not_offered_without_other_knightmon",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-059",
+        clause: "effects[1]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "BigMamemon [End of Your Turn] \"by deleting 1 of your Digimon with [Mamemon] in its name, delete 1 of ",
+            "your opponent's Digimon with the lowest play cost\": owner ruling 2026-11-23, parity with DCGO ",
+            "(EX13_059.cs: canNoSelect pick, RemoveUse when none chosen, reward only on a deletion). Offered only while ",
+            "a [Mamemon] of yours exists (`condition`); face-up, BigMamemon itself always can pay, so no unpayable ",
+            "state exists. A chosen Digimon spends the use, also when its deletion is prevented.",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_059.rs::ex13_059_eot_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_059.rs::ex13_059_eot_is_once_per_turn_and_resets_next_turn",
+            "cards_behavioral/ex13/ex13_059.rs::ex13_059_eot_prevented_payment_spends_opt_without_reward",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-059",
+        clause: "effects[2]",
+        row: RefundRow::CostDeclinedByOwnerRuling,
+        reason: concat!(
+            "BigMamemon's inherited [End of Your Turn] (delete all lowest-play-cost Digimon): same ruling and DCGO ",
+            "flow as effects[1], separate [Once Per Turn] (`EX13_059_ESS_EOT`). Not offered without a [Mamemon] of yours.",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_059.rs::ex13_059_inherited_eot_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_059.rs::ex13_059_inherited_eot_paid_spends_opt",
+            "cards_behavioral/ex13/ex13_059.rs::ex13_059_inherited_eot_prevented_payment_spends_opt_without_reward",
+            "cards_behavioral/ex13/ex13_059.rs::ex13_059_inherited_eot_not_offered_without_a_mamemon",
         ],
     },
 ];
