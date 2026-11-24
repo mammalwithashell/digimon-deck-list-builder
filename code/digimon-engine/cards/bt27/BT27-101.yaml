@@ -1,0 +1,111 @@
+# BT27-101 Silver-Winged Yaksha — Option, Purple, Cost 5. Traits: DATA SQUAD.
+# Source: data/card_bundles/BT27-101.md (official Bandai text + Q&A); same
+# shape as BT26-098. DCGO: DCGO2 Assets/Scripts/CardEffect/BT27/Purple/BT27_101.cs
+# Q&A: the [Main] "by" condition needs both a [Peckmon] and a [Crowmon] placed.
+card: BT27-101
+name: "Silver-Winged Yaksha"
+kind: option
+color: [purple]
+cost: 5
+traits: [DATA SQUAD]
+
+effects:
+  - text: "When this card would be used, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2."
+    kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    # DCGO CanUseCondition: a Tamer with a face-down card must exist, so no
+    # prompt is offered when the cost is unpayable.
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    optional: true
+    amount: 2
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
+    summary: "When this card would be used, by trashing the bottom face-down card under a Tamer, reduce the use cost by 2"
+
+  - when: main_from_hand
+    summary: "[Main] Place a [Peckmon] + a [Crowmon] from trash under a [Falcomon]; that Digimon may free-digivolve into a [Ravemon] in trash, ignoring requirements"
+    process:
+      - if:
+          condition:
+            all_of:
+              - count_gte:
+                  filter: { of: you, zone: [trash], name_is: "Peckmon" }
+                  n: 1
+              - count_gte:
+                  filter: { of: you, zone: [trash], name_is: "Crowmon" }
+                  n: 1
+              - count_gte:
+                  filter: { of: you, zone: [battle_area], kind: digimon, name_is: "Falcomon" }
+                  n: 1
+          then:
+            - select_own_permanent:
+                bind_as: falcomon
+                optional: true
+                filter: { kind: digimon, name_is: "Falcomon" }
+                prompt: "Select 1 [Falcomon] to gain digivolution cards"
+            - if:
+                condition: { binding_present: falcomon }
+                then:
+                  # Both picks precede both moves. select_trash pins the picked
+                  # card's identity, so the first placement shifting the trash
+                  # does not stale the second binding
+                  # (G-DSL-TRASH-INDEX-BINDING-STALE, resolved).
+                  - select_trash:
+                      of: you
+                      bind_as: peckmon_card
+                      optional: true
+                      filter: { name_is: "Peckmon" }
+                      prompt: "Select 1 [Peckmon] from your trash"
+                  - select_trash:
+                      of: you
+                      bind_as: crowmon_card
+                      optional: true
+                      filter: { name_is: "Crowmon" }
+                      prompt: "Select 1 [Crowmon] from your trash"
+                  # All-or-nothing: nothing moves unless BOTH were chosen.
+                  - if:
+                      condition:
+                        all_of:
+                          - binding_present: peckmon_card
+                          - binding_present: crowmon_card
+                      then:
+                        - place_as_bottom_source: { source: peckmon_card, target: falcomon }
+                        - place_as_bottom_source: { source: crowmon_card, target: falcomon }
+                        - select_trash:
+                            of: you
+                            bind_as: ravemon
+                            optional: true
+                            filter: { kind: digimon, name_is: "Ravemon" }
+                            prompt: "That Digimon may digivolve into a [Ravemon] in your trash, ignoring requirements and without paying the cost"
+                        - if:
+                            condition: { binding_present: ravemon }
+                            then:
+                              - effect_initiated_digivolve:
+                                  target: falcomon
+                                  from_hand: ravemon
+                                  cost: free
+                                  ignore_requirements: true
+
+  - text: "[Security] You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying the cost; then add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: play_pick
+          optional: true
+          # Only a card the effect can actually play is offered (DCGO
+          # BT27_101.cs:359-363 `CanPlayAsNewPermanent(cardSource, false,
+          # activateClass)`, hand and trash alike). CR 4.3 1-3-11-1.
+          filter:
+            all_of:
+              - any_of:
+                  - name_is: "Falcomon"
+                  - name_is: "Keenan Crier"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: play_pick }
+      - add_this_option_to_hand: {}

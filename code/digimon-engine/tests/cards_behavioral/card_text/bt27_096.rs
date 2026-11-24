@@ -14,6 +14,7 @@ use super::bt27_fx::*;
 
 const CARD: &str = "BT27-096";
 const FALCOMON: &str = "BT27-074";
+const YAKSHA: &str = "BT27-101";
 
 fn runner(hand: &[&str]) -> DebugRunner {
     DebugRunner::builder()
@@ -21,6 +22,13 @@ fn runner(hand: &[&str]) -> DebugRunner {
         .unwrap()
         .dsl_card(FALCOMON)
         .unwrap()
+        .add_card(printed(YAKSHA))
+        .dsl_card(YAKSHA)
+        .unwrap()
+        .add_card(purple(mon("FALCO", "Falcomon", 3, 3, &[])))
+        .add_card(mon("PECK", "Peckmon", 4, 5, &[]))
+        .add_card(mon("CROW", "Crowmon", 5, 7, &[]))
+        .add_card(mon("RAVE", "Ravemon", 6, 12, &[]))
         .add_card(mon("X", "X", 3, 3, &[]))
         .add_card(mon("Y", "Y", 3, 3, &[]))
         .add_card(mon("FD", "Fd", 3, 3, &[]))
@@ -115,4 +123,43 @@ fn security_plays_this_tamer_free() {
     attack_security(&mut r, a);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 1).contains(&CARD.to_string()));
+}
+
+#[test]
+fn main_trashes_five_face_down_cards_to_use_a_ravemon_text_option_from_trash_free() {
+    let mut r = runner(&[]);
+    let t = stocked(&mut r, CARD, &["FD"; 6]);
+    let f = r.place_on_field(0, "FALCO", Some(0));
+    for id in [YAKSHA, "PECK", "CROW", "RAVE"] {
+        r.inject_trash(0, id);
+    }
+    let mem = r.memory();
+    activate_main(&mut r, t);
+    pay_tamer_stock(&mut r);
+    assert_eq!(source_ids(&r, t).len(), 1, "5 bottom face-down cards trashed");
+    let v = r.pending_selection_view().expect("optional Option pick");
+    assert!(v.is_optional);
+    r.choose_prompt_card(YAKSHA, None).unwrap();
+    r.choose_prompt_card("FALCO", None).unwrap();
+    r.choose_prompt_card("PECK", None).unwrap();
+    r.choose_prompt_card("CROW", None).unwrap();
+    r.choose_prompt_card("RAVE", None).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(top_id(&r, f), "RAVE");
+    assert_eq!(r.memory(), mem, "used without paying the cost");
+    r.game.players[0].battle_area[t.index as usize].is_suspended = false;
+    assert!(!main_legal(&mut r, t), "Once Per Turn");
+}
+
+#[test]
+fn main_option_use_may_be_declined_after_paying() {
+    let mut r = runner(&[]);
+    let t = stocked(&mut r, CARD, &["FD"; 5]);
+    r.inject_trash(0, YAKSHA);
+    activate_main(&mut r, t);
+    pay_tamer_stock(&mut r);
+    r.decline_prompt().unwrap();
+    let _ = r.auto_resolve();
+    assert!(source_ids(&r, t).is_empty());
+    assert!(trash_ids(&r, 0).contains(&YAKSHA.to_string()));
 }

@@ -230,3 +230,23 @@ pub fn effect_bounce(r: &mut DebugRunner, by: u8, src: PermanentHandle, target: 
     r.game.set_effect_source_player_for_test(None);
     r.game.drain_effect_queue();
 }
+
+pub fn purple(mut c: CardData) -> CardData {
+    c.colors = vec![CardColor::Purple];
+    c
+}
+
+/// Production card data (printed text included) for an `[X] in its text` read.
+pub fn printed(id: &str) -> CardData {
+    use std::collections::HashMap;
+    use std::sync::OnceLock;
+    static CARDS: OnceLock<HashMap<String, CardData>> = OnceLock::new();
+    CARDS
+        .get_or_init(|| {
+            let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/cards.json");
+            CardData::load_from_file(&p).expect("load data/cards.json")
+        })
+        .get(id)
+        .unwrap_or_else(|| panic!("{id} in data/cards.json"))
+        .clone()
+}
