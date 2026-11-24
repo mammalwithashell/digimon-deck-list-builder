@@ -62,7 +62,10 @@ effects:
           prompt: "By suspending 1 of your [QueenChessmon], you may play this card from your trash to the breeding area without paying the cost"
       - suspend: { target: queen }
       - if:
-          condition: { binding_present: queen }
+          condition:
+            all_of:
+              - binding_present: queen
+              - effect_suspended_any_own_digimon: true
           then:
             - select_trash:
                 of: you

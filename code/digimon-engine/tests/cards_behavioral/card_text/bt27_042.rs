@@ -186,6 +186,30 @@ fn on_deletion_decline_leaves_it_in_trash_and_queen_unsuspended() {
 }
 
 #[test]
+fn on_deletion_queen_that_cannot_suspend_pays_nothing_and_plays_nothing() {
+    let mut r = runner();
+    let me = r.place_on_field(0, CARD, Some(0));
+    let queen = r.place_on_field(0, "QC", Some(0));
+    r.game.modifiers.add(
+        queen,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotSuspend,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            1,
+        ),
+    );
+    opponent_deletes(&mut r, me);
+    assert_eq!(r.security_count(0), 3);
+    assert!(r.pending_is_optional());
+    r.choose_prompt_card("QC", None).unwrap();
+    assert!(r.pending_selection().is_none(), "the suspension cost was not paid");
+    assert!(!r.game.players[0].battle_area[0].is_suspended);
+    assert!(breeding_id(&r).is_none());
+    assert!(trash_ids(&r, 0).contains(&CARD.to_string()));
+}
+
+#[test]
 fn on_deletion_without_queenchessmon_only_recovers() {
     let mut r = runner();
     let me = r.place_on_field(0, CARD, Some(0));
