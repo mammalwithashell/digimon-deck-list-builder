@@ -192,3 +192,66 @@ fn lm_066_suspension_costs_require_a_digimon_that_can_suspend() {
     assert!(digimon.contains("can_change_orientation: Some(true)"), "leave replacement payment");
     assert_eq!(option.matches("can_change_orientation: Some(true)").count(), 3, "cost gate + both payments");
 }
+
+fn green_digimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.colors = vec![digimon_engine::enums::CardColor::Green];
+    c
+}
+
+#[test]
+fn lm_066_option_bottom_decks_remaining_target_after_protection_prompt() {
+    // Four suspended Digimon -> "for every 2 suspended Digimon" returns 2.
+    // The opponent's own LM-066 is picked first: its [All Turns] leave
+    // replacement prompts partway through the per-target loop, and the
+    // second pick must still go to the bottom of the deck afterwards.
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("LM-066 YAML parses and compiles")
+        .add_card(security_option_filler())
+        .add_card(green_digimon("MY-GREEN"))
+        .add_card(green_digimon("OPP-B"))
+        .add_card(green_digimon("OPP-L"))
+        .deck(0, &["SEC-OPT"; 10])
+        .deck(1, &["SEC-OPT"; 10])
+        .security(0, &["SEC-OPT"; 3])
+        .security(1, &["SEC-OPT"; 3])
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    for _ in 0..4 {
+        let h = runner.place_stack(0, &["MY-GREEN"]);
+        runner.game.players[0].battle_area[h.index as usize].is_suspended = true;
+    }
+    runner.place_stack(1, &["OPP-L"]);
+    runner.place_stack(1, &["OPP-B"]);
+    runner.place_stack(1, &[CARD_ID]);
+    let opp = &runner.game.players[1].battle_area;
+    let locked = opp[0].top_card().handle();
+    let bounced = opp[1].top_card().handle();
+    let protected = opp[2].top_card().handle();
+    let deck_before = runner.deck_size(1);
+    runner.game.enter_main_phase();
+    runner.game.use_option_from_hand_without_paying_cost(0, 0);
+
+    runner.choose_prompt_card("OPP-L", None).expect("lock target");
+    let pick = runner.pending_selection_view().expect("bottom-deck selection");
+    assert_eq!(pick.prompt, "Return 1 of your opponent's Digimon to the bottom of the deck for every 2 suspended Digimon");
+    runner.choose_prompt_card(CARD_ID, None).expect("first bottom-deck pick");
+    runner.choose_prompt_card("OPP-B", None).expect("second bottom-deck pick");
+
+    let protection = runner.pending_selection_view().expect("LM-066 leave replacement prompts");
+    assert_eq!((protection.kind, protection.selecting_player), (SelectionKind::Replacement, 1));
+    runner
+        .execute_action(1, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept replacement");
+    runner.choose_prompt_card("OPP-L", None).expect("suspend cost for the replacement");
+
+    assert!(runner.pending_selection().is_none());
+    let opp = &runner.game.players[1].battle_area;
+    let field: Vec<_> = opp.iter().map(|p| p.top_card().handle()).collect();
+    assert_eq!(field, vec![locked, protected], "protected LM-066 stays; second pick leaves");
+    assert!(opp[0].is_suspended, "OPP-L was suspended to pay the replacement");
+    assert_eq!(runner.deck_size(1), deck_before + 1);
+    assert_eq!(runner.game.players[1].deck.first().map(|c| c.handle()), Some(bounced));
+}
