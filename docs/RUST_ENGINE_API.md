@@ -1027,6 +1027,69 @@ Effect::on_deletion(card)
 
 **Retired patterns (2026-05-23):** The pre-batched substrate had two side-channel slots — `pending_post_deletion_replays` (for Fortitude/Partition post-finalize replays) and `pending_deletion_resume` (Vec stack for nested OnDeletion parks). Both were retired by the batched flow; new code MUST NOT add similar workaround slots. If a new keyword needs "post-trash work to run before OnAnyDeletion," do it inline in the OnDeletion handler body — the batched flow already runs that handler post-trash.
 
+### Main-declaration guard (kept `[Main]` use — 2026-11-24)
+
+**Ruling.** Owner, 2026-11-24: "Match dcgo on the main use". *Orchestrator's
+interpretation (not the owner's wording):* for every `[Main]`-timed clause with
+a per-turn limit, the use accounting follows that card's DCGO script path by
+path; where DCGO calls `RemoveUse()` the clause authors `refund_opt` on exactly
+that path. CR 4.3 15-14-1-4 and 15-8-4-1/-2 read the other way (a declared
+`[Main]` is the activation and counts); the owner chose DCGO parity over that
+reading.
+
+**Why a guard.** A `[Main]` is a player action. If "declare, then pass the
+pick" refunds the use and changes nothing else, the same action is legal again
+in the same state: a free no-op an RL policy or a tree search can repeat
+forever. Every legal action must change the state (`invariant_fuzz`, the
+training no-op tripwire). `Game::main_declare_guard`
+(`src/game/main_declare_guard.rs`) withholds exactly that repeat:
+
+| Step | Where | What |
+|---|---|---|
+| Flag | `lower_triggered` | a `MainOnField` effect whose body contains `refund_opt` gets `Effect::main_refund_capable` |
+| Declare | `Game::activate_field_main` | after every gate, before the use is recorded: `in_flight = { key, uses_before, digest_before = guard_free_verification_digest() }` (key = player, permanent index, source card, OPT key) |
+| Settle | `settle_main_declaration`: tail of `activate_field_main`, of `Game::resolve_selection` and of `decode_action` | once nothing of the declaration is pending (no prompt, no resume stack, empty queue, outermost frame): if the use count is back at `uses_before` AND the guard-free digest equals `digest_before`, park the key at that digest; otherwise drop every park. An unknown `digest_before` never parks |
+| Enforce | `main_effect_select::field_main_match` | a refund-capable effect whose key is parked AND whose park digest equals the current guard-free digest is skipped; the next live `[Main]` on the permanent, if any, takes the bit |
+| Clear | `Game::note_turn_action` | every turn action except a FIELD_EFFECT +2 declaration (`decode_action`, hand play, player-declared attack, `end_turn`, DebugRunner action wrappers); a non-refund-capable `[Main]`, `<Delay>` or `<Training>` drops the parks; `begin_turn` empties the guard (CR 4.3 15-14-1-5-1) |
+
+Contract:
+
+- **The use is kept.** The parked `[Main]` is offered again as soon as the
+  state changes; a park is checked against the digest it was proven at, so a
+  park left behind by a direct `Game` call that bypassed `note_turn_action` just
+  stops applying.
+- **One match.** `field_main_match` returns the matched source/slot/OPT key
+  (`FieldMainTarget`) and `activate_field_main` dispatches on it, so the mask,
+  `explain_action` and the decoder cannot pick different effects (the decoder
+  used to re-scan without the outer-optional and activation-cost gates).
+- **Data, not closures.** The guard is plain data on `Game`: it clones, and it
+  is hashed into `verification_digest()` as a `main_declare_guard` section only
+  while non-empty (digests of states without a kept use are unchanged).
+  `guard_free_verification_digest()` is the same digest without that section.
+- **A refund leaves no residue.** `Permanent::unrecord_activation` and
+  `Player::unrecord_security_activation` remove an entry that reaches 0 (an
+  absent key reads as 0), so a refunded use is digest-identical to no use.
+- **Determinization.** `materialize` / `materialize_closed` call
+  `rebase_main_declare_guard_for_world(root)`: a park live in the root is
+  re-stamped with the world's digest (only hidden zones differ), a park stale in
+  the root is dropped, and an in-flight declaration forgets its pre-state, so
+  every world of one infoset offers the same actions.
+- **Replay.** DCGO's UI allows declare, pass, declare again. When a DCGO row's
+  FIELD_EFFECT +2 declaration is off only because of a park,
+  `ReplaySession` lifts the parks on that permanent
+  (`Game::unpark_main_declarations_for_replay`) and notes
+  `dcgo_main_redeclare_after_pass`.
+- **No contract change.** Observation tensor and action-space sizes are
+  unchanged.
+- **Authoring.** A `refund_opt` in a `[Main]` must sit only on a branch where
+  nothing was executed; a refund after an executed step is not a no-op, the
+  guard does not park it, and two such `[Main]`s could undo each other in a
+  cycle the guard cannot see.
+
+Tests: `tests/mask_and_tensor/main_declare_guard.rs`,
+`tests/replay_dcgo_int_and_order_folds.rs` (section 4), and the within-turn
+no-repeated-digest check in `tests/invariant_fuzz`.
+
 ### Reset-and-replay contract (recording back-step — 2026-05-29)
 
 The interactive replay stepper (`ReplaySession` / `LiveGame` stepping tools, the

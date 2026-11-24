@@ -21,6 +21,13 @@
 //!    BT18_097.cs:190-215) before `AddDigivolutionCardsBottom`. The engine's
 //!    single `select_zone_cards` takes the PICK order as the placement order.
 //!
+//! 4. A kept `[Main]` use declared again after a passed pick with nothing
+//!    changed in between. DCGO's human UI allows it; the engine's
+//!    main-declaration guard withholds it (owner ruling 2026-11-24,
+//!    `game::main_declare_guard`). The replay lifts the park for that DCGO row
+//!    and notes it (`dcgo_main_redeclare_after_pass`); it never reports a
+//!    mask miss for it.
+//!
 //! Staged with `DebugRunner` (real YAML, synthetic boards). No recording
 //! content.
 
@@ -488,4 +495,85 @@ fn bt18_097_a_single_card_needs_no_order_row() {
     assert!(s.is_complete());
     assert_eq!(under(&s.game, "TAMER"), vec!["HYB-B"]);
     let _ = PASS;
+}
+
+// ─── 4. Kept [Main] use re-declared after a pass ───────────────────────────
+
+/// Synthetic: "[Main] [Once Per Turn] You may play 1 Digimon card from your
+/// hand." with the use given back on a passed pick (DCGO `RemoveUse()`).
+const KEEP_MAIN: &str = r#"
+card: KEEP-MAIN
+name: Keeper
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 5000
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    optional: true
+    summary: "[Main] [Once Per Turn] You may play 1 Digimon card from your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Play 1 Digimon card from your hand"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_or_use_from_hand: { of: you, hand_index: pick }
+          else:
+            - refund_opt: {}
+"#;
+
+fn keeper() -> Game {
+    let mut filler = make_test_card("FILL", "FILL");
+    filler.card_kind = CardKind::Digimon;
+    filler.colors = vec![CardColor::Red];
+    filler.level = Some(3);
+    filler.dp = Some(3000);
+    filler.play_cost = 2;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(KEEP_MAIN)
+        .expect("KEEP-MAIN compiles")
+        .add_card(filler)
+        .hand(0, &["FILL"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(6)
+        .start();
+    r.set_first_player(0);
+    r.skip_mulligan();
+    r.game.enter_main_phase();
+    r.place_on_field(0, "KEEP-MAIN", Some(0));
+    r.game
+}
+
+fn declare_keeper() -> StepSpec {
+    use digimon_engine::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    };
+    let _ = EFFECTS_PER_PERMANENT;
+    spec(FIELD_EFFECT_START + FIELD_EFFECT_SLOT_FOR_MAIN, "main_phase", None)
+}
+
+#[test]
+fn kept_main_redeclared_after_a_pass_replays_with_one_note() {
+    let s = run(
+        keeper(),
+        vec![declare_keeper(), hand_pick(&[]), declare_keeper(), hand_pick(&["FILL"])],
+    );
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert!(s.is_complete(), "every row replays");
+    let notes: Vec<_> = s
+        .replay_notes()
+        .iter()
+        .filter(|n| n.contains("dcgo_main_redeclare_after_pass"))
+        .collect();
+    assert_eq!(notes.len(), 1, "{:?}", s.replay_notes());
+    assert_eq!(s.game.players[0].battle_area.len(), 2, "the second declaration played FILL");
+    assert!(s.game.players[0].hand.is_empty());
 }

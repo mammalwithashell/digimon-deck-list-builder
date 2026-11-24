@@ -638,6 +638,7 @@ impl Game {
             AttackInitiator::NaturalMainPhase | AttackInitiator::Vortex | AttackInitiator::Overclock
         ) {
             self.reset_loop_watch();
+            self.note_turn_action();
         }
         let TargetConstraint::Forced(target) = target_constraint else {
             return AttackResult::Invalid;

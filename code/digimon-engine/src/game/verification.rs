@@ -23,9 +23,24 @@ impl Game {
         self.verification_digest_with_version(crate::recorder::VerificationDigestVersion::CURRENT)
     }
 
+    /// The current gameplay digest without the main-declaration guard's own
+    /// section: what the guard compares to prove a declare-then-pass was a
+    /// no-op (`game::main_declare_guard`).
+    pub fn guard_free_verification_digest(&self) -> u64 {
+        self.verification_digest_impl(crate::recorder::VerificationDigestVersion::CURRENT, false)
+    }
+
     /// Explicit legacy verification is for archival recordings, never an
     /// inferred fallback after a current digest mismatch.
     pub fn verification_digest_with_version(&self, version: crate::recorder::VerificationDigestVersion) -> u64 {
+        self.verification_digest_impl(version, true)
+    }
+
+    fn verification_digest_impl(
+        &self,
+        version: crate::recorder::VerificationDigestVersion,
+        include_main_declare_guard: bool,
+    ) -> u64 {
         use crate::recorder::VerificationDigestVersion;
         let mut h = Sha256::new();
         token(&mut h, match version {
@@ -528,6 +543,12 @@ impl Game {
             &self.dsl_replacement_outcome,
         );
         field(&mut h, "in_counter_window", self.in_counter_window);
+        // The main-declaration guard (owner ruling 2026-11-24): hashed only
+        // while it holds something, so every digest recorded before it
+        // existed, and every state without a kept [Main] use, is unchanged.
+        if include_main_declare_guard && !self.main_declare_guard.is_empty() {
+            debug_field(&mut h, "main_declare_guard", &self.main_declare_guard);
+        }
 
         let digest = h.finalize();
         u64::from_le_bytes(

@@ -94,6 +94,9 @@ pub fn materialize(game: &Game, viewer: PlayerId, seed: u64) -> Game {
     // Fresh RNG stream for the world's own future randomness (shuffles
     // triggered by effects, etc.), derived from the world seed only.
     world.rng = StdRng::seed_from_u64(rng.gen());
+    // Main-declaration guard: same legal actions in every world of the
+    // infoset (`game::main_declare_guard`).
+    world.rebase_main_declare_guard_for_world(game);
     world
 }
 

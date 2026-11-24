@@ -1265,6 +1265,9 @@ pub fn materialize_closed_with_diagnostics(
         return Err("hypothesis changed entitled public state".into());
     }
     check_hypothesis(&world)?;
+    // Main-declaration guard: same legal actions in every world of the
+    // infoset (`game::main_declare_guard`).
+    world.rebase_main_declare_guard_for_world(root);
     Ok((world, hypothesis.used_fallback))
 }
 

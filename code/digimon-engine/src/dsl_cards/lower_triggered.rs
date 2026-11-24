@@ -291,6 +291,11 @@ pub fn lower_for_kind_with_clause_index(
         if steps_provide_resource_flow(&process) {
             builder = builder.resource_flow();
         }
+        // Owner ruling 2026-11-24: a [Main] that can give its use back is
+        // tracked by the main-declaration loop guard.
+        if matches!(engine_timing, EffectTiming::MainOnField) && has_refund_opt {
+            builder = builder.main_refund_capable();
+        }
         builder = builder.development_hand(crate::policies::development::HandBenefit::from_steps(&clause.process));
         // G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT: an Option [Main] body
         // that authors its own `place_self_as_delay_option` owns the
