@@ -54,17 +54,17 @@ fn runner(opp_hand: usize) -> DebugRunner {
         .start()
 }
 
-fn pick(r: &mut DebugRunner, a: u16) {
+fn do_action(r: &mut DebugRunner, a: u16) {
     let p = r.pending_selection_view().unwrap().selecting_player;
     assert_eq!(build_action_mask(&r.game, p)[a as usize], 1.0);
     r.execute_action(p, a).unwrap();
 }
 
-fn accept(r: &mut DebugRunner) {
+fn accept_offer(r: &mut DebugRunner) {
     let v = r.pending_selection_view().unwrap();
     assert!(v.is_optional, "{}", v.prompt);
     let a = *v.valid_action_ids.iter().find(|a| **a != PASS).unwrap();
-    pick(r, a);
+    do_action(r, a);
 }
 
 fn is_order(r: &DebugRunner) -> bool {
@@ -76,7 +76,7 @@ fn order_reduction_first(r: &mut DebugRunner, reduction_first: bool) {
     assert_eq!(v.kind, SelectionKind::TriggerOrder, "Q7685: player orders both triggers");
     let c = v.effect_choices.unwrap();
     assert_eq!(c.len(), 2);
-    pick(r, c[usize::from(reduction_first)].action_id);
+    do_action(r, c[usize::from(reduction_first)].action_id);
 }
 
 fn blind(r: &mut DebugRunner, n: usize) -> Vec<CardHandle> {
@@ -92,30 +92,30 @@ fn blind(r: &mut DebugRunner, n: usize) -> Vec<CardHandle> {
         let a = *v.valid_action_ids.iter().rfind(|a| **a != PASS).unwrap();
         let index = (a - digimon_engine::action::space::PLAY_HAND_START) as usize;
         handles.push(r.game.players[1].hand[index].handle());
-        pick(r, a);
+        do_action(r, a);
     }
     if r.pending_selection_view()
         .is_some_and(|v| matches!(v.kind, SelectionKind::CountCappedMultiSelect { .. }))
     {
-        pick(r, PASS);
+        do_action(r, PASS);
     }
     handles
 }
 
-fn decline_all(r: &mut DebugRunner) {
+fn decline_optionals(r: &mut DebugRunner) {
     for _ in 0..10 {
         let Some(v) = r.pending_selection_view() else { return };
         if v.is_optional {
-            pick(r, PASS);
+            do_action(r, PASS);
         } else if v.kind == SelectionKind::TriggerOrder {
-            pick(r, v.effect_choices.unwrap()[0].action_id);
+            do_action(r, v.effect_choices.unwrap()[0].action_id);
         } else {
             panic!("unexpected mandatory prompt: {}", v.prompt);
         }
     }
 }
 
-fn evolve(r: &mut DebugRunner) -> PermanentHandle {
+fn evolve_card(r: &mut DebugRunner) -> PermanentHandle {
     let b = r.place_on_field(0, "BLUE6", Some(0));
     assert!(digivolve_hand(r, CARD, b));
     b
@@ -142,7 +142,7 @@ fn digivolves_for_5_from_blue_black_or_data_squad_level_6_only() {
         let b = r.place_on_field(0, base, Some(0));
         let mem = r.memory();
         assert!(digivolve_hand(&mut r, CARD, b), "{base}");
-        decline_all(&mut r);
+        decline_optionals(&mut r);
         assert_eq!(top_id(&r, b), CARD);
         assert_eq!(mem - r.memory(), 5, "{base}");
     }
@@ -157,11 +157,11 @@ fn digivolves_for_5_from_blue_black_or_data_squad_level_6_only() {
 fn seven_cards_offers_only_the_option_main_and_declining_changes_nothing() {
     let mut r = runner(7);
     r.place_on_field(1, "L4", Some(0));
-    evolve(&mut r);
+    evolve_card(&mut r);
     assert!(!is_order(&r), "the hand-size clause does not trigger at 7");
     let v = r.pending_selection_view().expect("may activate the Option side [Main]");
     assert!(v.is_optional);
-    pick(&mut r, PASS);
+    do_action(&mut r, PASS);
     assert!(r.pending_selection().is_none());
     assert_eq!(r.hand_size(1), 7);
     assert_eq!(r.game.players[1].security.len(), 2);
@@ -174,9 +174,9 @@ fn eight_or_nine_cards_blind_returns_down_to_seven_then_bottom_decks_top_securit
         let mut r = runner(n);
         let top = r.game.players[1].security.last().unwrap().handle();
         let deck = r.deck_size(1);
-        evolve(&mut r);
+        evolve_card(&mut r);
         order_reduction_first(&mut r, true);
-        accept(&mut r);
+        accept_offer(&mut r);
         let chosen = blind(&mut r, n - 7);
         assert_eq!(r.hand_size(1), 7, "{n}");
         assert_eq!(r.deck_size(1), deck + n - 7 + 1);
@@ -186,17 +186,17 @@ fn eight_or_nine_cards_blind_returns_down_to_seven_then_bottom_decks_top_securit
         }
         assert_eq!(r.game.players[1].security.len(), 1);
         assert!(r.game.revealed_cards.is_empty(), "Q7689: never revealed");
-        decline_all(&mut r);
+        decline_optionals(&mut r);
     }
 }
 
 #[test]
 fn declining_the_reduction_keeps_hand_and_security() {
     let mut r = runner(9);
-    evolve(&mut r);
+    evolve_card(&mut r);
     order_reduction_first(&mut r, true);
-    pick(&mut r, PASS);
-    decline_all(&mut r);
+    do_action(&mut r, PASS);
+    decline_optionals(&mut r);
     assert_eq!(r.hand_size(1), 9);
     assert_eq!(r.game.players[1].security.len(), 2);
 }
@@ -207,8 +207,8 @@ fn option_main_bounce_to_eight_then_may_unsuspend_one_of_your_digimon() {
     r.place_on_field(1, "L4", Some(0));
     let mine = r.place_on_field(0, "RED5", Some(0));
     r.game.players[0].battle_area[mine.index as usize].is_suspended = true;
-    evolve(&mut r);
-    accept(&mut r);
+    evolve_card(&mut r);
+    accept_offer(&mut r);
     let v = r.pending_selection_view().expect("bounce target");
     assert_eq!(v.source_kind, EffectSourceKind::Option, "Q7682: an Option card effect");
     r.choose_prompt_card("L4", None).unwrap();
@@ -217,7 +217,7 @@ fn option_main_bounce_to_eight_then_may_unsuspend_one_of_your_digimon() {
     assert!(v.is_optional);
     assert_eq!(candidates(&r), vec!["RED5"], "only suspended Digimon of yours");
     r.choose_prompt_card("RED5", None).unwrap();
-    decline_all(&mut r);
+    decline_optionals(&mut r);
     assert!(!r.game.players[0].battle_area[find(&r, 0, "RED5").index as usize].is_suspended);
     assert_eq!(field_ids(&r, 0).iter().filter(|x| *x == CARD).count(), 1, "the Option side was not used");
 }
@@ -228,8 +228,8 @@ fn option_main_bounce_to_seven_offers_no_unsuspend() {
     r.place_on_field(1, "L4", Some(0));
     let mine = r.place_on_field(0, "RED5", Some(0));
     r.game.players[0].battle_area[mine.index as usize].is_suspended = true;
-    evolve(&mut r);
-    accept(&mut r);
+    evolve_card(&mut r);
+    accept_offer(&mut r);
     r.choose_prompt_card("L4", None).unwrap();
     assert_eq!(r.hand_size(1), 7);
     assert!(r.pending_selection().is_none());
@@ -240,9 +240,9 @@ fn option_main_bounce_to_seven_offers_no_unsuspend() {
 fn resolving_the_option_main_first_counts_the_bounced_card_for_the_reduction() {
     let mut r = runner(8);
     r.place_on_field(1, "L4", Some(0));
-    evolve(&mut r);
+    evolve_card(&mut r);
     order_reduction_first(&mut r, false);
-    accept(&mut r);
+    accept_offer(&mut r);
     r.choose_prompt_card("L4", None).unwrap();
     decline_all_optional_until_blind(&mut r);
     blind(&mut r, 2);
@@ -253,24 +253,24 @@ fn resolving_the_option_main_first_counts_the_bounced_card_for_the_reduction() {
 fn decline_all_optional_until_blind(r: &mut DebugRunner) {
     let v = r.pending_selection_view().expect("hand-size clause");
     assert!(v.is_optional);
-    accept(r);
+    accept_offer(r);
 }
 
 #[test]
 fn when_attacking_triggers_both_and_the_option_main_is_once_per_turn() {
     let mut r = runner(9);
     r.place_on_field(1, "L4", Some(0));
-    evolve(&mut r);
+    evolve_card(&mut r);
     order_reduction_first(&mut r, true);
-    pick(&mut r, PASS);
-    accept(&mut r);
+    do_action(&mut r, PASS);
+    accept_offer(&mut r);
     r.choose_prompt_card("L4", None).unwrap();
     assert_eq!(r.hand_size(1), 10);
     let h = find(&r, 0, CARD);
     r.game.players[0].battle_area[h.index as usize].is_suspended = false;
     attack_security(&mut r, h.index);
     assert!(!is_order(&r), "the Option-side [Main] was used this turn");
-    accept(&mut r);
+    accept_offer(&mut r);
     blind(&mut r, 3);
     assert_eq!(r.hand_size(1), 7);
     assert_eq!(r.game.players[1].security.len(), 0, "1 bottom-decked, then the attack checks the other");

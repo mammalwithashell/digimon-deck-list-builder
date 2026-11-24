@@ -50,7 +50,7 @@ fn digivolves_from_any_colour_level_three_data_squad_for_two() {
     let base = r.place_on_field(0, "GREEN-DS3", Some(0));
     let before = r.memory();
     assert!(digivolve_hand(&mut r, CARD, base));
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, base), CARD);
     assert_eq!(before - r.memory(), 2);
 }
@@ -89,7 +89,7 @@ fn four_cards_trash_exactly_two_of_the_players_choice() {
     // Lock pick: Y is now sourceless.
     assert_eq!(candidates(&r), vec!["TOP"]);
     r.choose_prompt_card("TOP", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, x), vec!["B"]);
     assert!(source_ids(&r, y).is_empty());
     assert!(r.game.modifiers.has(y, ModifierType::CannotSuspend));
@@ -106,7 +106,7 @@ fn under_four_cards_trashes_nothing_but_still_locks_a_sourceless_digimon() {
     assert!(!v.is_optional);
     assert_eq!(candidates(&r), vec!["BARE"]);
     r.choose_prompt_card("BARE", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, x), vec!["A"]);
     assert!(r.game.modifiers.has(bare, ModifierType::CannotSuspend));
 }
@@ -116,7 +116,7 @@ fn no_sourceless_digimon_means_no_lock() {
     let mut r = runner(0);
     let x = r.place_stack(1, &["A", "TOP"]);
     play_hand(&mut r, CARD);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert!(!r.game.modifiers.has(x, ModifierType::CannotSuspend));
 }
@@ -126,9 +126,9 @@ fn inherited_both_players_draw_once_per_turn() {
     let mut r = runner(0);
     let a = r.place_stack(0, &[CARD, "TOP"]).index;
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!((r.hand_size(0), r.hand_size(1)), (2, 1));
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!((r.hand_size(0), r.hand_size(1)), (2, 1));
 }

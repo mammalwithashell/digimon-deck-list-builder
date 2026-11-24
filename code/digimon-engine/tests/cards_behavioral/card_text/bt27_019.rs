@@ -48,7 +48,9 @@ fn on_play_places_hand_card_face_down_at_bottom_of_thomas_and_both_draw() {
     assert!(v.is_optional);
     assert_eq!(candidates(&r), vec!["X"]);
     r.choose_prompt_card("X", None).unwrap();
-    let _ = r.auto_resolve();
+    assert_eq!(candidates(&r), vec![THOMAS], "the player names the Thomas");
+    r.choose_prompt_card(THOMAS, None).unwrap();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["X", "OLD"]);
     assert_eq!(face_down(&r, t), vec![true, true]);
     assert_eq!(hand_ids(&r, 0), vec!["FILL"]);
@@ -66,7 +68,7 @@ fn on_play_lets_the_player_choose_which_thomas() {
     assert!(!v.is_optional);
     assert_eq!(candidates(&r), vec![THOMAS, THOMAS]);
     r.choose_prompt_card(THOMAS, Some(1)).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     let (with_x, without) = if source_ids(&r, t2) == vec!["X"] { (t2, t1) } else { (t1, t2) };
     assert!(source_ids(&r, with_x).contains(&"X".to_string()));
     assert!(!source_ids(&r, without).contains(&"X".to_string()));
@@ -115,7 +117,9 @@ fn when_moving_from_breeding_offers_the_same_placement() {
     let v = r.pending_selection_view().expect("When Moving hand pick");
     assert!(v.is_optional);
     r.choose_prompt_card("X", None).unwrap();
-    let _ = r.auto_resolve();
+    assert_eq!(candidates(&r), vec![THOMAS], "the player names the Thomas");
+    r.choose_prompt_card(THOMAS, None).unwrap();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["X", "OLD"]);
     assert_eq!(r.hand_size(1), 1);
 }
@@ -125,11 +129,11 @@ fn inherited_when_attacking_both_players_draw_once_per_turn() {
     let mut r = runner(&[]);
     let a = r.place_stack(0, &[CARD, "TOP"]).index;
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.hand_size(0), 1);
     assert_eq!(r.hand_size(1), 1);
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.hand_size(0), 1, "once per turn");
     assert_eq!(r.hand_size(1), 1);
 }

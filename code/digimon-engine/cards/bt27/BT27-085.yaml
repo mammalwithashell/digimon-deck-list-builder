@@ -50,16 +50,20 @@ alt_paths:
       - trash_top_source: { target: carrier }
 effects:
   - kind: grant_keyword
+    text: "＜Piercing＞"
     keyword: Piercing
   - kind: grant_keyword
+    text: "＜Blocker＞"
     keyword: Blocker
   - when: [when_digivolving, when_attacking]
+    text: "[When Digivolving] [When Attacking] You may activate 1 [Main] effect on this card's Option side."
     optional: true
     outer_prompt: true
     summary: "[When Digivolving] [When Attacking] You may activate 1 [Main] effect on this card's Option side"
     process:
       - refire_effect: { source: source, timing: option_main, optional: false }
   - when: on_discard_hand
+    text: "[All Turns] [Once Per Turn] When your opponent's hand is trashed from, this Digimon may unsuspend."
     active_when: { all_turns: true }
     optional: true
     outer_prompt: true
@@ -73,6 +77,7 @@ effects:
     process:
       - unsuspend: { target: source }
   - when: main_from_hand
+    text: "[Main] Your opponent trashes any 1 card from their hand or security stack. Then, delete 1 of their Digimon with a level as high as the number of cards in their hand or higher."
     summary: "[Main] Your opponent trashes any 1 card from their hand or security stack. Then, delete 1 of their Digimon with a level as high as the number of cards in their hand or higher"
     process:
       - as_selecting_player:

@@ -52,17 +52,17 @@ fn runner(opp_hand: &[&str]) -> DebugRunner {
         .start()
 }
 
-fn pick(r: &mut DebugRunner, a: u16) {
+fn do_action(r: &mut DebugRunner, a: u16) {
     let p = r.pending_selection_view().unwrap().selecting_player;
     assert_eq!(build_action_mask(&r.game, p)[a as usize], 1.0);
     r.execute_action(p, a).unwrap();
 }
 
-fn accept(r: &mut DebugRunner) {
+fn accept_offer(r: &mut DebugRunner) {
     let v = r.pending_selection_view().unwrap();
     assert!(v.is_optional, "{}", v.prompt);
     let a = *v.valid_action_ids.iter().find(|a| **a != PASS).unwrap();
-    pick(r, a);
+    do_action(r, a);
 }
 
 /// The opponent answers the hand-or-security choice.
@@ -73,7 +73,7 @@ fn opponent_chooses(r: &mut DebugRunner, security: bool) {
     assert!(!v.is_optional);
     let c = v.effect_choices.unwrap();
     assert_eq!(c.len(), 2);
-    pick(r, c[usize::from(security)].action_id);
+    do_action(r, c[usize::from(security)].action_id);
 }
 
 fn opponent_trashes_hand(r: &mut DebugRunner, id: &str) {
@@ -88,10 +88,10 @@ fn opponent_picks_first(r: &mut DebugRunner) {
     assert_eq!(v.selecting_player, 1);
     assert!(!v.is_optional);
     let a = *v.valid_action_ids.iter().find(|a| **a != PASS).unwrap();
-    pick(r, a);
+    do_action(r, a);
 }
 
-fn evolve(r: &mut DebugRunner) -> PermanentHandle {
+fn evolve_card(r: &mut DebugRunner) -> PermanentHandle {
     let b = r.place_on_field(0, "PUR6", Some(0));
     assert!(digivolve_hand(r, CARD, b));
     b
@@ -102,11 +102,11 @@ fn find(r: &DebugRunner, p: u8, id: &str) -> PermanentHandle {
     PermanentHandle { player: p, index: i as u8 }
 }
 
-fn decline_all(r: &mut DebugRunner) {
+fn decline_optionals(r: &mut DebugRunner) {
     for _ in 0..10 {
         let Some(v) = r.pending_selection_view() else { return };
         assert!(v.is_optional, "unexpected mandatory prompt: {}", v.prompt);
-        pick(r, PASS);
+        do_action(r, PASS);
     }
 }
 
@@ -126,7 +126,7 @@ fn digivolves_for_5_from_purple_green_or_data_squad_level_6_only() {
         let b = r.place_on_field(0, base, Some(0));
         let mem = r.memory();
         assert!(digivolve_hand(&mut r, CARD, b), "{base}");
-        decline_all(&mut r);
+        decline_optionals(&mut r);
         assert_eq!(top_id(&r, b), CARD);
         assert_eq!(mem - r.memory(), 5, "{base}");
     }
@@ -141,8 +141,8 @@ fn when_digivolving_hand_branch_then_deletes_a_digimon_at_or_above_the_hand_size
     for id in ["L3", "L4", "L6"] {
         r.place_on_field(1, id, Some(0));
     }
-    evolve(&mut r);
-    accept(&mut r);
+    evolve_card(&mut r);
+    accept_offer(&mut r);
     assert_eq!(r.pending_selection_view().unwrap().source_kind, EffectSourceKind::Option);
     opponent_chooses(&mut r, false);
     opponent_trashes_hand(&mut r, "H2");
@@ -164,8 +164,8 @@ fn security_branch_trashes_a_security_card_and_keeps_the_hand() {
     let mut r = runner(&["H1", "H2", "F", "F", "F", "F", "F"]);
     r.place_on_field(1, "L6", Some(0));
     r.place_on_field(1, "L4", Some(0));
-    evolve(&mut r);
-    accept(&mut r);
+    evolve_card(&mut r);
+    accept_offer(&mut r);
     opponent_chooses(&mut r, true);
     opponent_picks_first(&mut r);
     assert_eq!(r.game.players[1].security.len(), 1);
@@ -179,8 +179,8 @@ fn security_branch_trashes_a_security_card_and_keeps_the_hand() {
 fn empty_hand_leaves_only_the_security_branch_and_empty_hand_lets_any_level_be_deleted() {
     let mut r = runner(&[]);
     r.place_on_field(1, "L3", Some(0));
-    evolve(&mut r);
-    accept(&mut r);
+    evolve_card(&mut r);
+    accept_offer(&mut r);
     opponent_picks_first(&mut r);
     assert_eq!(r.game.players[1].security.len(), 1);
     assert_eq!(candidates(&r), vec!["L3"]);
@@ -192,8 +192,8 @@ fn empty_hand_leaves_only_the_security_branch_and_empty_hand_lets_any_level_be_d
 fn empty_security_leaves_only_the_hand_branch() {
     let mut r = runner(&["H1"]);
     r.game.players[1].security.clear();
-    evolve(&mut r);
-    accept(&mut r);
+    evolve_card(&mut r);
+    accept_offer(&mut r);
     opponent_trashes_hand(&mut r, "H1");
     assert_eq!(r.hand_size(1), 0);
 }
@@ -202,8 +202,8 @@ fn empty_security_leaves_only_the_hand_branch() {
 fn declining_the_activation_does_nothing() {
     let mut r = runner(&["H1"]);
     r.place_on_field(1, "L3", Some(0));
-    evolve(&mut r);
-    pick(&mut r, PASS);
+    evolve_card(&mut r);
+    do_action(&mut r, PASS);
     assert!(r.pending_selection().is_none());
     assert_eq!(r.hand_size(1), 1);
     assert_eq!(r.game.players[1].security.len(), 2);
@@ -213,28 +213,28 @@ fn declining_the_activation_does_nothing() {
 #[test]
 fn when_attacking_activates_again_and_the_hand_trash_unsuspends_it_once_per_turn() {
     let mut r = runner(&["H1", "H2", "F", "F", "F", "F", "F", "F", "F"]);
-    evolve(&mut r);
-    accept(&mut r);
+    evolve_card(&mut r);
+    accept_offer(&mut r);
     opponent_chooses(&mut r, false);
     opponent_trashes_hand(&mut r, "H1");
     assert!(r.pending_selection().is_none(), "not suspended: no unsuspend offer");
     let h = find(&r, 0, CARD);
     attack_security(&mut r, h.index);
-    accept(&mut r);
+    accept_offer(&mut r);
     opponent_chooses(&mut r, false);
     opponent_trashes_hand(&mut r, "H2");
     let v = r.pending_selection_view().expect("may unsuspend");
     assert!(v.is_optional && v.selecting_player == 0);
-    accept(&mut r);
+    accept_offer(&mut r);
     assert!(!r.game.players[0].battle_area[find(&r, 0, CARD).index as usize].is_suspended);
-    decline_all(&mut r);
+    decline_optionals(&mut r);
     while r.pending_selection().is_some() {
         r.decline_prompt().unwrap();
     }
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     let h = find(&r, 0, CARD);
     attack_security(&mut r, h.index);
-    accept(&mut r);
+    accept_offer(&mut r);
     opponent_chooses(&mut r, false);
     let before = r.hand_size(1);
     opponent_picks_first(&mut r);
@@ -250,10 +250,10 @@ fn declining_unsuspend_keeps_it_suspended() {
     let mut r = runner(&["H1", "F", "F", "F", "F", "F", "F", "F", "F"]);
     let h = r.place_stack(0, &["PUR6", CARD]);
     attack_security(&mut r, h.index);
-    accept(&mut r);
+    accept_offer(&mut r);
     opponent_chooses(&mut r, false);
     opponent_trashes_hand(&mut r, "H1");
-    pick(&mut r, PASS);
+    do_action(&mut r, PASS);
     assert!(r.game.players[0].battle_area[h.index as usize].is_suspended);
 }
 

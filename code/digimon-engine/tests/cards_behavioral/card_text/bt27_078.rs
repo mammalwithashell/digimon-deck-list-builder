@@ -42,7 +42,7 @@ fn on_play_with_one_tamer_plays_keenan_free() {
     assert_eq!(candidates(&r), vec!["KEENAN"]);
     let mem = r.memory();
     r.choose_prompt_card("KEENAN", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).contains(&"KEENAN".to_string()));
     assert_eq!(r.memory(), mem);
 }
@@ -77,7 +77,7 @@ fn inherited_on_deletion_opponent_chooses_and_trashes_one_hand_card() {
     assert_eq!(v.selecting_player, 1);
     assert!(!v.is_optional);
     r.choose_prompt_card("O2", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(hand_ids(&r, 1), vec!["O1"]);
     assert_eq!(trash_ids(&r, 1), vec!["O2"]);
 }

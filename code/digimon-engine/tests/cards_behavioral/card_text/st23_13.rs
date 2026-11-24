@@ -44,8 +44,8 @@ fn start_of_your_main_phase_places_new_card_at_bottom_even_with_existing_sources
     let mut r = start(builder(CARD));
     let tamer = stocked_tamer(&mut r, CARD);
     r.place_on_field(1, "TEXT-3", Some(0));
-    next_turn(&mut r);
-    next_turn(&mut r);
+    advance_turn(&mut r);
+    advance_turn(&mut r);
     r.assert_prompt(SelectionKind::EffectChoice, false, 0);
     r.execute_branch(0).unwrap();
     let sources = &r.game.players[0].battle_area[tamer.index as usize].card_sources;
@@ -89,9 +89,9 @@ fn your_turn_effect_trashing_under_this_tamer_may_suspend_it_to_buff_only_glowin
             accept
         );
         assert_eq!(r.dp_of(target), Some(if accept { 7000 } else { 4000 }));
-        next_turn(&mut r);
+        advance_turn(&mut r);
         assert_eq!(r.dp_of(target), Some(if accept { 7000 } else { 4000 }));
-        next_turn(&mut r);
+        advance_turn(&mut r);
         r.assert_prompt(SelectionKind::EffectChoice, false, 0);
         r.execute_branch(1).unwrap();
         assert_eq!(r.dp_of(target), Some(4000));

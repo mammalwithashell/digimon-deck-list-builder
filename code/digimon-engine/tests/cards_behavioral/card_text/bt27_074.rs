@@ -55,7 +55,7 @@ fn on_play_places_face_down_at_bottom_of_keenan_then_draws_and_trashes_a_chosen_
     assert!(!v.is_optional);
     assert_eq!(candidates(&r), vec!["DRAW", "Y"]);
     r.choose_prompt_card("Y", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["X", "OLD"]);
     assert_eq!(face_down(&r, t), vec![true, true]);
     assert_eq!(hand_ids(&r, 0), vec!["DRAW"]);
@@ -92,7 +92,7 @@ fn when_moving_from_breeding_offers_the_same_placement() {
     r.choose_prompt_card("X", None).unwrap();
     r.choose_prompt_card(KEENAN, None).unwrap();
     r.choose_prompt_card("DRAW", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["X", "OLD"]);
     assert_eq!(trash_ids(&r, 0), vec!["DRAW"]);
 }
@@ -106,9 +106,9 @@ fn inherited_draws_then_trashes_once_per_turn() {
     assert!(!v.is_optional);
     assert_eq!(candidates(&r), vec!["DRAW", "X"]);
     r.choose_prompt_card("X", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(hand_ids(&r, 0), vec!["DRAW"]);
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(hand_ids(&r, 0), vec!["DRAW"], "once per turn");
 }

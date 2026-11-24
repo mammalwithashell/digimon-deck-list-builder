@@ -43,12 +43,16 @@ alt_paths:
     cost: 3
 effects:
   - kind: grant_keyword
+    text: "＜Reboot＞"
     keyword: Reboot
   - kind: grant_keyword
+    text: "＜Blocker＞"
     keyword: Blocker
   - kind: grant_keyword
+    text: "＜Evade＞"
     keyword: Evade
   - when: when_digivolving
+    text: "[When Digivolving] For every 4 cards your opponent's hand has, 1 of their Digimon or Tamers can't suspend until their turn ends."
     summary: "For every 4 opposing hand cards, 1 opposing Digimon or Tamer can't suspend until their turn ends"
     process:
       - select_count_capped_multi:
@@ -78,6 +82,7 @@ effects:
                 value: 1
                 expiry: end_of_opponents_turn
   - when: [on_add_to_hand, on_digivolution_card_trashed]
+    text: "[All Turns] [Once Per Turn] When effects add to your opponent's hand, or effects trash cards under your Tamers, you may activate 1 [Main] effect on this card's Option side."
     active_when: { all_turns: true }
     optional: true
     outer_prompt: true
@@ -100,6 +105,7 @@ effects:
     process:
       - refire_effect: { source: source, timing: option_main, optional: false }
   - when: main_from_hand
+    text: "[Main] Return 1 of your opponent's highest level Digimon to the hand."
     summary: "[Main] Return 1 of your opponent's highest level Digimon to the hand"
     process:
       - select_opponent_permanent:

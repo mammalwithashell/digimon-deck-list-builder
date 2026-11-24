@@ -52,7 +52,7 @@ fn runner() -> DebugRunner {
     r
 }
 
-fn attack(r: &mut DebugRunner, attacker: u8) {
+fn attack_suspended(r: &mut DebugRunner, attacker: u8) {
     let target = r.place_on_field(1, "TEXT-FILLER", Some(0));
     r.game.players[1].battle_area[target.index as usize].is_suspended = true;
     action(r, 0, encode_attack(attacker as u16, target.index as u16));
@@ -77,7 +77,7 @@ fn on_field(r: &DebugRunner, id: &str) -> bool {
 fn when_attacking_offers_only_level_four_or_lower_aquatic_or_data_squad_digimon_sources() {
     let mut r = runner();
     let attacker = stack(&mut r);
-    attack(&mut r, attacker);
+    attack_suspended(&mut r, attacker);
     r.assert_prompt(SelectionKind::Material, true, 0);
     assert_eq!(candidates(&r), vec!["TEXT-AQ4", "TEXT-DS3"]);
 }
@@ -86,7 +86,7 @@ fn when_attacking_offers_only_level_four_or_lower_aquatic_or_data_squad_digimon_
 fn when_attacking_plays_chosen_source_with_cost_reduced_by_one() {
     let mut r = runner();
     let attacker = stack(&mut r);
-    attack(&mut r, attacker);
+    attack_suspended(&mut r, attacker);
     let before = r.memory();
     r.choose_prompt_card("TEXT-AQ4", None).unwrap();
     assert!(r.pending_selection().is_none());
@@ -103,7 +103,7 @@ fn when_attacking_plays_chosen_source_with_cost_reduced_by_one() {
 fn when_attacking_play_may_be_declined() {
     let mut r = runner();
     let attacker = stack(&mut r);
-    attack(&mut r, attacker);
+    attack_suspended(&mut r, attacker);
     let before = r.memory();
     r.decline_prompt().unwrap();
     assert!(r.pending_selection().is_none());
@@ -115,7 +115,7 @@ fn when_attacking_play_may_be_declined() {
 fn when_attacking_without_eligible_sources_plays_nothing() {
     let mut r = runner();
     let attacker = r.place_stack(0, &[CARD, "TEXT-DS5", "TEXT-PLAIN4", "TEXT-TOP"]).index;
-    attack(&mut r, attacker);
+    attack_suspended(&mut r, attacker);
     assert!(r.pending_selection().is_none());
     assert_eq!(r.game.players[0].battle_area.len(), 1);
 }
@@ -124,11 +124,11 @@ fn when_attacking_without_eligible_sources_plays_nothing() {
 fn when_attacking_is_once_per_turn() {
     let mut r = runner();
     let attacker = stack(&mut r);
-    attack(&mut r, attacker);
+    attack_suspended(&mut r, attacker);
     r.choose_prompt_card("TEXT-DS3", None).unwrap();
     assert!(r.pending_selection().is_none());
     r.game.players[0].battle_area[attacker as usize].is_suspended = false;
-    attack(&mut r, attacker);
+    attack_suspended(&mut r, attacker);
     assert!(r.pending_selection().is_none());
     assert_eq!(r.current_phase(), GamePhase::Main);
 }

@@ -165,7 +165,7 @@ fn inherited_may_redirect_an_opponent_attack_to_this_digimon() {
     r.attack_player(a1, 0, false);
     assert!(r.pending_is_optional(), "you may change");
     r.accept_optional_trigger().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.security_count(0), 3, "redirected: no security check");
     assert!(field_ids(&r, 0).contains(&"HOST".to_string()));
     assert_eq!(field_ids(&r, 1), vec!["ATK"], "the attacker lost the battle");
@@ -176,18 +176,18 @@ fn inherited_redirect_can_be_declined_and_is_once_per_turn() {
     let (mut r, _host, a1, _) = opponent_turn();
     r.attack_player(a1, 0, false);
     r.decline_optional_trigger().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.security_count(0), 2);
 
     let (mut r, _host, a1, a2) = opponent_turn();
     r.attack_player(a1, 0, false);
     r.accept_optional_trigger().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     let _ = a2;
     let a2 = PermanentHandle { player: 1, index: field_ids(&r, 1).iter().position(|x| x == "ATK").unwrap() as u8 };
     r.attack_player(a2, 0, false);
     assert!(!r.pending_is_optional(), "once per turn");
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.security_count(0), 2);
 }
 

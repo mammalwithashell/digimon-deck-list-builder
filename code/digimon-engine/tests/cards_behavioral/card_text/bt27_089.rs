@@ -14,7 +14,7 @@ use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::ModifierType;
 
 use super::bt27_fx::*;
-use super::common::{candidates, next_turn};
+use super::common::{advance_turn, candidates};
 
 const CARD: &str = "BT27-089";
 
@@ -39,8 +39,8 @@ fn runner(hand: &[&str]) -> DebugRunner {
 fn start_of_main_places_a_gaomon_card_face_down_to_draw_and_gain_memory() {
     let mut r = runner(&["GAOMON", "GAOGA", "PLAIN"]);
     let t = r.place_on_field(0, CARD, Some(0));
-    next_turn(&mut r);
-    next_turn(&mut r);
+    advance_turn(&mut r);
+    advance_turn(&mut r);
     let v = r.pending_selection_view().expect("optional placement");
     assert!(v.is_optional);
     let mut c = candidates(&r);
@@ -48,7 +48,7 @@ fn start_of_main_places_a_gaomon_card_face_down_to_draw_and_gain_memory() {
     assert_eq!(c, vec!["GAOGA", "GAOMON"]);
     let (hand, mem) = (r.hand_size(0), r.memory());
     r.choose_prompt_card("GAOGA", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["GAOGA"]);
     assert_eq!(face_down(&r, t), vec![true]);
     assert_eq!(r.hand_size(0), hand);
@@ -59,15 +59,15 @@ fn start_of_main_places_a_gaomon_card_face_down_to_draw_and_gain_memory() {
 fn start_of_main_may_be_declined_and_needs_a_matching_card() {
     let mut r = runner(&["GAOMON"]);
     let t = r.place_on_field(0, CARD, Some(0));
-    next_turn(&mut r);
-    next_turn(&mut r);
+    advance_turn(&mut r);
+    advance_turn(&mut r);
     r.decline_prompt().unwrap();
     assert!(source_ids(&r, t).is_empty());
 
     let mut r = runner(&["PLAIN"]);
     r.place_on_field(0, CARD, Some(0));
-    next_turn(&mut r);
-    next_turn(&mut r);
+    advance_turn(&mut r);
+    advance_turn(&mut r);
     assert!(r.pending_selection().is_none());
 }
 
@@ -93,7 +93,7 @@ fn opponent_hand_add_suspends_places_deck_top_and_protects_a_gaogamon() {
     assert!(!v.is_optional);
     assert_eq!(candidates(&r), vec!["GAOGA"], "[Gaomon] is not [Gaogamon]");
     r.choose_prompt_card("GAOGA", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["TOPD"]);
     assert_eq!(face_down(&r, t), vec![true]);
     assert!(r.game.modifiers.has(gao, ModifierType::CannotBeDestroyedByBattle));
@@ -108,7 +108,9 @@ fn placement_is_optional_but_protection_still_follows_the_suspend() {
     let v = r.pending_selection_view().unwrap();
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
     choose_branch(&mut r, 1);
-    let _ = r.auto_resolve();
+    assert_eq!(candidates(&r), vec!["GAOGA"]);
+    r.choose_prompt_card("GAOGA", None).unwrap();
+    no_prompt(&r);
     assert!(source_ids(&r, t).is_empty());
     assert!(r.game.modifiers.has(gao, ModifierType::CannotBeDestroyedByBattle));
 }
@@ -120,7 +122,7 @@ fn declining_skips_the_after_part() {
     let gao = r.place_on_field(0, "GAOGA", Some(0));
     bounce_opponent(&mut r);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(!r.game.players[0].battle_area[t.index as usize].is_suspended);
     assert!(!r.game.modifiers.has(gao, ModifierType::CannotBeDestroyedByBattle));
 }
@@ -155,6 +157,6 @@ fn security_plays_this_tamer_free() {
         .start();
     let a = r.place_on_field(0, "ATK", Some(0)).index;
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 1).contains(&CARD.to_string()));
 }

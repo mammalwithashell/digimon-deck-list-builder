@@ -71,7 +71,7 @@ fn hand_trash_suspends_this_tamer_to_place_the_top_two_cards_face_down() {
     let v = r.pending_selection_view().expect("optional trigger");
     assert!(v.is_optional);
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.game.players[0].battle_area[t.index as usize].is_suspended);
     let mut s = source_ids(&r, t);
     s.sort();
@@ -85,7 +85,7 @@ fn hand_trash_trigger_may_be_declined_and_needs_an_unsuspended_tamer() {
     let t = r.place_on_field(0, CARD, Some(0));
     trash_from_hand(&mut r);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(!r.game.players[0].battle_area[t.index as usize].is_suspended);
     assert_eq!(source_ids(&r, t), vec!["X"]);
 
@@ -93,7 +93,7 @@ fn hand_trash_trigger_may_be_declined_and_needs_an_unsuspended_tamer() {
     let t = r.place_on_field(0, CARD, Some(0));
     r.game.players[0].battle_area[t.index as usize].is_suspended = true;
     trash_from_hand(&mut r);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert_eq!(source_ids(&r, t), vec!["X"]);
 }
@@ -121,7 +121,7 @@ fn security_plays_this_tamer_free() {
         .start();
     let a = r.place_on_field(0, "ATK", Some(0)).index;
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 1).contains(&CARD.to_string()));
 }
 
@@ -134,7 +134,7 @@ fn main_trashes_five_face_down_cards_to_use_a_ravemon_text_option_from_trash_fre
         r.inject_trash(0, id);
     }
     let mem = r.memory();
-    activate_main(&mut r, t);
+    activate_field_main(&mut r, t);
     pay_tamer_stock(&mut r);
     assert_eq!(source_ids(&r, t).len(), 1, "5 bottom face-down cards trashed");
     let v = r.pending_selection_view().expect("optional Option pick");
@@ -144,7 +144,7 @@ fn main_trashes_five_face_down_cards_to_use_a_ravemon_text_option_from_trash_fre
     r.choose_prompt_card("PECK", None).unwrap();
     r.choose_prompt_card("CROW", None).unwrap();
     r.choose_prompt_card("RAVE", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, f), "RAVE");
     assert_eq!(r.memory(), mem, "used without paying the cost");
     r.game.players[0].battle_area[t.index as usize].is_suspended = false;
@@ -156,10 +156,10 @@ fn main_option_use_may_be_declined_after_paying() {
     let mut r = runner(&[]);
     let t = stocked(&mut r, CARD, &["FD"; 5]);
     r.inject_trash(0, YAKSHA);
-    activate_main(&mut r, t);
+    activate_field_main(&mut r, t);
     pay_tamer_stock(&mut r);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(source_ids(&r, t).is_empty());
     assert!(trash_ids(&r, 0).contains(&YAKSHA.to_string()));
 }

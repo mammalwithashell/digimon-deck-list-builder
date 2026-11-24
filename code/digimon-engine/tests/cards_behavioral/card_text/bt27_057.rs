@@ -7,7 +7,7 @@
 use digimon_engine::debug_runner::DebugRunner;
 
 use super::bt27_fx::*;
-use super::common::{candidates, next_turn};
+use super::common::{advance_turn, candidates};
 
 const CARD: &str = "BT27-057";
 
@@ -36,15 +36,15 @@ fn runner(hand: &[&str]) -> DebugRunner {
 fn start_of_main_trashes_a_chessmon_text_card_to_draw_and_gain_memory() {
     let mut r = runner(&["TEXT-CHESS", "PAWN", "AGU"]);
     r.place_on_field(0, CARD, Some(0));
-    next_turn(&mut r);
-    next_turn(&mut r);
+    advance_turn(&mut r);
+    advance_turn(&mut r);
     let v = r.pending_selection_view().expect("optional trash");
     assert!(v.is_optional);
     assert_eq!(candidates(&r), vec!["PAWN", "TEXT-CHESS"]);
     let hand = r.hand_size(0);
     let mem = r.memory();
     r.choose_prompt_card("TEXT-CHESS", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(trash_ids(&r, 0).contains(&"TEXT-CHESS".to_string()));
     assert_eq!(r.hand_size(0), hand);
     assert_eq!(r.memory(), mem + 1);
@@ -54,8 +54,8 @@ fn start_of_main_trashes_a_chessmon_text_card_to_draw_and_gain_memory() {
 fn start_of_main_may_be_declined() {
     let mut r = runner(&["PAWN"]);
     r.place_on_field(0, CARD, Some(0));
-    next_turn(&mut r);
-    next_turn(&mut r);
+    advance_turn(&mut r);
+    advance_turn(&mut r);
     let mem = r.memory();
     r.decline_prompt().unwrap();
     assert!(hand_ids(&r, 0).contains(&"PAWN".to_string()));
@@ -66,8 +66,8 @@ fn start_of_main_may_be_declined() {
 fn start_of_main_needs_a_chessmon_text_card() {
     let mut r = runner(&["AGU"]);
     r.place_on_field(0, CARD, Some(0));
-    next_turn(&mut r);
-    next_turn(&mut r);
+    advance_turn(&mut r);
+    advance_turn(&mut r);
     assert!(r.pending_selection().is_none());
 }
 
@@ -80,6 +80,6 @@ fn inherited_on_deletion_de_digivolves_one_opposing_digimon() {
     let v = r.pending_selection_view().expect("De-Digivolve pick");
     assert!(!v.is_optional);
     r.choose_prompt_card("TOP", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, victim), "B");
 }

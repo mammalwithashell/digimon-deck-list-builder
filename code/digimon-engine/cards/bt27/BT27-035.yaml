@@ -59,12 +59,16 @@ alt_paths:
       - trash_top_source: { target: carrier }
 effects:
   - kind: grant_keyword
+    text: "＜Reboot＞"
     keyword: Reboot
   - kind: grant_keyword
+    text: "＜Blocker＞"
     keyword: Blocker
   - kind: grant_keyword
+    text: "＜Evade＞"
     keyword: Evade
   - when: [when_digivolving, when_attacking]
+    text: "[When Digivolving] [When Attacking] [Once Per Turn] You may activate 1 [Main] effect on this card's Option side."
     once_per_turn: true
     optional: true
     outer_prompt: true
@@ -72,6 +76,7 @@ effects:
     process:
       - refire_effect: { source: source, timing: option_main, optional: false }
   - when: [when_digivolving, when_attacking]
+    text: "[When Digivolving] [When Attacking] If your opponent's hand has 8 or more cards, by returning cards without looking to the bottom of the deck so that it has 7 left, return their top security card to the bottom of the deck."
     optional: true
     outer_prompt: true
     condition:
@@ -101,6 +106,7 @@ effects:
           then:
             - return_top_security_to_deck: { of: opponent, position: bottom }
   - when: main_from_hand
+    text: "[Main] Return 1 of your opponent's Digimon to the hand. Then, if their hand has 8 or more cards, 1 of your Digimon may unsuspend."
     summary: 'Return 1 opposing Digimon to hand, then at 8 hand cards may unsuspend 1 of your Digimon'
     process:
       - select_opponent_permanent:

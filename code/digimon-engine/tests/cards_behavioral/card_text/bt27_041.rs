@@ -126,7 +126,7 @@ fn when_digivolving_gives_security_a_minus_1_and_dp_until_opponent_turn_ends() {
     let o = PermanentHandle { player: 1, index: field_ids(&r, 1).iter().position(|x| x == "OPP").unwrap() as u8 };
     assert_eq!(dp - r.effective_dp(o).unwrap(), 3000, "lasts through their turn");
     r.attack_player(o, 0, false);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.security_count(0), 3, "<Security A. -1>: no security check");
     r.end_turn();
     assert_eq!(r.effective_dp(o).unwrap(), dp, "expired after their turn");
@@ -149,7 +149,7 @@ fn ascension_may_place_it_as_the_top_security_card_when_deleted() {
         assert_eq!(v.selecting_player, 0);
         assert_eq!(v.effect_choices.unwrap().len(), 2, "Yes / No");
         choose_branch(&mut r, usize::from(!accept));
-        let _ = r.auto_resolve();
+        no_prompt(&r);
         let top = r.game.players[0].security.last().unwrap().card_id(&r.game.card_data).to_string();
         assert_eq!(r.security_count(0), if accept { 4 } else { 3 });
         assert_eq!(top == CARD, accept);

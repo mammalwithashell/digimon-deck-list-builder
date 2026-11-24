@@ -34,6 +34,7 @@ alt_paths:
 
 effects:
   - when: [on_play, when_digivolving]
+    text: "[On Play] [When Digivolving] You may play 1 play cost 7 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost."
     summary: "[On Play] [When Digivolving] You may play 1 play cost 7 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost"
     process:
       - select_hand:
@@ -50,6 +51,7 @@ effects:
       - play_from_hand_free: { of: you, hand_index: pick }
 
   - when: on_deletion
+    text: "[On Deletion] ＜Recovery +1＞. Then, by suspending 1 of your [QueenChessmon], you may play this card from your trash to the breeding area without paying the cost."
     summary: "[On Deletion] <Recovery +1>. Then, by suspending 1 of your [QueenChessmon], you may play this card from your trash to the breeding area without paying the cost"
     process:
       - recover: { of: you, count: 1 }

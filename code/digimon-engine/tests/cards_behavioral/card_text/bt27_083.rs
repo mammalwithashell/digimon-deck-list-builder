@@ -66,15 +66,15 @@ fn runner(opp_hand: usize) -> DebugRunner {
     r
 }
 
-fn pick(r: &mut DebugRunner, a: u16) {
+fn do_action(r: &mut DebugRunner, a: u16) {
     let p = r.pending_selection_view().unwrap().selecting_player;
     assert_eq!(build_action_mask(&r.game, p)[a as usize], 1.0);
     r.execute_action(p, a).unwrap();
 }
 
-fn pick_first(r: &mut DebugRunner) {
+fn pick_first_valid(r: &mut DebugRunner) {
     let a = *r.pending_selection_view().unwrap().valid_action_ids.iter().find(|a| **a != PASS).unwrap();
-    pick(r, a);
+    do_action(r, a);
 }
 
 fn opponent_chooses(r: &mut DebugRunner, security: bool) {
@@ -84,7 +84,7 @@ fn opponent_chooses(r: &mut DebugRunner, security: bool) {
     assert!(!v.is_optional);
     let c = v.effect_choices.unwrap();
     assert_eq!(c.len(), 2);
-    pick(r, c[usize::from(security)].action_id);
+    do_action(r, c[usize::from(security)].action_id);
 }
 
 fn opponent_deletes(r: &mut DebugRunner, target: PermanentHandle) {
@@ -118,7 +118,7 @@ fn digivolves_for_3_from_purple_level_5_crowmon_or_data_squad_level_5() {
         let mem = r.memory();
         assert!(digivolve_hand(&mut r, CARD, b), "{base}");
         while r.pending_selection().is_some() {
-            pick_first(&mut r);
+            pick_first_valid(&mut r);
         }
         assert_eq!(top_id(&r, b), CARD);
         assert_eq!(mem - r.memory(), 3, "{base}");
@@ -152,7 +152,7 @@ fn when_digivolving_opponent_may_trash_a_security_card_instead() {
     assert!(digivolve_hand(&mut r, CARD, b));
     opponent_chooses(&mut r, true);
     assert_eq!(r.pending_selection_view().unwrap().selecting_player, 1);
-    pick_first(&mut r);
+    pick_first_valid(&mut r);
     assert_eq!(r.game.players[1].security.len(), 1);
     assert_eq!(r.hand_size(1), 3);
     assert!(trash_ids(&r, 1).contains(&"SEC".to_string()));
@@ -165,7 +165,7 @@ fn when_digivolving_with_empty_hand_trashes_security_without_a_choice() {
     assert!(digivolve_hand(&mut r, CARD, b));
     let v = r.pending_selection_view().unwrap();
     assert_ne!(v.kind, SelectionKind::EffectChoice);
-    pick_first(&mut r);
+    pick_first_valid(&mut r);
     assert_eq!(r.game.players[1].security.len(), 1);
 }
 
@@ -190,7 +190,7 @@ fn on_deletion_may_decline_and_does_nothing_at_8_cards() {
     let mut r = runner(7);
     let h = r.place_stack(0, &["PUR5", CARD]);
     opponent_deletes(&mut r, h);
-    pick(&mut r, PASS);
+    do_action(&mut r, PASS);
     assert!(!field_ids(&r, 0).contains(&"AV7".to_string()));
 
     let mut r = runner(8);
@@ -210,7 +210,7 @@ fn option_main_trims_the_opponent_hand_to_7_and_does_not_delete() {
     let v = r.pending_selection_view().expect("opponent picks discards");
     assert_eq!(v.selecting_player, 1, "the opponent chooses what to trash");
     while r.pending_selection_view().is_some_and(|v| v.selecting_player == 1) {
-        pick_first(&mut r);
+        pick_first_valid(&mut r);
     }
     assert_eq!(r.hand_size(1), 7);
     assert_eq!(mem - r.memory(), 5);

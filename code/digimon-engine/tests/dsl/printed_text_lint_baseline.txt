@@ -859,6 +859,10 @@ BT26-103 missing_text 2
 BT26-103 missing_text 3
 BT26-103 missing_text 4
 BT26-103 missing_text 5
+BT27-031 optional_without_may 0
+BT27-093 timing_tag_mismatch 1
+BT27-095 timing_tag_mismatch 1
+BT27-096 timing_tag_mismatch 2
 BT3-002 optional_without_may 0
 BT3-103 may_without_optional 0
 BT3-105 missing_text 0

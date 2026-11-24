@@ -38,10 +38,13 @@ alt_paths:
     cost: 3
 effects:
   - kind: grant_keyword
+    text: "＜Blocker＞"
     keyword: Blocker
   - kind: grant_keyword
+    text: "＜Retaliation＞"
     keyword: Retaliation
   - when: when_digivolving
+    text: "[When Digivolving] Your opponent trashes any 1 card from their hand or security stack."
     summary: "[When Digivolving] Your opponent trashes any 1 card from their hand or security stack"
     process:
       - as_selecting_player:
@@ -75,6 +78,7 @@ effects:
                       prompt: "Trash 1 of your security cards"
                   - trash_selected_security: { of: opponent, card: sec }
   - when: on_deletion
+    text: "[On Deletion] If your opponent's hand has 7 or fewer cards, you may play 1 play cost 7 or lower purple Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost."
     optional: true
     condition:
       count_lte: { filter: { of: opponent, zone: [hand] }, n: 7 }
@@ -102,6 +106,7 @@ effects:
                 hand_index: revived
                 cost_delta: free
   - when: main_from_hand
+    text: "[Main] Your opponent trashes cards in their hand so that they have 7 left. If this effect didn't trash, delete 1 of their Digimon."
     summary: "[Main] Your opponent trashes cards in their hand so that they have 7 left. If this effect didn't trash, delete 1 of their Digimon"
     process:
       - trash_opponent_hand_to_count:

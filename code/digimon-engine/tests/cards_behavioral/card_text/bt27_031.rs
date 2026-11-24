@@ -14,8 +14,7 @@
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::selection::TriggerSource;
-use digimon_engine::enums::{CardColor, EffectTiming, GamePhase};
+use digimon_engine::enums::{CardColor, GamePhase};
 use digimon_engine::permanent::PermanentHandle;
 
 use super::bt27_fx::*;
@@ -63,13 +62,13 @@ fn jumbo(r: &DebugRunner) -> PermanentHandle {
     PermanentHandle { player: 0, index: i as u8 }
 }
 
-fn accept(r: &mut DebugRunner) {
+fn accept_offer(r: &mut DebugRunner) {
     assert!(activate_prompt(r), "the effect is optional");
     assert!(r.pending_is_optional());
     r.accept_optional_trigger().unwrap();
 }
 
-fn pick(r: &mut DebugRunner, mut want: Vec<&str>, id: &str) {
+fn pick_from(r: &mut DebugRunner, mut want: Vec<&str>, id: &str) {
     let mut c = candidates(r);
     c.sort();
     want.sort();
@@ -112,10 +111,10 @@ fn when_digivolving_places_another_digimon_then_bottom_decks_one_with_as_many_or
     let mid = r.place_stack(1, &["O3", "O4", "O5"]);
     r.place_stack(1, &["O3", "O4", "O5", "O6"]);
     jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["ALLY"], "ALLY");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["ALLY"], "ALLY");
     assert_eq!(source_ids(&r, jumbo(&r)), vec!["ALLY", "B5"], "placed as the bottom card");
-    pick(&mut r, vec!["O3", "O5"], "O5");
+    pick_from(&mut r, vec!["O3", "O5"], "O5");
     assert_eq!(field_ids(&r, 1), vec!["O3", "O6"]);
     let _ = mid;
     assert_eq!(deck_ids(&r, 1)[0], "O5", "bottom of the deck");
@@ -128,8 +127,8 @@ fn a_tamer_may_be_placed() {
     r.place_on_field(0, "TAM", Some(0));
     r.place_on_field(1, "O3", Some(0));
     jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["TAM"], "TAM");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["TAM"], "TAM");
     assert_eq!(source_ids(&r, jumbo(&r)), vec!["TAM", "B5"]);
     r.choose_prompt_card("O3", None).unwrap();
     assert!(field_ids(&r, 1).is_empty());
@@ -158,27 +157,44 @@ fn with_no_eligible_opponent_digimon_the_placement_still_happens() {
     r.place_on_field(0, "RED3", Some(0));
     r.place_stack(1, &["O3", "O4", "O5", "O6"]);
     jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["RED3"], "RED3");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["RED3"], "RED3");
     assert_eq!(source_ids(&r, jumbo(&r)), vec!["RED3", "B5"]);
     assert!(r.pending_selection().is_none(), "3 sources > 2, and RED3 is not blue");
     assert_eq!(field_ids(&r, 1), vec!["O6"]);
 }
 
 #[test]
-fn shared_once_per_turn() {
+fn counter_is_once_per_turn_across_two_attacks() {
     let mut r = runner();
+    let me = r.place_stack(0, &["B5", CARD]);
     r.place_on_field(0, "RED3", Some(0));
     r.place_on_field(0, "TAM", Some(0));
-    jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["RED3", "TAM"], "RED3");
-    while r.pending_selection().is_some() {
+    r.pass_turn();
+    let first = r.place_on_field(1, "O5", Some(0));
+    r.place_on_field(1, "O6", Some(0));
+    r.attack_player(first, 0, false);
+    let counter = encode_attack(0, me.index as u16);
+    r.execute_action(0, counter).unwrap();
+    if activate_prompt(&r) {
+        accept_offer(&mut r);
+    }
+    pick_from(&mut r, vec!["RED3", "TAM"], "RED3");
+    pick_from(&mut r, vec!["O5", "O6"], "O5");
+    while let Some(v) = r.pending_selection_view() {
+        assert!(v.is_optional, "{}", v.prompt);
         r.decline_prompt().unwrap();
     }
-    r.game.enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(jumbo(&r)));
-    r.game.drain_effect_queue();
-    assert!(r.pending_selection().is_none(), "once per turn across its timings");
+    let second = PermanentHandle { player: 1, index: field_ids(&r, 1).iter().position(|x| x == "O6").unwrap() as u8 };
+    r.set_phase(GamePhase::Main);
+    r.game.players[1].battle_area[second.index as usize].is_suspended = false;
+    r.attack_player(second, 0, false);
+    let me = jumbo(&r);
+    let counter = encode_attack(0, me.index as u16);
+    assert!(
+        r.pending_selection_view().map_or(true, |v| !v.valid_action_ids.contains(&counter)),
+        "[Once Per Turn]: no second [Counter] this turn"
+    );
 }
 
 #[test]
@@ -197,10 +213,10 @@ fn counter_in_a_real_attack_bottom_decks_the_attacker() {
     assert!(v.valid_action_ids.contains(&counter));
     r.execute_action(0, counter).unwrap();
     if activate_prompt(&r) {
-        accept(&mut r);
+        accept_offer(&mut r);
     }
-    pick(&mut r, vec!["RED3"], "RED3");
-    pick(&mut r, vec!["O5"], "O5");
+    pick_from(&mut r, vec!["RED3"], "RED3");
+    pick_from(&mut r, vec!["O5"], "O5");
     assert!(field_ids(&r, 1).is_empty(), "the attacker left the field");
     assert_eq!(deck_ids(&r, 1)[0], "O5");
     assert_eq!(r.security_count(0), 0);
@@ -211,12 +227,12 @@ fn effect_added_sources_may_play_a_blue_cost_5_or_lower_card_from_them() {
     let mut r = runner();
     r.place_on_field(0, "ALLY", Some(0));
     let me = jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["ALLY"], "ALLY");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["ALLY"], "ALLY");
     let v = r.pending_selection_view().expect("free play from sources");
     assert!(v.is_optional);
     assert!(v.prompt.contains("play cost 5 or lower blue"));
-    pick(&mut r, vec!["ALLY"], "ALLY");
+    pick_from(&mut r, vec!["ALLY"], "ALLY");
     let mut f = field_ids(&r, 0);
     f.sort();
     assert_eq!(f, vec!["ALLY", CARD]);
@@ -228,16 +244,16 @@ fn the_source_play_is_optional_and_filters_colour_and_cost() {
     let mut r = runner();
     r.place_on_field(0, "ALLY", Some(0));
     let me = jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["ALLY"], "ALLY");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["ALLY"], "ALLY");
     r.decline_prompt().unwrap();
     assert_eq!(source_ids(&r, jumbo(&r)), vec!["ALLY", "B5"]);
 
     let mut r = runner();
     r.place_on_field(0, "RED3", Some(0));
     jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["RED3"], "RED3");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["RED3"], "RED3");
     assert!(r.pending_selection().is_none(), "B5 costs 7, RED3 is red");
 }
 
@@ -246,9 +262,9 @@ fn the_source_play_is_once_per_turn() {
     let mut r = runner();
     r.place_on_field(0, "ALLY", Some(0));
     let me = jumbo_over(&mut r, "B5");
-    accept(&mut r);
-    pick(&mut r, vec!["ALLY"], "ALLY");
-    pick(&mut r, vec!["ALLY"], "ALLY");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["ALLY"], "ALLY");
+    pick_from(&mut r, vec!["ALLY"], "ALLY");
     let again = r.place_on_field(0, "ALLY", Some(0));
     let me = jumbo(&r);
     let card = r.top_card(me);
@@ -266,8 +282,8 @@ fn decode_plays_a_lv5_aquatic_or_data_squad_source_when_removed_by_an_effect() {
     let me = r.place_stack(0, &["B5", "AQ5", "SQ5", CARD]);
     let opp = r.place_on_field(1, "O6", Some(0));
     opponent_bounces(&mut r, opp, me);
-    accept(&mut r);
-    pick(&mut r, vec!["AQ5", "SQ5"], "AQ5");
+    accept_offer(&mut r);
+    pick_from(&mut r, vec!["AQ5", "SQ5"], "AQ5");
     assert_eq!(field_ids(&r, 0), vec!["AQ5"]);
     assert!(hand_ids(&r, 0).contains(&CARD.to_string()));
 }

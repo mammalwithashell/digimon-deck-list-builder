@@ -19,7 +19,7 @@ alt_paths:
     cost: 3
 
 effects:
-  - text: "＜Decode (Lv.4 or lower w/[Aquatic]/[DATA SQUAD] trait)＞"
+  - text: "＜Decode (Lv.4 or lower w/[Aquatic]/[DATA SQUAD] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)"
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
@@ -45,7 +45,7 @@ effects:
           source_index: decode_source
           cost_delta: free
 
-  - text: "＜Decode (Lv.4 or lower w/[Aquatic]/[DATA SQUAD] trait)＞"
+  - text: "＜Decode (Lv.4 or lower w/[Aquatic]/[DATA SQUAD] trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 specified Digimon card from its digivolution cards without paying the cost.)"
     kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area

@@ -48,7 +48,7 @@ fn digivolves_with_cost_reduced_by_two() {
     play_hand(&mut r, "PAWN");
     let before = r.memory();
     r.choose_prompt_card("KNIGHT", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, carrier), "KNIGHT");
     assert_eq!(before - r.memory(), 1, "digivolve cost 3 reduced by 2");
 }

@@ -18,6 +18,7 @@ alt_paths:
 
 effects:
   - when: [on_play, when_digivolving, when_attacking]
+    text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] If your opponent's hand has 6 or more cards, they trash 1 card in their hand. Then, by trashing 2 bottom face-down cards from under any of your Tamers, you may play or use 1 [DATA SQUAD] trait card with a play or use cost of 5 or less from your hand without paying the cost."
     once_per_turn: true
     summary: "If the opponent has 6+ hand cards they trash 1; then trash 2 bottom face-down Tamer cards to play/use a cost 5 or lower DATA SQUAD hand card free"
     process:
@@ -69,6 +70,7 @@ effects:
                             cost_delta: free
 
   - scope: inherited
+    text: "[On Deletion] You may play 1 play cost 5 or lower card with [Avian] or [Bird] in any of its traits or the [DATA SQUAD] trait from your trash without paying the cost."
     when: on_deletion
     summary: "[Inherited][On Deletion] You may play 1 play cost 5 or lower [Avian]/[Bird]/[DATA SQUAD] card from your trash without paying the cost"
     process:

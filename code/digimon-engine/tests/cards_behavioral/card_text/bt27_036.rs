@@ -52,7 +52,8 @@ fn adds_one_chessmon_text_card_and_one_data_squad_card_and_bottoms_the_rest() {
     pick_reveal(&mut r, "CHESS");
     assert!(!legal(&r, reveal_action(&r, "PLAIN")));
     pick_reveal(&mut r, "DS");
-    let _ = r.auto_resolve();
+    assert_eq!(order_to_deck(&mut r), 1);
+    no_prompt(&r);
     assert_eq!(hand_sorted(&r), vec!["CHESS", "DS"]);
     assert_eq!(r.deck_size(0), 1);
     assert_eq!(r.game.players[0].deck[0].card_id(&r.game.card_data), "PLAIN");
@@ -63,7 +64,8 @@ fn chessmon_in_effect_text_counts() {
     let mut r = runner(&["TEXT-CHESS", "PLAIN", "FILL"]);
     play_hand(&mut r, CARD);
     pick_reveal(&mut r, "TEXT-CHESS");
-    let _ = r.auto_resolve();
+    assert_eq!(order_to_deck(&mut r), 2);
+    no_prompt(&r);
     assert_eq!(hand_sorted(&r), vec!["TEXT-CHESS"]);
     assert_eq!(r.deck_size(0), 2);
 }
@@ -75,7 +77,8 @@ fn overlap_card_may_fill_the_chessmon_pick_alone_per_q4704() {
     assert!(legal(&r, reveal_action(&r, "CHESS")));
     assert!(legal(&r, reveal_action(&r, "BOTH")));
     pick_reveal(&mut r, "BOTH");
-    let _ = r.auto_resolve();
+    assert_eq!(order_to_deck(&mut r), 2);
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert_eq!(hand_sorted(&r), vec!["BOTH"]);
     assert_eq!(r.deck_size(0), 2);
@@ -88,7 +91,8 @@ fn overlap_card_may_fill_the_data_squad_pick_after_another_chessmon() {
     pick_reveal(&mut r, "CHESS");
     assert!(!legal(&r, reveal_action(&r, "CHESS")), "no card is used twice");
     pick_reveal(&mut r, "BOTH");
-    let _ = r.auto_resolve();
+    assert_eq!(order_to_deck(&mut r), 1);
+    no_prompt(&r);
     assert_eq!(hand_sorted(&r), vec!["BOTH", "CHESS"]);
 }
 
@@ -96,7 +100,8 @@ fn overlap_card_may_fill_the_data_squad_pick_after_another_chessmon() {
 fn no_matches_returns_all_three_to_the_bottom() {
     let mut r = runner(&["PLAIN", "FILL", "FILL"]);
     play_hand(&mut r, CARD);
-    let _ = r.auto_resolve();
+    assert_eq!(order_to_deck(&mut r), 3);
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert_eq!(r.hand_size(0), 0);
     assert_eq!(r.deck_size(0), 3);
@@ -112,10 +117,10 @@ fn inherited_when_attacking_gives_minus_2000_dp_once_per_turn() {
     let v = r.pending_selection_view().expect("opponent Digimon pick");
     assert!(!v.is_optional);
     r.choose_prompt_card("TOP", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.dp_of(victim), Some(base - 2000));
     let other = r.place_on_field(1, "TOP", Some(0));
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.dp_of(other), Some(base), "once per turn");
 }

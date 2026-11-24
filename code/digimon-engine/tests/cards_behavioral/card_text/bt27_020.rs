@@ -67,7 +67,7 @@ fn on_play_places_as_bottom_digivolution_card_of_a_digimon_and_draws() {
     assert!(!v.is_optional);
     assert_eq!(candidates(&r), vec!["BT27-020", "HOST"]);
     r.choose_prompt_card("HOST", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, host), vec!["AQ4", "A"]);
     assert_eq!(face_down(&r, host), vec![false, false]);
     assert_eq!(hand_ids(&r, 0), vec!["FILL"]);
@@ -87,7 +87,7 @@ fn on_play_places_face_down_at_bottom_of_a_data_squad_tamer_and_draws() {
         assert_eq!(candidates(&r), vec!["DS-T"], "non-DATA SQUAD Tamer excluded");
         r.choose_prompt_card("DS-T", None).unwrap();
     }
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["DS3", "A"]);
     assert_eq!(face_down(&r, t), vec![true, true]);
     assert_eq!(hand_ids(&r, 0), vec!["FILL"]);
@@ -104,7 +104,7 @@ fn on_play_destination_choice_offers_digimon_or_data_squad_tamer() {
     assert_eq!(v.effect_choices.as_ref().map(|c| c.len()), Some(2), "{v:?}");
     choose_branch(&mut r, 0);
     r.choose_prompt_card("HOST", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, host), vec!["DS3", "A"]);
     assert!(source_ids(&r, t).is_empty());
 }
@@ -114,7 +114,7 @@ fn on_play_decline_draws_nothing() {
     let mut r = runner(&[CARD, "AQ4"]);
     play_hand(&mut r, CARD);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert_eq!(hand_ids(&r, 0), vec!["AQ4"]);
 }
@@ -123,7 +123,7 @@ fn on_play_decline_draws_nothing() {
 fn on_play_without_eligible_hand_card_does_nothing() {
     let mut r = runner(&[CARD, "DS5", "PLAIN4"]);
     play_hand(&mut r, CARD);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert_eq!(r.hand_size(0), 2);
 }
@@ -141,7 +141,7 @@ fn inherited_trashes_top_digivolution_card_when_top_is_chosen() {
     attack_security(&mut r, a);
     r.choose_prompt_card("TOP", None).unwrap();
     choose_branch(&mut r, 0);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, victim), vec!["A"]);
     assert_eq!(top_id(&r, victim), "TOP");
     assert!(trash_ids(&r, 1).contains(&"B".to_string()), "trash {:?}", trash_ids(&r, 1));
@@ -154,7 +154,7 @@ fn inherited_trashes_bottom_digivolution_card_when_bottom_is_chosen() {
     attack_security(&mut r, a);
     r.choose_prompt_card("TOP", None).unwrap();
     choose_branch(&mut r, 1);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, victim), vec!["B"]);
     assert!(trash_ids(&r, 1).contains(&"A".to_string()));
 }
@@ -165,7 +165,7 @@ fn inherited_ignores_opponent_digimon_without_digivolution_cards() {
     let a = r.place_stack(0, &[CARD, "TOP"]).index;
     r.place_on_field(1, "TOP", Some(0));
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     let victim = r.place_stack(1, &["A", "B", "TOP"]);
     attack_security(&mut r, a);
@@ -173,7 +173,7 @@ fn inherited_ignores_opponent_digimon_without_digivolution_cards() {
     assert_eq!(candidates(&r), vec!["TOP"]);
     r.choose_prompt_card("TOP", None).unwrap();
     choose_branch(&mut r, 0);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, victim), vec!["A"]);
 }
 
@@ -186,9 +186,9 @@ fn inherited_target_pick_is_mandatory_and_once_per_turn() {
     assert!(!v.is_optional);
     r.choose_prompt_card("TOP", None).unwrap();
     choose_branch(&mut r, 0);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     let other = r.place_stack(1, &["A", "TOP"]);
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, other), vec!["A"], "once per turn");
 }

@@ -95,7 +95,7 @@ pub fn ids(r: &DebugRunner, cards: &[digimon_engine::card_source::CardSource]) -
         .collect()
 }
 
-pub fn next_turn(r: &mut DebugRunner) {
+pub fn advance_turn(r: &mut DebugRunner) {
     let player = r.game.turn_player();
     action(r, player, PASS);
     if r.current_phase() == digimon_engine::enums::GamePhase::Breeding {

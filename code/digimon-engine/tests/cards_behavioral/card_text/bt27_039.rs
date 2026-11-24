@@ -57,10 +57,10 @@ fn play_may_be_declined_and_is_once_per_turn() {
     let a = r.place_on_field(0, CARD, Some(0)).index;
     attack_security(&mut r, a);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(hand_ids(&r, 0), vec!["PAWN"]);
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(hand_ids(&r, 0), vec!["PAWN"], "once per turn");
 }
 
@@ -72,9 +72,9 @@ fn inherited_gives_minus_2000_dp_once_per_turn() {
     let base = r.dp_of(victim).unwrap();
     attack_security(&mut r, a);
     r.choose_prompt_card("TOP", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.dp_of(victim), Some(base - 2000));
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.dp_of(victim), Some(base - 2000), "once per turn");
 }

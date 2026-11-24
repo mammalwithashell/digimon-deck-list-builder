@@ -62,7 +62,7 @@ fn main_places_peckmon_and_crowmon_then_falcomon_digivolves_into_ravemon_from_tr
     let v = r.pending_selection_view().expect("optional Ravemon pick");
     assert!(v.is_optional);
     r.choose_prompt_card("RAVE", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, f), "RAVE", "requirements ignored");
     let s = source_ids(&r, f);
     assert!(s.contains(&"PECK".to_string()) && s.contains(&"CROW".to_string()));
@@ -77,7 +77,7 @@ fn main_is_all_or_nothing() {
     r.choose_prompt_card("FALCO", None).unwrap();
     r.choose_prompt_card("PECK", None).unwrap();
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(source_ids(&r, f).is_empty(), "Q&A: only one placed means none");
     assert_eq!(top_id(&r, f), "FALCO");
 }
@@ -91,7 +91,7 @@ fn digivolving_is_optional_after_placing() {
     r.choose_prompt_card("PECK", None).unwrap();
     r.choose_prompt_card("CROW", None).unwrap();
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, f), "FALCO");
     assert_eq!(source_ids(&r, f).len(), 2);
 }
@@ -120,7 +120,7 @@ fn security_plays_falcomon_or_keenan_from_hand_or_trash_then_adds_itself_to_hand
     c.sort();
     assert_eq!(c, vec!["FALCO", "KEENAN"]);
     r.choose_prompt_card("KEENAN", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 1).contains(&"KEENAN".to_string()));
     assert!(hand_ids(&r, 1).contains(&CARD.to_string()));
 }
@@ -141,12 +141,12 @@ fn security_play_may_be_declined_and_still_adds_itself_to_hand() {
     let a = r.place_on_field(0, "ATK", Some(0)).index;
     attack_security(&mut r, a);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 1).is_empty());
     assert!(hand_ids(&r, 1).contains(&CARD.to_string()));
 }
 
-fn finish(r: &mut DebugRunner) {
+fn resolve_rest(r: &mut DebugRunner) {
     while let Some(v) = r.pending_selection_view() {
         if v.is_optional {
             r.decline_prompt().unwrap();
@@ -166,7 +166,7 @@ fn trashing_a_face_down_tamer_card_reduces_the_use_cost_by_two() {
     let v = r.pending_selection_view().expect("optional reduction");
     assert!(v.is_optional);
     r.execute_branch(0).unwrap();
-    finish(&mut r);
+    resolve_rest(&mut r);
     assert!(source_ids(&r, t).is_empty());
     assert_eq!(r.memory(), mem - 3);
 }
@@ -179,7 +179,7 @@ fn reduction_may_be_declined_and_needs_a_face_down_card() {
     let mem = r.memory();
     use_card(&mut r);
     r.decline_prompt().unwrap();
-    finish(&mut r);
+    resolve_rest(&mut r);
     assert_eq!(source_ids(&r, t).len(), 1);
     assert_eq!(r.memory(), mem - 5);
 
@@ -188,6 +188,6 @@ fn reduction_may_be_declined_and_needs_a_face_down_card() {
     r.place_on_field(0, "FALCO", Some(0));
     let mem = r.memory();
     use_card(&mut r);
-    finish(&mut r);
+    resolve_rest(&mut r);
     assert_eq!(r.memory(), mem - 5, "no offer without a face-down card");
 }

@@ -83,7 +83,7 @@ fn each_matching_play_places_this_tamer_under_it_then_protects_one_own_digimon()
         want.sort();
         assert_eq!(c, want);
         r.choose_prompt_card("OTHER", None).unwrap();
-        let _ = r.auto_resolve();
+        no_prompt(&r);
         let other = find(&r, "OTHER");
         let played = find(&r, id);
         for m in [
@@ -104,7 +104,7 @@ fn protection_blocks_opponent_bounce_until_their_turn_ends() {
     r.place_on_field(0, CARD, Some(0));
     let played = play_and_place(&mut r, "LEO");
     r.choose_prompt_card("LEO", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     let opp = r.place_on_field(1, "ATK", Some(0));
     r.end_turn();
     effect_bounce(&mut r, 1, opp, played);
@@ -120,7 +120,7 @@ fn own_effects_may_still_return_the_protected_digimon() {
     r.place_on_field(0, CARD, Some(0));
     let played = play_and_place(&mut r, "LEO");
     r.choose_prompt_card("LEO", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     effect_bounce(&mut r, 0, played, played);
     assert!(hand_ids(&r, 0).contains(&"LEO".to_string()));
 }
@@ -131,7 +131,7 @@ fn placement_may_be_declined() {
     r.place_on_field(0, CARD, Some(0));
     play_hand(&mut r, "LEO");
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).contains(&CARD.to_string()));
     let h = find(&r, "LEO");
     assert!(source_ids(&r, h).is_empty());
@@ -174,6 +174,6 @@ fn security_plays_this_tamer_free() {
         .start();
     let a = r.place_on_field(0, "ATK", Some(0)).index;
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 1).contains(&CARD.to_string()));
 }

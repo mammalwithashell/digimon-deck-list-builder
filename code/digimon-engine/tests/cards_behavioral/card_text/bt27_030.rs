@@ -39,7 +39,7 @@ fn runner(hand: &[&str]) -> DebugRunner {
         .start()
 }
 
-fn pay(r: &mut DebugRunner) {
+fn pay_stock_branch(r: &mut DebugRunner) {
     choose_branch(r, 0);
     pay_tamer_stock(r);
 }
@@ -57,14 +57,14 @@ fn on_play_bounces_a_level_four_or_lower_then_pays_two_face_down_cards_to_play_d
     r.choose_prompt_card("L4", None).unwrap();
     assert!(hand_ids(&r, 1).contains(&"L4".to_string()));
     let _ = l4;
-    pay(&mut r);
+    pay_stock_branch(&mut r);
     assert_eq!(source_ids(&r, t).len(), 1, "2 bottom face-down cards trashed");
     let v = r.pending_selection_view().expect("optional free play");
     assert!(v.is_optional);
     assert_eq!(candidates(&r), vec!["SQ5"], "cost 6 and non-DATA SQUAD excluded");
     let mem = r.memory();
     r.choose_prompt_card("SQ5", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).contains(&"SQ5".to_string()));
     assert_eq!(r.memory(), mem, "played without paying the cost");
 }
@@ -80,7 +80,7 @@ fn the_then_cost_is_independent_of_the_bounce_and_may_be_declined() {
     let v = r.pending_selection_view().expect("cost choice still offered");
     assert_eq!(v.effect_choices.as_ref().map(|c| c.len()), Some(2));
     choose_branch(&mut r, 1);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t).len(), 2, "nothing trashed");
     assert_eq!(hand_ids(&r, 0), vec!["SQ5"]);
 }
@@ -90,9 +90,9 @@ fn the_cost_may_be_paid_and_the_play_declined() {
     let mut r = runner(&[CARD, "SQ5"]);
     let t = stocked(&mut r, "T", &["FD", "FD"]);
     play_hand(&mut r, CARD);
-    pay(&mut r);
+    pay_stock_branch(&mut r);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(source_ids(&r, t).is_empty());
     assert_eq!(hand_ids(&r, 0), vec!["SQ5"]);
 }
@@ -102,7 +102,7 @@ fn fewer_than_two_face_down_cards_offers_no_cost() {
     let mut r = runner(&[CARD, "SQ5"]);
     stocked(&mut r, "T", &["FD"]);
     play_hand(&mut r, CARD);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert_eq!(hand_ids(&r, 0), vec!["SQ5"]);
 }
@@ -116,10 +116,10 @@ fn when_attacking_fires_once_per_turn() {
     let v = r.pending_selection_view().expect("When Attacking bounce");
     assert!(v.is_optional);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     r.game.players[0].battle_area[me as usize].is_suspended = false;
     attack_security(&mut r, me);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none(), "Once Per Turn");
 }
 
@@ -138,7 +138,7 @@ fn inherited_keeps_a_gaogamon_named_carrier_by_trashing_one_face_down_card() {
     assert!(v.is_optional);
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
     pay_tamer_stock(&mut r);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, me), "GAO");
     assert_eq!(source_ids(&r, t).len(), 1);
 }
@@ -153,10 +153,10 @@ fn inherited_covers_a_data_squad_carrier_and_is_once_per_turn() {
     let v = r.pending_selection_view().expect("optional replacement");
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
     pay_tamer_stock(&mut r);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).contains(&"SQUADMON".to_string()));
     effect_bounce(&mut r, 1, opp, me);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(hand_ids(&r, 0).contains(&"SQUADMON".to_string()), "second leave this turn");
 }
 
@@ -167,7 +167,7 @@ fn inherited_ignores_other_carriers_and_needs_a_face_down_card() {
     let me = carrier(&mut r, "L4");
     let opp = r.place_on_field(1, "L4", Some(0));
     effect_bounce(&mut r, 1, opp, me);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(hand_ids(&r, 0).contains(&"L4".to_string()));
 
     let mut r = runner(&[]);
@@ -175,6 +175,6 @@ fn inherited_ignores_other_carriers_and_needs_a_face_down_card() {
     let me = carrier(&mut r, "GAO");
     let opp = r.place_on_field(1, "L4", Some(0));
     effect_bounce(&mut r, 1, opp, me);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(hand_ids(&r, 0).contains(&"GAO".to_string()));
 }

@@ -109,7 +109,7 @@ fn when_digivolving_locks_one_digimon_or_tamer_per_four_opponent_hand_cards() {
         if picks == 2 {
             r.choose_prompt_card("L6", None).unwrap();
         }
-        let _ = r.auto_resolve();
+        no_prompt(&r);
         let ot = find(&r, 1, "OT");
         let l6 = find(&r, 1, "L6");
         let l4 = find(&r, 1, "L4");
@@ -142,7 +142,7 @@ fn effect_adding_to_opponent_hand_may_activate_the_option_main_once_per_turn() {
     c.sort();
     assert_eq!(c, vec!["L6", "L6B"], "only highest-level Digimon");
     r.choose_prompt_card("L6B", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(hand_ids(&r, 1).contains(&"L6B".to_string()));
     assert_eq!(field_ids(&r, 0), vec![CARD], "the Option side was not used");
     let l6 = find(&r, 1, "L6");
@@ -158,7 +158,7 @@ fn declining_keeps_the_target_and_the_once_per_turn() {
     r.place_on_field(1, "L6", Some(0));
     effect_bounce(&mut r, 0, me, l4);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(field_ids(&r, 1), vec!["L6"]);
     let l6 = find(&r, 1, "L6");
     effect_bounce(&mut r, 0, me, l6);

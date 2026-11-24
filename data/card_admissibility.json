@@ -21201,14 +21201,12 @@
       "untested_constructs": []
     },
     "BT27-002": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-003": {
@@ -21223,14 +21221,12 @@
       "untested_constructs": []
     },
     "BT27-004": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-005": {
@@ -21388,26 +21384,26 @@
       "untested_constructs": []
     },
     "BT27-019": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-020": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
       "reason": "untested_lowering",
       "reasons": [
         "untested_lowering"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:stack_size_gte"
+      ]
     },
     "BT27-021": {
       "admissible": false,
@@ -21444,23 +21440,23 @@
     },
     "BT27-024": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
     "BT27-025": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -21488,12 +21484,12 @@
     },
     "BT27-028": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -21510,36 +21506,40 @@
     },
     "BT27-030": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
     "BT27-031": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
     "BT27-032": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
+      "needs_card_test": true,
       "reason": "untested_lowering",
       "reasons": [
-        "untested_lowering"
+        "untested_lowering",
+        "untested_card"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:event_add_to_hand_player",
+        "timing:on_add_to_hand"
+      ]
     },
     "BT27-033": {
       "admissible": false,
@@ -21565,24 +21565,22 @@
     },
     "BT27-035": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
     "BT27-036": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-037": {
@@ -21609,12 +21607,12 @@
     },
     "BT27-039": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -21631,25 +21629,30 @@
     },
     "BT27-041": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
     "BT27-042": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
+      "needs_card_test": true,
       "reason": "untested_lowering",
       "reasons": [
-        "untested_lowering"
+        "untested_lowering",
+        "untested_card"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:can_play_to_breeding_from_trash",
+        "predicate:is_source_card",
+        "verb:play_to_breeding_from_trash"
+      ]
     },
     "BT27-043": {
       "admissible": false,
@@ -21763,12 +21766,12 @@
     },
     "BT27-053": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -21806,14 +21809,12 @@
       "untested_constructs": []
     },
     "BT27-057": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-058": {
@@ -21851,12 +21852,12 @@
     },
     "BT27-061": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -21906,12 +21907,12 @@
     },
     "BT27-066": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -21939,12 +21940,12 @@
     },
     "BT27-069": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -21993,14 +21994,12 @@
       "untested_constructs": []
     },
     "BT27-074": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-075": {
@@ -22037,14 +22036,12 @@
       "untested_constructs": []
     },
     "BT27-078": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-079": {
@@ -22070,14 +22067,12 @@
       "untested_constructs": []
     },
     "BT27-081": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-082": {
@@ -22093,12 +22088,12 @@
     },
     "BT27-083": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -22115,12 +22110,12 @@
     },
     "BT27-085": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -22159,25 +22154,33 @@
     },
     "BT27-089": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
+      "needs_card_test": true,
       "reason": "untested_lowering",
       "reasons": [
-        "untested_lowering"
+        "untested_lowering",
+        "untested_card"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:event_add_to_hand_player",
+        "timing:on_add_to_hand"
+      ]
     },
     "BT27-090": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
+      "needs_card_test": true,
       "reason": "untested_lowering",
       "reasons": [
-        "untested_lowering"
+        "untested_lowering",
+        "untested_card"
       ],
-      "untested_constructs": []
+      "untested_constructs": [
+        "predicate:card_in_zone",
+        "predicate:is_source_card"
+      ]
     },
     "BT27-091": {
       "admissible": false,
@@ -22202,14 +22205,12 @@
       "untested_constructs": []
     },
     "BT27-093": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-094": {
@@ -22224,24 +22225,22 @@
       "untested_constructs": []
     },
     "BT27-095": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-096": {
       "admissible": false,
-      "dsl": false,
+      "dsl": true,
       "has_card_test": false,
-      "needs_card_test": false,
-      "reason": "untested_lowering",
+      "needs_card_test": true,
+      "reason": "untested_card",
       "reasons": [
-        "untested_lowering"
+        "untested_card"
       ],
       "untested_constructs": []
     },
@@ -22290,14 +22289,12 @@
       "untested_constructs": []
     },
     "BT27-101": {
-      "admissible": false,
-      "dsl": false,
+      "admissible": true,
+      "dsl": true,
       "has_card_test": false,
       "needs_card_test": false,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "BT27-102": {
@@ -48130,20 +48127,20 @@
     }
   },
   "counts": {
-    "admissible": 1239,
+    "admissible": 1250,
     "diverged_no_quirk": 0,
     "failed_verdict": 17,
     "registered": 4587,
     "unregistered": 0,
-    "untested_card": 17,
-    "untested_lowering": 3314
+    "untested_card": 32,
+    "untested_lowering": 3288
   },
-  "generated_at": "2026-11-23T22:07:03+00:00",
+  "generated_at": "2026-11-24T02:28:05+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "6d8e11f07033955b5dc122b816124012e4cfbaeebdd8208babc5dc81df7089e2",
+    "behavioral_test_modules_sha256": "e8359da20a15ed128283f47e5cfc08651218f0942393b0e3c26cfe41d015c665",
     "card_registry_sha256": "76d299f56767401907be0c9d0206557ec7e668d9f8748677c3e586e80a6a85e2",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "91584034ff2c86ca535337d33e7c134c39261c3b9fc20fc2cb533e0e67f6781d",
+    "lowering_coverage_sha256": "b5cb1bb09c66faa4bacbe6a1c0d274339d56a6d14f775d3173c8ad944e1312c2",
     "validated_cards_dsl_sha256": "4c458f64815169f142607fadcae7536b3093d8c38ac7c172fe20cbcccc98607c",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },

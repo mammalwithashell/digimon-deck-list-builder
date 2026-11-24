@@ -58,7 +58,7 @@ fn six_opposing_hand_cards_makes_them_trash_one_then_pays_to_play_data_squad_fre
     assert_eq!(candidates(&r), vec!["SQ5"]);
     let mem = r.memory();
     r.choose_prompt_card("SQ5", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).contains(&"SQ5".to_string()));
     assert_eq!(r.memory(), mem);
 }
@@ -73,7 +73,7 @@ fn five_opposing_hand_cards_skips_the_trash_but_the_then_part_still_resolves() {
     assert_eq!(v.effect_choices.as_ref().map(|c| c.len()), Some(2));
     assert_eq!(r.hand_size(1), 5);
     choose_branch(&mut r, 1);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(hand_ids(&r, 0), vec!["SQ5"]);
 }
 
@@ -82,7 +82,7 @@ fn no_face_down_cards_means_no_then_cost() {
     let mut r = runner(&[CARD, "SQ5"], &[]);
     stocked(&mut r, "T", &["FD"]);
     play_hand(&mut r, CARD);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
 }
 
@@ -94,11 +94,11 @@ fn when_attacking_fires_once_per_turn() {
     let v = r.pending_selection_view().expect("When Attacking hand trash");
     assert_eq!(v.selecting_player, 1);
     r.execute_action(1, v.valid_action_ids[0]).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.hand_size(1), 5);
     r.game.players[0].battle_area[me as usize].is_suspended = false;
     attack_security(&mut r, me);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(r.hand_size(1), 5, "Once Per Turn");
 }
 
@@ -117,7 +117,7 @@ fn inherited_on_deletion_plays_an_avian_bird_or_data_squad_card_from_trash_free(
     assert_eq!(c, vec!["AVIAN", "BIRD", "SQ5"], "cost 6, untraited and Crowmon itself excluded");
     let mem = r.memory();
     r.choose_prompt_card("BIRD", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).contains(&"BIRD".to_string()));
     assert_eq!(r.memory(), mem);
 }
@@ -129,6 +129,6 @@ fn inherited_on_deletion_may_be_declined() {
     let me = r.place_stack(0, &[CARD, "TOP"]);
     lose_battle(&mut r, me.index);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(trash_ids(&r, 0).contains(&"SQ5".to_string()));
 }

@@ -47,7 +47,7 @@ fn hand_play_protects_chosen_digimon_without_blocker() {
     assert!(!v.is_optional);
     assert_eq!(candidates(&r), vec!["ALLY", CARD]);
     r.choose_prompt_card("ALLY", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.game.modifiers.has(ally, ModifierType::CannotBeDestroyedByBattle));
     assert!(!r.game.has_keyword(ally, Keyword::Blocker), "not played by effects");
 }
@@ -60,7 +60,7 @@ fn when_digivolving_protects_without_blocker() {
     if r.pending_selection().is_some() {
         r.choose_prompt_card(CARD, None).unwrap();
     }
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.game.modifiers.has(base, ModifierType::CannotBeDestroyedByBattle));
     assert!(!r.game.has_keyword(base, Keyword::Blocker));
 }
@@ -75,7 +75,7 @@ fn played_by_effects_also_grants_blocker_to_the_chosen_digimon() {
     r.choose_prompt_card(CARD, None).unwrap();
     assert_eq!(field_ids(&r, 0).last().map(String::as_str), Some(CARD));
     r.choose_prompt_card("TOP", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.game.modifiers.has(carrier, ModifierType::CannotBeDestroyedByBattle));
     assert!(r.game.has_keyword(carrier, Keyword::Blocker));
 }

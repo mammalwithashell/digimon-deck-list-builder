@@ -9,7 +9,7 @@ cost: 4
 traits: [DATA SQUAD]
 
 effects:
-  - text: "[Start of Your Main Phase] By placing 1 [Cyborg]/[Aquatic] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+  - text: "[Start of Your Main Phase] By placing 1 [Cyborg] or [Aquatic] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
     when: start_of_your_main_phase
     condition:
       count_gte:

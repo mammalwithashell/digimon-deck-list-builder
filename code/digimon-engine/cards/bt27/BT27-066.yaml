@@ -31,11 +31,14 @@ alt_paths:
 
 effects:
   - kind: grant_keyword
+    text: "＜Reboot＞"
     keyword: Reboot
   - kind: grant_keyword
+    text: "＜Blocker＞"
     keyword: Blocker
 
   - when: [on_play, on_deletion]
+    text: "[On Play] [On Deletion] To 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for each of your other Digimon with [Chessmon] in their names. Then, delete 1 of your opponent's Digimon with a play cost of 5 or less."
     summary: "[On Play] [On Deletion] To 1 of your opponent's Digimon, <De-Digivolve 1> for each of your other Digimon with [Chessmon] in their names. Then, delete 1 of your opponent's Digimon with a play cost of 5 or less"
     process:
       - if:
@@ -86,6 +89,7 @@ effects:
             - delete_permanent: { target: doomed }
 
   - scope: inherited
+    text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
     when: on_opponent_attack
     once_per_turn: true
     optional: true

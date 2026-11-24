@@ -48,7 +48,7 @@ fn on_play_locks_a_chosen_opposing_digimon_or_tamer() {
         assert!(!v.is_optional);
         assert_eq!(candidates(&r), vec!["OPP-T", "TOP"]);
         r.choose_prompt_card(pick, None).unwrap();
-        let _ = r.auto_resolve();
+        no_prompt(&r);
         let locked = if pick == "TOP" { d } else { t };
         let other = if pick == "TOP" { t } else { d };
         assert!(r.game.modifiers.has(locked, ModifierType::CannotSuspend));
@@ -74,7 +74,7 @@ fn decode_may_be_declined_and_the_digimon_leaves() {
     let h = r.place_stack(0, &["DS3", CARD]);
     bounce(&mut r, h);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).is_empty());
 }
 
@@ -87,7 +87,7 @@ fn decode_offers_only_matching_sources_and_plays_one_free() {
     accept_decode(&mut r);
     assert_eq!(candidates(&r), vec!["AQ4", "DS3"]);
     r.choose_prompt_card("DS3", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).contains(&"DS3".to_string()));
     assert_eq!(r.memory(), before);
 }
@@ -100,7 +100,7 @@ fn inherited_decode_works_from_digivolution_cards() {
     accept_decode(&mut r);
     assert_eq!(candidates(&r), vec!["DS3"]);
     r.choose_prompt_card("DS3", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(field_ids(&r, 0), vec!["DS3"]);
 }
 
@@ -118,7 +118,7 @@ fn decode_does_not_apply_when_deleted_in_battle() {
         .start();
     let h = r.place_stack(0, &["DS3", CARD]);
     lose_battle(&mut r, h.index);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(r.pending_selection().is_none());
     assert!(!field_ids(&r, 0).contains(&"DS3".to_string()));
 }

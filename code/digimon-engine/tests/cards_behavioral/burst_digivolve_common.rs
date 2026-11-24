@@ -136,7 +136,7 @@ pub fn route_choices(r: &DebugRunner) -> Option<Vec<(String, u16)>> {
     )
 }
 
-pub fn pick_route(r: &mut DebugRunner, burst: bool) {
+pub fn choose_burst_route(r: &mut DebugRunner, burst: bool) {
     let choices = route_choices(r).expect("route prompt");
     let (_, action) = choices
         .iter()
@@ -209,7 +209,7 @@ pub fn burst_and_check(spec: BurstSpec, host: Host) -> DebugRunner {
     let deck = r.game.players[0].deck.len();
     r.game.decode_action(digivolve_action(host_h, hand_index), 0);
     if host == Host::AlsoNormal {
-        pick_route(&mut r, true);
+        choose_burst_route(&mut r, true);
     }
     assert!(
         route_choices(&r).is_none(),
@@ -275,7 +275,7 @@ pub fn assert_route_choice(spec: BurstSpec) {
     assert_eq!(choices.len(), 2, "{}: {choices:?}", spec.card);
     assert!(choices.iter().any(|(l, _)| l.starts_with("Burst Digivolve for cost 0")));
     assert!(choices.iter().any(|(l, _)| l == "Digivolve for cost 5"));
-    pick_route(&mut r, false);
+    choose_burst_route(&mut r, false);
     assert_eq!(r.game.memory, memory - 5, "{}: normal route pays 5", spec.card);
     assert_eq!(slot_of(&r, TAMER), Some(0), "{}: the Tamer stays", spec.card);
     assert_eq!(top_id(&r, host_h), spec.card);

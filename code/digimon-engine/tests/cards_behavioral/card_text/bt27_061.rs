@@ -49,7 +49,7 @@ fn on_deletion_plays_a_cost_four_or_lower_chessmon_free() {
     assert_eq!(candidates(&r), vec!["BISHOP", "PAWN"]);
     let mem = r.memory();
     r.choose_prompt_card("BISHOP", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(field_ids(&r, 0), vec!["BISHOP"]);
     assert_eq!(r.memory(), mem);
 }
@@ -60,7 +60,7 @@ fn on_deletion_play_may_be_declined() {
     let a = r.place_on_field(0, CARD, Some(0)).index;
     lose_battle(&mut r, a);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 0).is_empty());
     assert_eq!(hand_ids(&r, 0), vec!["PAWN"]);
 }
@@ -74,6 +74,6 @@ fn inherited_on_deletion_de_digivolves_one_opposing_digimon() {
     let v = r.pending_selection_view().expect("De-Digivolve pick");
     assert!(!v.is_optional);
     r.choose_prompt_card("TOP", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, victim), "B");
 }

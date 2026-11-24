@@ -95,7 +95,7 @@ pub fn legal(r: &DebugRunner, a: u16) -> bool {
 }
 
 /// Attack an opposing suspended Digimon with `attacker` (index on player 0's field).
-pub fn attack(r: &mut DebugRunner, attacker: u8, target: PermanentHandle) {
+pub fn attack_suspended(r: &mut DebugRunner, attacker: u8, target: PermanentHandle) {
     r.game.players[1].battle_area[target.index as usize].is_suspended = true;
     let a = encode_attack(attacker as u16, target.index as u16);
     assert!(build_action_mask(&r.game, 0)[a as usize] > 0.5, "attack illegal");
@@ -147,7 +147,7 @@ pub fn digivolve_hand(r: &mut DebugRunner, id: &str, target: PermanentHandle) ->
 /// Attack a suspended 99000 DP opposing wall so `attacker` loses the battle.
 pub fn lose_battle(r: &mut DebugRunner, attacker: u8) -> PermanentHandle {
     let wall = r.place_on_field(1, "WALL", Some(0));
-    attack(r, attacker, wall);
+    attack_suspended(r, attacker, wall);
     wall
 }
 
@@ -199,7 +199,7 @@ pub fn main_legal(r: &mut DebugRunner, h: PermanentHandle) -> bool {
     build_action_mask(&r.game, 0)[main_action(h) as usize] > 0.5
 }
 
-pub fn activate_main(r: &mut DebugRunner, h: PermanentHandle) {
+pub fn activate_field_main(r: &mut DebugRunner, h: PermanentHandle) {
     if !main_legal(r, h) {
         let m = build_action_mask(&r.game, 0);
         let on: Vec<usize> = (0..m.len()).filter(|&i| m[i] > 0.5).collect();
@@ -249,4 +249,24 @@ pub fn printed(id: &str) -> CardData {
         .get(id)
         .unwrap_or_else(|| panic!("{id} in data/cards.json"))
         .clone()
+}
+
+pub fn no_prompt(r: &DebugRunner) {
+    assert!(r.pending_selection().is_none(), "unexpected prompt: {:?}", r.pending_selection_view().map(|v| v.prompt));
+}
+
+/// Answer a "place the rest on the deck in any order" prompt card by card,
+/// returning how many cards were ordered.
+pub fn order_to_deck(r: &mut DebugRunner) -> usize {
+    let mut n = 0;
+    while let Some(v) = r.pending_selection_view() {
+        if !matches!(v.kind, digimon_engine::selection::SelectionKind::OrderedPermutation { .. }) {
+            break;
+        }
+        assert!(!v.is_optional, "every remaining card is ordered");
+        let a = *v.valid_action_ids.iter().find(|a| **a != digimon_engine::action::space::PASS).unwrap();
+        r.execute_action(v.selecting_player, a).unwrap();
+        n += 1;
+    }
+    n
 }

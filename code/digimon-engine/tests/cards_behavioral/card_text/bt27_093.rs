@@ -6,7 +6,7 @@
 use digimon_engine::debug_runner::DebugRunner;
 
 use super::bt27_fx::*;
-use super::common::{candidates, next_turn};
+use super::common::{advance_turn, candidates};
 
 const CARD: &str = "BT27-093";
 
@@ -30,8 +30,8 @@ fn runner(hand: &[&str]) -> DebugRunner {
 }
 
 fn to_main_phase(r: &mut DebugRunner) {
-    next_turn(r);
-    next_turn(r);
+    advance_turn(r);
+    advance_turn(r);
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn start_of_main_places_a_matching_card_at_the_bottom_face_down_to_draw_and_gain
     assert_eq!(candidates(&r), vec!["TEXT-CHESS"]);
     let (hand, mem) = (r.hand_size(0), r.memory());
     r.choose_prompt_card("TEXT-CHESS", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(source_ids(&r, t), vec!["TEXT-CHESS", "FD"]);
     assert_eq!(face_down(&r, t), vec![true, true]);
     assert_eq!(r.hand_size(0), hand);
@@ -77,7 +77,7 @@ fn main_suspends_trashes_two_bottom_face_down_cards_and_digivolves_reduced_by_tw
     let t = stocked(&mut r, CARD, &["FD", "PLAIN"]);
     let base = r.place_on_field(0, "BASE", Some(0));
     let mem = r.memory();
-    activate_main(&mut r, t);
+    activate_field_main(&mut r, t);
     assert!(r.game.players[0].battle_area[t.index as usize].is_suspended);
     pay_tamer_stock(&mut r);
     let v = r.pending_selection_view().expect("optional digivolve base");
@@ -85,7 +85,7 @@ fn main_suspends_trashes_two_bottom_face_down_cards_and_digivolves_reduced_by_tw
     r.choose_prompt_card("BASE", None).unwrap();
     assert_eq!(candidates(&r), vec!["KNIGHT"]);
     r.choose_prompt_card("KNIGHT", None).unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert_eq!(top_id(&r, base), "KNIGHT");
     assert_eq!(mem - r.memory(), 1, "evo cost 3 reduced by 2");
     assert_eq!(source_ids(&r, t).len() + source_ids(&r, other).len(), 1);
@@ -108,10 +108,10 @@ fn main_digivolve_may_be_declined_after_paying() {
     let mut r = runner(&["KNIGHT"]);
     let t = stocked(&mut r, CARD, &["FD", "FD"]);
     r.place_on_field(0, "BASE", Some(0));
-    activate_main(&mut r, t);
+    activate_field_main(&mut r, t);
     pay_tamer_stock(&mut r);
     r.decline_prompt().unwrap();
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(source_ids(&r, t).is_empty(), "cost paid");
     assert_eq!(hand_ids(&r, 0), vec!["KNIGHT"]);
 }
@@ -129,6 +129,6 @@ fn security_plays_this_tamer_free() {
         .start();
     let a = r.place_on_field(0, "ATK", Some(0)).index;
     attack_security(&mut r, a);
-    let _ = r.auto_resolve();
+    no_prompt(&r);
     assert!(field_ids(&r, 1).contains(&CARD.to_string()));
 }

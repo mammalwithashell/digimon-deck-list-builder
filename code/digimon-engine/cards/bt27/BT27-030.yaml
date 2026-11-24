@@ -18,6 +18,7 @@ alt_paths:
 
 effects:
   - when: [on_play, when_digivolving, when_attacking]
+    text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may return 1 of your opponent's level 4 or lower Digimon to the hand. Then, by trashing 2 bottom face-down cards from under any of your Tamers, you may play or use 1 [DATA SQUAD] trait card with a play or use cost of 5 or less from your hand without paying the cost."
     once_per_turn: true
     summary: "May bounce an opposing level 4 or lower Digimon; then trash 2 bottom face-down Tamer cards to play/use a cost 5 or lower DATA SQUAD hand card free"
     process:
@@ -63,6 +64,7 @@ effects:
                             cost_delta: free
 
   - scope: inherited
+    text: "[All Turns] [Once Per Turn] When this Digimon with [Gaogamon] in its name or the [DATA SQUAD] trait would leave the battle area, by trashing the bottom face-down card from under any of your Tamers, it doesn't leave."
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
