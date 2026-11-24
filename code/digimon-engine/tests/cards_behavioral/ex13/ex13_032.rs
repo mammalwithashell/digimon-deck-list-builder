@@ -221,15 +221,42 @@ fn ex13_032_face_down_only_offers_the_clause() {
 // Section 3 — Behavioral outcomes per cost branch
 // ════════════════════════════════════════════════════════════════════════════
 
+/// The labels of the pending effect choice, in order.
+fn choice_labels(r: &DebugRunner) -> Vec<String> {
+    r.pending_selection_view()
+        .and_then(|v| v.effect_choices)
+        .unwrap_or_default()
+        .iter()
+        .map(|c| c.label.clone())
+        .collect()
+}
+
+/// Pick the effect-choice row whose label contains `needle`.
+fn choose(r: &mut DebugRunner, needle: &str) {
+    let view = r.pending_selection_view().expect("effect choice");
+    let row = view
+        .effect_choices
+        .as_ref()
+        .and_then(|cs| cs.iter().find(|c| c.label.contains(needle)))
+        .unwrap_or_else(|| panic!("no `{needle}` row in {:?}", choice_labels(r)))
+        .action_id;
+    r.execute_action(view.selecting_player, row).expect("choose");
+}
+
+/// DCGO EX13_032.cs offers each payable cost plus "Don't pay the cost" as one
+/// `SetIntSelection` (owner ruling 2026-11-23: parity with DCGO).
 #[test]
-fn ex13_032_both_costs_available_offers_a_two_way_choice() {
+fn ex13_032_both_costs_available_offers_both_costs_and_dont_pay() {
     let mut r = runner(2);
     tamer_with_face_down(&mut r);
     attack(&mut r);
     r.accept_optional_trigger().expect("accept");
     assert_eq!(r.pending_kind(), Some(SelectionKind::EffectChoice));
-    let view = r.pending_selection_view().unwrap();
-    assert_eq!(view.effect_choices.as_ref().unwrap().len(), 2);
+    let labels = choice_labels(&r);
+    assert_eq!(labels.len(), 3, "{labels:?}");
+    assert!(labels[0].contains("security"), "{labels:?}");
+    assert!(labels[1].contains("Tamers"), "{labels:?}");
+    assert!(labels[2].contains("Don't pay"), "{labels:?}");
 }
 
 #[test]
@@ -267,17 +294,20 @@ fn ex13_032_face_down_branch_unsuspends_and_locks_opponent_digimon() {
         .has(opp, ModifierType::CannotActivateWhenDigivolvingEffects));
 }
 
+/// Only the Tamer cost is payable: DCGO lists that cost and "Don't pay the
+/// cost" (no dead security row).
 #[test]
-fn ex13_032_face_down_only_pays_without_a_choice() {
+fn ex13_032_face_down_only_offers_that_cost_and_dont_pay() {
     let mut r = runner(0);
     let t = tamer_with_face_down(&mut r);
     let (chirin, opp) = attack(&mut r);
     r.accept_optional_trigger().expect("accept");
-    assert_ne!(
-        r.pending_kind(),
-        Some(SelectionKind::EffectChoice),
-        "only one payable cost → no cost menu"
-    );
+    assert_eq!(r.pending_kind(), Some(SelectionKind::EffectChoice));
+    let labels = choice_labels(&r);
+    assert_eq!(labels.len(), 2, "{labels:?}");
+    assert!(labels[0].contains("Tamers"), "{labels:?}");
+    assert!(labels[1].contains("Don't pay"), "{labels:?}");
+    choose(&mut r, "Tamers");
     drain(&mut r);
     assert_eq!(face_down_count(&r, t), 0);
     assert!(!suspended(&r, chirin));
@@ -354,6 +384,132 @@ fn ex13_032_once_per_turn_blocks_a_second_attack_trigger() {
     assert!(
         r.pending_selection().is_none(),
         "[Once Per Turn]: the second attack does not offer it again"
+    );
+}
+
+// ─── [OPT] declined cost keeps the use (owner ruling 2026-11-23) ─────────────
+//
+// DCGO EX13_032.cs: offered only while a cost is payable
+// (`AdditionalActivateCondition`); skippable; then one `SetIntSelection` of
+// each payable cost plus "Don't pay the cost". "Don't pay" -> `RemoveUse()`.
+// The Tamer cost opens a Tamer `SelectPermanentEffect` with canNoSelect true;
+// no Tamer chosen -> nothing paid -> `RemoveUse()`. A paid cost spends the use
+// and runs the unsuspend + "After" lock (Q7301).
+// qa/rules/mechanics-gaps-2026-10.md W14 row (f).
+
+fn set_unsuspended(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.players[h.player as usize].battle_area[h.index as usize].is_suspended = false;
+}
+
+/// Resolve the rest of the attack without touching Chirinmon's clause.
+fn drain_without_paying(r: &mut DebugRunner) {
+    for _ in 0..12 {
+        let Some(view) = r.pending_selection_view() else {
+            return;
+        };
+        let a = if view.is_optional {
+            PASS
+        } else {
+            view.valid_action_ids[0]
+        };
+        r.execute_action(view.selecting_player, a).expect("resolve");
+    }
+}
+
+/// After the use was kept, a second attack the same turn (staged by
+/// unsuspending Chirinmon) offers the clause again.
+fn second_attack_offers_it(r: &mut DebugRunner, chirin: PermanentHandle) {
+    drain_without_paying(r);
+    set_unsuspended(r, chirin);
+    r.attack_player(chirin, 1, false);
+    assert!(
+        r.pending_is_optional(),
+        "the kept [Once Per Turn] is offered on the next [When Attacking] this turn"
+    );
+}
+
+#[test]
+fn ex13_032_outer_decline_keeps_opt() {
+    let mut r = runner(2);
+    let (chirin, _opp) = attack(&mut r);
+    r.decline_optional_trigger().expect("decline");
+    assert_eq!(r.security_count(0), 2);
+    second_attack_offers_it(&mut r, chirin);
+}
+
+#[test]
+fn ex13_032_dont_pay_keeps_opt_and_does_nothing() {
+    let mut r = runner(2);
+    let t = tamer_with_face_down(&mut r);
+    let (chirin, opp) = attack(&mut r);
+    r.accept_optional_trigger().expect("accept");
+    choose(&mut r, "Don't pay");
+    assert!(
+        r.pending_selection_view()
+            .is_none_or(|v| v.kind != SelectionKind::EffectChoice),
+        "the clause asks nothing more"
+    );
+    assert_eq!(r.security_count(0), 2, "no security trashed");
+    assert_eq!(face_down_count(&r, t), 1, "no face-down card trashed");
+    assert!(suspended(&r, chirin), "not paid: no unsuspend");
+    assert!(!r
+        .modifiers()
+        .has(opp, ModifierType::CannotActivateWhenDigivolvingEffects));
+    second_attack_offers_it(&mut r, chirin);
+}
+
+#[test]
+fn ex13_032_security_only_offers_that_cost_and_dont_pay() {
+    let mut r = runner(2);
+    let (chirin, _opp) = attack(&mut r);
+    r.accept_optional_trigger().expect("accept");
+    let labels = choice_labels(&r);
+    assert_eq!(labels.len(), 2, "{labels:?}");
+    assert!(labels[0].contains("security"), "{labels:?}");
+    assert!(labels[1].contains("Don't pay"), "{labels:?}");
+    choose(&mut r, "Don't pay");
+    assert_eq!(r.security_count(0), 2);
+    second_attack_offers_it(&mut r, chirin);
+}
+
+/// The Tamer cost chosen, then no Tamer picked: nothing paid, the use kept.
+#[test]
+fn ex13_032_tamer_cost_declined_at_the_tamer_pick_keeps_opt() {
+    let mut r = runner(0);
+    let t = tamer_with_face_down(&mut r);
+    let (chirin, opp) = attack(&mut r);
+    r.accept_optional_trigger().expect("accept");
+    choose(&mut r, "Tamers");
+    assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField), "Tamer pick");
+    assert_eq!(
+        digimon_engine::action::build_action_mask(&r.game, 0)[PASS as usize],
+        1.0,
+        "DCGO EX13_032.cs Tamer SelectPermanentEffect canNoSelect: the pick may be declined"
+    );
+    r.execute_action(0, PASS).expect("decline the Tamer pick");
+    assert_eq!(face_down_count(&r, t), 1, "nothing trashed");
+    assert!(suspended(&r, chirin), "not paid: no unsuspend");
+    assert!(!r
+        .modifiers()
+        .has(opp, ModifierType::CannotActivateWhenDigivolvingEffects));
+    second_attack_offers_it(&mut r, chirin);
+}
+
+/// Paying the security cost spends the use, with the Tamer cost still payable
+/// on the next attack.
+#[test]
+fn ex13_032_paid_cost_spends_opt() {
+    let mut r = runner(2);
+    tamer_with_face_down(&mut r);
+    let (chirin, _opp) = attack(&mut r);
+    r.accept_optional_trigger().expect("accept");
+    choose(&mut r, "security");
+    drain(&mut r);
+    assert!(!suspended(&r, chirin), "paid: unsuspended");
+    r.attack_player(chirin, 1, false);
+    assert!(
+        r.pending_selection_view().is_none_or(|v| !v.is_optional),
+        "spent: the second attack does not offer it"
     );
 }
 
