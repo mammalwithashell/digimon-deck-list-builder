@@ -30,6 +30,18 @@ A node needs, in total:
 
 ## 2. Payload
 
+On the build machine, prepare the pinned DCGO project using
+[`docs/DCGO_BUILD.md`](../DCGO_BUILD.md). Use an activated Unity 2021.3.45f2
+Editor with Windows Mono Build Support to build the player and its manifest:
+
+```bash
+cargo run --locked -p dcgo-harness -- build --unity "$UNITY" \
+    --project "$PWD/DCGO" --output "$PLAYER"
+```
+
+Run this from the base repo. `UNITY` is the Editor executable, and `PLAYER`
+is a new output directory outside the DCGO project.
+
 [`scripts/build-oracle-node.sh`](../../scripts/build-oracle-node.sh) assembles
 items 1–3 from a build machine (one that has the base repo — DCGO submodule
 and the rules PDFs live only there, per rules 29 and 32) into a directory
@@ -141,6 +153,57 @@ dcgo-harness --root <root> node down
 into `daemon.rs`'s `player_command` — nothing to add here), so **no attached
 desktop session, no virtual display, and no `tscon` session redirection are
 needed**. See §6 for the measurement this rests on.
+
+### Ubuntu Devin (Wine)
+
+Use a private copy of the Windows **scripted Mono player** from §2. The
+public standalone DCGO client and its MelonLoader recorder do not consume
+this job queue. Do not commit the player or upload it to public CI artifacts.
+The Devin blueprint installs Wine/Xvfb and the shared ONNX Runtime on Ubuntu
+22.04 x86-64; it does not install the player or start a service.
+
+After the blueprint lands on the default branch, follow Devin's
+[Git-backed blueprint setup](https://docs.devin.ai/onboard-devin/environment/git-backed-blueprints)
+to switch this repo's blueprint to Git if needed, sync it, and build a snapshot.
+Start new sessions from that snapshot.
+
+From the repo root, in both shells:
+
+```bash
+source "$HOME/.local/share/digimon-devin/oracle-env.sh"
+export WINEPREFIX="$HOME/.local/share/dcgo-oracle/wine"
+PLAYER="$HOME/.local/share/dcgo-oracle/player" # extracted build with manifest.json
+ROOT="$(scripts/dcgo-oracle-wine.sh root)"
+```
+
+In one shell, keep the player running in the foreground:
+
+```bash
+scripts/dcgo-oracle-wine.sh run "$PLAYER"
+```
+
+The launcher checks the manifest via `node status` before starting Wine.
+Wait for a fresh heartbeat in the second shell:
+
+```bash
+cargo run -q -p dcgo-harness -- --root "$ROOT" node status --build "$PLAYER"
+```
+
+`GO` alone means the files match; the player is ready when the report also
+shows **fresh heartbeat**. If the heartbeat does not appear, check
+`"$ROOT/dcgo-player.log"` and Photon access. Once it does, first run the
+scenario with `exam --sim-only`, then run it live:
+
+```bash
+cargo run -q -p dcgo-harness -- --root "$ROOT" exam --oracle --build "$PLAYER" \
+    --scenario qa/dcgo-exams/EX10/EX10-025-effect0.yaml --cards-json data/cards.json \
+    --decks qa/dcgo-exams/EX10/rocks_pool.json
+```
+
+The native Linux harness uses `winepath` to locate the recording and its state
+sidecar, so keep the same Wine prefix in both shells. Stop the Wine player in
+its foreground shell; `node up`, `node down`, and `watch` manage the player
+directly on Windows, not this Wine process.
 
 ## 5. The action-space rule, as an operational fact
 

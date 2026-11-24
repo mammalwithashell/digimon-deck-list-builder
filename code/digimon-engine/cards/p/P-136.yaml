@@ -46,6 +46,8 @@ effects:
 
   - text: "[Your Turn] [Once Per Turn] When any of your Digimon digivolve into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory."
     when: on_digivolve
+    optional: true
+    once_per_turn: true
     active_when: { your_turn: true }
     trigger_if:
       all_of:

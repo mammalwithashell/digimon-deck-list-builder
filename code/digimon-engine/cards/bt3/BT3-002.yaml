@@ -44,7 +44,6 @@ effects:
     scope: inherited
     when: when_attacking
     once_per_turn: true
-    optional: true
     condition: { has_keyword: Jamming }
     summary: "[When Attacking][OPT] If carrier has Jamming, Draw 1"
     process:
