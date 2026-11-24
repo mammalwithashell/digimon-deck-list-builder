@@ -11,7 +11,14 @@
 #   with [Sukamon] in its name, it doesn't leave.
 #   Official Q&A: with only 1 qualifying card, that card is added to the hand.
 #
-# DCGO: no EX13_027.cs at b9a0638cd.
+#   Official Q&A Q7287: the inherited effect may delete either player's
+#   [Sukamon]-named Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_027.cs
+# (absent at b9a0638cd, present in the current submodule). Its inherited
+# clause is followed exactly by owner ruling 2026-11-23 (W14 row (f)):
+# declining the deletion pick after accepting gives the [Once Per Turn] back
+# (`RemoveUse()`); the pick spans both battle areas.
 #
 # Reveal: `reveal_search` with a HAND bucket first and a TRASH bucket second.
 # Buckets resolve in order with cross-bucket de-dup, so a lone match always
@@ -22,7 +29,7 @@
 # `active_when` deliberately reads ONLY the replacement cause (no subject
 # predicate), so the replacement stays self-scoped to the carrier ("this
 # Digimon"). The first step is the cost selection, so the offer is gated on
-# at least one OTHER [Sukamon]-named Digimon existing.
+# at least one OTHER [Sukamon]-named Digimon existing, on either side.
 
 card: EX13-027
 name: Chuumon
@@ -79,14 +86,29 @@ effects:
       none_of:
         - replacement_cause: own_effect
     summary: "Inherited [All Turns][OPT] By deleting 1 other [Sukamon]-named Digimon, this Digimon doesn't leave (not by your effects)"
+    # DCGO flow (EX13_027.cs), followed by owner ruling 2026-11-23 ("parity
+    # with DCGO", qa/rules/mechanics-gaps-2026-10.md W14 row (f)): offered only
+    # while another [Sukamon]-named Digimon is on EITHER battle area
+    # (`CanActivateCondition`; Q7287: "1 other Digimon" may be the opponent's);
+    # after the accept, a pick with canNoSelect true. None chosen ->
+    # `RemoveUse()`: the use is kept and the carrier leaves. One chosen ->
+    # `isUsed` (spent); it doesn't leave only if that Digimon was deleted
+    # (the paid-deletion pair `delete_permanent` + `cancel_replacement`).
     process:
-      - select_own_permanent:
+      - select_any_permanent:
           bind_as: prevent_cost
+          optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - other: true
               - kind: digimon
               - name_contains: Sukamon
-          prompt: "Delete 1 of your other Digimon with [Sukamon] in its name"
+          prompt: "Delete 1 other Digimon with [Sukamon] in its name"
       - delete_permanent: { target: prevent_cost }
       - cancel_replacement: {}
+      - if:
+          condition: { binding_absent: prevent_cost }
+          then:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}
