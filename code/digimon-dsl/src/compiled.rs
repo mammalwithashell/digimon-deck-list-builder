@@ -1757,6 +1757,7 @@ pub enum CompiledFieldSelector {
     /// Fewest digivolution cards beneath the top card among candidate
     /// permanents.
     LowestMaterialCount,
+    LowestMaterialCountRedirection,
 }
 
 // ── Steps ───────────────────────────────────────────────────────────
@@ -2072,6 +2073,7 @@ pub enum CompiledStep {
     TrashBottomSources {
         target: CompiledBindingRef,
         count: u8,
+        bind_trashed_as: Option<String>,
     },
     TrashAllSources {
         target: CompiledBindingRef,

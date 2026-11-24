@@ -1519,10 +1519,17 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::TrashBottomSources { target, count } => {
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
-            {
-                let _ = ctx.trash_bottom_sources(h, *count);
+        CompiledStep::TrashBottomSources { target, count, bind_trashed_as } => {
+            let trashed = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => ctx.trash_bottom_sources(h, *count),
+                _ => 0,
+            };
+            if let Some(name) = bind_trashed_as {
+                if trashed > 0 {
+                    bindings.insert_literal(name, i64::from(trashed));
+                } else {
+                    bindings.clear_for_merge(name);
+                }
             }
             true
         }

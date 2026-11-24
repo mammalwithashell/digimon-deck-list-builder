@@ -112,6 +112,9 @@ fn compile_field_selector(s: crate::step::FieldSelector) -> CompiledFieldSelecto
         crate::step::FieldSelector::LowestMaterialCount => {
             CompiledFieldSelector::LowestMaterialCount
         }
+        crate::step::FieldSelector::LowestMaterialCountRedirection => {
+            CompiledFieldSelector::LowestMaterialCountRedirection
+        }
     }
 }
 
@@ -3468,6 +3471,7 @@ fn compile_step(
         S::TrashBottomSources(a) => CompiledStep::TrashBottomSources {
             target: compile_binding_ref(&a.target),
             count: a.count,
+            bind_trashed_as: a.bind_trashed_as.clone(),
         },
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),

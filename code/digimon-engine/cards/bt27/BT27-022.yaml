@@ -1,0 +1,53 @@
+card: BT27-022
+name: Renamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Beastkin, Ice-Snow, ALYSION]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - when: on_play
+    text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Ice-Snow] or [ALYSION] trait card and 1 blue Tamer card among them to the hand. Return the rest to the bottom of the deck."
+    summary: "[On Play] Reveal 3; add an Ice-Snow or ALYSION card and a blue Tamer; bottom-deck the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: trait_pick
+              min: 1
+              max: 1
+              filter: { any_of: [{ trait_has: Ice-Snow }, { trait_has: ALYSION }] }
+            - bind_as: tamer_pick
+              min: 1
+              max: 1
+              filter: { kind: tamer, color_is: blue }
+          prompt: "Add 1 Ice-Snow or ALYSION card and 1 blue Tamer to your hand"
+      - add_to_hand_from_reveal: { of: you, card: trait_pick }
+      - add_to_hand_from_reveal: { of: you, card: tamer_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    text: "[When Attacking] If this Digimon has the [Ice-Snow] trait, you may change the attack target to 1 of your opponent's unsuspended Digimon with the fewest digivolution cards."
+    when: when_attacking
+    optional: true
+    condition: { trait_has: Ice-Snow }
+    summary: "Inherited [When Attacking] If this Digimon is Ice-Snow, it may change its target to an unsuspended opposing Digimon with the fewest digivolution cards"
+    process:
+      - select_opponent_permanent:
+          bind_as: defender
+          optional: true
+          filter: { kind: digimon, is_unsuspended: true }
+          selector: lowest_material_count_redirection
+          prompt: "Choose a new attack target among the opponent's unsuspended Digimon with the fewest digivolution cards"
+      - redirect_attack_target: { new_target: defender, optional: false }
