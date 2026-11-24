@@ -25,7 +25,7 @@ effects:
             any_of:
               - name_contains: "Huckmon"
               - name_contains: "Sistermon"
-              - trait_has: "Royal Knight"
+              - trait_contains: "Royal Knight"
           prompt: "Add 1 Huckmon, Sistermon, or Royal Knight card"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - per_selected:
@@ -49,7 +49,7 @@ effects:
             any_of:
               - name_contains: "Huckmon"
               - name_contains: "Sistermon"
-              - trait_has: "Royal Knight"
+              - trait_contains: "Royal Knight"
           prompt: "Add 1 Huckmon, Sistermon, or Royal Knight card"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - per_selected:

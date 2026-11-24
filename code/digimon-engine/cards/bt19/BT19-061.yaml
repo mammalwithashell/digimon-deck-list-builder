@@ -38,7 +38,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: pick
-          optional: true
+          optional: false
           filter:
             any_of:
               - trait_has: "Xros Heart"
