@@ -24,8 +24,9 @@ impl Game {
     }
 
     /// The current gameplay digest without the main-declaration guard's own
-    /// section: what the guard compares to prove a declare-then-pass was a
-    /// no-op (`game::main_declare_guard`).
+    /// section and without the card-choice id allocator: what the guard
+    /// compares to prove a declare-then-pass was a no-op
+    /// (`game::main_declare_guard`).
     pub fn guard_free_verification_digest(&self) -> u64 {
         self.verification_digest_impl(crate::recorder::VerificationDigestVersion::CURRENT, false)
     }
@@ -347,7 +348,14 @@ impl Game {
         if version == VerificationDigestVersion::V4 {
             cost_receipt_hash::write_pending_play_credits(&mut h, self);
             security_play_hash::write(&mut h, self);
-            debug_field(&mut h, "card_choice.next_id", &self.next_card_choice_id);
+            // An allocator counter, not gameplay: a passed card-choice pick
+            // (e.g. a hand-or-trash union pick) bumps it and changes nothing
+            // else. The guard-free digest leaves it out, or a declare-then-pass
+            // through such a pick would never be proven a no-op and could be
+            // repeated forever (`game::main_declare_guard`).
+            if include_main_declare_guard {
+                debug_field(&mut h, "card_choice.next_id", &self.next_card_choice_id);
+            }
             debug_field(&mut h, "card_choice.security_shuffle_generations", &self.security_shuffle_generations);
             debug_field(&mut h, "card_choice.resolved", &self.resolved_card_choice);
             if let Some(owner) = self.pending_selection.as_ref().and_then(|s| s.card_choice.as_ref()) {

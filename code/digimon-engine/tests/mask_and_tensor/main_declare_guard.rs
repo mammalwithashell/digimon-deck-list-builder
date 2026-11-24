@@ -148,6 +148,37 @@ effects:
       - gain_memory: 1
 "#;
 
+/// A refund-capable `[Main]` whose pick spans hand and trash: the union pick
+/// is a card choice, which allocates a card-choice id even when passed (the
+/// Rie Kishibe (EX13-074) shape).
+const UNION_KEEP: &str = r#"
+card: UNION-MAIN
+name: Union Keeper
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 5000
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    summary: "[Main] [Once Per Turn] You may play 1 Digimon card from your hand or trash."
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: pick
+          filter: { kind: digimon }
+          prompt: "Play 1 Digimon card from your hand or trash"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - draw: { of: you, count: 1 }
+          else:
+            - refund_opt: {}
+"#;
+
 fn filler(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
@@ -160,7 +191,7 @@ fn filler(id: &str) -> CardData {
 
 fn builder() -> DebugRunnerBuilder {
     let mut b = DebugRunner::builder();
-    for yaml in [KEEP, EMPTY, INH_KEEP, INH_SUSPEND, TOP_GAIN] {
+    for yaml in [KEEP, EMPTY, INH_KEEP, INH_SUSPEND, TOP_GAIN, UNION_KEEP] {
         b = b.from_dsl_yaml(yaml).expect("fixture card compiles");
     }
     b.add_card(filler("G-LV3"))
@@ -338,6 +369,30 @@ fn zero_candidate_declaration_refunds_without_a_prompt_and_is_withheld() {
     assert_eq!(g.guard_free_verification_digest(), before_free);
     assert_ne!(g.verification_digest(), before_full, "every legal action changes the state");
     assert!(!offered(g, main_bit(0)), "the no-op declaration is not offered again");
+}
+
+/// A passed card-choice pick bumps the card-choice id allocator and changes
+/// nothing else: it must still be proven a no-op, or the declaration could
+/// be repeated forever (each pass a "new" state).
+#[test]
+fn a_passed_card_choice_pick_is_still_a_no_op() {
+    let mut r = builder().start();
+    r.set_first_player(0);
+    r.place_on_field(0, "UNION-MAIN", Some(0));
+    r.game.enter_main_phase();
+    let g = &mut r.game;
+    let before_free = g.guard_free_verification_digest();
+    declare(g, 0);
+    let id_before = g.pending_selection.as_ref().map(|s| s.card_choice.is_some());
+    assert_eq!(id_before, Some(true), "the union pick is a card choice");
+    pass_pick(g);
+    assert_eq!(uses_spent(g, 0), 0, "the passed pick gives the use back");
+    assert_eq!(
+        g.guard_free_verification_digest(),
+        before_free,
+        "the card-choice id allocator is not gameplay state"
+    );
+    assert!(!offered(g, main_bit(0)), "the identical declaration is withheld");
 }
 
 /// Drive both seats with PASS (or the first legal action) until player 0's
