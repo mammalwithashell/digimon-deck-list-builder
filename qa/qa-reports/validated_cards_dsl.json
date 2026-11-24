@@ -17135,6 +17135,105 @@
       "tests_ignored": 0,
       "notes": "inherited [When Attacking][OPT] may digivolve into a [Dinosaur]/[Tyrannomon]-named hand card with the printed cost; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
       "integration_verification": "limited"
+    },
+    "LM-063": {
+      "card_name": "Endurance Training",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — Training options",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_063.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (red/purple), twin of LM-062 per DCGO LM_063.cs: name-gated color bypass, [Main] reveal 2 add 1 red/purple + bottom + place as Delay, <Delay> optional cost -2 digivolve into red/purple Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "LM-064": {
+      "card_name": "Bobbing Training",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — Training options",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_064.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (yellow/blue), twin of LM-062 per DCGO LM_064.cs: name-gated color bypass, [Main] reveal 2 add 1 yellow/blue + bottom + place as Delay, <Delay> optional cost -2 digivolve into yellow/blue Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "LM-065": {
+      "card_name": "Weight Training",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — Training options",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-065.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_065.rs",
+      "test_count": 10,
+      "patterns": [
+        "D3",
+        "A2",
+        "delay-main",
+        "effect-digivolve-reduce"
+      ],
+      "notes": "Shared Training-option shape (black/green), twin of LM-062 per DCGO LM_065.cs: name-gated color bypass, [Main] reveal 2 add 1 black/green + bottom + place as Delay, <Delay> optional cost -2 digivolve into black/green Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "LM-066": {
+      "card_name": "Zephagamon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_066.rs",
+      "test_count": 5,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Piercing/Vortex/Blocker, Rule trait [Bird Dragon]; WD/WA OPT optional unsuspend 1 Digimon then may battle; [All Turns][OPT] leave-field replacement by suspending 1 Digimon (not own effects). Option: suspend-2 cost -2, CannotUnsuspend until their turn ends, then bottom-deck 1 per 2 suspended Digimon."
+    },
+    "LM-067": {
+      "card_name": "Gundramon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_067.rs",
+      "test_count": 4,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Reboot/Blocker/Fragment(3); WD/Counter OPT reveal 6 play-or-use 1 cost<=6 [Three Musketeers]-text card free, rest bottom; WD/WA trash up to 3 [Three Musketeers] sources, delete 1 cost<=7 per card. Option: Use Req, <De-Digivolve 3> 3 Digimon, may place 1 [Three Musketeers] card from hand/trash as bottom source."
+    },
+    "LM-068": {
+      "card_name": "HeavyMetaldramon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_068.rs",
+      "test_count": 7,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Security A.+1; WD/End of Attack hand<=4 play lv<=4 Evil/Dark Dragon/Evil Dragon from trash free; WD/On Deletion trash 2 then may activate Option-side [Main]. Option: [Trash][Your Turn] on ally Evil-family attack, hand<=4, use from trash cost -3 (engine: trash-scoped OnAllyAttack enqueue); [Main] delete 1 with level >= hand size."
     }
   }
 }

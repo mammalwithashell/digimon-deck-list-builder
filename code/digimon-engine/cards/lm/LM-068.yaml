@@ -1,0 +1,160 @@
+card: LM-068
+name: HeavyMetaldramon
+kind: dual
+
+level: 6
+color: [purple, red]
+cost: 6
+dp: 13000
+traits: [Evil Dragon, LIBERATOR]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - any_color: true
+        - level_eq: 5
+        - any_of:
+            - trait_has: "Dark Dragon"
+            - trait_has: "Evil Dragon"
+    cost: 4
+
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [purple, red]
+    traits: [Evil Dragon, LIBERATOR]
+    effect_text: |
+      ＜Security A. +1＞
+      [When Digivolving] [End of Attack] If your hand has 4 or fewer cards, you may play 1 level 4 or lower Digimon card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from your trash to the field without paying the cost.
+      [When Digivolving] [On Deletion] Trash 2 cards in your hand. Then, you may activate 1 [Main] effect on this card's Option side.
+    effects:
+      - text: "＜Security A. +1＞"
+        kind: grant_keyword
+        keyword: SecurityAttackPlus
+        value: 1
+        summary: "<Security A. +1>"
+
+      - text: "[When Digivolving] [End of Attack] If your hand has 4 or fewer cards, you may play 1 level 4 or lower Digimon card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from your trash to the field without paying the cost."
+        when: [when_digivolving, end_of_attack]
+        condition:
+          count_lte:
+            filter: { of: you, zone: [hand] }
+            n: 4
+        summary: "[WD][End of Attack] If hand <=4, you may play 1 level <=4 [Evil]/[Dark Dragon]/[Evil Dragon] trait Digimon from trash free"
+        process:
+          - select_trash:
+              of: you
+              bind_as: revived
+              optional: true
+              filter:
+                all_of:
+                  - kind: digimon
+                  - level_lte: 4
+                  - any_of:
+                      - trait_has: Evil
+                      - trait_has: "Dark Dragon"
+                      - trait_has: "Evil Dragon"
+                  - can_play_from_effect_without_cost: true
+              prompt: "You may play 1 level 4 or lower Digimon card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from your trash without paying the cost"
+          - play_from_trash_free:
+              of: you
+              hand_index: revived
+
+      - text: "[When Digivolving] [On Deletion] Trash 2 cards in your hand. Then, you may activate 1 [Main] effect on this card's Option side."
+        when: [when_digivolving, on_deletion]
+        as_option_effect: true
+        summary: "[WD][On Deletion] Trash 2 cards in hand; then you may activate this card's Option [Main]: delete 1 opp Digimon with level >= your hand size"
+        process:
+          - select_hand:
+              optional: false
+              of: you
+              bind_as: discard_a
+              filter: {}
+              prompt: "Trash 1 of 2 cards from your hand"
+          - trash_from_hand_by_index: { of: you, hand_index: discard_a }
+          - select_hand:
+              optional: false
+              of: you
+              bind_as: discard_b
+              filter: {}
+              prompt: "Trash 2 of 2 cards from your hand"
+          - trash_from_hand_by_index: { of: you, hand_index: discard_b }
+          - select_effect_choice:
+              bind_as: activate_main
+              labels:
+                - "Activate this card's Option-side [Main]: delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher"
+                - "Don't activate"
+              prompt: "You may activate 1 [Main] effect on this card's Option side"
+          - if:
+              condition: { equals: [activate_main, 0] }
+              then:
+                - select_opponent_permanent:
+                    optional: false
+                    bind_as: doomed
+                    filter:
+                      all_of:
+                        - kind: digimon
+                        - level_gte:
+                            formula:
+                              base: 0
+                              per:
+                                card_count_in_zone: { of: you, zone: hand }
+                              delta: 1
+                    prompt: "Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher"
+                - delete_permanent: { target: doomed }
+
+  option:
+    use_cost: 6
+    colors: [purple, red]
+    effect_text: |
+      [Trash] [Your Turn] When one of your [Evil], [Dark Dragon] or [Evil Dragon] trait Digimon attacks, if your hand has 4 or fewer cards, you may use this card with the cost reduced by 3.
+      [Main] Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher.
+    arts_digivolve: true
+    effects:
+      - text: "[Trash] [Your Turn] When one of your [Evil], [Dark Dragon] or [Evil Dragon] trait Digimon attacks, if your hand has 4 or fewer cards, you may use this card with the cost reduced by 3."
+        scope: trash
+        when: on_ally_attack
+        active_when: { your_turn: true }
+        condition:
+          all_of:
+            - event_target_owner: you
+            - any_of:
+                - event_target_trait_has: Evil
+                - event_target_trait_has: "Dark Dragon"
+                - event_target_trait_has: "Evil Dragon"
+            - count_lte:
+                filter: { of: you, zone: [hand] }
+                n: 4
+        summary: "[Trash][Your Turn] When your [Evil]/[Dark Dragon]/[Evil Dragon] Digimon attacks, if hand <=4, you may use this card from trash with cost -3"
+        process:
+          - use_option_from_trash:
+              of: you
+              optional: true
+              filter: { is_source_card: true }
+              cost: { reduce: 3 }
+              prompt: "You may use this card from your trash with the cost reduced by 3"
+
+      - text: "[Main] Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher."
+        when: main
+        summary: "[Main] Delete 1 opp Digimon with level >= the number of cards in your hand"
+        process:
+          - select_opponent_permanent:
+              optional: false
+              bind_as: doomed
+              filter:
+                all_of:
+                  - kind: digimon
+                  - level_gte:
+                      formula:
+                        base: 0
+                        per:
+                          card_count_in_zone: { of: you, zone: hand }
+                        delta: 1
+              prompt: "Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher"
+          - delete_permanent: { target: doomed }

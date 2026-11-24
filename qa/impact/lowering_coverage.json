@@ -4680,8 +4680,7 @@
    "parsed_only_constructs": [],
    "protection_constructs": [],
    "untested_constructs": [
-    "predicate:card_in_zone",
-    "predicate:is_source_card"
+    "predicate:card_in_zone"
    ]
   },
   "BT17-081": {
@@ -32710,6 +32709,249 @@
    "protection_constructs": [],
    "untested_constructs": []
   },
+  "LM-063": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:effect_initiated_digivolve",
+    "verb:place_remainder_on_deck",
+    "verb:place_self_as_delay_option",
+    "verb:reveal_top_deck",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_digivolve_onto",
+    "predicate:color_is",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:name_is",
+    "predicate:no_permanent",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "LM-064": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:effect_initiated_digivolve",
+    "verb:place_remainder_on_deck",
+    "verb:place_self_as_delay_option",
+    "verb:reveal_top_deck",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_digivolve_onto",
+    "predicate:color_is",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:name_is",
+    "predicate:no_permanent",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "LM-065": {
+   "behaviourally_covered": true,
+   "clause_count": 3,
+   "constructs": [
+    "verb:add_to_hand_from_reveal",
+    "verb:effect_initiated_digivolve",
+    "verb:place_remainder_on_deck",
+    "verb:place_self_as_delay_option",
+    "verb:reveal_top_deck",
+    "verb:select_hand",
+    "verb:select_own_permanent",
+    "verb:select_reveal",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_digivolve_onto",
+    "predicate:color_is",
+    "predicate:has_digivolve_candidate",
+    "predicate:kind",
+    "predicate:name_is",
+    "predicate:no_permanent",
+    "predicate:owner",
+    "predicate:zone",
+    "timing:main_from_hand",
+    "timing:on_security"
+   ],
+   "effect_clause_count": 3,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
+  "LM-066": {
+   "behaviourally_covered": true,
+   "clause_count": 9,
+   "constructs": [
+    "verb:add_modifier",
+    "verb:battle",
+    "verb:cancel_replacement",
+    "verb:if",
+    "verb:per_selected",
+    "verb:return_to_deck",
+    "verb:select_any_permanent",
+    "verb:select_count_capped_multi",
+    "verb:select_opponent_permanent",
+    "verb:suspend",
+    "verb:unsuspend",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:binding_present",
+    "predicate:can_change_orientation",
+    "predicate:can_unsuspend",
+    "predicate:color_is",
+    "predicate:count_gte",
+    "predicate:is_unsuspended",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:none_of",
+    "predicate:owner",
+    "predicate:play_cost_gte",
+    "predicate:replacement_cause",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:main",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker",
+    "keyword:Piercing",
+    "keyword:Vortex"
+   ],
+   "effect_clause_count": 7,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "clause:replacement",
+    "predicate:replacement_cause",
+    "trigger:when_would_leave_battle_area",
+    "verb:cancel_replacement"
+   ],
+   "untested_constructs": []
+  },
+  "LM-067": {
+   "behaviourally_covered": true,
+   "clause_count": 8,
+   "constructs": [
+    "verb:de_digivolve",
+    "verb:delete_bound_permanents",
+    "verb:if",
+    "verb:per_selected",
+    "verb:place_as_bottom_source",
+    "verb:place_remainder_on_deck",
+    "verb:play_from_revealed_free",
+    "verb:reveal_top_deck",
+    "verb:select_count_capped_multi",
+    "verb:select_own_permanent",
+    "verb:select_own_sources",
+    "verb:select_reveal_buckets",
+    "verb:select_union_zone",
+    "verb:trash_selected_sources_as_cost",
+    "verb:use_option_from_revealed",
+    "predicate:all_of",
+    "predicate:any_field_permanent",
+    "predicate:any_of",
+    "predicate:any_permanent",
+    "predicate:binding_card_kind",
+    "predicate:binding_count_eq",
+    "predicate:binding_present",
+    "predicate:can_play_or_use_from_effect",
+    "predicate:color_is",
+    "predicate:in_text_contains",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:owner",
+    "predicate:play_cost_lte",
+    "predicate:play_or_use_cost_lte",
+    "predicate:trait_has",
+    "predicate:zone",
+    "timing:counter",
+    "timing:main",
+    "timing:when_attacking",
+    "timing:when_digivolving",
+    "keyword:Blocker",
+    "keyword:Fragment",
+    "keyword:Reboot"
+   ],
+   "effect_clause_count": 6,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [
+    "keyword:Fragment"
+   ],
+   "untested_constructs": []
+  },
+  "LM-068": {
+   "behaviourally_covered": true,
+   "clause_count": 7,
+   "constructs": [
+    "verb:delete_permanent",
+    "verb:if",
+    "verb:play_from_trash_free",
+    "verb:select_effect_choice",
+    "verb:select_hand",
+    "verb:select_opponent_permanent",
+    "verb:select_trash",
+    "verb:trash_from_hand_by_index",
+    "verb:use_option_from_trash",
+    "predicate:all_of",
+    "predicate:any_of",
+    "predicate:can_play_from_effect_without_cost",
+    "predicate:color_is",
+    "predicate:count_lte",
+    "predicate:equals",
+    "predicate:event_target_owner",
+    "predicate:event_target_trait_has",
+    "predicate:is_source_card",
+    "predicate:kind",
+    "predicate:level_eq",
+    "predicate:level_gte",
+    "predicate:level_lte",
+    "predicate:owner",
+    "predicate:trait_has",
+    "predicate:your_turn",
+    "predicate:zone",
+    "timing:end_of_attack",
+    "timing:main",
+    "timing:on_ally_attack",
+    "timing:on_deletion",
+    "timing:when_digivolving",
+    "keyword:SecurityAttackPlus"
+   ],
+   "effect_clause_count": 5,
+   "has_card_test": true,
+   "lowering_covered": true,
+   "parsed_only_constructs": [],
+   "protection_constructs": [],
+   "untested_constructs": []
+  },
   "P-035": {
    "behaviourally_covered": true,
    "clause_count": 3,
@@ -44788,6 +45030,12 @@
     ],
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option": [
      "yaml_key"
+    ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
+     "yaml_key"
+    ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
+     "yaml_key"
     ]
    },
    "tested": true,
@@ -44801,7 +45049,9 @@
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_candidates_respect_each_prohibition",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_commits_a_played_digimon_and_a_used_option_for_free",
     "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_false_polarity_selects_only_the_egg_and_commit_still_refuses_it",
-    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option"
+    "dsl::constructs/play_or_use_candidate_legality.rs::play_or_use_full_battle_area_offers_only_the_option",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered"
    ]
   },
   "predicate:can_play_to_breeding_from_hand": {
@@ -49792,14 +50042,21 @@
   "predicate:is_source_card": {
    "kind": "predicate",
    "name": "is_source_card",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source": [
+     "yaml_key"
+    ],
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source",
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source"
+   ]
   },
   "predicate:is_source_permanent": {
    "kind": "predicate",
@@ -51096,6 +51353,12 @@
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
+     "yaml_key"
+    ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
+     "yaml_key"
+    ],
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources": [
      "variant"
     ],
@@ -52238,6 +52501,8 @@
     "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::play_cost_budget.rs::play_cost_budget_filter_excludes_non_matching_kind",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_false_offers_only_tamer_without_stash",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash",
@@ -65257,6 +65522,18 @@
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
+     "yaml_key"
+    ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
+     "yaml_key"
+    ],
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source": [
+     "yaml_key"
+    ],
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source": [
+     "yaml_key"
+    ],
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling": [
      "yaml_key"
     ],
@@ -66003,6 +66280,10 @@
     "dsl::plutomon_admission_constructs.rs::discarded_event_membership_keeps_two_new_copies_and_excludes_old_identical_copy",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_is_false_for_normal_paid_hand_play",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered",
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source",
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_option_by_use_cost",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_uses_max_of_both_dual_faces",
@@ -80741,6 +81022,12 @@
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance": [
      "yaml_key"
     ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered": [
+     "yaml_key"
+    ],
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered": [
+     "yaml_key"
+    ],
     "dsl::predicate_leaves_ii.rs::play_cost_eq_binding_compiles_from_yaml": [
      "variant",
      "yaml_key"
@@ -80998,6 +81285,8 @@
     "dsl::play_and_attack_rule_guards.rs::an_effect_cannot_make_the_non_turn_player_attack",
     "dsl::play_and_attack_rule_guards.rs::digi_eggs_and_options_cannot_be_played_by_effects",
     "dsl::plutomon_admission_constructs.rs::played_by_effect_uses_completed_effect_play_provenance",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_met_colour_requirement_is_offered",
+    "dsl::predicate_can_play_or_use_option.rs::option_with_unmet_colour_requirement_is_not_offered",
     "dsl::predicate_leaves_ii.rs::play_cost_eq_binding_compiles_from_yaml",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_digimon_at_or_below_ceiling",
     "dsl::predicate_play_or_use_cost_lte.rs::play_or_use_cost_lte_admits_option_by_use_cost",
@@ -82818,6 +83107,12 @@
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash": [
      "variant"
     ],
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source": [
+     "yaml_key"
+    ],
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source": [
+     "yaml_key"
+    ],
     "dsl::xros_reusable_primitives.rs::moved_source_count_can_reduce_followup_play_cost": [
      "yaml_key"
     ],
@@ -83059,6 +83354,8 @@
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_false_offers_only_tamer_without_stash",
     "dsl::predicate_face_down_stack_position.rs::select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash",
+    "dsl::predicate_is_source_card.rs::is_source_card_false_excludes_the_source",
+    "dsl::predicate_is_source_card.rs::is_source_card_true_admits_only_the_source",
     "dsl::xros_reusable_primitives.rs::moved_source_count_can_reduce_followup_play_cost",
     "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection",
     "rules_conformance::ch15_08_effect_categories.rs::battle_result_trigger_condition_false_at_the_battle_never_activates",
@@ -85868,12 +86165,12 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2308,
+  "behavioural_tests": 2312,
   "cards": {
-   "behaviourally_covered": 1274,
-   "lowering_covered": 1292,
+   "behaviourally_covered": 1280,
+   "lowering_covered": 1298,
    "not_covered": 51,
-   "total": 1343
+   "total": 1349
   },
   "constructs": {
    "keyword": {
@@ -85887,12 +86184,12 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 208,
-    "tested_behaviourally": 201,
+    "tested": 209,
+    "tested_behaviourally": 202,
     "total": 240,
-    "untested": 32,
+    "untested": 31,
     "used_by_cards": 213,
-    "used_untested": 24
+    "used_untested": 23
    },
    "timing": {
     "parsed_only": 2,
@@ -86032,8 +86329,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 424,
-  "scanned_tests": 2734,
+  "scanned_files": 426,
+  "scanned_tests": 2738,
   "top_untested": [
    {
     "cards_blocked": 3,
@@ -86058,11 +86355,6 @@
    {
     "cards_blocked": 1,
     "construct": "predicate:card_in_zone",
-    "ex13_lists_blocked": 26
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:is_source_card",
     "ex13_lists_blocked": 26
    },
    {
