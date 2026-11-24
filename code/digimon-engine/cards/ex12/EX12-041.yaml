@@ -23,18 +23,17 @@
 #     card is then played/used paying the reduced cost. With no playable card
 #     DCGO does not offer the [Main] (CanUseCondition) and neither does the
 #     `condition:`.
-#   - [Once Per Turn] on a passed pick: a [Main] is activation-type; the player
-#     activates it by declaring it in the main phase (CR 4.3 15-8-4-1/-2),
-#     each activation counts as one use (CR 4.3 15-14-1-1), and it counts
-#     "even if the effect's processing can't be executed" (CR 4.3 15-14-1-4).
-#     So declaring the [Main] spends the use whether a card is then picked or
-#     the pick is passed. DCGO EX12_041.cs RemoveUse()s when nothing is picked
-#     (`if (!isUsed) activateClass.RemoveUse()`); we follow the rules text, as
-#     for Manekimon (BT26-012), the same printed shape, in the 2026-10-25
-#     record (docs/RUST_ENGINE_GAPS.md "Explicit Main-declaration correction
-#     (2026-10-25)"; declare-then-pass was a free repeatable no-op cycle).
-#     The W14 table in qa/rules/mechanics-gaps-2026-10.md covers unprinted
-#     accept prompts on triggered effects, not a declared [Main].
+#   - [Once Per Turn] on a passed pick: KEPT, by the owner ruling of
+#     2026-11-24 "Match dcgo on the main use". DCGO EX12_041.cs:180
+#     `if (!isUsed) activateClass.RemoveUse();` gives the use back when no
+#     card is picked; isUsed is set (:96) as soon as a card is picked, before
+#     the play, so a picked card spends the use whatever the play then does.
+#     `else: refund_opt` on the absent pick is exactly that path. The owner
+#     chose DCGO parity over the CR 4.3 15-14-1-4 / 15-8-4-1/-2 reading (a
+#     declared [Main] spends); this reverses the 2026-10-25 record and commit
+#     4606e6b4d. The main-declaration loop guard (docs/RUST_ENGINE_API.md
+#     "Main-declaration guard") withholds the identical declaration until the
+#     state changes, so the kept use is not a free repeatable no-op.
 #     Mirrors EX12-013 (BetelGammamon) and EX12-043 (Hakubamon).
 #   - Inherited: OnAllyAttack, OPT (hash EX12_041_Inherited), mandatory target.
 
@@ -103,6 +102,9 @@ effects:
                 of: you
                 hand_index: pick
                 cost_delta: { reduce: 2 }
+          # DCGO EX12_041.cs:180 RemoveUse (owner ruling 2026-11-24).
+          else:
+            - refund_opt: {}
 
   - scope: inherited
     when: when_attacking
