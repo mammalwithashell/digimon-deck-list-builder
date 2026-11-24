@@ -50,7 +50,7 @@ effects:
               zone: [hand]
               all_of:
                 - kind: tamer
-                - name_contains: "Arata Sanada"
+                - name_is: "Arata Sanada"
                 - can_play_from_effect_without_cost: true
             n: 1
     summary: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Arata Sanada] from your hand without paying the cost"
@@ -62,7 +62,7 @@ effects:
           filter:
             all_of:
               - kind: tamer
-              - name_contains: "Arata Sanada"
+              - name_is: "Arata Sanada"
               - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Arata Sanada] without paying the cost"
       - play_from_hand_free: { of: you, hand_index: arata }

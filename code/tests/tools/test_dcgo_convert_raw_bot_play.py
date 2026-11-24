@@ -37,6 +37,74 @@ def test_unqueued_paid_bot_play_preserves_the_recorded_copy():
     assert (play["actor"], play["action_id"], play["card_index"]) == (1, 1, 55)
 
 
+def _bt20_099_paid_play(selection_method, selected_index=55, **play_overrides):
+    # BT20-099's effect selects an ACCEL Digimon from hand, then plays it for its cost.
+    card = "BT20-030"
+    game = _raw_game(cards=[card], card_indexes=[55], root="Hand", **play_overrides)
+    game[0]["players"][1]["hand"][1:] = [card, card]
+    for entry in game[2]["hand"]["cards"][1:]:
+        entry["card_id"] = card
+    game.insert(2, {"method": selection_method, "args": [1, [selected_index], [0]]
+                    if selection_method.startswith("SelectCardEffect.") else [1, [selected_index]],
+                    "card_ids": [card], "zone": "Hand", "tp": 1, "turn": 2})
+    return game
+
+
+@pytest.mark.parametrize("selection_method", [
+    "SelectHandEffect.SetTargetHandCards",
+    "SelectCardEffect.SetTargetCardAndIndicies",
+])
+def test_paid_effect_play_is_not_emitted_after_the_selection(selection_method):
+    raw = _bt20_099_paid_play(selection_method, play_provenance="effect")
+    rows, _ = convert_raw.convert(raw, cards={})
+    [pick] = [row for row in rows if row["type"] == "selection"]
+    assert (pick["actor"], pick["card_ids"], pick["card_indexes"]) == (1, ["BT20-030"], [55])
+    assert not [row for row in rows if row.get("card_id") == "BT20-030"]
+
+
+@pytest.mark.parametrize("selection_method", [
+    "SelectHandEffect.SetTargetHandCards",
+    "SelectCardEffect.SetTargetCardAndIndicies",
+])
+def test_legacy_paid_effect_play_with_matching_hand_pick_is_unsupported(selection_method):
+    raw = _bt20_099_paid_play(selection_method)
+    with pytest.raises(SystemExit, match="unsupported decision .*ambiguous paid bot play.*CardIndex 55"):
+        convert_raw.convert(raw, cards={})
+
+
+def test_legacy_bot_reveal_then_play_is_not_silently_dropped():
+    # BT13-046 can reveal a non-yellow card and leave it in hand to be played normally.
+    raw = _raw_game()
+    raw.insert(2, {"method": "SelectHandEffect.SetTargetHandCards", "args": [1, [55]],
+                   "card_ids": ["ST1-03"], "tp": 1, "turn": 2})
+    with pytest.raises(SystemExit, match="unsupported decision .*ambiguous paid bot play.*CardIndex 55"):
+        convert_raw.convert(raw, cards={})
+    rows, _ = convert_raw.convert(raw, cards={}, allow_truncated=True)
+    assert rows[-1]["type"] == "selection"
+    assert rows[-1]["card_indexes"] == [55]
+
+
+@pytest.mark.parametrize("boundary", ["different_copy", "different_turn", "direct_set", "direct_provenance"])
+def test_paid_bot_play_is_not_claimed_by_an_unrelated_selection(boundary):
+    raw = _bt20_099_paid_play("SelectHandEffect.SetTargetHandCards")
+    if boundary == "different_copy":
+        raw[2]["args"][1] = [56]
+    elif boundary == "different_turn":
+        raw[2]["turn"] -= 1
+    elif boundary == "direct_set":
+        raw.insert(3, {"method": "TurnStateMachine.set_PlayCard", "args": [], "tp": 1, "turn": 2})
+    else:
+        raw[3]["play_provenance"] = "direct"
+    rows, _ = convert_raw.convert(raw, cards={})
+    [play] = [row for row in rows if row.get("card_id") == "BT20-030"]
+    assert (play["actor"], play["action_id"], play["card_index"]) == (1, 1, 55)
+
+
+def test_explicit_effect_play_is_not_a_decision_without_a_selection():
+    rows, _ = convert_raw.convert(_raw_game(play_provenance="effect"), cards={})
+    assert not [row for row in rows if row.get("card_id") == "ST1-03"]
+
+
 @pytest.mark.parametrize("overrides", [{"is_ai": False}, {"pay_cost": False}, {"tp": 0}])
 def test_unqueued_non_main_plays_are_not_decisions(overrides):
     rows, _ = convert_raw.convert(_raw_game(**overrides), cards={})
@@ -46,3 +114,34 @@ def test_unqueued_non_main_plays_are_not_decisions(overrides):
 def test_unmappable_paid_bot_play_reports_unsupported_decision():
     with pytest.raises(SystemExit, match="digivolve of ST1-03 with an unlocatable target"):
         convert_raw.convert(_raw_game(target={"card_id": "ST1-01"}), cards={})
+
+
+@pytest.mark.parametrize(("in_breeding", "expected"), [
+    (True, convert_raw.ACTION_HATCH),
+    (False, convert_raw.ACTION_PASS),
+])
+def test_first_turn_bot_breeding_with_no_later_snapshot(in_breeding, expected):
+    # raw-20261123T230501Z.jsonl, seq 7–8: the opening play targets the egg in the bot's
+    # previously empty breeding area. There is no post-hatch snapshot.
+    raw = [
+        {"method": "TurnStateMachine.SetRedraw", "args": [1, False], "tp": 0, "turn": 0},
+        {"method": "TurnStateMachine.SetRedraw", "args": [0, False], "tp": 0, "turn": 0},
+        {"method": "Snapshot.PostMulligan", "seq": 7, "t": "t", "turn_count": 1,
+         "is_ai": True, "you": 0, "players": [
+             {"id": 0, "library": [], "hand": [], "security": [], "egg_library": ["ST1-01"] * 4, "breeding": []},
+             {"id": 1, "library": [], "hand": ["ST1-06", "ST1-07", "ST1-06", "ST1-04", "ST1-07"],
+              "security": [], "egg_library": ["ST1-01"] * 4, "breeding": []},
+         ]},
+        {"method": "PlayCardClass.PlayCard", "seq": 8, "cards": ["ST1-04"], "card_indexes": [94],
+         "root": "Hand", "play_provenance": "direct", "pay_cost": True, "breeding_area": False,
+         "target": {"card_id": "ST1-01", "card_index": 104}, "target_breeding": in_breeding,
+         "target_slot": -1 if in_breeding else 0, "boards": [[], []], "tp": 1, "turn": 1,
+         "hand": {"player": 1, "slot": 3, "cards": [
+             {"card_id": card, "card_index": index}
+             for card, index in [("ST1-06", 65), ("ST1-07", 85), ("ST1-06", 90), ("ST1-04", 94), ("ST1-07", 66)]
+         ]}},
+    ]
+    rows, _ = convert_raw.convert(raw, cards={})
+    [breeding, play] = [row for row in rows if row.get("phase") in ("Breeding", "Main")]
+    assert (breeding["actor"], breeding["action_id"], breeding["inferred"]) == (1, expected, True)
+    assert (play["actor"], play["card_index"], play["step"]) == (1, 94, breeding["step"] + 1)
