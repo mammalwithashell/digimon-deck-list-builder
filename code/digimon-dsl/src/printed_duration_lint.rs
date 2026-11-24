@@ -36,12 +36,6 @@ pub struct PrintedDurationFinding {
 /// needed: the CI gate fails on an exemption the card no longer trips.
 pub const PRINTED_DURATION_EXEMPT: &[(&str, &str)] = &[
     (
-        "BT25-057",
-        "Monarchlizamon: the mirror's Option text reads \"+5000 DP until your opponent's turn \
-         ends\"; the card face prints \"for the turn\" and DCGO BT25_057.cs uses \
-         UntilEachTurnEnd. The face wins (end_of_turn).",
-    ),
-    (
         "EX8-022",
         "Frigimon: the mirror repeats the inherited \"[When Attacking] ... until the end of \
          their turn\" as a \"Security Effect\" section; the card face has no security effect, \
