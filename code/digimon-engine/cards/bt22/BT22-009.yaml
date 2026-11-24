@@ -74,6 +74,7 @@ effects:
     summary: "[When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: link_target
           filter:
             all_of:

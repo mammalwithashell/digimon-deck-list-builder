@@ -271,6 +271,7 @@ effects:
       - may_attack_now:
           attacker: source
           targets: any
+          optional: false
           prompt: "Attack with this Digimon"
 
   # ─── Link DP +2000 (card-face link box) ─────────────────────────────────

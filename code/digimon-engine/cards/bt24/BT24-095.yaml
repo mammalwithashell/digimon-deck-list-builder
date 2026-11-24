@@ -103,6 +103,7 @@ effects:
     summary: "[Link][When Attacking][Once Per Turn] Return 1 of your opponent's suspended Digimon to the hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: wa_bounce
           filter:
             all_of:
