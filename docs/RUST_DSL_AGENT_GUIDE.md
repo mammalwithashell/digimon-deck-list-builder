@@ -301,6 +301,12 @@ Use these instead of mutating engine internals:
 
 `play_from_trash_free` accepts an optional `suppress_on_play: true` flag (default `false`). When set, the played Digimon's own `[On Play]` effects do **not** activate for that play event — for card text like "Any [On Play] effects on Digimon played with this effect don't activate." (BT5-106 Demonic Disaster). The suppression is scoped strictly to the just-played permanent and that single play: other permanents' On Play, and every other timing (`OnEnterFieldAnyone` / `OnAllyPlayed`), still fire normally. The flag is honored only by `play_from_trash_free`; setting it on `play_from_hand` / `play_from_trash` is a compile error.
 
+Use `place_deck_top_under: { of: you, count: 2, target: source, face_down: true }`
+to move deck-top cards to the bottom of a stack in one batch. Per Bandai
+Q6413, the original deck-top card ends up above the other moved cards.
+No card is revealed and there is no ordering prompt. A short deck moves
+only its available cards.
+
 Example search pattern:
 
 ```yaml

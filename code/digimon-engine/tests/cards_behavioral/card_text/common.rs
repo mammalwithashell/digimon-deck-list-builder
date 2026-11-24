@@ -425,16 +425,19 @@ pub fn reina_and_makoto_can_stash_two_or_suspend_without_stashing(card: &str) {
         let stashed = if branch == 0 { deck_size.min(2) } else { 0 };
         assert_eq!(permanent.face_down_source_indices().count(), stashed);
         assert_eq!(r.game.players[0].deck.len(), deck - stashed);
-        let (remaining, placed) = deck_before.split_at(deck - stashed);
+        let (remaining, moved) = deck_before.split_at(deck - stashed);
+        let deck_top_first: Vec<_> = moved.iter().rev().copied().collect();
         assert!(permanent.card_sources[..stashed]
             .iter()
             .all(|c| c.face_down));
         assert_eq!(
             permanent.card_sources[..stashed]
                 .iter()
+                .rev()
                 .map(|c| c.handle())
                 .collect::<Vec<_>>(),
-            placed
+            deck_top_first,
+            "{card}: the original deck top is placed first, above each subsequent card"
         );
         assert_eq!(
             ids(&r, &permanent.card_sources[stashed..]),
