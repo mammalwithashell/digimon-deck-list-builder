@@ -17108,6 +17108,7 @@
         "kind",
         "level_eq",
         "level_lte",
+        "not",
         "owner",
         "stack_size_gte",
         "trait_has",
@@ -17425,6 +17426,7 @@
         "can_play_from_effect_without_cost",
         "can_play_to_breeding_from_trash",
         "color_is",
+        "effect_suspended_any_own_digimon",
         "is_source_card",
         "is_unsuspended",
         "kind",
@@ -38690,7 +38692,8 @@
     "effect_suspended_any_own_digimon": [
       "BT10-048",
       "BT10-053",
-      "BT24-047"
+      "BT24-047",
+      "BT27-042"
     ],
     "effect_text_contains": [
       "AD1-017",
@@ -43149,6 +43152,7 @@
       "BT26-059",
       "BT26-075",
       "BT26-095",
+      "BT27-020",
       "BT27-024",
       "BT27-066",
       "BT7-063",
