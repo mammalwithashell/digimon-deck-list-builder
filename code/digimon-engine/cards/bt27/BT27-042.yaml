@@ -1,0 +1,74 @@
+# Source: data/card_bundles/BT27-042.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Yellow/BT27_042.cs
+card: BT27-042
+name: KingChessmon
+kind: digimon
+level: 6
+color: [yellow, black]
+cost: 13
+dp: 11000
+traits: [Puppet, DATA SQUAD]
+form: Mega
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from:
+      level_eq: 5
+      any_color: true
+      any_of:
+        - name_contains: Chessmon
+        - trait_has: DATA SQUAD
+    cost: 3
+  - kind: assembly
+    materials:
+      - { kind: digimon, level_eq: 5, name_contains: Chessmon, zones: [trash], stack_under: true }
+      - { kind: digimon, level_eq: 4, name_contains: Chessmon, zones: [trash], stack_under: true }
+      - { kind: digimon, level_eq: 3, name_contains: Chessmon, zones: [trash], stack_under: true }
+    cost: 5
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play] [When Digivolving] You may play 1 play cost 7 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Chessmon
+              - play_cost_lte: 7
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 play cost 7 or lower Digimon card with [Chessmon] in its name from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  - when: on_deletion
+    summary: "[On Deletion] <Recovery +1>. Then, by suspending 1 of your [QueenChessmon], you may play this card from your trash to the breeding area without paying the cost"
+    process:
+      - recover: { of: you, count: 1 }
+      - select_own_permanent:
+          optional: true
+          bind_as: queen
+          filter: { kind: digimon, name_is: QueenChessmon, is_unsuspended: true }
+          prompt: "By suspending 1 of your [QueenChessmon], you may play this card from your trash to the breeding area without paying the cost"
+      - suspend: { target: queen }
+      - if:
+          condition: { binding_present: queen }
+          then:
+            - select_trash:
+                of: you
+                optional: false
+                bind_as: self_card
+                filter:
+                  all_of:
+                    - is_source_card: true
+                    - can_play_to_breeding_from_trash: true
+                prompt: "Play this card from your trash to the breeding area without paying the cost"
+            - play_to_breeding_from_trash: { of: you, trash_index: self_card }
