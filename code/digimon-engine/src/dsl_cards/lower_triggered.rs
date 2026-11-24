@@ -578,8 +578,13 @@ pub fn folded_may_refund_binding(clause: &CompiledTriggeredClause) -> Option<Str
     }
     // An activation-type effect ([Main], [Counter]) is activated by the
     // player's own declaration (§15-14-1-4 "when a player chooses to activate
-    // ... even if the effect's processing can't be executed"): a pick passed
-    // inside it is not a decision not to activate.
+    // ... even if the effect's processing can't be executed"), so this
+    // rewrite never refunds one. Where a [Main] does give its use back on a
+    // passed pick, that is a per-card fact of its DCGO script (owner ruling
+    // 2026-11-24, "Match dcgo on the main use"): the card authors its own
+    // `refund_opt`, reviewed in `authoring_lint::MAIN_REFUND_BY_OWNER_RULING`,
+    // and a [Main] whose DCGO script spends keeps spending. Refunds stay
+    // explicit per card, never synthesized here.
     if clause.when.iter().any(|t| {
         matches!(
             t,
