@@ -47,6 +47,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve Lv.4 w/[Greymon] in name or w/[CS] trait: Cost 3".
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -55,11 +56,13 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, from your hand and without paying the cost, you may play 1 red or black Tamer card with a play cost of 4 or less or 1 Tamer card with the [CS] trait."
+    when: when_digivolving
     summary: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 red/black Tamer with play cost <= 4 or 1 [CS] Tamer from your hand without paying the cost"
     condition:
       count_lte:

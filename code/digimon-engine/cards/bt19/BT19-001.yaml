@@ -25,7 +25,8 @@ cost: 0
 traits: [Minor, Xros Heart]
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] By placing 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand under any of your Tamers, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     # DCGO SetUpActivateClass(..., isOptional: true): declining the

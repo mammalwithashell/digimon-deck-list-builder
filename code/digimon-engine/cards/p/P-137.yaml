@@ -31,7 +31,8 @@ effects:
   # card of this Digimon to prevent that deletion."
   # DCGO: CardEffectFactory.ArmorPurgeEffect(card: card).
   # Pattern: grant_keyword ArmorPurge (same as BT24-018 clause (d)).
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
     keyword: ArmorPurge
 
   # Clause (b) — <Raid>
@@ -39,7 +40,8 @@ effects:
   # attack to 1 of your opponent's unsuspended Digimon with the highest DP."
   # DCGO: CardEffectFactory.RaidSelfEffect(isInheritedEffect: false, card: card, condition: null).
   # Pattern: grant_keyword Raid (same as BT24-011 clause (b) / BT24-011 clause (2)).
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
 
   # Clause (c) — [Your Turn][Once Per Turn] on_attack_target_change
@@ -66,7 +68,8 @@ effects:
   # P-137 has no `attacker_trait_has` or `is_source_permanent` predicate needed:
   # OnAttackTargetChange fires from PlayerBattleArea, and Flamedramon is the
   # attacker (it has Raid); the trigger fires naturally for the Flamedramon permanent.
-  - when: on_attack_target_change
+  - text: "[Your Turn] [Once Per Turn] When this Digimon's attack target changes, your opponent adds their top security card to the hand."
+    when: on_attack_target_change
     active_when: { your_turn: true }
     once_per_turn: true
     summary: "[Your Turn][OPT] When this Digimon's attack target is switched, opponent adds their top security to hand"

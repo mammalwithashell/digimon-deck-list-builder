@@ -48,12 +48,13 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 3, trait_has: "DATA SQUAD" }
     cost: 2
 
 effects:
   # ─── Clause 0: [On Play][When Digivolving] may play Thomas H. Norstein free ──
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Thomas H. Norstein] from your hand without paying the cost."
+    when: [on_play, when_digivolving]
     optional: true
     active_when:
       count_lte:
@@ -65,6 +66,7 @@ effects:
     summary: "[OnPlay/WhenDigivolving] If <=1 Tamers, may play 1 [Thomas H. Norstein] from hand without paying the cost"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: thomas
           # Only a Thomas the free play would accept (DCGO BT25_023.cs:53-57
@@ -78,7 +80,8 @@ effects:
       - play_from_hand_free: { of: you, hand_index: thomas }
 
   # ─── Clause 1: Inherited [When Attacking][OPT] both players draw 1 ───────────
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Both players ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][OPT] Both players draw 1"

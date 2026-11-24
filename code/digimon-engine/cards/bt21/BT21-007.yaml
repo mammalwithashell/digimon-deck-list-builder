@@ -38,7 +38,8 @@ alt_paths:
 
 effects:
   # Clause 1 — [On Play] optional return Reptile/Dragonkin from trash
-  - when: on_play
+  - text: "[On Play] You may return 1 Digimon card with the [Reptile] or [Dragonkin] trait from your trash to the hand."
+    when: on_play
     optional: true
     summary: "[On Play] You may return 1 Reptile/Dragonkin Digimon from trash to hand"
     process:
@@ -56,7 +57,8 @@ effects:
       - add_to_hand_from_trash: { of: you, card: pick }
 
   # Clause 2 — [Inherited] [Your Turn] +2000 DP aura
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

@@ -40,7 +40,8 @@ alt_paths:
 
 effects:
   # ─── [On Play][When Digivolving] you may play a cost<=3 Tamer free ──────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] You may play 1 Tamer card with a play cost of 3 or less from your hand without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may play 1 Tamer card with a play cost of 3 or less from your hand without paying the cost"
     process:
       - select_hand:
@@ -63,7 +64,8 @@ effects:
             - play_from_hand_free: { of: you, hand_index: tamer_pick }
 
   # ─── Inherited [Your Turn] +2000 DP while you have a Tamer ──────────────────
-  - scope: inherited
+  - text: "[Your Turn] While you have a Tamer in play, this Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

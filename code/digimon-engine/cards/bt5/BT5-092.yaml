@@ -67,7 +67,8 @@ effects:
   #
   # Cross-reference: same shape as BT22-084 (Nokia Shiramine Lv.5) clause 2
   # and BT5-091 Tai Kamiya — see qa/archetype-qa/dsl/ implementations.
-  - when: on_play
+  - text: "[On Play] You may play 1 [Agumon] or [Gabumon] from your hand without paying the cost."
+    when: on_play
     optional: true
     summary: "[On Play] You may play 1 [Agumon] or [Gabumon] from your hand free"
     process:
@@ -113,7 +114,8 @@ effects:
   #     synchronous-pay_cost reducers; closed by
   #     G-COST-REDUCTION-OPTIONAL-SYNC-PAY-COST-DIGIVOLVE (the digivolve path
   #     now offers an accept/decline prompt, only when Nokia is unsuspended).
-  - kind: cost_reduction
+  - text: "[Your Turn] When any of your Digimon would digivolve into a Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name in the hand, by suspending this Tamer, reduce the digivolution cost by 1."
+    kind: cost_reduction
     scope: face_up
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
@@ -151,7 +153,8 @@ effects:
   # by BT5-093 (Tai & Matt), BT22-084 (Nokia Lv.5), BT9-092 (Cool Boy) and
   # other "play self from security" Tamers. Resolved precedent
   # G-PLACE-SELF-AS-OPTION-PERMANENT (engine-gaps.md, 2026-04-27).
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

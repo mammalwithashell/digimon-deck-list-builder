@@ -14,7 +14,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] If you attack an opponent's Digimon, this Digimon gets +2000 DP for the turn."
+    scope: inherited
     when: when_attacking
     condition: { event_target_is_player: false }
     summary: "[When Attacking] When attacking an opponent Digimon, this Digimon gets +2000 DP for the turn"

@@ -39,11 +39,12 @@ alt_paths:
     from: { name_is: "Gigimon" }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Hero }
+    from: { any_color: true, level_eq: 2, trait_has: Hero }
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with [Guilmon], [Growlmon], [Gallantmon] or [Megidramon] in its name or the [Hero] trait from your hand, ＜Draw 2＞."
+    when: on_play
     optional: true
     summary: "[On Play] By trashing 1 [Guilmon]/[Growlmon]/[Gallantmon]/[Megidramon]-name or [Hero] card from your hand, Draw 2"
     process:
@@ -66,7 +67,8 @@ effects:
             - trash_from_hand_by_index: { of: you, hand_index: trash_pick }
             - draw: { of: you, count: 2 }
 
-  - scope: inherited
+  - text: "[On Deletion] Gain 1 memory."
+    scope: inherited
     when: on_deletion
     optional: false
     summary: "[Inherited][On Deletion] Gain 1 memory"

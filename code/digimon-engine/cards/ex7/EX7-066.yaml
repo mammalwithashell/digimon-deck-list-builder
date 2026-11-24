@@ -104,6 +104,7 @@ effects:
     summary: "[Inherited] When effects trash this card from digivolution cards, 1 of your Digimon gets +3000 DP until the end of your opponent's turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter: { kind: digimon }
           prompt: "1 of your Digimon gets +3000 DP until the end of your opponent's turn"
@@ -124,6 +125,7 @@ effects:
               kind: digimon
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter:
                   all_of:
@@ -150,6 +152,7 @@ effects:
               trait_has: "Three Musketeers"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: place_target
                 filter:
                   all_of:
@@ -161,10 +164,12 @@ effects:
                 face_down: false
 
   # ─── Clause 3: [Security] delete 1 opp Digimon with 12000 DP or less ─────
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's Digimon with 12000 DP or less."
+    when: on_security
     summary: "[Security] Delete 1 of your opponent's Digimon with 12000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: sec_target
           filter:
             all_of:

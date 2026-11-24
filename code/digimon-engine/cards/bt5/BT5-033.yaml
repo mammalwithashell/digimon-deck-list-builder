@@ -15,7 +15,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - kind: flood_gate
+  - text: "[Opponent's Turn] Your opponent can't reduce paid digivolution costs."
+    kind: flood_gate
     summary: "[Opponent's Turn] Opponent can't reduce digivolution costs"
     active_when: { opponents_turn: true }
     target_player: opponent

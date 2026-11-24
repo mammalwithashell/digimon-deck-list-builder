@@ -30,18 +30,21 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: NSo
     cost: 0
 
 effects:
-  - when: on_deletion
+  - text: "[On Deletion] Gain 1 memory."
+    when: on_deletion
     summary: "[On Deletion] Gain 1 memory"
     process:
       - gain_memory: 1
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

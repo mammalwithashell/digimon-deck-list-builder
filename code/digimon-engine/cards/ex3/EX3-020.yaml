@@ -21,7 +21,8 @@ alt_paths:
     from: { name_is: Coredramon }
     cost: 3
 effects:
-  - kind: grant_keyword
+  - text: "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)"
+    kind: grant_keyword
     keyword: Evade
     summary: "<Evade>"
   - kind: aura
@@ -45,7 +46,8 @@ effects:
           ignore_requirements: false
           optional: true
           prompt: "DNA digivolve this Digimon and another Dramon?"
-  - kind: grant_keyword
+  - text: "[All Turns] While this Digimon has [Dramon] or [Examon] in its name, it gains ＜Evade＞. (When this Digimon would be deleted, you may suspend it to prevent that deletion.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Evade
     active_when:

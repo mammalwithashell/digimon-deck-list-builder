@@ -71,10 +71,12 @@ effects:
               - has_refireable_effect: on_play_or_when_digivolving
           prompt: "Choose 1 of your Olympos XII Digimon"
       - refire_effect:
+          optional: false
           source: refire_target
           timing: on_play_or_when_digivolving
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

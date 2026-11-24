@@ -41,6 +41,7 @@ const AdminPromotionsPage = lazy(() => import('@/pages/AdminPromotionsPage').the
 const BarracksPage = lazy(() => import('@/pages/BarracksPage').then(m => ({ default: m.BarracksPage })));
 const ArenaPage = lazy(() => import('@/pages/ArenaPage').then(m => ({ default: m.ArenaPage })));
 const GauntletPage = lazy(() => import('@/pages/GauntletPage').then(m => ({ default: m.GauntletPage })));
+const WatchPage = lazy(() => import('@/pages/WatchPage').then(m => ({ default: m.WatchPage })));
 const DeckPoolPage = lazy(() => import('@/pages/DeckPoolPage').then(m => ({ default: m.DeckPoolPage })));
 const AdminPatchNotesPage = lazy(() => import('@/pages/AdminPatchNotesPage').then(m => ({ default: m.AdminPatchNotesPage })));
 const AdminModelsPage = lazy(() => import('@/pages/AdminModelsPage').then(m => ({ default: m.AdminModelsPage })));
@@ -84,6 +85,7 @@ function DesktopRoutes() {
         <Route element={<AuthGuard />}>
           <Route path="/lobby" element={<LobbyPage />} />
           <Route path="/play" element={<ModeSelectPage />} />
+          <Route path="/watch" element={suspended(WatchPage)} />
           <Route path="/play/deck" element={<DeckSelectPage />} />
           <Route path="/play/ai-starter" element={<StarterDeckSelectPage />} />
           <Route path="/play/matching" element={<MatchingPage />} />
@@ -113,6 +115,7 @@ function WebRoutes() {
         <Route element={<AuthGuard />}>
           <Route path="/lobby" element={<LobbyPage />} />
           <Route path="/play" element={<ModeSelectPage />} />
+          <Route path="/watch" element={suspended(WatchPage)} />
           <Route path="/play/deck" element={<DeckSelectPage />} />
           <Route path="/play/ai-starter" element={<StarterDeckSelectPage />} />
           <Route path="/play/matching" element={<MatchingPage />} />

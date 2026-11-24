@@ -72,7 +72,8 @@ alt_paths:
 effects:
   # ─── [On Play][When Digivolving] delete this OR return 1 [Shaman]/[TS] from
   #     trash → delete 1 opponent level 5 or lower Digimon ──────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By deleting this Digimon or returning 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck, delete 1 of your opponent's level 5 or lower Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] By deleting this Digimon or returning 1 [Shaman] or [TS] trait card from your trash to the bottom of the deck, delete 1 of your opponent's level 5 or lower Digimon"
     process:
       - if:
@@ -101,6 +102,7 @@ effects:
                       condition: { effect_deleted_any_own_digimon: true }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim
                             filter:
                               all_of:
@@ -127,6 +129,7 @@ effects:
                             of: you
                             cards: returned
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim2
                             filter:
                               all_of:
@@ -149,6 +152,7 @@ effects:
                       condition: { effect_deleted_any_own_digimon: true }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: victim3
                             filter:
                               all_of:
@@ -159,7 +163,8 @@ effects:
 
   # ─── [On Deletion] may play 1 [TS] card (play cost <= 5) from hand or trash
   #     without paying the cost ──────────────────────────────────────────────
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost."
+    when: on_deletion
     summary: "[On Deletion] You may play 1 [TS] trait card with a play cost of 5 or less from your hand or trash without paying the cost"
     process:
       - select_union_zone:

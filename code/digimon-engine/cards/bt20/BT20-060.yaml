@@ -51,6 +51,7 @@ effects:
     summary: "[On Play][When Digivolving] 1 opponent Digimon gets -15000 DP until the end of their turn; if DNA digivolving, trash 1 security and recover"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Give 1 opponent Digimon -15000 DP"

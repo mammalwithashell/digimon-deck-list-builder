@@ -20,13 +20,15 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Xros Heart"
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Xros Heart] or [Blue Flare] trait among them to the hand. Trash the rest."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal top 3, add Xros Heart/Blue Flare, trash rest"
     process:
       - reveal_top_deck:
@@ -36,7 +38,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: pick
-          optional: true
+          optional: false
           filter:
             any_of:
               - trait_has: "Xros Heart"
@@ -51,7 +53,8 @@ effects:
                 of: you
                 card: rest
 
-  - when: on_deletion
+  - text: "[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers."
+    when: on_deletion
     summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
     process:
       - select_own_permanent:
@@ -63,6 +66,7 @@ effects:
           condition: { binding_present: tamer }
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: stash
@@ -77,7 +81,8 @@ effects:
                 card: stash
                 tamer: tamer
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Collision＞."
+    scope: inherited
     kind: grant_keyword
     active_when:
       all_of:

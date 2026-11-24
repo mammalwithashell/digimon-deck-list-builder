@@ -59,7 +59,7 @@ alt_paths:
     from: { name_is: "Koromon" }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 2, trait_has: "DATA SQUAD" }
     cost: 0
 
 effects:
@@ -103,6 +103,7 @@ effects:
                 condition: { binding_present: place_pick }
                 then:
                   - select_own_permanent:
+                      optional: false
                       bind_as: ds_tamer
                       filter:
                         all_of:
@@ -115,6 +116,7 @@ effects:
                       face_down: true
           else:
             - select_reveal:
+                optional: false
                 of: you
                 bind_as: add_pick
                 filter: { trait_has: "DATA SQUAD" }
@@ -123,7 +125,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Inherited [Your Turn] +2000 DP ──────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

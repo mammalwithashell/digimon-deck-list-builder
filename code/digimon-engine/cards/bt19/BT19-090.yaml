@@ -35,6 +35,7 @@ effects:
           condition: { equals: [mode, 1] }
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: shoutmon
                 filter:
                   all_of:
@@ -43,6 +44,7 @@ effects:
                 prompt: "Choose 1 Shoutmon EX6 to unsuspend"
             - unsuspend: { target: shoutmon }
             - select_own_permanent:
+                optional: false
                 bind_as: shooting
                 filter:
                   all_of:
@@ -51,6 +53,7 @@ effects:
                 prompt: "Choose 1 ShootingStarmon to unsuspend"
             - unsuspend: { target: shooting }
             - select_own_permanent:
+                optional: false
                 bind_as: attacker
                 # DCGO BT19_090.cs IsYourDigimon: CanAttack; the attack is
                 # player-only, so the leaf counts the player target only.
@@ -61,7 +64,8 @@ effects:
                 targets: player
                 optional: false
 
-  - when: on_security
+  - text: "[Security] You may play 1 [Xros Heart] trait Digimon card with 4000 DP or less from under your Tamers without paying the cost."
+    when: on_security
     summary: "[Security] Play 1 low-DP Xros Heart Digimon from under a Tamer without paying the cost"
     process:
       - select_under_tamer_sources:

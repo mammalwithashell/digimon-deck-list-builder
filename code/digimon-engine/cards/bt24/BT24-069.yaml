@@ -48,6 +48,7 @@ effects:
     summary: "[When Moving][When Digivolving] Trash 1 card in your hand. Then your opponent may trash 1 card in their hand; if they didn't, trash the top 2 cards of their deck"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: own_trash
           filter: {}
@@ -90,7 +91,8 @@ effects:
     dp_modifier: 2000
     summary: "[All Turns] While your opponent has 10 or more cards in their trash, this Digimon gets +2000 DP"
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Trash the top card of both players' decks."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: false

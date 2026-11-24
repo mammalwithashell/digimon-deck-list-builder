@@ -131,6 +131,7 @@ effects:
     summary: "<Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -144,10 +145,12 @@ effects:
           cost_delta: free
 
   # ─── [When Digivolving] -5000 DP; then if <=3 security, delete <=7000 DP ──
-  - when: when_digivolving
+  - text: "[When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, if you have 3 or fewer security cards, delete 1 of your opponent's Digimon with 7000 DP or less."
+    when: when_digivolving
     summary: "[When Digivolving] 1 opp Digimon gets -5000 DP for the turn; then if you have 3 or fewer security cards, delete 1 opp Digimon with 7000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_reduce_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
@@ -159,6 +162,7 @@ effects:
           condition: { security_count_lte: 3 }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter: { kind: digimon, dp_lte: 7000 }
                 prompt: "Delete 1 of your opponent's Digimon with 7000 DP or less"
@@ -175,6 +179,7 @@ effects:
     summary: "[Inherited] <Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source_inh
           filter:

@@ -60,7 +60,7 @@ alt_paths:
     from: { level_eq: 5, color_is: yellow }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 5, trait_has: "Glowing Dawn" }
     cost: 3
 
 effects:
@@ -73,6 +73,7 @@ effects:
       # Step A — place the opponent's lowest-DP Digimon as the top security card.
       # (Mandatory; selector lowest_dp surfaces a multi-target pick on a tie.)
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: { kind: digimon }
           selector: lowest_dp

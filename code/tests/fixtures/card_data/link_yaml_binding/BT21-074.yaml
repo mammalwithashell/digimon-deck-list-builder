@@ -100,7 +100,7 @@ alt_paths:
     from: { trait_has: "Sup." }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 4, in_text_contains: "Three Musketeers" }
+    from: { any_color: true, level_eq: 4, in_text_contains: "Three Musketeers" }
     cost: 3
 
 effects:
@@ -118,7 +118,8 @@ effects:
     summary: "[Link] +4000 DP to the linked Digimon"
 
   # ─── [On Play][WD] tuck Appmon/TM card from hand/trash → protection ───────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card, until your opponent's turn ends, their effects can't return that Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] By placing 1 [Appmon] or [Three Musketeers] card from hand/trash as any of your Digimon's bottom digivolution card, until your opponent's turn ends their effects can't return that Digimon to hand/deck or De-Digivolve it"
     process:
       # The whole tail lives in the union pick's `then:` so it runs ONLY
@@ -164,7 +165,8 @@ effects:
                 expiry: end_of_opponents_turn
 
   # ─── [WD][WA][OPT] trash Appmon/TM source from own Digimon → De-Digivolve 1 ─
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     optional: true
     # DCGO CanActivateConditionAtkShared: some own Digimon's digivolution
@@ -189,6 +191,7 @@ effects:
     summary: "[When Digivolving][When Attacking][OPT] By trashing 1 [Appmon] or [Three Musketeers] card from your Digimon's digivolution cards, <De-Digivolve 1> 1 of your opponent's Digimon"
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [material]
           filter:
@@ -200,6 +203,7 @@ effects:
       - trash_union_bound:
           binding: fodder
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
@@ -214,6 +218,7 @@ effects:
     summary: "[When Linking] Delete 1 of your opponent's level 4 or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: link_target
           filter:
             all_of:

@@ -17,7 +17,7 @@ alt_paths:
     cost: 4
 
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
   - kind: dna_digivolve
@@ -43,6 +43,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: debuffed
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
@@ -72,6 +73,7 @@ effects:
         - dna_origin: true
     process:
       - select_own_permanent:
+          optional: false
           bind_as: boosted
           filter: { kind: digimon }
           prompt: "1 of your Digimon gains Security A. +1 and +5000 DP for the turn"

@@ -82,6 +82,7 @@ effects:
           target: source
           face_down: true
       - select_own_permanent:
+          optional: false
           bind_as: bb
           filter:
             all_of:
@@ -97,7 +98,8 @@ effects:
           keyword: Blocker
           expiry: end_of_turn
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

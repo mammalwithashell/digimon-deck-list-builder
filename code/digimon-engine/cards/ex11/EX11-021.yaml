@@ -16,13 +16,15 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: Puppet
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Mirai Kinosaki] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     summary: "If you have 1 or fewer Tamers, you may play Mirai Kinosaki from hand free"
     condition:
@@ -52,7 +54,8 @@ effects:
   # only fires when the cost was actually paid: a declined selection, or a
   # board with no other Digimon to delete, leaves `sacrifice` unbound and
   # the attack proceeds. (BT13-012 "if you did" idiom.)
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     active_when: { opponents_turn: true }

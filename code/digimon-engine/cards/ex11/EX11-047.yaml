@@ -58,11 +58,13 @@ alt_paths:
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] trash 1 hand card, then +1 memory ──
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] Trash 1 card in your hand. Then, gain 1 memory."
+    when: start_of_your_main_phase
     active_when: { your_turn: true }
     summary: "[Start of Your Main Phase] Trash 1 card in your hand. Then, gain 1 memory"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
@@ -71,7 +73,8 @@ effects:
       - gain_memory: 1
 
   # ─── Clause 2: Inherited [Your Turn] +2000 DP ────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

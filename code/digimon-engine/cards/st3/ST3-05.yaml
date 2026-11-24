@@ -13,7 +13,8 @@ alt_paths:
     from: { level_eq: 3, color_is: yellow }
     cost: 2
 effects:
-  - scope: inherited
+  - text: "[When Attacking] If you have 4 or more security cards, gain 1 memory."
+    scope: inherited
     when: when_attacking
     condition: { security_count_gte: 4 }
     process:

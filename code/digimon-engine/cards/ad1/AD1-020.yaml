@@ -20,7 +20,8 @@ effects:
   # cards with different colors from your hand or trash under this Tamer. If
   # this effect placed, <Draw 1>. Then, if there are 4 or more [Hybrid] trait
   # cards under this Tamer, gain 2 memory.
-  - when: [on_play, start_of_your_main_phase]
+  - text: "[Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, ＜Draw 1＞. Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory."
+    when: [on_play, start_of_your_main_phase]
     summary: "[Start of Your Main Phase][On Play] Place up to 2 different-colour Hybrid cards under; if placed Draw 1; then 4+ Hybrid under → +2 memory"
     process:
       - select_zone_cards:
@@ -51,7 +52,8 @@ effects:
   # (DCGO CanAttack in CanActivate); once activated the attack is mandatory
   # (SetCanNotSelectNotAttack); the +1 is an EndOfAttack modifier
   # (may_attack_now cost_upgrade).
-  - scope: inherited
+  - text: "[End of Your Turn] [Once Per Turn] By attacking with this Digimon with the [Hybrid] or [Ten Warriors] trait, it gains ＜Security A. +1＞ for the attack."
+    scope: inherited
     when: end_of_your_turn
     optional: true
     outer_prompt: true
@@ -67,12 +69,14 @@ effects:
         can_attack: {targets: any}
     process:
       - may_attack_now:
+          optional: false
           attacker: source
           targets: any
           cost_upgrade: {security_attack: 1}
 
   # [Security] Play this card without paying the cost.
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

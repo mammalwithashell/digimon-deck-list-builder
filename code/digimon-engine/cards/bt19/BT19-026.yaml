@@ -26,6 +26,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -34,6 +35,7 @@ effects:
           amount: 2
           stop_at_level: 3
       - select_opponent_permanent:
+          optional: false
           bind_as: lower
           filter:
             all_of:
@@ -42,7 +44,8 @@ effects:
           prompt: "Return 1 opponent level 4 or lower Digimon to hand"
       - return_to_hand: { target: lower }
 
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Blue Flare] or [Xros Heart] trait Digimon card with a play cost of 5 or less from under your Tamers without paying the cost. Then, ＜Save＞."
+    when: on_deletion
     summary: "[On Deletion] May play a cost-5 Blue Flare/Xros Heart Digimon under your Tamers, then Save"
     process:
       - select_under_tamer_sources:
@@ -62,7 +65,8 @@ effects:
                 source_refs: play_source
                 cost_delta: free
 
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true }

@@ -86,6 +86,7 @@ alt_paths:
   # xros_req; DCGO PermanentCondition: IsLevel4 && HasTSTraits).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: TS
@@ -93,12 +94,14 @@ alt_paths:
 
 effects:
   # ─── <Collision> (face-up) ───────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Collision＞"
+    kind: grant_keyword
     keyword: Collision
     summary: "<Collision>"
 
   # ─── <Collision> (inherited — printed as its own Inherited Effect line) ──
-  - kind: grant_keyword
+  - text: "＜Collision＞ (During this Digimon's attack, give all of your opponent's Digimon ＜Blocker＞, and the opponent blocks if able.)"
+    kind: grant_keyword
     keyword: Collision
     scope: inherited
     summary: "Inherited: <Collision>"
@@ -112,7 +115,8 @@ effects:
   # optional single pick; the remainder is placed with a player-elected
   # top/bottom choice via `place_remainder_on_deck { position: choice }`
   # (fires regardless of whether the optional pick was taken).
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 play cost 5 or lower [Machine], [Cyborg] or [TS] trait card among them without paying the cost. Return the rest to the top or bottom of the deck."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal top 3; you may play 1 cost<=5 [Machine]/[Cyborg]/[TS] card free; return rest to top or bottom of deck"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

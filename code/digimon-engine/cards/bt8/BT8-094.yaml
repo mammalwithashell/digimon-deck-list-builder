@@ -23,7 +23,8 @@ cost: 3
 # `event_target_level_eq: 3` pins the printed Lv.3 requirement.
 
 effects:
-  - when: on_any_deletion
+  - text: "[All Turns] When any of your opponent's level 5 or lower Digimon are deleted, by suspending this Tamer, ＜Draw 1＞ ."
+    when: on_any_deletion
     active_when: { all_turns: true }
     optional: true
     summary: "[All Turns] When opponent's Lv.5 or lower Digimon is deleted, may suspend self to Draw 1"
@@ -38,7 +39,8 @@ effects:
       - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
 
-  - when: on_move
+  - text: "[Opponent's Turn] When any of your opponent's level 3 Digimon move from the breeding area to the battle area, gain 2 memory."
+    when: on_move
     active_when: { opponents_turn: true }
     summary: "[Opponent's Turn] When opponent's Lv.3 Digimon moves from breeding, gain 2 memory"
     trigger_if:
@@ -49,7 +51,8 @@ effects:
     process:
       - gain_memory: 2
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

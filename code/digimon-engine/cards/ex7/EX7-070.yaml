@@ -151,6 +151,7 @@ effects:
     summary: "[Inherited] When effects trash this card from digivolution cards, De-Digivolve 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
@@ -183,6 +184,7 @@ effects:
               kind: digimon
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter: { kind: digimon }
                 selector: lowest_play_cost
@@ -200,6 +202,7 @@ effects:
               trait_has: "Three Musketeers"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: place_target
                 filter:
                   all_of:
@@ -215,7 +218,8 @@ effects:
   # "Security Effect [Security] Delete 1 of your opponent's Digimon with the
   # lowest play cost." Mandatory, silently skipped if the opponent has no
   # Digimon (no add-to-hand tail — standard non-Tamer security disposition).
-  - scope: inherited
+  - text: "[Security] Delete 1 of your opponent's Digimon with the lowest play cost."
+    scope: inherited
     when: on_security
     summary: "[Security][Inherited] Delete 1 of your opponent's Digimon with the lowest play cost"
     process:
@@ -227,6 +231,7 @@ effects:
               kind: digimon
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: sec_target
                 filter: { kind: digimon }
                 selector: lowest_play_cost

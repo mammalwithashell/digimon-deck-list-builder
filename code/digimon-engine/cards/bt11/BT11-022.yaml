@@ -18,7 +18,8 @@ alt_paths:
     from: { name_is: Bebydomon }
     cost: 0
 effects:
-  - when: on_ally_played
+  - text: "[Your Turn][Once Per Turn] When you play another Digimon with [Dramon] in its name or [Blue Flare] in its traits, ＜Draw 1＞."
+    when: on_ally_played
     once_per_turn: true
     active_when: { your_turn: true }
     trigger_if:
@@ -31,7 +32,8 @@ effects:
     summary: "[Your Turn][Once Per Turn] When you play another Dramon or Blue Flare Digimon, Draw 1"
     process:
       - draw: { of: you, count: 1 }
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When you play another Digimon with [Dramon] in its name or [Blue Flare] in its traits, gain 1 memory."
+    scope: inherited
     when: on_ally_played
     once_per_turn: true
     active_when: { your_turn: true }

@@ -1,0 +1,42 @@
+{
+  "index": 4536,
+  "norm_id": 0.2268,
+  "card_id": "BT27-049",
+  "card_index": 49,
+  "card_name_eng": "Liamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_049",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "ACCEL"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Attacking] This Digimon may digivolve into a Digimon card with [Leomon] in its name or the [ACCEL] trait in the hand. For each of your opponent's Digimon and Tamers, reduce this effect's paid cost by 1.\r\n(Rule) Name: Treated as including [Leomon].",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    },
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Elecmon]/Lv.3 w/[Holy Beast]/[ACCEL] trait: Cost 2"
+}

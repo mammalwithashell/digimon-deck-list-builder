@@ -97,6 +97,7 @@ effects:
     summary: "[Security-trash] When an effect trashes this card from security, activate its [Main] effect (-3000 DP; then maybe <Security A. -1> to all opp Digimon)"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -3000 DP until the end of your opponent's turn"
@@ -126,6 +127,7 @@ effects:
     summary: "[Main] 1 opponent Digimon gets -3000 DP until end of opp turn; then, if 6 or fewer total security cards, all opponent Digimon gain <Security A. -1> until end of opp turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -3000 DP until the end of your opponent's turn"
@@ -147,11 +149,13 @@ effects:
   # "Security Effect [Security] Activate this card's [Main] effects." DCGO
   # SecuritySkill -> AddActivateMainOptionSecurityEffect (BT24-097 idiom:
   # scope: inherited, when: on_security, body mirrors Main).
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effect."
+    scope: inherited
     when: on_security
     summary: "[Security] Activate [Main] effects: -3000 DP to 1 opp Digimon; then maybe <Security A. -1> to all opp Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -3000 DP until the end of your opponent's turn"

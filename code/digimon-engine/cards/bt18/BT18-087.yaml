@@ -110,6 +110,7 @@ effects:
       # G-PRED-DP-LTE: dp_lte filter compiled but not evaluated at runtime yet;
       # all opponent Digimon will be offered until the gap closes.
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:
@@ -119,7 +120,8 @@ effects:
       - delete_permanent: { target: tgt }
 
   # ─── Clause 3: [Security] Play without paying the cost ─────────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

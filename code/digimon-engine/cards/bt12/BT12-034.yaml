@@ -119,7 +119,8 @@ effects:
   #   "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with
   #   [Greymon] in its name and 1 [Marcus Damon] among them to your hand.
   #   Place the rest at the bottom of your deck in any order."
-  - when: on_play
+  - text: "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with [Greymon] in its name and 1 [Marcus Damon] among them to your hand. Place the rest at the bottom of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 4; add one Greymon-name Digimon and one Marcus Damon; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
@@ -149,7 +150,8 @@ effects:
   # Printed: "[Your Turn][Once Per Turn] When one of your yellow or red
   # Tamers becomes suspended, 1 of your opponent's Digimon gets -2000 DP for
   # the turn."
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your yellow or red Tamers becomes suspended, 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
     when: on_suspend
     once_per_turn: true
     active_when: { your_turn: true }
@@ -161,6 +163,7 @@ effects:
     summary: "[Your Turn][Once Per Turn] When own yellow/red Tamer suspends, 1 opp Digimon gets -2000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -2000 DP for the turn"

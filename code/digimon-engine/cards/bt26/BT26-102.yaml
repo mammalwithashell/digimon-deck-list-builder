@@ -57,7 +57,8 @@ use_requirement:
 effects:
   # ─── [Main] by placing 6 [Seven Code] Digimon cards under 1 of your
   #     [Seven Code] Digimon, it may digivolve into [Dantemon] for free ───────
-  - when: main_from_hand
+  - text: "[Main] By placing 6 [Seven Code] trait Digimon cards from your battle area, link cards or trash as 1 of your [Seven Code] trait Digimon's bottom digivolution cards, that Digimon may digivolve into [Dantemon] in the hand, ignoring digivolution requirements and without paying the cost."
+    when: main_from_hand
     summary: "[Main] By placing 6 [Seven Code] trait Digimon cards from your battle area, link cards or trash as 1 of your [Seven Code] trait Digimon's bottom digivolution cards, that Digimon may digivolve into [Dantemon] in the hand, ignoring digivolution requirements and without paying the cost"
     process:
       - select_own_permanent:
@@ -104,7 +105,8 @@ effects:
 
   # ─── [Security] may play 1 play cost ≤ 5 [Appmon] card from hand or trash,
   #     free; then add this card to the hand ──────────────────────────────────
-  - scope: inherited
+  - text: "[Security] You may play 1 play cost 5 or lower [Appmon] trait card from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     summary: "[Security] You may play 1 play cost 5 or lower [Appmon] trait card from your hand or trash without paying the cost. Then, add this card to the hand"
     process:

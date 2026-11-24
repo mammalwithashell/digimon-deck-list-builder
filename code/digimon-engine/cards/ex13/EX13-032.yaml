@@ -78,7 +78,7 @@ alt_paths:
     from: { level_eq: 4, color_is: yellow }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 4, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
@@ -123,6 +123,7 @@ effects:
                   any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
                 then:
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: lock_a
                       filter: { kind: digimon }
                       prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
@@ -150,6 +151,7 @@ effects:
                         any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
                       then:
                         - select_opponent_permanent:
+                            optional: false
                             bind_as: lock_b
                             filter: { kind: digimon }
                             prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
@@ -184,7 +186,8 @@ effects:
       - cancel_replacement: {}
 
   # ─── Inherited [All Turns][OPT] would-leave save ([Kentaurosmon] carrier) ──
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Kentaurosmon] in its name would leave the battle area, by placing its top stacked card as the top security card, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

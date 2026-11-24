@@ -136,13 +136,13 @@ fn ex8_055_clause_a_has_wd_wa_not_opt() {
                     && t.when.contains(&CompiledTiming::WhenDigivolving)
                     && t.when.contains(&CompiledTiming::WhenAttacking)
                     && !t.once_per_turn
-                    && !t.optional
+                    && t.optional
         )
     });
 
     assert!(
         has_clause_a,
-        "EX8-055 must have a [WD][WA] FaceUp non-optional clause (Clause A)"
+        "EX8-055 must have a [WD][WA] FaceUp optional clause (Clause A): \"By trashing\" is an optional cost"
     );
 }
 
@@ -181,6 +181,9 @@ fn ex8_055_clause_a_when_digivolving_prompts_source_multi_3_of_3() {
         TriggerSource::Permanent(pyra),
     );
     runner.game.drain_effect_queue();
+    runner
+        .accept_optional_trigger()
+        .expect("\"By trashing\" cost is optional");
 
     assert!(
         matches!(
@@ -222,6 +225,9 @@ fn ex8_055_clause_a_rock_sources_are_valid_cost() {
         TriggerSource::Permanent(pyra),
     );
     runner.game.drain_effect_queue();
+    runner
+        .accept_optional_trigger()
+        .expect("\"By trashing\" cost is optional");
 
     assert!(
         matches!(
@@ -263,12 +269,11 @@ fn ex8_055_clause_a_silently_skips_when_fewer_than_3_sources() {
     );
     runner.game.drain_effect_queue();
 
-    // Drain any partial SourceMulti prompts that may appear.
-    for _ in 0..4 {
-        if runner.pending_selection().is_some() {
-            runner.auto_resolve().ok();
-        }
-    }
+    // §15-7-4: an unpayable "By trashing any 3" condition is not offered.
+    assert!(
+        runner.pending_selection().is_none(),
+        "Clause A must not offer activation when fewer than 3 Mineral/Rock sources exist"
+    );
 
     // EX8-055 must still be suspended (effect never fired).
     assert!(
@@ -598,6 +603,9 @@ fn ex8_055_clause_a_when_attacking_also_fires() {
         .game
         .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(pyra));
     runner.game.drain_effect_queue();
+    runner
+        .accept_optional_trigger()
+        .expect("\"By trashing\" cost is optional");
 
     assert!(
         matches!(

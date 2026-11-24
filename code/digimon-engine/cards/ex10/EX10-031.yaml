@@ -68,6 +68,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - effect_text_contains: "Knightmon"
@@ -88,6 +89,7 @@ effects:
     summary: "[On Play][When Digivolving] Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: shielded
           filter: { kind: digimon }
           prompt: "Until your opponent's turn ends, their <De-Digivolve> effects don't affect 1 of your Digimon, and it gets +3000 DP"
@@ -102,11 +104,12 @@ effects:
           expiry: end_of_opponents_turn
 
   # ─── Inherited — [Opp Turn][OPT] attack redirect ───────────────────────────
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     optional: true
     active_when: { opponents_turn: true }
     summary: "Inherited: [Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon"
     process:
-      - redirect_attack_target: { new_target: self }
+      - redirect_attack_target: { optional: false, new_target: self }

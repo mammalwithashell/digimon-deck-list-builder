@@ -50,7 +50,7 @@ alt_paths:
   # Printed special condition: "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
   # (DCGO AddSelfDigivolutionRequirementStaticEffect: HasAppmonTraits, lvl 2, cost 0).
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:
@@ -68,7 +68,8 @@ effects:
     summary: "[Link] +2000 DP to the linked Digimon"
 
   # ─── [On Play] reveal 3; add 1 Appmon + 1 Social/Tool/Reboot/Creation ──────
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Appmon] trait card and 1 [Social], [Tool], [Reboot] or [Creation] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Appmon] and 1 [Social]/[Tool]/[Reboot]/[Creation]; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -100,6 +101,7 @@ effects:
     summary: "[When Linking] Delete 1 of your opponent's Digimon with 3000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:

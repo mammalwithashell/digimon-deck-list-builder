@@ -88,7 +88,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2".
   # DCGO gates on EqualsTraits("Ice-Snow") && IsLevel3 — no color restriction.
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Ice-Snow }
+    from: { any_color: true, level_eq: 3, trait_has: Ice-Snow }
     cost: 2
 
 effects:
@@ -101,7 +101,8 @@ effects:
   # condition: count_lte own battle-area tamers <= 1 ("1 or fewer Tamers").
   # process: select_hand filtered to Tamer cards named exactly "Suzune Kazuki"
   #   (DCGO IsTamer && EqualsCardName) → play_from_hand_free.
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Suzune Kazuki] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     summary: "If ≤1 Tamer, you may play 1 [Suzune Kazuki] from hand without paying the cost"
     condition:
@@ -131,7 +132,8 @@ effects:
   # "<Jamming> (This Digimon can't be deleted in battles against Security
   #  Digimon.)"
   # DCGO: JammingSelfStaticEffect(isInheritedEffect: true) — unconditional.
-  - scope: inherited
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Jamming
     summary: "[Inherited] <Jamming>"

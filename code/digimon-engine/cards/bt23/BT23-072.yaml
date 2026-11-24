@@ -23,6 +23,7 @@ effects:
     process:
       - lose_memory: 3
       - select_own_breeding_permanent:
+          optional: false
           bind_as: breeding_host
           prompt: "Choose your breeding King Drasil_7D6 or Mother Eater"
           filter:
@@ -67,7 +68,8 @@ effects:
   # [Breeding]: specifies the breeding area, so it triggers only while the
   # carrier is there (CR 4.3 §3-4-7-4; `in_breeding: true` is also what lets
   # the breeding-area dispatch consider it at all).
-  - scope: inherited
+  - text: "[Start of Your Main Phase] If this Digimon has 6 or more digivolution cards, you may play 1 Digimon card with [King Drasil] in its name from its digivolution cards without paying the cost."
+    scope: inherited
     when: start_of_your_main_phase
     optional: true
     active_when: { in_breeding: true, materials_count_gte: 6 }

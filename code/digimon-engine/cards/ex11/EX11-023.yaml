@@ -16,7 +16,7 @@ alt_paths:
     from: { level_eq: 5, color_is: purple }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Puppet }
+    from: { any_color: true, level_eq: 5, trait_has: Puppet }
     cost: 3
     ignore_requirements: true
 
@@ -38,6 +38,7 @@ effects:
     summary: "<Scapegoat>"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: scapegoat_cost
           filter:
             all_of:
@@ -52,6 +53,7 @@ effects:
     summary: "Delete 1 opponent Digimon with the lowest level"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

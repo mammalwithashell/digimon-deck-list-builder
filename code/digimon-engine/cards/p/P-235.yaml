@@ -64,6 +64,7 @@ effects:
       # [DATA SQUAD] card revealed the pick has no candidates and skips
       # (BT21-097 idiom). Rose Rave audit 2026-11-11: was optional.
       - select_reveal:
+          optional: false
           of: you
           bind_as: picked
           filter: { trait_has: "DATA SQUAD" }
@@ -83,7 +84,8 @@ effects:
       - gain_memory: 2
 
   # ─── Clause 2: [Security] (inherited) place self in battle area ──────────────
-  - scope: inherited
+  - text: "[Security] Place this card in the battle area."
+    scope: inherited
     when: on_security
     summary: "[Security] Place this card in the battle area"
     process:

@@ -130,6 +130,7 @@ effects:
           condition: { binding_present: tamer_base }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: hybrid_evo
                 filter:
@@ -145,7 +146,8 @@ effects:
                 ignore_requirements: false
 
   # ─── Clause 3: [Security] may play 1 Tamer w/ inherited from hand/trash ─────
-  - scope: inherited
+  - text: "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] You may play 1 Tamer card with inherited effects from your hand or trash without paying the cost. Then, add this card to the hand"

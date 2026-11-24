@@ -46,7 +46,8 @@ attribute: Tool
 
 effects:
   # ─── Inherited [Your Turn][OPT] host-side link-cost reducer ────────────────
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card would link to this Digimon, you may reduce the cost by 1."
+    scope: inherited
     when: when_would_link_to_this
     optional: true
     once_per_turn: true

@@ -76,7 +76,8 @@ alt_paths:
 
 effects:
   # ─── Printed keyword ──────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Fragment《3》＞"
+    kind: grant_keyword
     keyword: Fragment
     value: 3
 
@@ -101,6 +102,7 @@ effects:
           then:
             - trash_selected_sources_as_cost: { source_refs: cost_sources }
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter: { kind: digimon }
                 prompt: "Delete 1 of your opponent's Digimon"
@@ -133,6 +135,7 @@ effects:
           target: source
       # Pick 2nd Mineral/Rock card from trash.
       - select_trash:
+          optional: false
           of: you
           bind_as: src2
           filter:
@@ -145,6 +148,7 @@ effects:
           target: source
       # Pick 3rd Mineral/Rock card from trash.
       - select_trash:
+          optional: false
           of: you
           bind_as: src3
           filter:

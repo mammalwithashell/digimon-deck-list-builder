@@ -7,6 +7,7 @@ effects:
   - when: main_from_hand
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -10000 DP"
@@ -14,9 +15,11 @@ effects:
           target: target
           value: -10000
           expiry: end_of_turn
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effect."
+    when: on_security
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -10000 DP"

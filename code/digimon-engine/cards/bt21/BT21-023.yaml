@@ -160,7 +160,8 @@ effects:
   # the link_card_to_self body has no candidates → prompt does not install
   # (DCGO CanActivateCondition gate). DSL `optional: true` on link_card_to_self
   # is the inner decline path (no outer_prompt needed).
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost"
     process:
       - link_cards:
@@ -177,12 +178,14 @@ effects:
   # DCGO WhenLinked (maxCount 1 = OPT), CanActivateCondition: IsOwnerTurn.
   # SharedLinkedActivateCoroutine: select opp Digimon DP<=this.DP (mandatory).
   # DP ceiling = host's effective_dp (includes the +4000 linked aura above).
-  - when: when_card_linked_to_this
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, delete 1 of your opponent’s Digimon with as much or less DP as this Digimon."
+    when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:
@@ -201,6 +204,7 @@ effects:
     summary: "[When Linking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: ess_del_target
           filter:
             all_of:

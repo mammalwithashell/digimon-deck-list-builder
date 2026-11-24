@@ -16,7 +16,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: cost_reduction
+  - text: "When one of your Digimon with a Tamer card in its digivolution cards digivolves into this card in your hand, reduce the memory cost of the digivolution by 2."
+    kind: cost_reduction
     when_digivolving_this: true
     condition:
       all_of:
@@ -27,7 +28,8 @@ effects:
     amount: 2
     summary: "When a Digimon with a Tamer source digivolves into this card in hand, reduce the cost by 2"
 
-  - when: when_digivolving
+  - text: "[When Digivolving] If a card with [Hybrid] in its traits is in this Digimon's digivolution cards, ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.)"
+    when: when_digivolving
     condition:
       self_source_count:
         filter: {trait_has: Hybrid}

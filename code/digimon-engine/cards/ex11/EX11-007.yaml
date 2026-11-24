@@ -73,6 +73,7 @@ effects:
     summary: "[When Moving][On Play] 1 of your [Tyrannomon]-name / [Reptile] / [Dinosaur] Digimon gains <Raid> and <Piercing> for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: raider
           filter:
             all_of:
@@ -92,7 +93,8 @@ effects:
           expiry: end_of_turn
 
   # Inherited [All Turns] +1000 DP.
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     active_when: { all_turns: true }
     target: {}

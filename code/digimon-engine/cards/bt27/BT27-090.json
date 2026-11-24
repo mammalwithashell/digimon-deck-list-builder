@@ -1,0 +1,28 @@
+{
+  "index": 4577,
+  "norm_id": 0.22885,
+  "card_id": "BT27-090",
+  "card_index": 90,
+  "card_name_eng": "Spencer Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When any of your Digimon with [Leomon] in their names or the [Boss] or [DATA SQUAD] trait are played, by placing this Tamer as any of those Digimon's bottom digivolution card, your opponent's effects can't return 1 of your Digimon to hands or decks, or trash its stacked cards until their turn ends.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon with [Leomon] in its name or the [Boss] or [DATA SQUAD] trait gets +3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

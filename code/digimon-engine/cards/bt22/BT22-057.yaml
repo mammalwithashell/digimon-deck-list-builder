@@ -32,11 +32,12 @@ alt_paths:
     from: { level_eq: 3, color_is: black }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: CS }
+    from: { any_color: true, level_eq: 3, trait_has: CS }
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Arata Sanada] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     condition:
       all_of:
@@ -49,23 +50,25 @@ effects:
               zone: [hand]
               all_of:
                 - kind: tamer
-                - name_contains: "Arata Sanada"
+                - name_is: "Arata Sanada"
                 - can_play_from_effect_without_cost: true
             n: 1
     summary: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Arata Sanada] from your hand without paying the cost"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: arata
           filter:
             all_of:
               - kind: tamer
-              - name_contains: "Arata Sanada"
+              - name_is: "Arata Sanada"
               - can_play_from_effect_without_cost: true
           prompt: "Play 1 [Arata Sanada] without paying the cost"
       - play_from_hand_free: { of: you, hand_index: arata }
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Diaboromon] in its text would leave the battle area, by deleting 1 of your other [Diaboromon], it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true
@@ -77,6 +80,7 @@ effects:
     summary: "Inherited [All Turns][OPT] When this Digimon with [Diaboromon] in its text would leave the battle area, by deleting 1 of your other [Diaboromon], it doesn't leave"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: prevent_cost
           filter:
             all_of:

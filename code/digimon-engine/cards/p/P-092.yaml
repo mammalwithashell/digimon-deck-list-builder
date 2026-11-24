@@ -20,7 +20,8 @@ alt_paths:
     from: {name_is: Bebydomon}
     cost: 0
 effects:
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your [Groundramon] are played, this Digimon may digivolve into [Wingdramon] in the hand for a digivolution cost of 3, ignoring digivolution requirements."
+    when: on_ally_played
     active_when: {your_turn: true}
     trigger_if:
       event_card_name_is: Groundramon
@@ -36,7 +37,8 @@ effects:
           from_hand: wing
           cost: 3
           ignore_requirements: true
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your [Groundramon] are played, this Digimon may digivolve into [Wingdramon] in the hand without paying the cost."
+    when: on_ally_played
     scope: inherited
     active_when: {your_turn: true}
     trigger_if:

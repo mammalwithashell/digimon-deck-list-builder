@@ -303,8 +303,11 @@ All three run on the sandbox copies (`D:\DCGO_mod_sandbox`, `D:\DCGO_mod_sandbox
 
 `UserData/DcgoRecorder/auto.txt` = `host` (or `join`) and the shared dir. The host creates a Photon room and writes
 `room.txt`; the joiner enters it; both pick a deck, ready, and the host's room starts the battle. Each client simulates
-both decks, so each raw log converts to a full recording (`convert_raw.py`); the first PvP recordings replay with 0
-divergences.
+both decks, so either client's raw log can produce a full recording (`convert_raw.py`) if it captures the game end.
+The checked-in `qa/dcgo-mod-recordings/pvp/pvp1_host.jsonl` is a full pass. The joiner fixture, `pvp1_join.jsonl`,
+has no `game_end` row: all four post-mulligan decisions replay without divergence, but the outcome is unverifiable,
+so `dcgo-replay` reports `partial_pass`. The joiner's raw log is not checked in, so the reason it lacks a game end is
+unknown. A complete capture is required to verify the rest; do not infer a winner from this prefix.
 
 ### A model plays a seat (`dcgo-agent`)
 
@@ -339,6 +342,12 @@ and reorder a mulligan reshuffle to the plan. The host picks the first player wi
   (animations). Converting the packet at queue time let the agent answer prompts DCGO had not opened. Plays are now
   taken only from `PlayCardClass.PlayCard` rows (logged at resolution, with the resolved hand slot and target, on
   every client), and the mod only queues a turn action while DCGO's main-phase loop is idle.
+- **Paid plays during effects.** `PlayCardClass.PlayCard` can include optional `play_provenance`: `effect` when
+  DCGO supplies an effect context, or `direct` when the played card matches the turn state's `PlayCard` and there
+  is no effect context. If neither is observed, the recorder omits the field. In older offline logs, an
+  immediately preceding hand pick by the bot on the same turn naming the same `CardIndex` can be either a
+  play selection or a reveal. Without a queued play or recorded provenance, conversion reports an unsupported
+  decision there rather than dropping the play or emitting a duplicate.
 - **Attacks were never recorded.** `SetAttackingPermaent` (called by `AttackPermanentAction.Execute`) is inlined in
   the shipped build and never reaches its hook. Attacks are decoded from the attack packet, which now carries both
   seats' `GetFieldPermanents()` order (`boards`) so `remap_board_slots` maps DCGO indices onto engine slots.

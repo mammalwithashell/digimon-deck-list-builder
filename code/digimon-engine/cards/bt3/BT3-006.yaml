@@ -22,12 +22,14 @@ cost: 0
 traits: [Flame]
 
 effects:
-  - scope: inherited
+  - text: "[On Deletion] Trigger ＜Draw 1＞. (Draw 1 card from your deck.) Then, trash 1 card in your hand."
+    scope: inherited
     when: on_deletion
     summary: "[Inherited][On Deletion] Draw 1, then trash 1 card in your hand"
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

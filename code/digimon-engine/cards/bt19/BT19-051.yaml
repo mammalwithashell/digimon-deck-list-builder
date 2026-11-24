@@ -13,16 +13,19 @@ digixros_aliases: [Ballistamon]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Xros Heart"
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Until the end of your opponent's turn, 1 of your Digimon can't be returned to hands or decks by your opponent's effects and gets +3000 DP."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Protect 1 own Digimon from hand/deck return and give +3000 DP"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon"
@@ -41,7 +44,8 @@ effects:
           value: 3000
           expiry: end_of_opponents_turn
 
-  - when: on_deletion
+  - text: "[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers."
+    when: on_deletion
     summary: "[On Deletion] Place 1 Xros Heart/Blue Flare Digimon from hand or trash under one of your Tamers"
     process:
       - select_own_permanent:
@@ -53,6 +57,7 @@ effects:
           condition: { binding_present: tamer }
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: stash
@@ -67,7 +72,8 @@ effects:
                 card: stash
                 tamer: tamer
 
-  - scope: inherited
+  - text: "[Opponent's Turn] This Digimon with the [Xros Heart] trait gains ＜Blocker＞."
+    scope: inherited
     kind: grant_keyword
     active_when:
       all_of:

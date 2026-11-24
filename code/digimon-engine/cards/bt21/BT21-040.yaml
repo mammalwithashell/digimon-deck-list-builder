@@ -85,6 +85,7 @@ alt_paths:
   # CS -> Hero.
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Koromon
         - all_of:
@@ -142,7 +143,8 @@ effects:
   # (BT21-042 / EX9-012 idiom): empty target `{}` + `active_when: { your_turn:
   # true }` + `scope: inherited`. `Game::source_dp_contribution` reads
   # `dp_modifier` gated by `active_when`.
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

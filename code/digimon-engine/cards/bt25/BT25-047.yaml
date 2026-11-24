@@ -17,12 +17,14 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: TS
     cost: 0
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Vegetation] or [Shaman] trait card and 1 [TS] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add one [Vegetation]/[Shaman] and one [TS] card to hand; rest to bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -46,7 +48,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: ts_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
   # Inherited [Your Turn] All of your Digimon get +1000 DP.
-  - kind: aura
+  - text: "[Your Turn] All of your Digimon get +1000 DP."
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     target: { kind: digimon, owner: you }

@@ -77,7 +77,8 @@ cost: 4
 
 effects:
   # ─── Clause 1: [Start of Your Turn] if memory <= 2, set it to 3 ──────────────
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set your memory to 3."
+    when: start_of_your_turn
     summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
     condition: { memory_lte: 2 }
     process:
@@ -93,7 +94,8 @@ effects:
   # shuffle is the final statement inside that same guarded branch. On an
   # empty security stack the mandatory search has no match, `on_no_match`
   # (omitted) no-ops, and the clause ends without touching security at all.
-  - when: on_play
+  - text: "[On Play] Look at your security stack, then reveal 1 card in it and add it to your hand. If that card is yellow, trigger ＜Recovery +1 (Deck)＞. (Place the top card of your deck on top of your security stack.) Then shuffle your security stack."
+    when: on_play
     summary: "[On Play] Look at your security, reveal 1 card and add it to hand; if yellow, Recovery +1 (Deck); then shuffle security"
     process:
       - search_own_security_stack:

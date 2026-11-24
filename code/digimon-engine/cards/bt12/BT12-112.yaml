@@ -36,9 +36,11 @@ effects:
       - preattach_digixros_material: { card: shoutmon, cost_delta: -1 }
       - allow_digixros_material_zone: { zone: trash }
 
-  - when: on_play
+  - text: "[On Play] Return all of the digivolution cards of 1 of your opponent's Digimon to the bottom of its owner's deck in any order, and return that Digimon to the bottom of its owner's deck."
+    when: on_play
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Return to deck"

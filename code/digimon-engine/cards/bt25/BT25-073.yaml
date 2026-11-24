@@ -70,18 +70,20 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
   # ─── <Jamming> (self) ───────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Jamming＞"
+    kind: grant_keyword
     keyword: Jamming
     summary: "<Jamming>"
 
   # ─── [On Play][When Digivolving] by trashing 1 of your Digimon's link
   #     cards, you may play or use 1 [TS] cost<=5 card from hand free ────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 of your Digimon's link cards, you may play or use 1 [TS] trait card with a play or use cost of 5 or less from your hand without paying the cost."
+    when: [on_play, when_digivolving]
     process:
       - trash_link_card_of_own_digimon:
           of: you
@@ -110,7 +112,8 @@ effects:
 
   # ─── Inherited [All Turns] leave-replacement: trash 1 of ITS OWN link
   #     cards → doesn't leave ──────────────────────────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

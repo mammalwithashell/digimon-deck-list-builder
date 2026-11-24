@@ -13,7 +13,8 @@ cost: 0
 traits: [Lesser, Iliad, TS]
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your [Iliad] trait Digimon are played, ＜Draw 1＞."
+    scope: inherited
     when: on_ally_played
     once_per_turn: true
     active_when: { your_turn: true }

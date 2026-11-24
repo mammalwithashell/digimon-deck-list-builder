@@ -14,11 +14,12 @@ alt_paths:
     from: { level_eq: 2, color_is: red }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Shambala }
+    from: { any_color: true, level_eq: 2, trait_has: Shambala }
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Shambala] trait and 1 card with the [TB] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Shambala] card and 1 [TB] card; rest to deck bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -39,7 +40,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: tb_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

@@ -14,7 +14,7 @@ use_requirement:
     of: you
     zone: [battle_area]
     kind: digimon
-    trait_has: X Antibody
+    trait_contains: X Antibody
 
 effects:
   - when: main_from_hand
@@ -31,7 +31,7 @@ effects:
               - has_digivolve_candidate:
                   of: you
                   zone: [reveal]
-                  filter: { kind: digimon, trait_has: X Antibody }
+                  filter: { kind: digimon, trait_contains: X Antibody }
           prompt: "You may choose a Digimon to digivolve using a revealed card"
           then:
             - select_reveal:
@@ -41,7 +41,7 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
-                    - trait_has: X Antibody
+                    - trait_contains: X Antibody
                     - can_digivolve_onto: host
                 prompt: "You may digivolve into 1 revealed X Antibody Digimon without paying its memory cost"
                 then:
@@ -66,27 +66,30 @@ effects:
               zone: [battle_area]
               all_of:
                 - kind: digimon
-                - trait_has: X Antibody
+                - trait_contains: X Antibody
                 - not: { kind: token }
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: material
-                filter: { trait_has: X Antibody }
+                filter: { trait_contains: X Antibody }
                 prompt: "Choose 1 X Antibody card in your trash to place as a bottom digivolution card"
                 then:
                   - select_own_permanent:
+                      optional: false
                       bind_as: recipient
                       filter:
                         all_of:
                           - kind: digimon
-                          - trait_has: X Antibody
+                          - trait_contains: X Antibody
                           - not: { kind: token }
                       prompt: "Choose 1 of your X Antibody Digimon to receive the card"
                       then:
                         - place_as_bottom_source: { source: material, target: recipient }
 
-  - when: on_security
+  - text: "[Security] You may reveal the top 3 cards of your deck. Add 1 card with [X Antibody] in its traits among them to your hand. Trash the rest."
+    when: on_security
     optional: true
     summary: "You may reveal 3; add 1 X Antibody card among them to hand and trash the rest"
     process:
@@ -95,7 +98,7 @@ effects:
           of: you
           bind_as: picked
           optional: false
-          filter: { trait_has: X Antibody }
+          filter: { trait_contains: X Antibody }
           prompt: "Add 1 revealed X Antibody card to your hand"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - per_selected:

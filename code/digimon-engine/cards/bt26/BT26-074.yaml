@@ -41,6 +41,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: TS
@@ -49,7 +50,8 @@ alt_paths:
 effects:
   # ─── [On Play][When Digivolving][When Attacking][OPT] your turn: by trashing
   #     1 hand card, may use 1 [Titan] Option from trash at -2 ──────────────
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] If it's your turn, by trashing 1 card in your hand, you may use 1 Option card with the [Titan] trait from your trash with the cost reduced by 2."
+    when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     condition:
       all_of:
@@ -82,11 +84,13 @@ effects:
             - refund_opt: {}
 
   # ─── Inherited [On Deletion] delete 1 opponent's lowest-level Digimon ─────
-  - scope: inherited
+  - text: "[On Deletion] Delete 1 of your opponent's Digimon with the lowest level."
+    scope: inherited
     when: on_deletion
     summary: "[Inherited][On Deletion] Delete 1 of your opponent's Digimon with the lowest level"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

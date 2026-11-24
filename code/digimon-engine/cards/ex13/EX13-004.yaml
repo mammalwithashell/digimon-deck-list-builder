@@ -25,7 +25,8 @@ cost: 0
 traits: [Flame]
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Witchelny] in its text in the hand with the cost reduced by 1. If this effect digivolved, trash your top security card."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][OPT] This Digimon may digivolve into a [Witchelny]-text hand card with the cost reduced by 1; if it did, trash your top security card"

@@ -42,7 +42,7 @@ alt_paths:
     from: { level_eq: 4, color_is: blue }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: CS }
+    from: { any_color: true, level_eq: 4, trait_has: CS }
     cost: 3
 
 effects:
@@ -90,6 +90,7 @@ effects:
     summary: "[All Turns][OPT] When any of your Tamers are played, 1 opponent Digimon or Tamer can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:
@@ -102,7 +103,8 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
 
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name suspends, it may unsuspend."
+    scope: inherited
     when: on_suspend
     active_when: { all_turns: true }
     once_per_turn: true

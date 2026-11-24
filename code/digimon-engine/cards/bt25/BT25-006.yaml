@@ -47,7 +47,8 @@ effects:
   # (the outer accept/decline) so declining the trigger costs nothing. Once the
   # card is trashed, the unsuspend target is a mandatory pick over own [Titan]
   # Digimon (DCGO `canNoSelect: false`).
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by trashing 1 card in your hand, 1 of your [Titan] trait Digimon unsuspends."
+    scope: inherited
     when: on_opponent_attack
     optional: true
     once_per_turn: true
@@ -59,12 +60,14 @@ effects:
     summary: "[Inherited][Opp Turn][OPT] When opp Digimon attacks, trash 1 hand card to unsuspend 1 of your [Titan] Digimon"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
           prompt: "Trash 1 card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - select_own_permanent:
+          optional: false
           bind_as: titan
           filter:
             all_of:

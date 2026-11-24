@@ -33,17 +33,20 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "TS"
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card with [Chronomon] in its text or the [Shaman] trait from your hand, ＜Draw 2＞."
+    when: [on_play, when_digivolving]
     condition:
       count_gte:
         filter:
@@ -70,7 +73,8 @@ effects:
             - trash_from_hand_by_index: { of: you, hand_index: chrono_cost }
             - draw: { of: you, count: 2 }
 
-  - scope: inherited
+  - text: "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Raid
     summary: "Inherited <Raid>"

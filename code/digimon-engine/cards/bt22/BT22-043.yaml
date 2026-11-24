@@ -38,11 +38,12 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 1
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
 
 effects:
-  - when: on_add_digivolution_cards
+  - text: "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost."
+    when: on_add_digivolution_cards
     optional: true
     outer_prompt: true
     once_per_turn: true

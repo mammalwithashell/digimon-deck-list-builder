@@ -34,10 +34,11 @@ attribute: Vaccine
 traits: [Beast]
 alt_paths:
   - kind: digivolve
-    from: { kind: digimon, level_eq: 3, name_contains: Gabumon }
+    from: { any_color: true, kind: digimon, level_eq: 3, name_contains: Gabumon }
     cost: 2
 effects:
-  - when: on_security
+  - text: "[Security] You may play 1 [Gabumon] or 1 Tamer card with [Matt Ishida] in its name from your hand or trash without paying the cost."
+    when: on_security
     optional: true
     summary: "[Security] You may play 1 [Gabumon] or 1 [Matt Ishida] Tamer from hand or trash without paying the cost"
     process:
@@ -63,6 +64,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
@@ -76,6 +78,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

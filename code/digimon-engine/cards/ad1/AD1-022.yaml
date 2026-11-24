@@ -45,7 +45,8 @@ traits: [ADVENTURE, Hero]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] gain 1 memory if opp has Digimon
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -56,7 +57,8 @@ effects:
       - gain_memory: 1
 
   # ─── Clause 2: [Your Turn] other ADVENTURE played → suspend → digivolve ───
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your other [ADVENTURE] trait Digimon or Tamers are played, by suspending this Tamer, 1 of your Digimon may digivolve into an [ADVENTURE] trait Digimon card in the hand. For every 2 of your Tamers' colors, reduce this effect's digivolution cost by 1."
+    when: on_ally_played
     active_when: { your_turn: true }
     optional: true
     summary: "[Your Turn] When another own [ADVENTURE] Digimon/Tamer is played, by suspending this Tamer, 1 of your Digimon may digivolve into an [ADVENTURE] Digimon in hand, -1 cost per 2 Tamer colors"
@@ -101,6 +103,7 @@ effects:
           condition: { binding_present: evo_base }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: evo_card
                 filter:
@@ -137,7 +140,8 @@ effects:
                       - 2
 
   # ─── Clause 3: [Security] play this card without paying the cost ─────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

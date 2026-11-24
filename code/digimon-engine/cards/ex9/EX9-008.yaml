@@ -17,16 +17,18 @@ alt_paths:
     cost: 0
 
   - kind: digivolve
-    from: { level_eq: 2, trait_has: DM }
+    from: { any_color: true, level_eq: 2, trait_has: DM }
     cost: 0
     ignore_requirements: true
 
 effects:
   # <Training> — printed keyword declared through the shared grant_keyword DSL.
-  - kind: grant_keyword
+  - text: "＜Training＞ (In the main phase, by suspending this Digimon, place your deck's top card face down as this Digimon's bottom digivolution card. This effect can also activate in the breeding area.)"
+    kind: grant_keyword
     keyword: Training
 
   # Inherited <Raid>.
-  - scope: inherited
+  - text: "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Raid

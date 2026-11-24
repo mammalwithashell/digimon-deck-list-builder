@@ -100,14 +100,15 @@ effects:
               of: you
               zone: [battle_area]
               kind: tamer
-              name_contains: "Marcus Damon"
+              name_is: "Marcus Damon"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: marcus
                 filter:
                   all_of:
                     - kind: tamer
-                    - name_contains: "Marcus Damon"
+                    - name_is: "Marcus Damon"
                 prompt: "Select 1 of your [Marcus Damon]s to treat as a 3000 DP Digimon"
             - add_modifier:
                 target: marcus
@@ -172,7 +173,7 @@ effects:
           of: you
           bind_as: marcus_in_trash
           optional: true
-          filter: { name_contains: "Marcus Damon" }
+          filter: { name_is: "Marcus Damon" }
           prompt: "Place 1 [Marcus Damon] from your trash as the top security card"
       - if:
           condition: { binding_present: marcus_in_trash }
@@ -187,7 +188,8 @@ effects:
   #
   # Identical printed body, inherited scope (DCGO duplicate ActivateClass with
   # SetIsInheritedEffect(true), hash "BT21_044_Inherited_AT").
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When any of your yellow or red Tamers are deleted, you may place 1 [Marcus Damon] from your trash as the top security card."
+    scope: inherited
     when: on_any_deletion
     active_when: { all_turns: true }
     once_per_turn: true
@@ -203,7 +205,7 @@ effects:
           of: you
           bind_as: marcus_in_trash
           optional: true
-          filter: { name_contains: "Marcus Damon" }
+          filter: { name_is: "Marcus Damon" }
           prompt: "Place 1 [Marcus Damon] from your trash as the top security card"
       - if:
           condition: { binding_present: marcus_in_trash }

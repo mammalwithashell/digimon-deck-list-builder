@@ -13,7 +13,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_deletion
+  - text: "[On Deletion] By trashing 1 card with the [Mineral] or [Rock] trait in your hand, ＜Draw 2＞."
+    when: on_deletion
     optional: true
     condition:
       count_gte:
@@ -38,7 +39,8 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 2 }
 
-  - scope: inherited
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Blocker
     summary: "Inherited <Blocker>"

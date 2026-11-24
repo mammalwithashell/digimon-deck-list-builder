@@ -126,7 +126,8 @@ alt_paths:
 effects:
   # ─── Clause 1 — [On Play] trash a Vemmon-text hand card, may return a
   # non-Digi-Egg Vemmon-text card from trash to hand ──────────────────────
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with [Vemmon] in its text from your hand, you may return 1 non-Digi-Egg card with [Vemmon] in its text from your trash to the hand."
+    when: on_play
     optional: true
     summary: "[On Play] By trashing 1 [Vemmon]-text card from hand, may return 1 non-Digi-Egg [Vemmon]-text card from trash to hand"
     condition:
@@ -165,7 +166,8 @@ effects:
       - add_to_hand_from_trash: { of: you, card: recovered }
 
   # ─── Clause 2 — Inherited [Your Turn][OPT] digivolve-cost -1 ──────────────
-  - kind: cost_reduction
+  - text: "[Your Turn] [Once Per Turn] When this Digimon would digivolve into a Digimon card with [Vemmon] in its text, reduce the digivolution cost by 1."
+    kind: cost_reduction
     scope: inherited
     reduction_timing: before_pay_cost
     active_when:

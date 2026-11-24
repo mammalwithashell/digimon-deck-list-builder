@@ -18,13 +18,15 @@ alt_paths:
     cost: 1
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: "Xros Heart"
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] This Digimon may digivolve into [OmniShoutmon] under your Tamers without paying the cost."
+    when: on_play
     summary: "[On Play] May digivolve into OmniShoutmon under your Tamers without paying the cost"
     process:
       - select_under_tamer_sources:
@@ -40,13 +42,15 @@ effects:
                 source: evo_source
                 cost: free
 
-  - when: on_deletion
+  - text: "[On Deletion] Reveal the top 3 cards of your deck. Play 1 Tamer card with the [Xros Heart] trait among them without paying the cost. Return the rest to the bottom of the deck. Then, ＜Save＞."
+    when: on_deletion
     summary: "[On Deletion] Reveal top 3, play 1 Xros Heart Tamer, bottom rest. Then, Save."
     process:
       - reveal_top_deck:
           of: you
           count: 3
       - choose_from_reveal:
+          optional: false
           of: you
           filter:
             all_of:
@@ -59,7 +63,8 @@ effects:
           of: you
           destinations: [deck_bottom]
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞."
+    scope: inherited
     kind: grant_keyword
     active_when:
       all_of:

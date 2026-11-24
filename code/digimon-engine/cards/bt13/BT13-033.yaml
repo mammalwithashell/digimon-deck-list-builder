@@ -57,6 +57,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: thomas
           filter: { kind: tamer, name_is: "Thomas H. Norstein" }
           prompt: "Return Thomas H. Norstein to hand"
@@ -66,10 +67,12 @@ alt_paths:
 
 effects:
   # ─── [When Digivolving] bounce 1, then memory per 4 opponent hand cards ────
-  - when: when_digivolving
+  - text: "[When Digivolving] Return 1 of your opponent's Digimon to the hand. Then, gain 1 memory for every 4 cards in your opponent's hand."
+    when: when_digivolving
     summary: "[When Digivolving] Return 1 of your opponent's Digimon to the hand. Then, gain 1 memory for every 4 cards in your opponent's hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: bounced
           filter: { kind: digimon }
           prompt: "Return 1 of your opponent's Digimon to the hand"
@@ -84,7 +87,8 @@ effects:
               - 4
 
   # ─── [When Attacking] blind-return opponent hand down to 8 → unsuspend ─────
-  - when: when_attacking
+  - text: "[When Attacking] If your opponent has 9 or more cards in their hand, by choosing cards in your opponent's hand without looking and returning them to the bottom of the deck so that 8 remain, unsuspend this Digimon."
+    when: when_attacking
     optional: true
     outer_prompt: true
     condition:

@@ -27,6 +27,7 @@ effects:
     summary: "De-Digivolve 2 an opponent's Digimon; then during an attack, a breeder may evolve into a Lv.6 or lower Chronicle from hand or trash for free"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: de_digivolve_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -73,13 +74,15 @@ effects:
     summary: "[All Turns][Once Per Turn] When security stacks are removed from, delete 1 opponent Digimon with the lowest DP"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lowest_dp_target
           selector: lowest_dp
           filter: { kind: digimon }
           prompt: "Delete 1 opponent Digimon with the lowest DP"
       - delete_permanent: { target: lowest_dp_target }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If this Digimon is [Alphamon: Ouryuken], trash your opponent's top security card."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition: { name_is: "Alphamon: Ouryuken" }

@@ -76,6 +76,7 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Composite"
@@ -101,7 +102,8 @@ effects:
   #
   # "By deleting 1 of your Digimon, delete 1 of your opponent's level 3
   # Digimon, 1 of their level 4 Digimon, and 1 of their level 5 Digimon."
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] By deleting 1 of your Digimon, delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon"
     process:
@@ -118,6 +120,7 @@ effects:
       # candidate at that level exists — matching DCGO's per-level
       # HasMatchConditionPermanent guard with no explicit `if` needed.
       - select_opponent_permanent:
+          optional: false
           bind_as: opp_l3
           filter:
             all_of:
@@ -126,6 +129,7 @@ effects:
           prompt: "Delete 1 of your opponent's level 3 Digimon"
       - delete_permanent: { target: opp_l3 }
       - select_opponent_permanent:
+          optional: false
           bind_as: opp_l4
           filter:
             all_of:
@@ -134,6 +138,7 @@ effects:
           prompt: "Delete 1 of your opponent's level 4 Digimon"
       - delete_permanent: { target: opp_l4 }
       - select_opponent_permanent:
+          optional: false
           bind_as: opp_l5
           filter:
             all_of:
@@ -146,7 +151,8 @@ effects:
   #
   # "By deleting 1 of your level 4 or lower purple or red Digimon, you may
   # play 1 [Machinedramon] from your trash without paying the cost."
-  - when: on_deletion
+  - text: "[On Deletion] By deleting 1 of your level 4 or lower purple or red Digimon, you may play 1 [Machinedramon] from your trash without paying the cost."
+    when: on_deletion
     optional: true
     summary: "[On Deletion] By deleting 1 of your level 4 or lower purple or red Digimon, you may play 1 [Machinedramon] from trash free"
     process:

@@ -9,20 +9,24 @@ traits: [Composite, Xros Heart, Blue Flare]
 attribute: Data
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
     summary: "<Alliance>"
 
-  - kind: grant_keyword
+  - text: "＜Reboot＞"
+    kind: grant_keyword
     keyword: Reboot
     summary: "<Reboot>"
 
-  - kind: grant_keyword
+  - text: "＜Material Save 4＞"
+    kind: grant_keyword
     keyword: MaterialSave
     value: 4
     summary: "<Material Save 4>"
 
-  - when: on_play
+  - text: "[On Play] For each color in this Digimon's digivolution cards, all of your opponent's Digimon get -1000 DP for the turn. Then, you may play 1 [ShootingStarmon] from under your Tamers without paying the cost."
+    when: on_play
     summary: "[On Play] Opponent Digimon -1000 DP per source color; may play ShootingStarmon under your Tamers"
     process:
       - add_modifier:
@@ -49,7 +53,8 @@ effects:
                 source_refs: shooting
                 cost_delta: free
 
-  - when: when_attacking
+  - text: "[When Attacking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
+    when: when_attacking
     summary: "[When Attacking] Delete 1 opponent Digimon with DP <= this Digimon"
     condition:
       any_permanent:
@@ -58,6 +63,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

@@ -108,7 +108,8 @@ alt_paths:
 
 effects:
   # ─── Clause 1 — [When Digivolving] place Hybrid/Hero as bottom source ────────
-  - when: when_digivolving
+  - text: "[When Digivolving] You may place 1 [Hybrid] or [Hero] trait Digimon card from your hand or trash as this Digimon's bottom digivolution card or under any of your red Tamers with inherited effects."
+    when: when_digivolving
     optional: true
     summary: "[When Digivolving] You may place 1 [Hybrid]/[Hero] Digimon from hand or trash as bottom source under self or a red Tamer with inherited effects"
     process:
@@ -168,11 +169,13 @@ effects:
                       target: dest
 
   # ─── Clause 2 — [When Attacking] digivolve into red Hybrid/Hero, cost -1 ────
-  - when: when_attacking
+  - text: "[When Attacking] This Digimon may digivolve into a red [Hybrid] or [Hero] trait Digimon card in the hand with the digivolution cost reduced by 1."
+    when: when_attacking
     optional: true
     summary: "[When Attacking] This Digimon may digivolve into a red [Hybrid]/[Hero] Digimon in hand, cost -1"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -196,7 +199,8 @@ effects:
           ignore_requirements: false
 
   # ─── Clause 3 — Inherited [Your Turn] +2000 DP self-aura ────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

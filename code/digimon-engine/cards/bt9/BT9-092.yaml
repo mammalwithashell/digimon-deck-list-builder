@@ -5,13 +5,14 @@ color: [white]
 cost: 2
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [X Antibody] trait and 1 such Option card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 X Antibody Digimon and 1 X Antibody Option"
     process:
       # collapse §2.4 parity fixture — the reveal→pick→bottom searcher idiom as
       # one `reveal_search`. Disjoint digimon/option bucket filters make the
       # cross-bucket de-dup a no-op, so this is behaviorally identical to the
-      # former two-`select_reveal` longhand. Each bucket stays an optional pick.
+      # former two-`select_reveal` longhand. Each bucket is a mandatory pick when an eligible card is revealed.
       - reveal_search:
           of: you
           count: 3
@@ -22,7 +23,7 @@ effects:
                   - trait_has: "X Antibody"
               to: hand
               max: 1
-              optional: true
+              optional: false
               prompt: "Add 1 X Antibody Digimon card"
             - filter:
                 all_of:
@@ -30,11 +31,12 @@ effects:
                   - trait_has: "X Antibody"
               to: hand
               max: 1
-              optional: true
+              optional: false
               prompt: "Add 1 X Antibody Option card"
           remainder: bottom
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
@@ -61,7 +63,8 @@ effects:
   # tests/dsl/phase3d_event_context.rs `digivolve_event_can_match_same_level
   # _x_antibody_transition`), and (c) a simpler body (gain_memory + draw).
   # The optional `optional: true` is the printed "you may".
-  - when: on_digivolve
+  - text: "[Your Turn] When any of your Digimon digivolve into a same-level Digimon with the [X Antibody] trait, by suspending this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: on_digivolve
     active_when: { your_turn: true }
     optional: true
     summary: "[Your Turn] When your Digimon digivolves into a same-level [X Antibody] Digimon, by suspending this Tamer gain 1 memory and draw 1"

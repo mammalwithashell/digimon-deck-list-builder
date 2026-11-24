@@ -18,11 +18,12 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Shambala }
+    from: { any_color: true, level_eq: 2, trait_has: Shambala }
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [Puppet] or [TB] trait from your hand, ＜Draw 2＞."
+    when: on_play
     condition:
       count_gte:
         filter:
@@ -57,6 +58,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

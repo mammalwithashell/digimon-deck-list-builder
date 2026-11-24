@@ -69,7 +69,7 @@ alt_paths:
     cost: 1
   # Printed alt evo box: "Digivolve Lv.2 w/[Royal Base] trait: Cost 0".
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Royal Base }
+    from: { any_color: true, level_eq: 2, trait_has: Royal Base }
     cost: 0
 
 effects:
@@ -85,7 +85,8 @@ effects:
     grant_keyword: { keyword: Reboot }
     summary: "{Security}[Opponent's Turn] All of your [Royal Base] trait Digimon gain <Reboot>"
 
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] Add your top face-down security card to the hand. Then, you may place 1 [Royal Base] trait Digimon card from your hand face up as the bottom security card."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] Add your top face-down security card to the hand. Then, you may place 1 [Royal Base] trait Digimon card from your hand face up as the bottom security card"
     process:
       - add_top_face_down_security_to_hand: { of: you }
@@ -110,7 +111,8 @@ effects:
                       position: bottom
                       face_up: true
 
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     active_when: { all_turns: true }
     target: {}

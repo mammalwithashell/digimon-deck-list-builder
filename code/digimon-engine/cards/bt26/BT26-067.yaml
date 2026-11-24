@@ -38,7 +38,7 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "TS" }
+    from: { any_color: true, level_eq: 3, trait_has: "TS" }
     cost: 2
 
 effects:
@@ -48,6 +48,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
@@ -56,7 +57,8 @@ effects:
 
   # ─── [End of Your Turn] with a blue/yellow Digimon, bottom-deck this Digimon
   #     → may play 1 red/blue [Iliad] Digimon from trash at -4 ────────────────
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] If you have a blue or yellow Digimon, by returning this Digimon to the bottom of the deck, you may play 1 red or blue Digimon card with the [Iliad] trait from your trash with the cost reduced by 4."
+    when: end_of_your_turn
     optional: true
     condition:
       any_field_permanent:
@@ -86,6 +88,7 @@ effects:
           cost_delta: { reduce: 4 }
 
   # ─── Inherited <Retaliation> ───────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation

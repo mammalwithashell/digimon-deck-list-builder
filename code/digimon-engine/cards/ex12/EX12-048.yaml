@@ -20,6 +20,7 @@ alt_paths:
     cost: 5
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 5
       any_of:
         - in_text_contains: Gokuumon
@@ -58,6 +59,7 @@ effects:
     summary: "[On Play][When Digivolving] Opponent Digimon gets -8000 DP and -3000 per level 5 source; then this may attack"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get DP minus"

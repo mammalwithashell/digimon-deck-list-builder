@@ -67,7 +67,7 @@ alt_paths:
     cost: 2
   # Alt-digivolution: Lv.3 with [TS] trait / cost 2 (printed digivolve box).
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
 
 effects:
@@ -78,7 +78,8 @@ effects:
       - draw: { of: you, count: 1 }
 
   # ─── Clause 2 — [Your Turn] red played/digivolve → digivolve into Crescemon (trash), cost -1 ─
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When your Digimon are played or digivolve, if any of them are red, this Digimon may digivolve into [Crescemon] in the trash with the cost reduced by 1."
+    when: [on_enter_field_anyone, on_digivolve]
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon are played/digivolve and any are red, this Digimon may digivolve into [Crescemon] in the trash with cost -1"
@@ -88,6 +89,7 @@ effects:
       event_target_owner: you
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -102,6 +104,7 @@ effects:
           ignore_requirements: false
 
   # ─── Inherited <Jamming> ───────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Jamming

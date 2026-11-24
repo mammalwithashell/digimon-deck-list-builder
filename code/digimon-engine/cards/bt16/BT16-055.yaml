@@ -42,6 +42,7 @@ effects:
     summary: "At 3 or more security, 1 of your Digimon can't have DP reduced or be De-Digivolved by opponent effects until opponent's turn ends"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to protect from DP reduction and De-Digivolve"
@@ -54,6 +55,7 @@ effects:
     summary: "At 3 or fewer security, 1 of your Digimon gains Blocker and Reboot until your opponent's turn ends"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain Blocker and Reboot"
@@ -78,7 +80,8 @@ effects:
   # lowering to an omitted target (both compile to the default predicate,
   # which `lower_aura.rs` treats as self); stated explicitly for the
   # validator's "aura requires target or target_player" intent check.
-  - scope: inherited
+  - text: "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true, rules_text_contains: "[Pulsemon]" }

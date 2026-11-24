@@ -18,6 +18,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - none_of:
@@ -39,10 +40,12 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Suspend 1 opponent Digimon or Tamer; then 1 opponent Digimon or Tamer can't unsuspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: suspend_target
           filter:
             any_of:
@@ -51,6 +54,7 @@ effects:
           prompt: "Suspend 1 opponent Digimon or Tamer"
       - suspend: { target: suspend_target }
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:
@@ -63,7 +67,8 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
 
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+    when: on_deletion
     optional: true
     summary: "[On Deletion][OPT] Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash free"
     process:
@@ -86,7 +91,8 @@ effects:
           prompt: "Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash without paying the cost"
       - play_from_trash_free: { of: you, hand_index: revive_pick }
 
-  - scope: inherited
+  - text: "[On Deletion] You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your trash without paying the cost."
+    scope: inherited
     when: on_deletion
     optional: true
     summary: "[Inherited][On Deletion][OPT] Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash free"

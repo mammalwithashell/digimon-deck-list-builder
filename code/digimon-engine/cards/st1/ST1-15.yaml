@@ -33,7 +33,8 @@ effects:
             - delete_permanent: { target: target }
 
   # [Security] Activate this card's [Main] effect.
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effect."
+    when: on_security
     condition:
       any_permanent:
         of: opponent

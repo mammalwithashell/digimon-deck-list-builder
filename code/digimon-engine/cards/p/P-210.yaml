@@ -26,7 +26,8 @@ cost: 3
 traits: [TS]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -36,7 +37,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_play
+  - text: "[On Play] You may return 1 Digimon card with the [TS] trait from your trash to the hand."
+    when: on_play
     summary: "[On Play] You may return 1 Digimon card with the [TS] trait from your trash to the hand"
     process:
       - select_trash:
@@ -50,7 +52,8 @@ effects:
           prompt: "You may return 1 Digimon card with the [TS] trait from your trash to the hand"
       - add_to_hand_from_trash: { of: you, card: ts_pick }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

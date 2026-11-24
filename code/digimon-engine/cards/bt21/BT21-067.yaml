@@ -43,6 +43,7 @@ alt_paths:
   # [Digivolve] Lv.3 w/[Gabumon] in name or w/[ADVENTURE] trait: Cost 2.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - any_of:
@@ -52,13 +53,15 @@ alt_paths:
 
 effects:
   # ─── [Security] At the end of the battle, play this card for free ─────────
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
   # ─── [On Play][When Digivolving] you may return 1 ADVENTURE Digimon ───────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"
     process:
@@ -81,6 +84,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

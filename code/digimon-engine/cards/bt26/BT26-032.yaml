@@ -94,7 +94,8 @@ alt_paths:
 
 effects:
   # ─── <Alliance> ────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
 
   # ─── <Succession ([Ceresmon])> ────────────────────────────────────────────────
@@ -105,7 +106,8 @@ effects:
   # ─── [When Digivolving] opp suspended Digimon -5000 DP until their turn
   #     ends; then by suspending 1 Digimon, on your turn, may play/use 1
   #     [Vegetation]/[TS] card from hand at cost -5 ────────────────────────
-  - when: when_digivolving
+  - text: "[When Digivolving] All of your opponent's suspended Digimon get -5000 DP until their turn ends. Then, by suspending 1 Digimon, if it's your turn, you may play or use 1 [Vegetation] or [TS] trait card from your hand with the cost reduced by 5."
+    when: when_digivolving
     summary: "[When Digivolving] All of your opponent's suspended Digimon get -5000 DP until their turn ends. Then, by suspending 1 Digimon, if it's your turn, you may play or use 1 [Vegetation] or [TS] trait card from your hand with the cost reduced by 5"
     process:
       - add_modifier:

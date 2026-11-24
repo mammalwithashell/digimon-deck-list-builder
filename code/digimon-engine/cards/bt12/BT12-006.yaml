@@ -31,7 +31,8 @@ traits: [CRT]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[On Deletion] If this Digimon has ＜Save＞ in its text, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: on_deletion
     condition:
       all_of:

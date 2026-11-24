@@ -33,7 +33,8 @@ traits: [TS]
 
 effects:
   # ─── [Start of Your Main Phase] trash 1 [TS] hand card → Draw 1 + 1 memory ─
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 [TS] trait card from your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter:
@@ -59,7 +60,8 @@ effects:
 
   # ─── [Opponent's Turn] When an opp Digimon attacks, by bottom-decking 1 own
   #     [TS] Tamer, may change the attack target to 1 own [TS] Digimon ───────
-  - when: on_opponent_attack
+  - text: "[Opponent's Turn] When one of your opponent's Digimon attacks, by returning 1 of your [TS] trait Tamers to the bottom of the deck, you may change the attack target to 1 of your Digimon with the [TS] trait."
+    when: on_opponent_attack
     optional: true
     active_when: { opponents_turn: true }
     summary: "[Opponent's Turn] When an opponent's Digimon attacks, by returning 1 of your [TS] Tamers to the bottom of the deck, you may change the attack target to 1 of your [TS] Digimon"
@@ -90,9 +92,10 @@ effects:
                   - if:
                       condition: { binding_present: new_defender }
                       then:
-                        - redirect_attack_target: { new_target: new_defender }
+                        - redirect_attack_target: { optional: false, new_target: new_defender }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

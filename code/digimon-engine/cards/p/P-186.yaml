@@ -62,6 +62,7 @@ alt_paths:
 
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - name_contains: "WarGrowlmon"
@@ -111,12 +112,13 @@ effects:
   # Player selects any Digimon (either player's) with dp_gte:13000. Selection
   # is optional so if no target exists the binding is absent and the
   # `binding_absent` branch triggers recovery.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 Digimon with 13000 DP or more. If this effect didn't delete, ＜Recovery +1 ≪Deck≫＞."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 Digimon ≥13000 DP; if no deletion, Recovery +1"
     process:
       - select_any_permanent:
           bind_as: del_target
-          optional: true
+          optional: false
           filter:
             all_of:
               - kind: digimon

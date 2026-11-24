@@ -158,7 +158,8 @@ effects:
   # face-up permanent and a Tamer is on the controller's field. Card-scoped
   # via `target: { card_number_is: "ST22-08" }` — mirrors DCGO
   # IgnoreColorConditionClass(cardCondition: cardSource == card).
-  - kind: flood_gate
+  - text: "While you have a Tamer, you can ignore this card's color requirements."
+    kind: flood_gate
     scope: face_up
     active_when:
       any_field_permanent:
@@ -173,10 +174,12 @@ effects:
   # canNoSelect: false). The lowest-DP filter offers only the lowest-DP
   # opponent Digimon (all tied lowest-DP Digimon on a tie). "Then, add this
   # card to the hand" routes ST22-08 from pending-security to the hand.
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, add this card to the hand."
+    when: on_security
     summary: "[Security] Delete opponent's lowest-DP Digimon, then add this card to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -209,6 +212,7 @@ effects:
       # "1 of your Digimon" — the DP comparator (mandatory pick, DCGO
       # canNoSelect: false). Bound as `ally` for the dp_lte formula below.
       - select_own_permanent:
+          optional: false
           bind_as: ally
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon (the DP comparator)"
@@ -216,6 +220,7 @@ effects:
       # your Digimon" — only opponent Digimon with DP <= the chosen ally's
       # effective DP are eligible (binding_dp formula).
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

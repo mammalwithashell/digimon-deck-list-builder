@@ -46,15 +46,16 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, name_is: "Wanyamon" }
+    from: { any_color: true, level_eq: 3, name_is: "Wanyamon" }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 2, trait_has: "DATA SQUAD" }
     cost: 0
 
 effects:
   # ─── Clause 0: [On Play] reveal 3, add 2 by filters, bottom the rest ─────────
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Thomas H. Norstein] or card with the [DATA SQUAD] trait and 1 card with [Gaogamon] in its name among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal top 3; add 1 [Thomas H. Norstein]/[DATA SQUAD] and 1 [Gaogamon]-named; bottom the rest"
     process:
       - reveal_top_deck:
@@ -65,14 +66,14 @@ effects:
           from: revealed
           buckets:
             - bind_as: pick_squad
-              min: 0
+              min: 1
               max: 1
               filter:
                 any_of:
                   - name_is: "Thomas H. Norstein"
                   - trait_has: "DATA SQUAD"
             - bind_as: pick_gaoga
-              min: 0
+              min: 1
               max: 1
               filter:
                 name_contains: "Gaogamon"
@@ -83,7 +84,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Clause 1: Inherited [When Attacking][OPT] both players draw 1 ───────────
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Both players ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][OPT] Both players draw 1"

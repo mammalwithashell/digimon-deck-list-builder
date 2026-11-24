@@ -59,6 +59,7 @@ effects:
     summary: "[Start of Your Main Phase] 1 of your opponent's Digimon gains \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\" until the end of their turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: debuff_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to gain \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\""
@@ -73,7 +74,8 @@ effects:
           body:
             - lose_memory: 2
 
-  - kind: cost_reduction
+  - text: "[Your Turn][Once Per Turn] When this Digimon would digivolve, if you have a green Tamer, reduce the digivolution cost by 1."
+    kind: cost_reduction
     scope: inherited
     reduction_timing: before_pay_cost
     active_when:

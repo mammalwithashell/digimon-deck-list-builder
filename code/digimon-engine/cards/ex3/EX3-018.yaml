@@ -21,9 +21,11 @@ alt_paths:
     from: { name_contains: Dracomon }
     cost: 2
 effects:
-  - kind: grant_keyword
+  - text: "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)"
+    kind: grant_keyword
     keyword: Evade
-  - kind: aura
+  - text: "[All Turns] While this Digimon has [Dramon] or [Examon] in its name, it gains ＜Evade＞. (When this Digimon would be deleted, you may suspend it to prevent that deletion.)"
+    kind: aura
     scope: inherited
     active_when:
       any_of:

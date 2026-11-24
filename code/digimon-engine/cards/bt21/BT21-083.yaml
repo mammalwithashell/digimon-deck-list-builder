@@ -6,10 +6,13 @@ cost: 4
 traits: [General, Xros Heart, Hero]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By placing 1 Digimon card with the [Xros Heart], [Blue Flare] or [Hero] trait from your hand under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    optional: true
     summary: "[Start of Main] Place 1 Xros Heart/Blue Flare/Hero Digimon from hand under this Tamer, draw 1, gain 1 memory"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: stash
           filter:
@@ -26,7 +29,8 @@ effects:
       - draw: { of: you, count: 1 }
       - gain_memory: 1
 
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When your Digimon are played or digivolve, if any of them have the [Xros Heart] or [Hero] trait, by suspending this Tamer, one of them may attack."
+    when: [on_enter_field_anyone, on_digivolve]
     optional: true
     active_when: { your_turn: true }
     condition:
@@ -46,7 +50,8 @@ effects:
           optional: true
           ignore_summoning_sickness: true
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

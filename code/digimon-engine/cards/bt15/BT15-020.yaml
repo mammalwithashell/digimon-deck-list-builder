@@ -54,7 +54,8 @@ alt_paths:
 
 effects:
   # ─── Clause (a): [Start of Your Main Phase] ─────────────────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] 1 of your Digimon gains ＜Blocker＞ until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞."
+    when: start_of_your_main_phase
     summary: "[SoMP] 1 of your Digimon gains Blocker until EoOT; then draw 1 if Matt Ishida tamer"
     process:
       # Sub-clause (a1): grant Blocker to a chosen own Digimon.
@@ -68,6 +69,7 @@ effects:
               kind: digimon
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: tgt
                 filter: { kind: digimon }
                 prompt: "Choose 1 of your Digimon to gain Blocker"

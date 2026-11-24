@@ -29,7 +29,8 @@ effects:
           prompt: "Suspend 1 of your Marcus Damon Tamers"
       - suspend: { target: marcus }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
@@ -58,6 +59,7 @@ effects:
     summary: "[All Turns][OPT] When this Tamer suspends, 1 own Digimon gains Piercing and +3000 DP; then 1 opponent Digimon gets -3000 DP"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain Piercing and +3000 DP for the turn"
@@ -70,6 +72,7 @@ effects:
           value: 3000
           expiry: end_of_turn
       - select_opponent_permanent:
+          optional: false
           bind_as: debuff_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -3000 DP for the turn"

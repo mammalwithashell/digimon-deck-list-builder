@@ -19,7 +19,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing 1 card in your hand, you may return 1 Digimon card with the [Puppet] trait from your trash to the hand."
+    when: on_play
     optional: true
     summary: "By trashing 1 card in hand, you may return 1 Puppet Digimon from trash to hand"
     condition:
@@ -69,7 +70,8 @@ effects:
   #   - player picks an OTHER Digimon: `sacrifice` is present → that Digimon is
   #     deleted and the attack ends. The EX9-024 carrier always survives.
   # Mirrors the BT16-028 `select_*` → cost → `if binding_present` payoff idiom.
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     active_when: { opponents_turn: true }

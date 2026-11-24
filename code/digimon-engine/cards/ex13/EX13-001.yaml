@@ -22,7 +22,8 @@ cost: 0
 traits: [Lesser]
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your red Tamers are played, this Digimon may digivolve into a Digimon card with [Growlmon] or [Gallantmon] in its name in the hand with the cost reduced by 2."
+    scope: inherited
     when: on_ally_played
     once_per_turn: true
     active_when: { your_turn: true }

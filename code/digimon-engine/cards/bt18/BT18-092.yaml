@@ -199,7 +199,8 @@ traits: [LIBERATOR]
 
 effects:
   # ─── Clause 1: [Start of Your Main Phase] trash 1 Vemmon -> draw 1 + gain 1 memory ─
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 [Vemmon] in your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     optional: true
     summary: "[Start of Your Main Phase] By trashing 1 [Vemmon] in hand, Draw 1 and gain 1 memory"
     process:
@@ -213,14 +214,15 @@ effects:
           optional: true
           cost: true
           filter:
-            name_contains: "Vemmon"
+            name_is: "Vemmon"
           prompt: "Trash 1 [Vemmon] in your hand to draw 1 and gain 1 memory"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - gain_memory: 1
       - draw: { of: you, count: 1 }
 
   # ─── Clause 2: [Your Turn] ally attacks -> suspend + return 2 Vemmon -> De-Digivolve 1 opp Digimon ─
-  - when: on_ally_attack
+  - text: "[Your Turn] When any of your Digimon attack, by suspending this Tamer and returning 2 [Vemmon] from those Digimon's digivolution cards to the bottom of the deck, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    when: on_ally_attack
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon attacks, by suspending this Tamer and returning 2 [Vemmon] from that Digimon's digivolution cards to the bottom of the deck, De-Digivolve 1 an opponent's Digimon"
@@ -251,12 +253,13 @@ effects:
           min: 2
           max: 2
           filter:
-            name_contains: "Vemmon"
+            name_is: "Vemmon"
           prompt: "Return 2 [Vemmon] from the attacking Digimon's digivolution cards to the bottom of the deck"
       - return_selected_sources_to_deck:
           source_refs: vemmon_sources
           position: bottom
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter: { kind: digimon }
           prompt: "Select 1 of your opponent's Digimon to De-Digivolve 1"
@@ -266,7 +269,8 @@ effects:
           stop_at_level: 3
 
   # ─── Clause 3: [Security] Play this card without paying the cost ────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

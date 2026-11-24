@@ -43,6 +43,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: "Glowing Dawn"
@@ -50,7 +51,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] Reveal 3; add 1 Glowing Dawn + 1 yellow BEATBREAK; rest bottom ─
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Glowing Dawn] trait card and 1 yellow [BEATBREAK] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add one [Glowing Dawn] and one yellow [BEATBREAK] card to hand; rest to bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -75,7 +77,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Inherited <Barrier> ───────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier
     summary: "Inherited <Barrier>"

@@ -6,7 +6,8 @@ color: [yellow]
 traits: [Lesser]
 form: In-Training
 effects:
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When an opponent's Digimon is deleted by dropping to 0 DP, this Digimon gets +1000 DP for the turn."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     active_when: { your_turn: true }

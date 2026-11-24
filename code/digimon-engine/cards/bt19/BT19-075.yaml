@@ -121,6 +121,7 @@ effects:
     summary: "[All Turns] By deleting 1 of your Composite Digimon, this Digimon doesn't leave"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: composite_cost
           filter:
             all_of:

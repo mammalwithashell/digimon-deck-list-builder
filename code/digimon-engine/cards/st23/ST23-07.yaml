@@ -40,13 +40,14 @@ attribute: Data
 # Alt-digivolve: Lv.3 with the [Glowing Dawn] trait / cost 2.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 3, trait_has: "Glowing Dawn" }
     cost: 2
 
 effects:
   # ─── [On Play][When Digivolving] if <=1 Tamer, may play 1 [Glowing Dawn] Tamer
   #     from hand without paying the cost ──────────────────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with the [Glowing Dawn] trait from your hand without paying the cost."
+    when: [on_play, when_digivolving]
     active_when:
       count_lte:
         filter:
@@ -79,7 +80,8 @@ effects:
           hand_index: tamer_pick
 
   # ─── Inherited <Piercing> ──────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Piercing
     summary: "Inherited <Piercing>"

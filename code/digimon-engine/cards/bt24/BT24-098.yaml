@@ -67,12 +67,14 @@ effects:
     process:
       - draw: { of: you, count: 2 }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_a
           filter: {}
           prompt: "Trash 1 of 2 cards in your hand"
       - trash_from_hand_by_index: { of: you, hand_index: trash_a }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_b
           filter: {}
@@ -82,7 +84,8 @@ effects:
 
   # ─── [Your Turn] own [Titan] Digimon played → <Delay>: if opp has 5+
   #     memory, may play 1 level 5 or lower [Titan] Digimon from trash free ─
-  - kind: delay
+  - text: "[Your Turn] When any of your [Titan] trait Digimon are played, ＜Delay＞. ・If your opponent has 5 or more memory, you may play 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost."
+    kind: delay
     trigger: on_ally_played
     active_when:
       all_of:
@@ -109,7 +112,8 @@ effects:
 
   # ─── [Security] may play 1 level 4 or lower [Titan] Digimon from hand or
   #     trash free; then add this card to the hand ──────────────────────────
-  - scope: inherited
+  - text: "[Security] You may play 1 level 4 or lower [Titan] trait Digimon card from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] You may play 1 level 4 or lower [Titan] Digimon card from your hand or trash without paying the cost. Then, add this card to the hand"

@@ -8,7 +8,8 @@ color: [purple, yellow]
 cost: 4
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory."
+    when: start_of_your_main_phase
     optional: true
     summary: "By trashing 1 Hybrid or Ten Warriors card from hand, gain 1 memory"
     condition:
@@ -34,7 +35,8 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: paid }
       - gain_memory: 1
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand."
+    scope: inherited
     when: when_attacking
     optional: true
     once_per_turn: true
@@ -60,7 +62,8 @@ effects:
           prompt: "Return 1 Hybrid or Ten Warriors card from trash to hand"
       - add_to_hand_from_trash: { of: you, card: recovered }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "Play this card without paying its cost"
     process:
       - play_from_security: {}

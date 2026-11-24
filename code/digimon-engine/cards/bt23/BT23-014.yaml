@@ -36,7 +36,7 @@ alt_paths:
     cost: 3
   # Alt-digivolve: Lv.5 with [CS] trait / cost 3 (from xros_req data).
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
     ignore_requirements: true
 
@@ -67,7 +67,8 @@ effects:
   # and this card's controller's effect that plays from the locked player's trash
   # is allowed (Dragomon EX5-060 is the driver; G-ENGINE-TRASH-PLAY-LOCK-SCOPE,
   # docs/RUST_ENGINE_GAPS.md).
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash."
+    when: [on_play, when_digivolving]
     summary: "Until opp's turn ends, their effects can't play Digimon/Tamers from trash"
     process:
       - add_player_modifier:
@@ -92,10 +93,12 @@ effects:
   # (CR 4.3 4-28-1) also occupies a battle-area slot and must not be counted
   # (DCGO BT23_014.cs: `.Filter(x => x.IsDigimon || x.IsTamer).Count * 2000`). The `dp_lte`
   # formula is evaluated per-candidate by `eval_permanent_fields`.
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum."
+    when: [on_play, when_digivolving, when_attacking]
     summary: "Delete 1 opp Digimon (≤8000+2000×opp_count DP)"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

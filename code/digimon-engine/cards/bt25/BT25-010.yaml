@@ -55,7 +55,7 @@ attribute: Free
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: TS }
+    from: { any_color: true, level_eq: 2, trait_has: TS }
     cost: 0
   - kind: digivolve
     from: { name_is: Poromon }
@@ -63,7 +63,8 @@ alt_paths:
 
 effects:
   # ─── [Your Turn] digivolve-into-trait cost reduction (self-source only) ─────
-  - kind: cost_reduction
+  - text: "[Your Turn] When this Digimon would digivolve into a Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits, reduce the cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when:
       all_of:
@@ -87,7 +88,8 @@ effects:
     summary: "[Your Turn] When this digivolves into Avian/Bird/Beast/Animal/Sovereign (not Sea Animal), reduce cost by 1"
 
   # ─── Inherited [Your Turn] +2000 DP ────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

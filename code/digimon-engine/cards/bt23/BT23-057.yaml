@@ -63,13 +63,15 @@ alt_paths:
     from: { level_eq: 5, color_is: red }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
 
 
 effects:
   # ─── Cost reduction: return 3 named trash cards to deck top/bottom, −5 ───────
-  - kind: cost_reduction
+  - text: "When this card would be played, by returning 3 cards with [Huckmon], [Sistermon] or [Jesmon] in their names from your trash to the top or bottom of the deck, reduce the play cost by 5."
+    kind: cost_reduction
+    optional: true
     reduction_timing: before_pay_cost
     when_playing_this: true
     amount: 5
@@ -112,7 +114,8 @@ effects:
                 destination: bottom
 
   # ─── [On Play][When Digivolving]: may play Hinukamuy token, then delete ──────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may play 1 [Hinukamuy] Token. (Digimon/White/6000 DP/＜Alliance＞＜Reboot＞＜Blocker＞) Then, delete 1 of your opponent's Digimon with a play cost of 6 or less. For each of your other Digimon, add 3 to this effect's play cost maximum."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may play 1 Hinukamuy Token; then delete 1 opp Digimon (cost <= 6 + 3 per other own Digimon)"
     process:
       # "You may play 1 [Hinukamuy] Token" — surface the may/decline so PASS is
@@ -131,6 +134,7 @@ effects:
       #  For each of your other Digimon, add 3 to this effect's play cost
       #  maximum." Cap = 6 + 3 * (own battle-area Digimon other than this card).
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

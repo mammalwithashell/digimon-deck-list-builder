@@ -55,6 +55,7 @@ traits: [Reptile, Glowing Dawn, BEATBREAK]
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Glowing Dawn"
@@ -62,7 +63,8 @@ alt_paths:
 
 effects:
   # ─── [On Play][When Digivolving] You may suspend 1 opponent Digimon ────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
@@ -78,7 +80,8 @@ effects:
 
   # ─── [Your Turn][Once Per Turn] When you would use a [Glowing Dawn] Option,
   #     by trashing a bottom face-down card under a Tamer, reduce the cost by 3 ─
-  - kind: cost_reduction
+  - text: "[Your Turn] [Once Per Turn] When you would use an Option card with the [Glowing Dawn] trait, by trashing the bottom face-down card under any of your Tamers, reduce the cost by 3."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
     # "would USE": an Option-use cost only (CR 4.3 9-1-1; DCGO HasUseCost,
@@ -91,11 +94,12 @@ effects:
     once_per_turn: true
     amount: 3
     pay_cost:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
     summary: "[Your Turn][Once Per Turn] When you would use a [Glowing Dawn] Option card, by trashing a bottom face-down card under a Tamer, reduce the cost by 3"
 
   # ─── Inherited <Piercing> ──────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Piercing
     summary: "Inherited <Piercing>"

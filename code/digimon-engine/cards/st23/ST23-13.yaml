@@ -53,7 +53,8 @@ traits: [Glowing Dawn, BEATBREAK]
 effects:
   # ─── [SOMP][On Play] may place top deck card FD under self; then if opp has a
   #     Digimon, gain 1 memory ─────────────────────────────────────────────────
-  - when: [on_play, start_of_your_main_phase]
+  - text: "[Start of Your Main Phase] [On Play] You may place the top card of your deck face down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory."
+    when: [on_play, start_of_your_main_phase]
     summary: "[SOMP][On Play] You may place the top deck card face down under this Tamer; then if your opponent has a Digimon, gain 1 memory"
     process:
       # "You may place the top card of your deck face down under this Tamer" —
@@ -91,7 +92,8 @@ effects:
 
   # ─── [Your Turn] on trash from under this Tamer → suspend self → 1 [Glowing
   #     Dawn] Digimon +3000 DP until opponent's turn ends ──────────────────────
-  - when: on_digivolution_card_trashed
+  - text: "[Your Turn] When effects trash cards from under this Tamer, by suspending this Tamer, 1 of your [Glowing Dawn] trait Digimon gets +3000 DP until your opponent's turn ends."
+    when: on_digivolution_card_trashed
     optional: true
     active_when:
       your_turn: true
@@ -101,6 +103,7 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:
@@ -113,7 +116,8 @@ effects:
           expiry: end_of_opponents_turn
 
   # ─── Inherited [Security] Play this card without paying the cost ───────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

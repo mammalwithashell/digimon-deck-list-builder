@@ -66,7 +66,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] By placing a blue level 3 Digimon card from your hand as the bottom digivolution card of 1 of your blue Digimon, this Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)"
+    when: when_digivolving
     summary: "[When Digivolving] By placing a blue Lv.3 Digimon card from hand as the bottom digivolution card of 1 of your blue Digimon, this Digimon gains <Jamming> for the turn"
     process:
       - select_hand:
@@ -82,6 +83,7 @@ effects:
           prompt: "You may place 1 blue level 3 Digimon card from your hand as the bottom digivolution card of 1 of your blue Digimon to have this Digimon gain <Jamming> for the turn"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: host
                 filter:
                   all_of:

@@ -22,7 +22,8 @@ effects:
   # condition: count_lte with tamer kind in battle_area ≤ 1 gates activation.
   # process: select_hand filtered to exact name "Close" → play_from_hand_free.
   # Pattern: identical shape to BT21-017 Dimetromon (same archetype, same clause).
-  - when: when_digivolving
+  - text: "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Close] from your hand without paying the cost."
+    when: when_digivolving
     optional: true
     summary: "If ≤1 Tamer, you may play 1 [Close] from hand without paying the cost"
     condition:
@@ -63,6 +64,7 @@ effects:
     summary: "When this source is trashed from a Mineral/Rock Digimon, delete an opponent Digimon cost 4 or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon, play_cost_lte: 4 }
           prompt: "Choose 1 opponent Digimon with play cost 4 or less"

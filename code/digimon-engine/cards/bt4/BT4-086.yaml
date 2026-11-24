@@ -42,12 +42,14 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Rush＞ (This Digimon can attack the turn it comes into play.)"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
 
   # ─── [On Play] you may delete 1 of your [Cerberusmon] to gain 9 memory ────
-  - when: on_play
+  - text: "[On Play] You may delete 1 of your [Cerberusmon] to gain 9 memory."
+    when: on_play
     condition:
       any_permanent:
         of: you

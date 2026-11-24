@@ -47,6 +47,7 @@ effects:
     summary: "[Main] Move all Digimon sources from a Xros Heart Digimon under a Tamer, then play Xros Heart from hand cost reduced by moved count"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: host
           # "1 of your [Xros Heart] trait Digimon" -- no source requirement
           # (printed text; DCGO BT21_092.cs:64-74 CanSelectDigimonCondition
@@ -59,6 +60,7 @@ effects:
               - trait_has: "Xros Heart"
           prompt: "Choose 1 Xros Heart Digimon whose Digimon digivolution cards go under a Tamer"
       - select_own_permanent:
+          optional: false
           bind_as: tamer
           filter: { kind: tamer }
           prompt: "Choose 1 Tamer to receive the source cards"
@@ -88,7 +90,8 @@ effects:
             reduce_fn:
               binding_value: moved_count
 
-  - when: on_security
+  - text: "[Security] You may play 1 [Xros Heart] trait card with a play cost of 5 or less from your hand or trash without paying the cost."
+    when: on_security
     summary: "[Security] Play 1 play-cost-5-or-less Xros Heart card from hand or trash without paying the cost"
     process:
       - select_union_zone:

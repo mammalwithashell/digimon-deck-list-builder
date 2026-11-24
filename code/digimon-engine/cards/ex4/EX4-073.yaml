@@ -195,6 +195,7 @@ alt_paths:
 
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 7
         - name_contains: "Omnimon"
@@ -242,6 +243,7 @@ effects:
       # Arm 1: <De-Digivolve 3> on 1 opp Digimon. Mandatory if a legal target
       # exists (DCGO canNoSelect: false, maxCount: Min(1, candidates)).
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon — De-Digivolve 3 (trash up to 3 sources, can't trash past Lv3)"
@@ -290,7 +292,8 @@ effects:
   #
   # `optional: true` mirrors DCGO `isOptional: true` / `canNoSelect: true` on
   # the source-select — the player may decline the whole clause (`min: 0`).
-  - when: when_attacking
+  - text: "[When Attacking] By trashing up to 3 level 6 or higher cards from this Digimon's digivolution cards, for each card trashed, activate the effect below. Then, if you trashed 3 cards, trash your opponent's top 2 security cards. ・Delete 1 of your opponent's Digimon or Tamers with the lowest play cost."
+    when: when_attacking
     optional: true
     summary: "[When Attacking] Trash up to 3 Lv6+ sources; per-trash delete lowest-cost opp Digimon/Tamer; if 3 trashed, trash 2 opp security"
     process:
@@ -311,6 +314,7 @@ effects:
                 bind_as: _trashed_source
                 body:
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: low_cost
                       filter:
                         any_of:

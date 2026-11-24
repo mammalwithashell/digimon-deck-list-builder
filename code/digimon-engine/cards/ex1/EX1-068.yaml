@@ -55,7 +55,8 @@ effects:
   # `SetIsSecurityEffect(true)`. No canNoSelect — mandatory ([Security]
   # effects are not opt-out under the official rules). Identical shape to
   # ST2-13 Hammer Spark Clause 2 (`when: on_security` + `gain_memory: 2`).
-  - when: on_security
+  - text: "[Security] Gain 2 memory."
+    when: on_security
     summary: "[Security] Gain 2 memory"
     process:
       - gain_memory: 2

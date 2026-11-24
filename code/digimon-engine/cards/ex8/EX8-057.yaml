@@ -35,13 +35,15 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: NSo
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [NSo] trait and 1 card with the [Fallen Angel] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [NSo] card and 1 [Fallen Angel] card to the hand; the rest to the deck bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -69,6 +71,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

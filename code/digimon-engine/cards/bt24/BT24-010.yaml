@@ -90,6 +90,7 @@ alt_paths:
   # Alt-digivolve: Lv.3 w/[Agumon] in name OR w/[TS] trait — cost 2.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - any_of:
@@ -102,13 +103,15 @@ effects:
   #
   # <Blocker> — own (face-up) only. DCGO: BlockerSelfStaticEffect on
   # EffectTiming.None, isInheritedEffect: false.
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
   # <Raid> — INHERITED only (no own-face grant on this card). DCGO:
   # RaidSelfEffect on OnAllyAttack, isInheritedEffect: true.
-  - scope: inherited
+  - text: "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Raid
     summary: "Inherited <Raid>"
@@ -131,6 +134,7 @@ effects:
     summary: "[On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: { kind: digimon }
           prompt: "Select 1 of your opponent's Digimon to De-Digivolve 1"

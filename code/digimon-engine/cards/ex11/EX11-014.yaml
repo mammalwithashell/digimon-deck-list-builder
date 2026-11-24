@@ -112,7 +112,8 @@ effects:
   # Both adds are mandatory when candidates exist (DCGO canNoSelect = false;
   # no printed "you may") — min: 1, no `optional:`. A picked card cannot
   # satisfy both buckets (no_duplicate_cards).
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Suzune Kazuki] and 1 [Ice-Snow] trait Digimon card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Suzune Kazuki] and 1 [Ice-Snow] trait Digimon; rest to deck bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -141,7 +142,8 @@ effects:
   # "<Jamming> (This Digimon can't be deleted in battles against Security
   #  Digimon.)"
   # DCGO: JammingSelfStaticEffect(isInheritedEffect: true) — unconditional.
-  - scope: inherited
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Jamming
     summary: "[Inherited] <Jamming>"

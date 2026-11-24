@@ -12,10 +12,12 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
 
-  - kind: grant_keyword
+  - text: "＜Overclock ([Puppet] Trait)＞"
+    kind: grant_keyword
     keyword: Overclock
     overclock_cost_filter:
       any_of:
@@ -24,7 +26,8 @@ effects:
             - kind: digimon
             - trait_has: Puppet
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost. Then, you may play 1 [Familiar] Token for each of your opponent's Digimon. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.)"
+    when: [on_play, when_digivolving]
     summary: "You may play 1 level 4 or lower Puppet Digimon from hand, then may play Familiar Tokens per opponent Digimon"
     # DCGO EX11_024.cs:50-103: the "you may play" is the hand pick itself
     # (SelectHandEffect canNoSelect: true), opened only when a candidate is in
@@ -74,10 +77,12 @@ effects:
                       controller: you
                       token_name: familiar
 
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] To 1 of your opponent's Digimon, give -3000 DP for the turn for each of your Digimon."
+    when: [when_digivolving, when_attacking]
     summary: "Give 1 opponent Digimon -3000 DP for each of your Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Give -3000 DP per own Digimon"

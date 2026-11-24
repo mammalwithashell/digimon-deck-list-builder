@@ -41,7 +41,7 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "TS" }
+    from: { any_color: true, level_eq: 3, trait_has: "TS" }
     cost: 2
 
 effects:
@@ -66,6 +66,7 @@ effects:
           then:
             - suspend: { target: susp }
       - select_own_permanent:
+          optional: false
           bind_as: buff
           filter:
             all_of:
@@ -81,7 +82,8 @@ effects:
 
   # ─── Inherited [Your Turn][OPT] win a battle → 1 [Insectoid]/[Titan] Digimon
   #     may digivolve (hand, cost -1) ────────────────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When this Digimon wins a battle, 1 of your [Insectoid] or [Titan] trait Digimon may digivolve into an [Insectoid] or [Titan] trait Digimon card in the hand with the cost reduced by 1."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     active_when: { your_turn: true }

@@ -74,6 +74,7 @@ alt_paths:
     cost: 1
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: TS
@@ -81,15 +82,19 @@ alt_paths:
 
 effects:
   # ─── <Jamming> <Reboot> <Blocker> ─────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Jamming＞"
+    kind: grant_keyword
     keyword: Jamming
-  - kind: grant_keyword
+  - text: "＜Reboot＞"
+    kind: grant_keyword
     keyword: Reboot
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
   # ─── [On Deletion] may play 1 Lv.<=4 [Titan] Digimon from trash free ─────
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 level 4 or lower Digimon card with the [Titan] trait from your trash without paying the cost."
+    when: on_deletion
     condition:
       count_gte:
         filter:
@@ -119,12 +124,14 @@ effects:
     summary: "[Main] Trash 1 card in your hand. Then, <De-Digivolve 3> 1 of your opponent's Digimon"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
           prompt: "Trash 1 card in your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"

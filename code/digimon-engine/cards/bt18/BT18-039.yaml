@@ -14,10 +14,12 @@ alt_paths:
     from: { level_eq: 4, color_is: yellow }
     cost: 3
 effects:
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "Barrier"
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing your top security card, change 1 Digimon's original DP to 6000 until the end of of your opponent's turn."
+    when: [on_play, when_digivolving]
     optional: true
     active_when: { security_count_gte: 1 }
     summary: "By trashing your top security card, change 1 Digimon's original DP to 6000 until the end of your opponent's turn"
@@ -27,6 +29,7 @@ effects:
           condition: { equals: [paid_security, 1] }
           then:
             - select_any_permanent:
+                optional: false
                 bind_as: target
                 filter: { all_of: [{ kind: digimon }, { zone: [battle_area] }] }
                 prompt: "Change 1 Digimon's original DP to 6000"
@@ -36,7 +39,8 @@ effects:
                 value: 0
                 payload: { dp: 6000 }
                 expiry: end_of_opponents_turn
-  - when: on_own_security_removed
+  - text: "[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon may unsuspend."
+    when: on_own_security_removed
     scope: inherited
     once_per_turn: true
     optional: true

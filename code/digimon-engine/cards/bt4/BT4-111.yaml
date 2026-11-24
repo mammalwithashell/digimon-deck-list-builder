@@ -34,7 +34,8 @@ effects:
             - 10
 
   # [Security] (blue security effect) Gain 2 memory.
-  - when: on_security
+  - text: "[Security] Gain 2 memory."
+    when: on_security
     summary: "[Security] Gain 2 memory"
     process:
       - gain_memory: 2

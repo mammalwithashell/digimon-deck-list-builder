@@ -7,11 +7,13 @@ color: [red, yellow]
 cost: 5
 also_treated_as: [Takuya Kanbara, Koji Minamoto]
 effects:
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     condition: {memory_lte: 2}
     process:
       - set_memory: 3
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] You may place up to 1 [Hybrid] trait card with different names from your trash under this Tamer. For each of your other Tamers, add 2 to the maximum number this effect may place."
+    when: start_of_your_main_phase
     process:
       - select_count_capped_multi:
           of: you
@@ -35,7 +37,8 @@ effects:
           bind_as: spirits
           prompt: You may place Hybrid cards with different names under this Tamer
       - place_cards_as_bottom_sources: {cards: spirits, target: source}
-  - scope: inherited
+  - text: "[End of Your Turn] [Once Per Turn] This Digimon with the [Hybrid] or [Ten Warriors] trait may attack a player."
+    scope: inherited
     when: end_of_your_turn
     optional: true
     outer_prompt: true
@@ -49,6 +52,7 @@ effects:
         any_of: [{trait_has: Hybrid}, {trait_has: Ten Warriors}]
     process:
       - may_attack_now: {attacker: source, targets: player, optional: true}
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     process:
       - play_from_security: {}

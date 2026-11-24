@@ -24,6 +24,7 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - any_of:
@@ -51,6 +52,7 @@ effects:
           condition: { equals: [branch, 0] }
           then:
             - choose_from_reveal:
+                optional: false
                 of: you
                 filter: { in_text_contains: "Three Musketeers" }
                 destination: hand
@@ -68,6 +70,7 @@ effects:
                 bind_as: source_pick
                 prompt: "Place 1 [Three Musketeers] trait card as this Digimon's bottom digivolution card"
       - place_remainder_on_deck: { of: you, position: bottom }
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation

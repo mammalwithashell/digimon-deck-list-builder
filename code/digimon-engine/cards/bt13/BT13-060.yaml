@@ -21,6 +21,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: yoshi
           filter: { kind: tamer, name_is: "Yoshino Fujieda" }
           prompt: "Return Yoshino Fujieda"
@@ -29,14 +30,17 @@ alt_paths:
       - trash_top_source: { target: carrier }
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Suspend 1 of your opponent's Digimon and 1 of their Tamers. Until the end of your opponent's turn, all of their Digimon and Tamers don't unsuspend."
+    when: when_digivolving
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: d
           filter: { kind: digimon }
           prompt: "Suspend opponent Digimon"
       - suspend: { target: d }
       - select_opponent_permanent:
+          optional: false
           bind_as: t
           filter: { kind: tamer }
           prompt: "Suspend opponent Tamer"
@@ -56,7 +60,8 @@ effects:
   # every 2 of your opponent's suspended Digimon and Tamers.
   # DCGO BT13_060.cs:218-266 — mandatory; count = suspended (Digimon|Tamer) / 2,
   # trashed from the top via IDestroySecurity.
-  - when: when_attacking
+  - text: "[When Attacking] Trash the top card of your opponent’s security stack for every 2 of your opponent's suspended Digimon and/or Tamers."
+    when: when_attacking
     summary: "[When Attacking] Trash 1 opp security per 2 suspended opp Digimon/Tamers"
     process:
       - trash_top_security:

@@ -62,7 +62,8 @@ effects:
   # The inner `select_trash` picker is itself mandatory (DCGO
   # `canNoSelect: () => false`); when no valid target exists the trigger
   # simply does not fire (the `condition` gate fails).
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, return 1 card with [Garurumon], [Greymon] or [Omnimon] in its name from your trash to the hand."
+    when: start_of_your_main_phase
     optional: false
     summary: "[Start of Main] If you have a [Tai Kamiya] Tamer, return 1 [Garurumon]/[Greymon]/[Omnimon] from trash to hand"
     condition:
@@ -73,6 +74,7 @@ effects:
         name_contains: "Tai Kamiya"
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: pick
           filter:
@@ -93,7 +95,8 @@ effects:
   # `EffectTiming.OnEndTurn` activate). Predecessor `alt_path_registration
   # { kind: dna_digivolve }` (resolved 2026-05-02) registered a next-turn
   # alt-path and so could not satisfy the printed "AT end of turn" surface.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     # FAITHFULNESS FIX (G-FIX-BT12-EOT-DNA-PAYCOST, 2026-06-02): NORMAL DNA

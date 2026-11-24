@@ -16,13 +16,13 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "Greymon" }
+    from: { any_color: true, level_eq: 5, name_contains: "Greymon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 5, trait_has: ADVENTURE }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Hero }
+    from: { any_color: true, level_eq: 5, trait_has: Hero }
     cost: 3
 
 effects:
@@ -50,6 +50,7 @@ effects:
         dp_lte: { formula: { source_dp: {} } }
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:
@@ -110,6 +111,7 @@ effects:
     process:
       - optional:
           - select_own_permanent:
+              optional: false
               bind_as: attacker
               filter: { kind: digimon, can_attack: { targets: any } }
               prompt: "Choose 1 of your Digimon that may attack"
@@ -140,7 +142,8 @@ effects:
   # the delete filter reuses dp_lte source_dp (the carrier's effective DP). With
   # no eligible opponent Digimon the mandatory pick has no candidates and the
   # body does nothing.
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon with [Greymon] or [Omnimon] in its name."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][OPT] (mandatory) If this Digimon has Greymon/Omnimon in its name, delete 1 opp Digimon with DP <= this Digimon"
@@ -152,6 +155,7 @@ effects:
               - source_name_contains: "Omnimon"
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: inh_del
                 filter:
                   all_of:

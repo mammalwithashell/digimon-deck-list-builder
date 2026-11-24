@@ -8,7 +8,8 @@ traits: [Lesser]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +1000 DP when battling an opponent's Digimon that has no digivolution cards."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

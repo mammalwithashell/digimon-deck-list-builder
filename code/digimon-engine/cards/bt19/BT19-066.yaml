@@ -65,7 +65,8 @@ effects:
   # (lower_triggered.rs) auto-suppresses the whole prompt when no hand card
   # matches the filter — mirroring DCGO's CanActivateCondition
   # HasMatchConditionOwnersHand gate; no explicit `condition:` block needed.
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [Composite] or [Wicked God] trait in your hand, ＜Draw 2＞."
+    when: on_play
     summary: "[On Play] By trashing 1 [Composite]/[Wicked God] hand card, Draw 2"
     process:
       - select_hand:
@@ -88,7 +89,8 @@ effects:
   #
   # Unconditional inherited Blocker grant (DCGO BlockerSelfStaticEffect,
   # isInherited: true). Common idiom — see ST23-10/ST23-11/P-215/EX8-046/ST5-11.
-  - scope: inherited
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Blocker
     summary: "Inherited <Blocker>"

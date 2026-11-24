@@ -243,7 +243,8 @@ effects:
   # `!card.Owner.SecurityCards.Any(c => c.EqualsCardName("Island of
   # Adventure") && !c.IsFlipped)`. Face-down [Island of Adventure] security
   # cards do NOT close the gate (printed "face-up" qualifier honored).
-  - kind: flood_gate
+  - text: "While you have no face-up [Island of Adventure] security cards, you can ignore this card's color requirements."
+    kind: flood_gate
     active_when:
       no_face_up_security_named:
         of: you

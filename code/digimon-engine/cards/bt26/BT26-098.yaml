@@ -42,7 +42,8 @@ cost: 5
 traits: [DATA SQUAD]
 
 effects:
-  - kind: cost_reduction
+  - text: "When this card would be used, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
     # DCGO CanUseCondition: a Tamer with a face-down card must exist, so no
@@ -51,7 +52,7 @@ effects:
     optional: true
     amount: 2
     pay_cost:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
     summary: "When this card would be used, by trashing the bottom face-down card under a Tamer, reduce the use cost by 2"
 
   - when: main_from_hand
@@ -118,7 +119,8 @@ effects:
                                   cost: free
                                   ignore_requirements: true
 
-  - scope: inherited
+  - text: "[Security] You may play 1 [Lalamon] or [Yoshino Fujieda] from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     summary: "[Security] You may play 1 [Lalamon] or [Yoshino Fujieda] from your hand or trash without paying the cost; then add this card to the hand"
     process:

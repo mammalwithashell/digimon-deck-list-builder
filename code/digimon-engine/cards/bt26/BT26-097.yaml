@@ -60,7 +60,8 @@ traits: [TS]
 
 effects:
   # ─── Use cost +1 per own security card ──────────────────────────────────────
-  - kind: use_cost_increase
+  - text: "Add 1 to this card's use cost for each of your security cards."
+    kind: use_cost_increase
     amount:
       base: 0
       per:
@@ -177,7 +178,8 @@ effects:
 
   # ─── [Security] may play 1 play cost <= 5 [TS] card from hand free; then
   #     add this card to the hand ──────────────────────────────────────────────
-  - scope: inherited
+  - text: "[Security] You may play 1 play cost 5 or lower [TS] trait card from your hand without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     summary: "[Security] You may play 1 play cost 5 or lower [TS] trait card from your hand without paying the cost. Then, add this card to the hand"
     process:

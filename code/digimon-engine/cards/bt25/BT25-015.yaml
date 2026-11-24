@@ -79,21 +79,23 @@ alt_paths:
     cost: 4
   # Alt-digivolution: Lv.4 with [Giant Bird] trait / cost 3.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "Giant Bird" }
+    from: { any_color: true, level_eq: 4, trait_has: "Giant Bird" }
     cost: 3
   # Alt-digivolution: Lv.4 with [TS] trait / cost 3.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
   # ─── <Raid> ─────────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
   # ─── <Fortitude> ────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Fortitude＞"
+    kind: grant_keyword
     keyword: Fortitude
     summary: "<Fortitude>"
 
@@ -101,10 +103,12 @@ effects:
   #
   # Mandatory (DCGO optional:false). The select silently no-ops when no opp
   # Digimon has DP <= 6000 (DCGO HasMatchConditionPermanent guard).
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Delete 1 of your opponent's Digimon with 6000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:
@@ -114,7 +118,8 @@ effects:
       - delete_permanent: { target: del_target }
 
   # ─── Clause B — Inherited [All Turns][OPT] battle-delete → trash opp top sec ─
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, trash their top security card."
+    scope: inherited
     when: [on_any_deletion]
     once_per_turn: true
     active_when: { all_turns: true }

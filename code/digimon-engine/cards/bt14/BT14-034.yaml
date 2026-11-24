@@ -41,12 +41,14 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
-  - when: on_deletion
+  - text: "[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn."
+    when: on_deletion
     scope: inherited
     summary: "Inherited [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn"
     condition:
@@ -56,6 +58,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to get -3000 DP for the turn"

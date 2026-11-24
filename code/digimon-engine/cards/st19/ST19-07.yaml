@@ -12,9 +12,11 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
     keyword: Jamming
 
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier

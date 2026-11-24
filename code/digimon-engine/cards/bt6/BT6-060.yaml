@@ -73,7 +73,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] reveal 4; add 1 TM Digimon and/or 1 7-cost Option; trash rest
-  - when: on_play
+  - text: "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with [Three Musketeers] in its type and/or 1 Option card with a memory cost of 7 among them to your hand. Trash the remaining cards."
+    when: on_play
     summary: "[On Play] Reveal 4; add 1 [Three Musketeers] Digimon and/or 1 cost-7 Option to hand; trash the rest"
     process:
       - reveal_top_deck: { of: you, count: 4, bind_as: revealed }

@@ -324,28 +324,19 @@ impl Args {
     /// The harness root, for the subcommands that actually queue DCGO work.
     fn require_root(&self) -> Result<&std::path::Path, String> {
         self.root.as_deref().ok_or_else(|| {
-            "this subcommand drives the DCGO job queue and needs --root <DIR>              (the directory holding jobs/ claimed/ done/ failed/). Only              `exam`, `migrate-verdicts`, and `mcp` run without one."
+            "this subcommand needs --root <DIR> (the directory holding jobs/, claimed/, done/, and failed/)"
                 .to_string()
         })
     }
 }
 
-/// Whether this subcommand touches the job queue at all.
-///
-/// `exam` does not: it lowers scenarios and replays them in our engine, and
-/// with `--sim-only` never involves DCGO. `migrate-verdicts` does not either:
-/// it is a pure file-to-file conversion of the verdict store, unrelated to
-/// the DCGO job queue. `mcp` does not either: most of its tools (validate,
-/// authoring guide, keyword brief, scenario probing) run entirely against
-/// files and the engine, not the job queue -- the few that do need a root
-/// (e.g. `exam_probe` with `sim_only: false`) resolve it themselves and say
-/// so in their error. Creating jobs/ claimed/ done/ failed/ for any of these
-/// would litter the CI workspace with empty directories at best, and at worst
-/// require a root the run has no use for.
+/// Whether the dispatcher must initialize the queue before running a command.
+/// Exam and MCP resolve the root themselves only when they use the oracle.
 fn needs_root(command: &Command) -> bool {
     !matches!(
         command,
         Command::Exam { .. }
+            | Command::Build { .. }
             | Command::MigrateVerdicts { .. }
             | Command::VerdictTriage { .. }
             | Command::VerdictSet { .. }
@@ -1582,8 +1573,26 @@ mod try_backfill_tests {
 }
 
 #[cfg(test)]
-mod oracle_cli_tests {
+mod cli_tests {
     use super::*;
+
+    #[test]
+    fn build_does_not_require_a_queue_root() {
+        let temp = tempfile::tempdir().unwrap();
+        let args = Args::try_parse_from([
+            "dcgo-harness",
+            "build",
+            "--unity",
+            temp.path().join("missing-unity").to_str().unwrap(),
+            "--project",
+            temp.path().join("project").to_str().unwrap(),
+            "--output",
+            temp.path().join("player").to_str().unwrap(),
+        ])
+        .unwrap();
+        let err = run(&args).unwrap_err();
+        assert!(err.starts_with("unity not found at "), "{err}");
+    }
 
     fn parse(extra: &[&str]) -> Result<Args, clap::Error> {
         let mut argv = vec!["dcgo-harness", "exam", "--scenario", "x.yaml", "--cards-json", "c.json"];

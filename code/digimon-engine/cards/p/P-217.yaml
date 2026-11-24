@@ -51,7 +51,8 @@ effects:
   # Buckets are mandatory-when-present (no canNoSelect / no optional flag);
   # engine clamps a bucket to 0 when no candidates match — identical shape to
   # BT25-007's On Play clause.
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Social] trait card and 1 [Creation], [Navi] or [Tool] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Social] and 1 [Creation]/[Navi]/[Tool]; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -94,7 +95,8 @@ effects:
   # suspended the cost is unpayable and the activation fails (engine's
   # CanActivateSuspendCostEffect semantics — the selection is not offered).
   # optional: true because DCGO marks it skippable.
-  - when: on_any_link
+  - text: "[Your Turn] When any of your Digimon get linked to a [Social], [Navi] or [Tool] trait card, by suspending this Tamer, gain 1 memory."
+    when: on_any_link
     optional: true
     summary: "[Your Turn] When any of your Digimon get linked to a [Social]/[Navi]/[Tool] card, suspend this Tamer to gain 1 memory"
     active_when:
@@ -115,7 +117,8 @@ effects:
   # ─── Clause 2: [Security] play this card without paying the cost ────────────
   # Printed: [Security] Play this card without paying the cost.
   # DCGO: PlaySelfTamerSecurityEffect → play_from_security: {}
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

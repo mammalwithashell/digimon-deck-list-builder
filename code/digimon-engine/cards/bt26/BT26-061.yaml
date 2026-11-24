@@ -40,6 +40,7 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: "Glowing Dawn"
@@ -47,7 +48,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] Reveal 3; add 1 Glowing Dawn + 1 purple BEATBREAK; rest bottom
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Glowing Dawn] trait card and 1 purple [BEATBREAK] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal the top 3 cards of your deck. Add 1 [Glowing Dawn] trait card and 1 purple [BEATBREAK] trait card among them to the hand. Return the rest to the bottom of the deck"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -79,6 +81,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}

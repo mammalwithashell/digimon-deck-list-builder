@@ -102,7 +102,7 @@ alt_paths:
   # EvoCosts row per colour). A rainbow circle is ANY colour, so the gate carries
   # no `color_is` — the Ukkomon (BT16-082) idiom. cards.json holds it as seven rows.
   - kind: digivolve
-    from: { level_eq: 4 }
+    from: { any_color: true, level_eq: 4 }
     cost: 4
   - kind: dna_digivolve
     materials:
@@ -135,7 +135,8 @@ effects:
   # Turn] color treatment live -> `per: source_rules_color_count` (the
   # carrier's synthesized rules colors, incl. the AddColor union below).
   # Duration EffectDuration.UntilOpponentTurnEnd -> end_of_opponents_next_turn.
-  - when: when_digivolving
+  - text: "[When Digivolving] You may place 1 level 5 or lower Digimon card from your trash under this Digimon as its bottom digivolution card. Then, up to 4 of your opponent's Digimon get -1000 DP for each of this Digimon's colors until the end of your opponent's next turn."
+    when: when_digivolving
     summary: "[When Digivolving] You may place 1 level 5 or lower Digimon card from your trash under this Digimon as its bottom digivolution card. Then, up to 4 of your opponent's Digimon get -1000 DP for each of this Digimon's colors until the end of your opponent's next turn."
     process:
       - select_trash:

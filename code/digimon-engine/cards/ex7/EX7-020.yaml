@@ -103,7 +103,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, this Digimon gains ＜Jamming＞ and ＜Blocker＞ until the end of your opponent's turn."
+    when: when_digivolving
     summary: "[WD] Trash the bottom 2 digivolution cards of 1 opp Digimon; then if opp has no Digimon with digivolution cards, this Digimon gains <Jamming> and <Blocker> until end of opp's turn"
     process:
       # Trash half — gated per-step (NOT at clause level): the grant half
@@ -118,6 +119,7 @@ effects:
               stack_size_gte: 2
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: peel_target
                 filter:
                   kind: digimon
@@ -145,7 +147,8 @@ effects:
                 keyword: Blocker
                 expiry: end_of_opponents_turn
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Trash the top digivolution card of 1 of your opponent's Digimon."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:
@@ -157,6 +160,7 @@ effects:
     summary: "[Inherited][When Attacking][OPT] Trash the top digivolution card of 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: peel_target
           filter:
             kind: digimon

@@ -50,6 +50,9 @@ pub struct PredicateSpec {
     pub materials_count_matches_aggregate: Option<MaterialCountAggregatePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_is: Option<ColorSpec>,
+    /// Intentional colour-free gate. Authoring metadata; imposes no constraint.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub any_color: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_only: Option<Vec<ColorSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -467,7 +470,8 @@ pub struct PredicateSpec {
     /// effect a refire could activate right now (`refire_effect`, "activate 1
     /// [On Play] or [When Digivolving] effect of 1 of your [X] Digimon"), and
     /// that effect still has a use left this turn. The value is the refire's
-    /// timing: `on_play`, `when_digivolving` or `on_play_or_when_digivolving`.
+    /// timing: `on_play`, `when_digivolving`, `on_play_or_when_digivolving`,
+    /// or `on_deletion` (including active inherited effects).
     /// Mirrors DCGO BT24_102.cs:93-98, where the Digimon pick's
     /// `canTargetCondition` requires `permanent.EffectList(OnEnterFieldAnyone)
     /// .Any(CanBeEffectCandidate)`, so a Digimon with nothing to activate is
@@ -1423,7 +1427,10 @@ where
 
 impl PredicateSpec {
     pub fn is_empty(&self) -> bool {
-        self == &Self::default()
+        self == &Self {
+            any_color: self.any_color,
+            ..Self::default()
+        }
     }
 }
 
@@ -1743,7 +1750,7 @@ pub struct SourceCountPredicate {
 
 /// Payload for the `has_digivolve_candidate` permanent-subject leaf â€” "some
 /// card in `zone` of player `of` matches `filter` and can digivolve onto this
-/// permanent". `hand`, `trash`, and owner-filtered `reveal` are valid zones.
+/// permanent". `material` scans only cards beneath the effect's source permanent.
 /// An omitted `cost` checks routes only; an explicit cost also checks that
 /// the consuming effect's payment is possible with its existing reducers.
 /// An explicit cost is forbidden inside cost_reduction/cost_assignment
@@ -1752,10 +1759,10 @@ pub struct SourceCountPredicate {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DigivolveCandidatePredicate {
-    /// Whose hand / trash / revealed cards to scan. Defaults to `you`.
+    /// Whose hand / trash / revealed cards or carrier materials to scan. Defaults to `you`.
     #[serde(default = "default_level_aggregate_of")]
     pub of: PlayerRef,
-    /// Zones to scan: `hand`, `trash`, or `reveal`.
+    /// Zones to scan: `hand`, `trash`, `reveal`, or `material`.
     pub zone: Vec<Zone>,
     /// Card-shape filter each candidate result card must satisfy (evaluated
     /// as a `Card` subject). Omit to accept any Digimon card with a route.

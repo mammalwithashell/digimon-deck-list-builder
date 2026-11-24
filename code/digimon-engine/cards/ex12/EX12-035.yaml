@@ -18,6 +18,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -87,6 +88,7 @@ effects:
     summary: "<Decode (Lv.5 or lower w/[Gabumon]/[Garurumon] in name or [ME]/[VB])>"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -118,6 +120,7 @@ effects:
           then:
             - trash_selected_sources: { source_refs: trashed_sources }
       - select_opponent_permanent:
+          optional: false
           bind_as: bottom_target
           filter:
             all_of:
@@ -140,6 +143,7 @@ effects:
     summary: "[All Turns][OPT] When any Digimon are played/digivolve, 1 opponent Digimon can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon that can't suspend until their turn ends"

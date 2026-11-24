@@ -41,12 +41,14 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Digisorption -3＞ (When one of your Digimon digivolves into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 3.)"
+    kind: grant_keyword
     keyword: Digisorption
     value: 3
     summary: "<Digisorption -3>"
 
-  - scope: inherited
+  - text: "[When Attacking] You may play 1 level 3 green Digimon card from your hand suspended without paying its memory cost."
+    scope: inherited
     when: when_attacking
     optional: true
     summary: "[When Attacking] You may play 1 level 3 green Digimon card from your hand suspended without paying its memory cost"

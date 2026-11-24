@@ -21,14 +21,16 @@ alt_paths:
     from: { name_is: Bebydomon }
     cost: 0
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 4 cards of your deck. Add 1 green or blue card with [Dramon] in its name and 1 card with [Examon] in its name among them to your hand. Place the rest at the bottom of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 4; add 1 green or blue [Dramon]-name card and 1 [Examon]-name card; bottom-deck the rest in any order"
     process:
       - reveal_search:
           of: you
           count: 4
           buckets:
-            - filter:
+            - optional: false
+              filter:
                 all_of:
                   - name_contains: Dramon
                   - any_of:
@@ -37,12 +39,14 @@ effects:
               to: hand
               max: 1
               prompt: "Add 1 green or blue card with [Dramon] in its name"
-            - filter: { name_contains: Examon }
+            - optional: false
+              filter: { name_contains: Examon }
               to: hand
               max: 1
               prompt: "Add 1 card with [Examon] in its name"
           remainder: bottom
-  - when: on_suspend
+  - text: "[All Turns][Once Per Turn] When one of your Digimon with [Dramon] or [Examon] in its name becomes suspended, this Digimon gets +1000 DP for the turn."
+    when: on_suspend
     scope: inherited
     once_per_turn: true
     active_when: { all_turns: true }

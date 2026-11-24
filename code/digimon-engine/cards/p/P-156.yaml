@@ -18,7 +18,8 @@ use_requirement:
     kind: tamer
 
 effects:
-  - when: main
+  - text: "[Main] Choose 1 Tamer. You may play 1 play cost 3 or lower Digimon card of the same color as the chosen Tamer from your hand or trash without paying the cost."
+    when: main
     condition:
       any_permanent:
         of: any
@@ -26,6 +27,7 @@ effects:
     summary: "[Main] Choose 1 Tamer; you may play 1 Digimon with the same color and play cost 3 or less from hand or trash"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: chosen_tamer
           filter:
             kind: tamer
@@ -75,7 +77,8 @@ effects:
   #     optional sub-effect has a follow-up hand selection;
   #   - the mandatory add_this_option_to_hand tail is a sibling step that always
   #     resolves whether the optional play is performed, declined, or skipped.
-  - when: on_security
+  - text: "[Security] You may play 1 Tamer card from your hand without paying the cost. Then, add this card to the hand."
+    when: on_security
     optional: false
     summary: "[Security] You may play 1 Tamer from hand free; then add this card to hand"
     process:
@@ -99,6 +102,7 @@ effects:
                 condition: { equals: [tamer_play_choice, 0] }
                 then:
                   - select_hand:
+                      optional: false
                       of: you
                       bind_as: picked_tamer
                       filter:

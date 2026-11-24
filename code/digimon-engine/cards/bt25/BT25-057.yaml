@@ -17,8 +17,8 @@
 #   [When Digivolving] This Digimon may battle 1 of your opponent's Digimon.
 #   OPTION FACE — "Final Judgment", Use 4
 #   Use Req. [Glowing Dawn] trait (ignore color requirements).
-#   [Main] 1 of your Digimon gains ＜Rush＞, ＜Security A. +1＞ and +5000 DP for
-#     the turn. Then, it may attack.
+#   [Main] 1 of your Digimon gains ＜Rush＞, ＜Security A. +1＞ and +5000 DP until
+#     your opponent's turn ends. Then, it may attack.
 #   ＜Arts Digivolve＞ (instead of trashing after use, your cards may digivolve
 #     into this card without paying the cost).
 #
@@ -36,7 +36,7 @@
 #   opponent Digimon (IBattle isAttack:true → battle, NOT an attack — no
 #   security continuation).
 # Option [Main] (OptionSkill) — select 1 of YOUR Digimon → GainRush +
-#   ChangeDigimonSAttack(+1) + ChangeDigimonDP(+5000) UntilEachTurnEnd → then
+#   ChangeDigimonSAttack(+1) + ChangeDigimonDP(+5000) until opponent's turn ends → then
 #   may attack (SelectAttackEffect).
 # Arts Digivolve — CardEffectFactory.ArtsDigivolveEffect(card).
 
@@ -74,6 +74,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Glowing Dawn"
@@ -94,24 +95,28 @@ dual:
       # (Comprehensive Rules Ver. 4.3 §15-7-1), so the clause is `optional: true`:
       # the player may decline even when a face-down card exists, and with none
       # it is not offered (§15-7-4).
-      - when: [when_digivolving, when_attacking]
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] By trashing the bottom face-down card under any of your Tamers, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        when: [when_digivolving, when_attacking]
         once_per_turn: true
         optional: true
         summary: "[WD][WA][OPT] By trashing the bottom face-down card under a Tamer, <De-Digivolve 1> 1 opponent Digimon"
         process:
-          - trash_bottom_face_down_source_under_tamer: { of: you }
+          - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
           - select_opponent_permanent:
+              optional: false
               bind_as: degen_target
               filter: { kind: digimon }
               prompt: "Choose 1 opponent Digimon to <De-Digivolve 1>"
           - de_digivolve: { target: degen_target, amount: 1 }
 
       # [WD] this Digimon may battle 1 opponent Digimon (optional; a battle, not an attack).
-      - when: when_digivolving
+      - text: "[When Digivolving] This Digimon may battle 1 of your opponent's Digimon."
+        when: when_digivolving
         optional: true
         summary: "[WD] This Digimon may battle 1 opponent Digimon"
         process:
           - select_opponent_permanent:
+              optional: false
               bind_as: battle_target
               filter: { kind: digimon }
               prompt: "Choose 1 opponent Digimon to battle"
@@ -122,7 +127,7 @@ dual:
     use_cost: 4
     colors: [green]
     effect_text: |
-      [Main] 1 of your Digimon gains <Rush>, <Security A. +1> and +5000 DP for the turn. Then, it may attack.
+      [Main] 1 of your Digimon gains <Rush>, <Security A. +1> and +5000 DP until your opponent's turn ends. Then, it may attack.
     # Use Req. [Glowing Dawn] trait — a Glowing Dawn Digimon on the field
     # satisfies the Option's color requirement (ignore color).
     # <Use Req.> (CR 16-42-3; DCGO CardEffectFactory.UseRequirements): one
@@ -138,19 +143,20 @@ dual:
     arts_digivolve: true
     effects:
       - when: main
-        summary: "[Main] 1 of your Digimon gains <Rush> + <Security A. +1> + 5000 DP for the turn, then may attack"
+        summary: "[Main] 1 of your Digimon gains <Rush> + <Security A. +1> + 5000 DP until your opponent's turn ends, then may attack"
         process:
           - select_own_permanent:
+              optional: false
               bind_as: buffed
               filter: { kind: digimon }
               prompt: "Choose 1 of your Digimon to gain <Rush>, <Security A. +1> and +5000 DP"
-          - grant_keyword: { target: buffed, keyword: Rush, expiry: end_of_turn }
+          - grant_keyword: { target: buffed, keyword: Rush, expiry: end_of_opponents_turn }
           - grant_keyword:
               target: buffed
               keyword: SecurityAttackPlus
               value: 1
-              expiry: end_of_turn
-          - add_dp_modifier: { target: buffed, value: 5000, expiry: end_of_turn }
+              expiry: end_of_opponents_turn
+          - add_dp_modifier: { target: buffed, value: 5000, expiry: end_of_opponents_turn }
           # "Then, it may attack." -- the attack is part of this [Main]
           # effect, by the chosen Digimon, before the effect resolves and so
           # before the pending trash / <Arts Digivolve> (CR 4.3 15-1-2, 9-1-5,

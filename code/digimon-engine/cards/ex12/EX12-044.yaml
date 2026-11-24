@@ -14,6 +14,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -43,6 +44,7 @@ effects:
     summary: "[On Play][When Digivolving][When Attacking] 1 opponent Digimon gets -4000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to get -4000 DP for the turn"
@@ -72,6 +74,7 @@ effects:
     summary: "[When Attacking] If this stack has 2+ same-level cards, may digivolve into an [Angel]/[Holy Dragon]/[Three Great Angels]/[NSp]/[VB] Digimon in hand with cost -2"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -106,6 +109,7 @@ effects:
     summary: "[Inherited] <Decode (Lv.4 or lower w/[Holy Beast]/[NSp]/[VB] trait])>"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:

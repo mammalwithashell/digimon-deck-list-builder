@@ -42,7 +42,8 @@ effects:
   # (`body_first_step_is_declinable` → false for a non-optional
   # `SelectOwnPermanent`). No [Once Per Turn] is printed, so
   # G-OPT-REFUND-ON-DECLINE is moot here.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 4 or lower Digimon."
+    when: [on_play, when_digivolving]
     optional: true
     outer_prompt: true
     summary: "[On Play][When Digivolving] MAY delete 1 of your Digimon to delete 1 opponent level 4 or lower Digimon"
@@ -59,11 +60,13 @@ effects:
             level_lte: 4
     process:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter: { kind: digimon }
           prompt: "Delete 1 of your Digimon"
       - delete_permanent: { target: sacrifice }
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:
@@ -72,7 +75,8 @@ effects:
           prompt: "Delete 1 opponent level 4 or lower Digimon"
       - delete_permanent: { target: target }
 
-  - scope: inherited
+  - text: "[On Deletion] Gain 1 memory."
+    scope: inherited
     when: on_deletion
     summary: "[On Deletion] Gain 1 memory"
     process:

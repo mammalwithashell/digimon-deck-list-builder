@@ -70,7 +70,8 @@ effects:
   #
   # flood_gate installs a player-scoped IgnoreColorRequirement modifier whenever
   # the controller has any Tamer in play. Target restricts bypass to THIS card only.
-  - kind: flood_gate
+  - text: "While you have a Tamer, you can ignore this card's color requirements."
+    kind: flood_gate
     active_when:
       any_permanent:
         of: you
@@ -95,6 +96,7 @@ effects:
     summary: "[Security] De-Digivolve 2 1 opponent Digimon, then add this card to hand"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -129,6 +131,7 @@ effects:
           free: true
           filter: { kind: digimon }
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain Reboot and +3000 DP until end of opponent's turn"

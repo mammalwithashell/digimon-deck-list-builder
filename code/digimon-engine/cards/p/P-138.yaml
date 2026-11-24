@@ -15,7 +15,8 @@ alt_paths:
     from: { level_eq: 3, color_is: blue }
     cost: 2
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Veedramon] in its name and 1 blue Tamer card among them to the hand. Return the rest to the bottom of the deck."
+    when: [on_play, when_digivolving]
     summary: "Reveal 3; add a Veedramon Digimon and a blue Tamer; bottom the rest in any order"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -34,7 +35,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: digimon_pick }
       - add_to_hand_from_reveal: { of: you, card: tamer_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When this Digimon becomes unsuspended, gain 1 memory."
+    scope: inherited
     when: on_unsuspend
     once_per_turn: true
     active_when: { your_turn: true }

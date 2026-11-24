@@ -50,6 +50,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: TS
@@ -58,7 +59,8 @@ alt_paths:
 effects:
   # ─── [Start of Your Main Phase] hand <= 5 → 1 [Titan] Digimon may digivolve
   #     into a [Titan] Digimon card in the trash, cost -2 ─────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your hand has 5 or fewer cards, 1 of your Digimon with the [Titan] trait may digivolve into a Digimon card with the [Titan] trait in the trash with the cost reduced by 2."
+    when: start_of_your_main_phase
     condition:
       all_of:
         - count_lte:
@@ -106,7 +108,8 @@ effects:
 
   # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Titan]
   #     Digimon may digivolve into [Titamon] / a [Titan] trash card, cost -1 ──
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the cost reduced by 1."
+    scope: inherited
     when: on_discard_hand
     once_per_turn: true
     active_when:

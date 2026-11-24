@@ -38,7 +38,8 @@ traits: [Lesser, LIBERATOR]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Start of Your Main Phase] This Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 1. If this effect digivolved, trash 2 cards in your hand."
+    scope: inherited
     when: start_of_your_main_phase
     active_when: { your_turn: true }
     summary: "[Inherited][Start of Your Main Phase] This Digimon may digivolve into a [Dark Dragon]/[Evil Dragon] trait Digimon card in the trash with the cost reduced by 1; if it did, trash 2 cards in your hand"
@@ -69,12 +70,14 @@ effects:
                 condition: { effect_digivolved_any_digimon: true }
                 then:
                   - select_hand:
+                      optional: false
                       of: you
                       bind_as: discard_a
                       filter: {}
                       prompt: "Trash 2 cards in your hand (1 of 2)"
                   - trash_from_hand_by_index: { of: you, hand_index: discard_a }
                   - select_hand:
+                      optional: false
                       of: you
                       bind_as: discard_b
                       filter: {}

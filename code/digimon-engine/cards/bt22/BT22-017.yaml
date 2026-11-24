@@ -129,7 +129,7 @@ alt_paths:
   # TRAIT-gated alt — same cost as standard routes; the base must carry [CS] trait.
   # Per EX11-017/P-215 idiom: one alt_path with trait_has predicate, no color restriction.
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
 
 
@@ -158,7 +158,8 @@ effects:
   #
   # `place_remainder_on_deck { position: bottom }` → DCGO
   # `RemainingCardsPlace.DeckBottom`.
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Omnimon] in its text and 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Omnimon-text] (approx by name) + 1 [CS] trait card; bottom rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -202,7 +203,8 @@ effects:
   # `EffectTiming.OnEndTurn` activate). Predecessor `alt_path_registration
   # { kind: dna_digivolve }` (resolved 2026-05-02) registered a next-turn
   # alt-path and so could not satisfy the printed "AT end of turn" surface.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     # FAITHFULNESS FIX (G-FIX-BT12-EOT-DNA-PAYCOST, 2026-06-02): NORMAL DNA

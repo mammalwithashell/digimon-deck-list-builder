@@ -8,7 +8,8 @@ traits: [Lesser]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] By trashing the top or bottom card of your security stack, gain 1 memory."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true

@@ -75,7 +75,7 @@ alt_paths:
     cost: 4
   # Alt-digivolution: Lv.4 with [TS] trait / cost 3 (printed digivolve box).
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
@@ -88,6 +88,7 @@ effects:
     summary: "[OP][WD] Give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: taunt_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to gain '[Start of Your Main Phase] This Digimon attacks.'"
@@ -109,6 +110,7 @@ effects:
     summary: "[All Turns] When this Digimon wins a battle, it may digivolve into [Callismon]/[Marsmon] in hand without paying the cost"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -125,7 +127,8 @@ effects:
           ignore_requirements: true
 
   # ─── Clause C — Inherited [All Turns][OPT] win battle → trash top security ──
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, trash their top security card."
+    scope: inherited
     when: [on_any_deletion]
     once_per_turn: true
     active_when: { all_turns: true }

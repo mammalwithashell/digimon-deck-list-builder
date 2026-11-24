@@ -17,7 +17,8 @@ traits: [ADVENTURE]
 
 effects:
   # [Start of Your Main Phase] If you have a Digimon with the [ADVENTURE] trait, gain 1 memory.
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have a Digimon with the [ADVENTURE] trait, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If you have an [ADVENTURE] Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -30,7 +31,8 @@ effects:
 
   # [Your Turn] When any Digimon cards with the [ADVENTURE] trait would be played
   # from your hand, by suspending this Tamer, reduce the play cost by 1.
-  - kind: cost_reduction
+  - text: "[Your Turn] When any Digimon cards with the [ADVENTURE] trait would be played from your hand, by suspending this Tamer, reduce the play cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when: { your_turn: true }
     optional: true
@@ -47,7 +49,8 @@ effects:
       - suspend: { target: source }
 
   # [Security] Play this card without paying the cost.
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

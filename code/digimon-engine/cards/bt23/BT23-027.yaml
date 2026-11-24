@@ -150,6 +150,7 @@ alt_paths:
   # DCGO: EqualsCardName("Patamon") || (IsLevel3 && HasCSTraits).
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Patamon
         - all_of:
@@ -158,10 +159,12 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
 
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier
 

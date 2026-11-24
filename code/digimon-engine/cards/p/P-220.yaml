@@ -160,11 +160,13 @@ alt_paths:
 
 effects:
   # ─── Clause 0: face-up keywords ────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Reboot＞"
+    kind: grant_keyword
     keyword: Reboot
     summary: "<Reboot>"
 
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -179,6 +181,7 @@ effects:
       # auto-skips (no prompt) when the opponent has no Digimon, matching
       # DCGO's HasMatchConditionPermanent gate. The pick itself is mandatory.
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -221,7 +224,8 @@ effects:
   # multi-select — accepting it commits to the mandatory exact-3 pick;
   # declining it skips the whole clause. This is faithfully equivalent to
   # DCGO's `canNoSelect: () => true` at the point of activation.
-  - when: on_deletion
+  - text: "[On Deletion] By returning 3 [Composite], [Wicked God] or [DM] trait cards from your trash to the bottom of the deck, you may play 2 level 6 or lower [Composite], [Ver.3] or [Ver.5] trait Digimon cards from your trash without paying the costs. This effect can't play cards of the same level."
+    when: on_deletion
     optional: true
     condition:
       count_gte:

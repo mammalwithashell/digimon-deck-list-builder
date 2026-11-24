@@ -105,7 +105,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Activate 1 of the effects below. ・ ＜De-Digivolve 1＞ 3 of your opponent's Digimon. ・ 1 of your other Digimon digivolves into a level 6 or lower Digimon card with [Garurumon] in its name in your hand without paying the cost. ・This Digimon and one of your other Digimon may DNA digivolve into a Digimon card in your hand for the cost."
+    when: when_digivolving
     summary: "[When Digivolving] Choose 1: De-Digivolve 1 up to 3 opp Digimon / free-digivolve another Digimon into a Lv6-or-lower [Garurumon] hand card / DNA digivolve this + another Digimon into a hand card (paying the cost)"
     process:
       - select_effect_choice:
@@ -153,6 +154,7 @@ effects:
                 # matches DCGO's early-return on a null selectedPermanent.
                 optional: true
             - select_hand:
+                optional: false
                 of: you
                 bind_as: evo_card
                 filter:
@@ -182,7 +184,8 @@ effects:
                 optional: true
                 prompt: "Choose 1 other Digimon to DNA digivolve with"
 
-  - scope: inherited
+  - text: "[When Attacking][Once Per Turn] If this Digimon has [Omnimon] in its name, trash the top card of your opponent's security stack."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition: { source_name_contains: "Omnimon" }

@@ -97,6 +97,7 @@ alt_paths:
   # 3) Lv.4 [Xros Heart] or [Hero] trait digivolve: Cost 3 (xros_req)
   - kind: digivolve
     from:
+      any_color: true
       level_eq: 4
       any_of:
         - trait_has: "Xros Heart"
@@ -114,7 +115,8 @@ effects:
   # select_hand optional: true — if no eligible card in hand, player can skip.
   # binding_exists: play_pick gates the delete so it only fires if a card was
   # selected and played.
-  - when: end_of_attack
+  - text: "[End of Attack] You may play 1 card with the [Xros Heart], [Blue Flare] or [Hero] trait from your hand with the play cost reduced by 5. If you did, delete this Digimon."
+    when: end_of_attack
     optional: true
     summary: "[End of Attack] You may play 1 [Xros Heart]/[Blue Flare]/[Hero] from hand cost -5; if played, delete self"
     process:
@@ -159,7 +161,8 @@ effects:
   # Destination: any own Tamer (kind: tamer), optional.
   # Source: Digimon with Xros Heart or Blue Flare.
   # Save keyword is auto-installed by keyword_effects.rs from the printed "＜Save＞".
-  - when: on_deletion
+  - text: "[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers. Then, ＜Save＞."
+    when: on_deletion
     optional: true
     summary: "[On Deletion] You may place 1 [Xros Heart]/[Blue Flare] Digimon from hand or trash under any of your Tamers. Then, Save."
     process:
@@ -182,6 +185,7 @@ effects:
                 condition: { equals: [zone_choice, 0] }
                 then:
                   - select_hand:
+                      optional: false
                       of: you
                       bind_as: source_card
                       filter:
@@ -198,6 +202,7 @@ effects:
                 condition: { equals: [zone_choice, 1] }
                 then:
                   - select_trash:
+                      optional: false
                       of: you
                       bind_as: source_card
                       filter:
@@ -224,7 +229,8 @@ effects:
   # as BT12-022 (`source_permanent_trait_has: "Free"` in `active_when`).
   # Gap G-DSL-AURA-TARGET-SOURCE-PERMANENT is RESOLVED (qa/resolved-gaps.md,
   # bg-imperial-substrate-closeout 2026-05-21).
-  - scope: inherited
+  - text: "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞."
+    scope: inherited
     kind: aura
     active_when:
       your_turn: true

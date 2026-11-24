@@ -17,7 +17,8 @@ effects:
           expiry: end_of_opponents_next_turn
 
   # [Security] All of your Security Digimon get +7000 DP for the turn.
-  - when: on_security
+  - text: "[Security] All of your Security Digimon get +7000 DP for the turn."
+    when: on_security
     summary: "[Security] Your Security Digimon get +7000 DP for the turn"
     process:
       - add_player_modifier:

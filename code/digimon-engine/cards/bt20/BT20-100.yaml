@@ -70,7 +70,8 @@ effects:
   # same set of plays without a zone choice that could lead nowhere (the old
   # select_effect_choice offered "From trash" with an empty trash). The
   # BT20-093 [Security] idiom.
-  - scope: inherited
+  - text: "[Security] You may play 1 [Omekamon] or [Cool Boy] from your hand or trash without paying the cost. Then, place this card in the battle area."
+    scope: inherited
     when: on_security
     summary: "[Security] You may play [Omekamon] or [Cool Boy] from hand or trash free; then place self in battle area"
     process:

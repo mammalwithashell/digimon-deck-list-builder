@@ -69,7 +69,8 @@ alt_paths:
 #   no-eligible-trash prompt approximation is closed by the `count_gte` guard.
 
 effects:
-  - when: [start_of_your_main_phase, on_play]
+  - text: "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Insectoid] or [Free] trait in your trash with the digivolution cost reduced by 1."
+    when: [start_of_your_main_phase, on_play]
     optional: true
     active_when:
       all_of:
@@ -141,13 +142,15 @@ effects:
 # Implementation status: IMPLEMENTED. The select + suspend pattern is
 # battle-tested (EX8-074, BT17-081, BT13-012 precedents).
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: false
     summary: "[Inherited][When Attacking][OPT] Suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter: { kind: digimon }
           prompt: "Suspend 1 of your opponent's Digimon"

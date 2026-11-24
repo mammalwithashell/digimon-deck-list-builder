@@ -184,6 +184,10 @@ fn p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_
     runner.push_source(kotone, "XH-LV4");
 
     runner.game.enter_main_phase();
+    assert!(
+        runner.pending_selection().is_none(),
+        "no Xros Heart/Twilight Digimon in hand or trash, so the [Start of Your Main Phase] placement is not offered"
+    );
     let activation = FIELD_EFFECT_START
         + kotone.index as u16 * EFFECTS_PER_PERMANENT
         + FIELD_EFFECT_SLOT_FOR_MAIN;
@@ -238,3 +242,31 @@ fn p_224_main_suspends_to_play_level5_or_higher_xros_heart_from_under_tamers_at_
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_choice;
+
+#[test]
+fn p_224_on_play_is_not_offered_without_a_xros_heart_or_twilight_digimon_to_place() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("P-224 YAML loads")
+        .add_card(filler_digimon("PLAIN-HAND"))
+        .add_card(filler_digimon("DRAW-CARD"))
+        .hand(0, &["PLAIN-HAND"])
+        .deck(0, &["DRAW-CARD"])
+        .memory(3)
+        .start();
+
+    let kotone = runner.place_on_field(0, CARD_ID, Some(0));
+    let deck_before = runner.deck_size(0);
+
+    runner.fire_on_play(0, kotone.index as usize);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "P-224's \"By placing\" condition is unpayable, so its activation must not be offered"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "no draw without paying the condition"
+    );
+}

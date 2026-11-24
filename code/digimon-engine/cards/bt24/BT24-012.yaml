@@ -65,7 +65,8 @@ effects:
   #        CanTriggerWhenLoseSecurity checks player == card.Owner.Enemy
   #        (opponent's security), IsOwnerTurn, SetIsInheritedEffect(true),
   #        SetUpActivateClass(max=1 OPT).
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     active_when: { your_turn: true }

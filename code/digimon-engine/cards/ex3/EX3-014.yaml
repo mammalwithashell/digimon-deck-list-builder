@@ -46,14 +46,17 @@ alt_paths:
 
 effects:
   # ＜Rush＞ — static self keyword.
-  - kind: grant_keyword
+  - text: "＜Rush＞ (This Digimon may attack the turn it was played.)"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
 
-  - when: on_play
+  - text: "[On Play] Delete 1 of your opponent's Digimon with 3000 DP or less. For each card with [Dragon], [saur], or [Ceratopsian] in one of its traits in this Digimon's digivolution cards, add 2000 to the maximum DP you can choose with this effect."
+    when: on_play
     summary: "[On Play] Delete 1 opp Digimon with DP <= 3000 + 2000 per Dragon/saur/Ceratopsian digivolution source"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

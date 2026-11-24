@@ -60,7 +60,8 @@ effects:
                 then:
                   - place_self_under_permanent: { target: host }
 
-  - scope: inherited
+  - text: "[All Turns] When this Digimon would leave the battle area other than by one of your effects, from this Digimon's digivolution cards, return 1 Digimon card to the hand and place 1 [X Antibody] on top of your security stack."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     active_when:
@@ -99,6 +100,7 @@ effects:
                   owner_can_add_security: true
           then:
             - select_material:
+                optional: false
                 of_permanent: source
                 bind_as: antibody
                 filter: { name_is: X Antibody }
@@ -110,7 +112,8 @@ effects:
                 position: top
                 face: down
 
-  - when: on_security
+  - text: "[Security] Add this card to the hand."
+    when: on_security
     summary: "Add this card to the hand"
     process:
       - add_this_option_to_hand: {}

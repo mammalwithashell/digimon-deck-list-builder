@@ -52,6 +52,7 @@ effects:
     summary: "Suspend 2 Digimon, -4 play cost"
     pay_cost:
       - select_any_permanent:
+          optional: false
           bind_as: suspend_1
           filter:
             all_of:
@@ -60,6 +61,7 @@ effects:
           prompt: "Suspend 1 Digimon (cost 1/2)"
       - suspend: { target: suspend_1 }
       - select_any_permanent:
+          optional: false
           bind_as: suspend_2
           filter:
             all_of:

@@ -32,6 +32,7 @@ effects:
           - trait_has: Dragonkin
     process:
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:
@@ -49,7 +50,8 @@ effects:
           keyword: Raid
           expiry: end_of_turn
 
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory."
+    scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
     active_when: { your_turn: true }

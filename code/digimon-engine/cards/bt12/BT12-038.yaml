@@ -112,6 +112,7 @@ alt_paths:
   # Level == 3).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - name_contains: "Agumon"
@@ -121,7 +122,8 @@ alt_paths:
 effects:
   # ─── Clause 1 — [When Digivolving] no_permanent(Marcus Damon)-gated free
   #     play ────────────────────────────────────────────────────────────────
-  - when: when_digivolving
+  - text: "[When Digivolving] If you don't have [Marcus Damon] in play, you may play 1 [Marcus Damon] from your hand without paying the cost."
+    when: when_digivolving
     condition:
       no_permanent:
         of: you
@@ -146,7 +148,8 @@ effects:
 
   # ─── Clause 2 — Inherited [Your Turn][Once Per Turn] own yellow/red Tamer
   #     suspend → 1 opponent Digimon gets -2000 DP for the turn ─────────────
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your yellow or red Tamers becomes suspended, 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
     when: on_suspend
     once_per_turn: true
     active_when: { your_turn: true }
@@ -158,6 +161,7 @@ effects:
     summary: "[Your Turn][Once Per Turn] When own yellow/red Tamer suspends, 1 opponent Digimon gets -2000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"

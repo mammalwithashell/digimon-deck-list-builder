@@ -23,7 +23,8 @@ traits: [Lesser, Hero]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your yellow or red Tamers suspend, ＜Draw 1＞."
+    scope: inherited
     when: on_suspend
     once_per_turn: true
     active_when: { your_turn: true }

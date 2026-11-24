@@ -56,6 +56,7 @@ effects:
     process:
       - unsuspend: { target: source }
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: { kind: digimon }
           prompt: "Suspend 1 opposing Digimon"

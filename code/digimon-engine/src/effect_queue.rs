@@ -338,6 +338,8 @@ impl Game {
         // (`is_source`, source-carrier rebinding) must still resolve to the
         // Digimon the effect was borrowed from, not to nothing.
         let source_identity = Some(self.source_move_anchor(effect.source));
+        let allow_below_top_liveness = effect.timing == EffectTiming::OnDeletion
+            && self.top_card_handle(effect.source) != Some(effect.source_card);
         QueuedEffect {
             source_identity,
             source_card: effect.source_card,
@@ -353,7 +355,7 @@ impl Game {
             is_optional,
             is_turn_player,
             card_id: effect.card_id,
-            allow_below_top_liveness: false,
+            allow_below_top_liveness,
             dna_origin_context: None,
             granted_effect_id: None,
             keyword_effect: None,

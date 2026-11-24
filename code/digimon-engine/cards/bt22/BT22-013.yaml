@@ -188,10 +188,10 @@ alt_paths:
   # DCGO gates on (CS-trait || Greymon-name) && Lv.5 — no color restriction.
   # Encoded as two alt_paths (one per branch of the disjunction), matching P-215 idiom.
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "Greymon" }
+    from: { any_color: true, level_eq: 5, name_contains: "Greymon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
 
 effects:
@@ -241,6 +241,7 @@ effects:
             this_card_can_digivolve_onto: { cost: 6, ignore_requirements: true }
     process:
       - select_own_permanent:
+          optional: false
           bind_as: base
           filter:
             all_of:
@@ -270,7 +271,8 @@ effects:
   # Inner branch 1 uses dp_lte: { aggregate: lowest_dp } — same pattern as
   # BT24-017 / BT24-040. G-PRED-DP-LTE is RESOLVED: dp_lte is now evaluated,
   # lowest-DP filter honored, and the behavioral test asserts this directly.
-  - when: when_digivolving
+  - text: "[When Digivolving] Activate 1 of the effects below: ・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand, ignoring digivolution requirements and without paying the cost. ・Delete 1 of your opponent's Digimon with the lowest DP."
+    when: when_digivolving
     summary: "[When Digivolving] Choose: digivolve Gabumon→MetalGarurumon free OR delete opp's lowest-DP Digimon"
     process:
       - select_effect_choice:
@@ -332,6 +334,7 @@ effects:
           condition: { equals: [branch, 1] }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:
@@ -353,7 +356,8 @@ effects:
   # subject_or_source_permanent). G-DSL-SOURCE-NAME-CONTAINS is RESOLVED:
   # the gate correctly blocks the inherited when the top card is not
   # Omnimon-named. Negative test is active and green (0 ignored).
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, trash your opponent's top security card."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition: { source_name_contains: "Omnimon" }

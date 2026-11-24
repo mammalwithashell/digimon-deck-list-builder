@@ -26,6 +26,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - { level_eq: 4, effect_text_contains: "＜Save＞" }
         - { level_eq: 4, trait_has: Hero }
@@ -106,7 +107,8 @@ effects:
     summary: "[All Turns] +1000 DP per digivolution card (material_count formula)"
 
   # ─── Clause 5 (Inherited): [Your Turn] +2000 DP ───────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

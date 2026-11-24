@@ -49,7 +49,8 @@ alt_paths:
 
 effects:
   # ─── [When Digivolving][When Attacking] delete <=8000 DP; else +3000/Blocker ─
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. If this effect didn't delete, this Digimon gets +3000 DP and gains ＜Blocker＞ until the end of your opponent's turn."
+    when: [when_digivolving, when_attacking]
     summary: "[When Digivolving][When Attacking] Delete 1 opp Digimon with 8000 DP or less; if this effect didn't delete, +3000 DP and <Blocker> until end of opponent's turn"
     process:
       # Top-level select+delete (BT25-014 idiom): an empty mandatory select
@@ -58,6 +59,7 @@ effects:
       # outer tail with PRE-delete bindings — see qa/dsl-vocab-gaps.md
       # G-DSL-IF-BODY-PARK-RESULT-LOG).
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -78,7 +80,8 @@ effects:
                 expiry: end_of_opponents_turn
 
   # ─── [Your Turn] while you have 0 or less memory: opponent-effect immunity ──
-  - kind: aura
+  - text: "[Your Turn] While you have 0 or less memory, this Digimon isn't affected by your opponent's effects."
+    kind: aura
     target: {}
     active_when:
       all_of:

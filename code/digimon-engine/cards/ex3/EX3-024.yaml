@@ -58,6 +58,7 @@ effects:
                 of: opponent
                 body:
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: attacker
                       filter: { kind: digimon }
                       prompt: "Choose 1 of your Digimon to attack (even one that cannot attack)"
@@ -65,7 +66,8 @@ effects:
                       attacker: attacker
                       targets: any
                       prompt: "Attack with the selected Digimon"
-  - when: start_of_opponents_main_phase
+  - text: "[Start of Opponent's Main Phase] By suspending 1 of your Digimon with [Dramon] or [Examon] in its name,1 of your opponent's Digimon must attack."
+    when: start_of_opponents_main_phase
     scope: inherited
     summary: "By suspending your Dramon or Examon, your opponent attacks with 1 of their Digimon"
     process:
@@ -96,6 +98,7 @@ effects:
                 of: opponent
                 body:
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: attacker
                       filter: { kind: digimon }
                       prompt: "Choose 1 of your Digimon to attack (even one that cannot attack)"

@@ -36,7 +36,7 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: DATA SQUAD }
+    from: { any_color: true, level_eq: 4, trait_has: DATA SQUAD }
     cost: 3
 
 effects:
@@ -83,11 +83,12 @@ effects:
         - replacement_subject_is_mine: true
     summary: "[All Turns][OPT] Trash FD under a Tamer so this Digimon doesn't leave"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}
 
   # ─── Inherited [All Turns][OPT] leave-prevention (Gaogamon-name / DATA SQUAD) ─
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Gaogamon] in its name or the [DATA SQUAD] trait would leave the battle area, by trashing the bottom face-down card from under any of your Tamers, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
@@ -104,5 +105,5 @@ effects:
             - source_permanent_trait_has: DATA SQUAD
     summary: "Inherited [All Turns][OPT] Gaogamon-name/DATA SQUAD carrier doesn't leave by trashing FD"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}

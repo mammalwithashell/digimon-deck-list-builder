@@ -64,12 +64,13 @@ alt_paths:
 
   # [Digivolve] Lv.5 w/[Dark Masters] in text: Cost 3 (any colour).
   - kind: digivolve
-    from: { level_eq: 5, in_text_contains: "Dark Masters" }
+    from: { any_color: true, level_eq: 5, in_text_contains: "Dark Masters" }
     cost: 3
 
 effects:
   # ─── [On Play][When Digivolving] tuck a Lv.5 [Dark Masters] card → delete ≤5
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By placing 1 level 5 card with [Dark Masters] in its text from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's level 5 or lower Digimon."
+    when: [on_play, when_digivolving]
     optional: true
     outer_prompt: true
     condition:
@@ -108,6 +109,7 @@ effects:
           source: dark_master
           target: source
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -117,7 +119,8 @@ effects:
       - delete_permanent: { target: victim }
 
   # ─── [When Attacking] return 7 opponent-trash cards to their deck bottom → unsuspend
-  - when: when_attacking
+  - text: "[When Attacking] By returning 7 cards from your opponent's trash to the bottom of the deck, unsuspend this Digimon."
+    when: when_attacking
     optional: true
     outer_prompt: true
     condition:

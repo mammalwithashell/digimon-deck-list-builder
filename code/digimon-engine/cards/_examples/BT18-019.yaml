@@ -18,6 +18,7 @@ effects:
   - when: [on_play, when_digivolving]
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter: { kind: digimon }
           prompt: "Delete a Digimon"
@@ -44,11 +45,13 @@ effects:
     optional: true
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: kim
           filter: { name_is: "Kimeramon" }
           prompt: "Return Kimeramon"
       - select_trash:
+          optional: false
           of: you
           bind_as: mach
           filter: { name_is: "Machinedramon" }
@@ -56,6 +59,7 @@ effects:
       - return_to_deck_from_reveal: { of: you, card: kim, position: bottom }
       - return_to_deck_from_reveal: { of: you, card: mach, position: bottom }
       - select_trash:
+          optional: false
           of: you
           bind_as: millen
           filter: { name_is: "Millenniummon" }

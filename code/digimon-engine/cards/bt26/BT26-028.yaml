@@ -85,7 +85,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "<Barrier>"
 
@@ -103,7 +104,8 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [On Play][When Digivolving] may link 1 Lv.3 Life/System/Seven Code source
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may link 1 level 3 Digimon card with the [Life], [System] or [Seven Code] trait from this Digimon's digivolution cards to this Digimon without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may link 1 level 3 [Life]/[System]/[Seven Code] trait Digimon card from this Digimon's digivolution cards to this Digimon without paying the cost"
     process:
       - link_cards:
@@ -139,6 +141,7 @@ effects:
     summary: "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects and gets -3000 DP"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: med_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects and gets -3000 DP until their turn ends"

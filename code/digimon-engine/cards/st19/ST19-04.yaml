@@ -16,7 +16,8 @@ alt_paths:
     cost: 1
 
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing 1 card with the [Puppet] trait in your hand, ＜Draw 2＞. (Draw 2 cards from your deck.)"
+    when: on_play
     optional: true
     summary: "By trashing a Puppet card from hand, Draw 2"
     condition:
@@ -39,6 +40,7 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 2 }
 
-  - scope: inherited
+  - text: "＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Reboot

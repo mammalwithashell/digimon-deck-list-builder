@@ -19,6 +19,7 @@ effects:
   process:
   - &id001
     select_opponent_permanent:
+      optional: false
       bind_as: victim
       filter:
         kind: digimon
@@ -38,7 +39,8 @@ effects:
   process:
   - *id001
   - *id002
-- when: on_security
+- text: "[Security] Delete 1 of your opponent's level 6 or lower Digimon. Then, place this card in the battle area."
+  when: on_security
   process:
   - *id001
   - *id002

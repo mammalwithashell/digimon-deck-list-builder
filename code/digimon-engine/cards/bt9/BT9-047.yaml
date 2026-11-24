@@ -36,7 +36,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - kind: flood_gate
+  - text: "[All Turns] Players can’t play Digimon by effects."
+    kind: flood_gate
     scope: face_up
     # §3-4-7-4: a Pomumon in the breeding area has no active effect. The
     # declarative tick scans the breeding area too (for [Breeding] cards), so

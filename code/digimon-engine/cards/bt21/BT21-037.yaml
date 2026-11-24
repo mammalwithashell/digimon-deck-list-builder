@@ -27,7 +27,8 @@ effects:
   # DCGO: CardEffectFactory.PierceSelfEffect(isInheritedEffect: false, card: card, condition: null)
   # at EffectTiming.OnDetermineDoSecurityCheck.
   # Pattern: grant_keyword Piercing (same as BT24-018 clause (b), BT72 clause 2).
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 
@@ -36,7 +37,8 @@ effects:
   # card of this Digimon to prevent that deletion."
   # DCGO: CardEffectFactory.ArmorPurgeEffect(card: card) at EffectTiming.WhenPermanentWouldBeDeleted.
   # Pattern: grant_keyword ArmorPurge (same as BT24-018 clause (d), P-137 clause (a)).
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
     keyword: ArmorPurge
     summary: "<Armor Purge>"
 
@@ -70,7 +72,8 @@ effects:
   # target exists), with the DP buff running unconditionally afterward.
   # (Previously authored with step-level `optional: true`, which wrongly exposed a decline
   # when a target existed — caught by rules_faq::effect_resolution::mp29_*.)
-  - when: when_digivolving
+  - text: "[When Digivolving] Suspend 1 of your opponent's Digimon. Then, this Digimon gets +2000 DP until your opponent's turn ends."
+    when: when_digivolving
     summary: "[When Digivolving] Suspend 1 opp Digimon; this Digimon gets +2000 DP until opp turn ends"
     process:
       - if:
@@ -81,6 +84,7 @@ effects:
               kind: digimon
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: tgt
                 filter: { kind: digimon }
                 prompt: "Suspend 1 of your opponent's Digimon"

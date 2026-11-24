@@ -110,10 +110,12 @@ effects:
   # The <=6000 delete is a mandatory single pick when a legal target exists
   # (DCGO maxCount Min(1,count), canNoSelect:false). The fallback fires only when
   # the first delete did not actually delete anything (FailureProcess).
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's 6000 DP or lower Digimon. If this effect didn't delete, delete 1 of their 13000 DP or higher Digimon."
+    when: [on_play, when_digivolving, when_attacking]
     summary: "[On Play][When Digivolving][When Attacking] Delete 1 opp Digimon <=6000 DP; if none deleted, delete 1 opp Digimon >=13000 DP"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -125,6 +127,7 @@ effects:
           condition: { effect_deleted_any_opponent_digimon: false }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim2
                 filter:
                   all_of:

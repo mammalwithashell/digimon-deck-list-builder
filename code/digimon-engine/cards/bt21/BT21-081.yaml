@@ -29,7 +29,8 @@ traits: [LIBERATOR]
 
 effects:
   # ─── Clause (a): [Start of Your Main Phase] ──────────────────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If opponent has Digimon, gain 1 memory"
     condition:
       any_permanent:
@@ -45,7 +46,8 @@ effects:
   # AND at least one Reptile/Dragonkin must be available to target.
   # DCGO CanActivateCondition: IsExistOnBattleArea + CanActivateSuspendCostEffect
   # AND HasMatchConditionPermanent(CanSelectCondition).
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] By suspending this Tamer, 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains ＜Piercing＞ for the turn. Then, that Digimon attacks."
+    when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] Suspend self → grant Piercing to Reptile/Dragonkin"
     condition:
@@ -67,6 +69,7 @@ effects:
       - suspend: { target: source }
       # Select 1 Reptile/Dragonkin Digimon to receive Piercing.
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:
@@ -85,7 +88,8 @@ effects:
           targets: any
 
   # ─── Clause (c): [Security] Play without paying the cost ─────────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

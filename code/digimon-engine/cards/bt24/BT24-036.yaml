@@ -47,16 +47,19 @@ alt_paths:
 
 effects:
   # ─── [Security] At the end of the battle, play this card without paying the cost
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
   # ─── [On Play][On Deletion] 1 opponent Digimon gets -3000 DP for the turn ─────
-  - when: [on_play, on_deletion]
+  - text: "[On Play] [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn."
+    when: [on_play, on_deletion]
     summary: "[On Play][On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to get -3000 DP for the turn"
@@ -84,6 +87,7 @@ effects:
     summary: "[Link][On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: link_tgt
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to get -5000 DP for the turn"

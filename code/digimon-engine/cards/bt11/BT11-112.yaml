@@ -12,6 +12,7 @@ effects:
     summary: "1 of your Veemon/Veedramon-name Digimon gains Blocker and Evade until the end of your opponent's turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: recipient
           filter:
             all_of:
@@ -41,10 +42,12 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - refire_effect:
+          optional: false
           source: event_target
           timing: when_digivolving
           target_attribution: true
-  - when: on_unsuspend
+  - text: "[Your Turn][Once Per Turn] When any of your blue Digimon unsuspend, gain 1 memory."
+    when: on_unsuspend
     active_when: { your_turn: true }
     once_per_turn: true
     condition:
@@ -55,6 +58,7 @@ effects:
     summary: "[Your Turn][Once Per Turn] When one of your blue Digimon becomes unsuspended, gain 1 memory"
     process:
       - gain_memory: 1
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     process:
       - play_from_security: {}

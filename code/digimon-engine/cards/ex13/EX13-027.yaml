@@ -61,14 +61,16 @@ effects:
           of: you
           count: 3
           buckets:
-            - filter:
+            - optional: false
+              filter:
                 any_of:
                   - name_contains: Sukamon
                   - name_contains: Etemon
               to: hand
               max: 1
               prompt: "Add 1 card with [Sukamon] or [Etemon] in its name to the hand"
-            - filter:
+            - optional: false
+              filter:
                 any_of:
                   - name_contains: Sukamon
                   - name_contains: Etemon
@@ -77,7 +79,8 @@ effects:
               prompt: "Trash 1 card with [Sukamon] or [Etemon] in its name"
           remainder: bottom
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 other Digimon with [Sukamon] in its name, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

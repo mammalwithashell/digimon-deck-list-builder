@@ -6,13 +6,15 @@ cost: 4
 traits: [ADAMAS, TS]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory"
     condition: { memory_lte: 4 }
     process:
       - gain_memory: 1
 
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card with as high or lower a use cost as your opponent's memory from your hand without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack."
+    when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] Suspend this Tamer to use 1 TS Option from hand under opponent-memory ceiling; then 1 TS Digimon may attack"
     # Printed (and DCGO `CanActivateCondition`): only the suspend cost has to be
@@ -48,7 +50,8 @@ effects:
           targets: any
           optional: true
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

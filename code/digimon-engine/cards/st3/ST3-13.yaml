@@ -7,6 +7,7 @@ effects:
   - when: main_from_hand
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to get +3000 DP"
@@ -14,7 +15,8 @@ effects:
           target: target
           value: 3000
           expiry: end_of_turn
-  - when: on_security
+  - text: "[Security] All of your Digimon and Security Digimon get +5000 DP for the turn. Then add this card to its owner's hand."
+    when: on_security
     process:
       - add_modifier:
           target: { owner: you, zone: [battle_area], kind: digimon }

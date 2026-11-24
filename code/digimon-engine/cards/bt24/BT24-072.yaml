@@ -65,6 +65,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -76,7 +77,8 @@ effects:
   # ─── [On Play][When Digivolving] by trashing 1 hand card, until your
   #     opponent's turn ends, 1 own [Demon]/[Shaman]/[Titan] Digimon gains
   #     <Blocker> and <Retaliation> ──────────────────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, until your opponent's turn ends, 1 of your Digimon with the [Demon], [Shaman] or [Titan] trait gains ＜Blocker＞ and ＜Retaliation＞."
+    when: [on_play, when_digivolving]
     condition:
       count_gte:
         filter: { of: you, zone: [hand] }
@@ -92,6 +94,7 @@ effects:
           prompt: "Trash 1 card in your hand: 1 of your [Demon]/[Shaman]/[Titan] Digimon gains <Blocker> and <Retaliation>"
       - trash_from_hand_by_index: { of: you, hand_index: cost_card }
       - select_own_permanent:
+          optional: false
           bind_as: buff
           filter:
             all_of:
@@ -112,7 +115,8 @@ effects:
 
   # ─── [On Deletion] you may play 1 Lv.4- [Demon]/[Titan] Digimon from the
   #     trash without paying the cost ─────────────────────────────────────
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 level 4 or lower [Demon] or [Titan] trait Digimon card from your trash without paying the cost."
+    when: on_deletion
     summary: "[On Deletion] You may play 1 level 4 or lower [Demon] or [Titan] trait Digimon card from your trash without paying the cost"
     process:
       - select_trash:
@@ -131,7 +135,8 @@ effects:
 
   # ─── Inherited [Your Turn] while this Digimon is [Titamon] or has the
   #     [Titan] trait → <Security A. +1> ───────────────────────────────────
-  - kind: grant_keyword
+  - text: "[Your Turn] While this Digimon is [Titamon] or has the [Titan] trait, it gains ＜Security A. +1＞."
+    kind: grant_keyword
     scope: inherited
     keyword: SecurityAttackPlus
     value: 1

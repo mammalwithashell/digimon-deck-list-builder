@@ -83,7 +83,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Paledramon] or [Hexeblaumon] in its name and 1 card with the [Ice-Snow] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Paledramon]/[Hexeblaumon]-named card and 1 [Ice-Snow] trait card; rest to deck bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -107,7 +108,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: ice_snow_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] Trash the top digivolution card of 1 of your opponent's Digimon."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition:
@@ -119,6 +121,7 @@ effects:
     summary: "[Inherited][When Attacking][OPT] Trash the top digivolution card of 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: peel_target
           filter:
             kind: digimon

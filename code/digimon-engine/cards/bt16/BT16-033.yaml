@@ -23,10 +23,12 @@ alt_paths:
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
     keyword: ArmorPurge
     summary: "<Armor Purge>"
-  - when: on_security_check
+  - text: "[Your Turn] When this Digimon checks your opponent's security stack, if you have 3 or more security cards, gain 1 memory. If you have 2 or fewer, ＜Recovery +1 (Deck)＞."
+    when: on_security_check
     active_when: { your_turn: true }
     condition: { event_target_is_source: true }
     summary: "[Your Turn] When this Digimon checks your opponent's security stack, if you have 3 or more security cards, gain 1 memory. If you have 2 or fewer, <Recovery +1 (Deck)>."

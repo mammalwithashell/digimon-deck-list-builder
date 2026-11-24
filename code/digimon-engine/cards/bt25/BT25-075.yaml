@@ -114,7 +114,7 @@ alt_paths:
   # Printed alt box: "[Digivolve] Lv.5 w/[TS] trait: Cost 3" — trait-gated,
   # no color restriction, cheaper than the standard box.
   - kind: digivolve
-    from: { level_eq: 5, trait_has: TS }
+    from: { any_color: true, level_eq: 5, trait_has: TS }
     cost: 3
 
 effects:
@@ -171,7 +171,8 @@ effects:
     summary: "[All Turns] All of your [TS] trait Digimon gain <Rush> and <Link +1>"
 
   # ─── [Your Turn] When your Digimon get linked, one of them may attack ──────
-  - when: on_any_link
+  - text: "[Your Turn] When your Digimon get linked, one of them may attack."
+    when: on_any_link
     optional: true
     active_when:
       your_turn: true

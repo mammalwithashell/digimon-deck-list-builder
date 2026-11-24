@@ -38,18 +38,20 @@ attribute: Vaccine
 alt_paths:
   # [Digivolve] Lv.3 w/[ADVENTURE] trait: Cost 2 (no colour gate).
   - kind: digivolve
-    from: { level_eq: 3, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 3, trait_has: ADVENTURE }
     cost: 2
 
 effects:
   # ─── [Security] At the end of the battle, play this card for free ─────────
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
   # ─── [On Play][When Digivolving] 2 opponent Digimon get Security A. -1 ────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Give 2 of your opponent's Digimon ＜Security A. -1＞ until their turn ends. (This Digimon checks 1 fewer security card.)"
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Give 2 of your opponent's Digimon <Security A. -1> until their turn ends"
     process:
       - select_count_capped_multi:
@@ -72,12 +74,14 @@ effects:
                 expiry: end_of_opponents_turn
 
   # ─── Inherited [When Attacking][Once Per Turn] -2000 DP for the turn ──────
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[Inherited][When Attacking][Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -2000 DP for the turn"

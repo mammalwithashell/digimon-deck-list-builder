@@ -209,11 +209,11 @@ alt_paths:
     cost: 4
   # Printed alt: Lv.5 w/[Garurumon] in name: Cost 3 (printed special digivolution)
   - kind: digivolve
-    from: { level_eq: 5, name_contains: "Garurumon" }
+    from: { any_color: true, level_eq: 5, name_contains: "Garurumon" }
     cost: 3
   # Printed alt: Lv.5 w/[CS] trait: Cost 3 (printed special digivolution)
   - kind: digivolve
-    from: { level_eq: 5, trait_has: CS }
+    from: { any_color: true, level_eq: 5, trait_has: CS }
     cost: 3
 
 effects:
@@ -263,6 +263,7 @@ effects:
             this_card_can_digivolve_onto: { cost: 6, ignore_requirements: true }
     process:
       - select_own_permanent:
+          optional: false
           bind_as: base
           filter:
             all_of:
@@ -306,7 +307,8 @@ effects:
   # Inner branch 1 uses `level_matches_aggregate { selector: lowest_level,
   # of: opponent }` — same pattern as AD1-012 (CresGarurumon) and BT24-040
   # (Karatenmon); the engine evaluates this predicate (not blocked).
-  - when: when_digivolving
+  - text: "[When Digivolving] Activate 1 of the effects below: ・1 of your [Agumon] may digivolve into [WarGreymon] in the hand, ignoring digivolution requirements and without paying the cost. ・Return 1 of your opponent's Digimon with the lowest level to the hand."
+    when: when_digivolving
     summary: "[When Digivolving] Choose: digivolve Agumon→WarGreymon free OR return opp's lowest-level Digimon to hand"
     process:
       - select_effect_choice:
@@ -321,6 +323,7 @@ effects:
             # [Agumon] / [WarGreymon] are card names (CR 4.3 2-3-1-2; DCGO
             # `EqualsCardName`, BT22_026.cs:159,164), not "in its name".
             - select_own_permanent:
+                optional: false
                 bind_as: base
                 filter: { name_is: "Agumon" }
                 prompt: "Choose your Agumon"
@@ -339,6 +342,7 @@ effects:
           condition: { equals: [branch, 1] }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:
@@ -365,7 +369,8 @@ effects:
   # ResolvedBinding::Permanent; SelfRef resolves to Card while Source
   # resolves to source_permanent. Same convention as AD1-012 unsuspend
   # step. See dsl_cards/binding_ref.rs.
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its name, it unsuspends."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     condition: { source_name_contains: "Omnimon" }

@@ -137,6 +137,7 @@ effects:
           expiry: end_of_opponents_turn
       # Step 2 — select 1 opponent Digimon (mandatory when any exists).
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve> for every 2 [Vemmon] in this Digimon's digivolution cards"
@@ -175,6 +176,7 @@ effects:
     summary: "[All Turns] When this Digimon would leave the battle area, you may play 1 [Vemmon] from its digivolution cards without paying the cost"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: vemmon_source
           filter:
@@ -195,7 +197,8 @@ effects:
   #   deck, then end the attack.
   # scope: inherited so it lives on the digivolution card beneath a later evo.
   # active_when opponents_turn = DCGO IsOpponentTurn. EX10-003 nested-then idiom.
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack."
+    scope: inherited
     when: on_opponent_attack
     optional: true
     once_per_turn: true

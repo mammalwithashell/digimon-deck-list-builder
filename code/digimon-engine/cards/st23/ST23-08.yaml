@@ -54,17 +54,19 @@ attribute: Data
 # Alt-digivolve: Lv.4 with the [Glowing Dawn] trait / cost 3.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 4, trait_has: "Glowing Dawn" }
     cost: 3
 
 effects:
   # ─── <Alliance> ────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)"
+    kind: grant_keyword
     keyword: Alliance
     summary: "<Alliance>"
 
   # ─── [On Play][When Digivolving] +3000 DP, then optional paid play/use ───────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if it's your turn, by trashing the bottom face-down card from under any of your Tamers, you may play or use 1 [Glowing Dawn] trait card from your hand with the cost reduced by 3."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends. Then, if it's your turn, by trashing a bottom face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card from hand with the cost reduced by 3"
     process:
       - add_dp_modifier:
@@ -111,13 +113,14 @@ effects:
                 cost_delta: { reduce: 3 }
 
   # ─── Inherited [End of Attack][OPT] trash FD under Tamer → unsuspend self ──
-  - scope: inherited
+  - text: "[End of Attack] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, this [Glowing Dawn] trait Digimon unsuspends."
+    scope: inherited
     when: end_of_attack
     once_per_turn: true
     optional: true
     summary: "[Inherited][End of Attack][OPT] By trashing a bottom face-down card under a Tamer, this [Glowing Dawn] Digimon unsuspends"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - if:
           condition: { source_permanent_trait_has: "Glowing Dawn" }
           then:

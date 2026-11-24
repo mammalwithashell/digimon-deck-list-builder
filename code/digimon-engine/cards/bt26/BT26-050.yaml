@@ -80,6 +80,7 @@ dual:
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - trait_has: "DATA SQUAD"
@@ -89,6 +90,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: yoshino
           filter: { kind: tamer, name_is: "Yoshino Fujieda" }
           prompt: "Return [Yoshino Fujieda] to the hand"
@@ -99,7 +101,8 @@ alt_paths:
 effects:
   # ─── [When Digivolving] may suspend 2 Digimon/Tamers (either side); then 2
   #     opp Digimon/Tamers can't unsuspend until their turn ends ─────────────
-  - when: when_digivolving
+  - text: "[When Digivolving] You may suspend 2 Digimon or Tamers. Then, 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends."
+    when: when_digivolving
     summary: "[When Digivolving] You may suspend 2 Digimon or Tamers; then 2 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"
     process:
       # "You may suspend 2 Digimon or Tamers" — DCGO: canNoSelect:true,
@@ -147,7 +150,8 @@ effects:
 
   # ─── [WD][WA] by bottom-decking 1 other suspended Digimon, trash the
   #     opponent's top security card ─────────────────────────────────────────
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] By returning 1 other suspended Digimon to the bottom of the deck, trash your opponent's top security card."
+    when: [when_digivolving, when_attacking]
     condition:
       any_field_permanent:
         of: any

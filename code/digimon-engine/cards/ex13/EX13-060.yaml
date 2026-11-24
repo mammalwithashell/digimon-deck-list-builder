@@ -57,6 +57,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - trait_has: Chronicle
@@ -76,10 +77,12 @@ alt_paths:
     cost: 5
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. Then, if they have 5 or more memory, gain 2 memory."
+    when: when_digivolving
     summary: "[When Digivolving] 1 opponent Digimon gets -8000 DP until their turn ends; then, if they have 5 or more memory, gain 2 memory"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -8000 DP until their turn ends"
@@ -92,7 +95,8 @@ effects:
           then:
             - gain_memory: 2
 
-  - when: on_ally_played
+  - text: "[Your Turn] [Once Per Turn] When any of your [Chronicle] trait Digimon or Tamers are played, 1 of your Digimon may attack. Then, you may activate 1 of this Digimon's [When Digivolving] effects."
+    when: on_ally_played
     once_per_turn: true
     active_when: { your_turn: true }
     trigger_if:
@@ -122,7 +126,8 @@ effects:
           timing: when_digivolving
           optional: true
 
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] You may play 1 [Chronicle] trait card without [Alphamon] in its name from your hand with the cost reduced by 6. It gains ＜Rush＞ for the turn."
+    when: end_of_your_turn
     once_per_turn: true
     summary: "[End of Your Turn][OPT] You may play 1 [Chronicle] trait card without [Alphamon] in its name from hand with the cost reduced by 6; it gains <Rush> for the turn"
     process:

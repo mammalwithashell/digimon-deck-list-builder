@@ -26,6 +26,7 @@ effects:
         play_cost_lte: 4
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:
@@ -45,6 +46,7 @@ effects:
       event_permanent_is_source: true
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"

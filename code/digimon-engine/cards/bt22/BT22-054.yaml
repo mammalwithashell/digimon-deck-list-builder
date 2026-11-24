@@ -36,11 +36,12 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 1
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
 
 effects:
-  - when: on_add_digivolution_cards
+  - text: "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, 1 of your opponent's Digimon gets -3000 DP for the turn."
+    when: on_add_digivolution_cards
     once_per_turn: true
     active_when: { your_turn: true }
     trigger_if:
@@ -55,6 +56,7 @@ effects:
     summary: "[Your Turn][Once Per Turn] When effects place [CS] trait Digimon cards in this Digimon's digivolution cards, 1 of your opponent's Digimon gets -3000 DP for the turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -3000 DP for the turn"

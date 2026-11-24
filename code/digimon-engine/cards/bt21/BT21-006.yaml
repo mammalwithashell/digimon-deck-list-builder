@@ -45,7 +45,8 @@ form: In-Training
 
 effects:
   # ─── Inherited [All Turns] self-aura: +3000 DP with 4+ [Vemmon] sources ─────
-  - scope: inherited
+  - text: "[All Turns] This Digimon with 4 or more [Vemmon] digivolution cards gets +3000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when:

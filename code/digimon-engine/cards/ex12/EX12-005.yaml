@@ -16,7 +16,7 @@ alt_paths:
     from: { name_is: Koromon }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: VB }
+    from: { any_color: true, level_eq: 2, trait_has: VB }
     cost: 0
 
 effects:

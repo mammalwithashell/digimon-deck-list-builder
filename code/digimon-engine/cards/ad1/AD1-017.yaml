@@ -121,11 +121,13 @@ effects:
   # turn") on the first, then -3000 DP (expiry end_of_your_turn = "until your
   # turn ends") on the second. From the security owner's perspective, "your
   # opponent" is resolved by `select_opponent_permanent`.
-  - scope: inherited
+  - text: "[Security] Give 1 of your opponent's Digimon ＜Security A. -1＞ for the turn. Then, 1 of their Digimon gets -3000 DP until your turn ends."
+    scope: inherited
     when: on_security
     summary: "[Security] Give 1 opp Digimon Security A. -1; then 1 opp Digimon gets -3000 DP until your turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: sec_target
           filter: { kind: digimon }
           prompt: "Give 1 of your opponent's Digimon <Security A. -1> for the turn"
@@ -135,6 +137,7 @@ effects:
           value: -1
           expiry: end_of_turn
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -3000 DP until your turn ends"

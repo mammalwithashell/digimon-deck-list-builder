@@ -159,7 +159,8 @@ effects:
   # OrderedPermutation selection, exposing the player's "any order" choice
   # to the RL action space (no auto-select; per the no-approximations
   # policy for top-of-deck placement).
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Greymon] in its name and 1 Digimon card with [Gabumon], [Garurumon], or [Omnimon] in its name among them to your hand. Place the rest on top of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 3; add one Greymon Digimon and one Gabumon/Garurumon/Omnimon Digimon; top the rest in chosen order"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -228,7 +229,8 @@ effects:
   # inherited clause's source carrier (`rctx.source_permanent`). `false`
   # rejects the fire when the digivolving permanent IS EX4-038's own host
   # carrier, faithfully implementing the printed "other Digimon" exclusion.
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When one of your other Digimon digivolves, gain 1 memory."
+    scope: inherited
     when: on_digivolve
     once_per_turn: true
     active_when: { your_turn: true }

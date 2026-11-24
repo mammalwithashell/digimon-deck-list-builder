@@ -15,7 +15,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] Up to 2 of your Digimon gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase) until the end of your opponent's next turn."
+    when: when_digivolving
     summary: "[When Digivolving] Up to 2 of your Digimon gain Reboot until the end of your opponent's turn"
     process:
       - select_count_capped_multi:

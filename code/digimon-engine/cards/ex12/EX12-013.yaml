@@ -19,7 +19,7 @@ alt_paths:
     from: { name_is: Gammamon }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: VB }
+    from: { any_color: true, level_eq: 3, trait_has: VB }
     cost: 2
 
 effects:

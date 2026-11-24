@@ -107,7 +107,8 @@ alt_paths:
 
 effects:
   # ─── Clause (a): [When Digivolving] free Tamer play + conditional DP debuff ─
-  - when: when_digivolving
+  - text: "[When Digivolving] You may play 1 yellow or red Tamer card from your hand without paying its memory cost. Then, if [RizeGreymon] or [X Antibody] is in this Digimon’s digivolution cards, 1 of your opponent's Digimon gets -2000 DP for the turn for each yellow or red Tamer you have in play."
+    when: when_digivolving
     summary: "[When Digivolving] May play 1 yellow/red Tamer free; then if RizeGreymon/X Antibody is in this Digimon's digivolution cards, 1 opponent Digimon gets -2000 DP per yellow/red Tamer you have in play"
     process:
       # Step 1: "You may play 1 yellow or red Tamer card from your hand
@@ -162,6 +163,7 @@ effects:
                   n: 1
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: debuffed
                 filter: { kind: digimon }
                 prompt: "Choose 1 of your opponent's Digimon to get -2000 DP per yellow/red Tamer you have in play"
@@ -188,7 +190,8 @@ effects:
   # Digimon gets +1000 DP." — ALL Tamer colors count (no yellow/red filter,
   # unlike clause (a)'s debuff half). Own (non-inherited) printed effect —
   # `scope` omitted, defaulting to `FaceUp`.
-  - kind: aura
+  - text: "[Your Turn] For each Tamer you have in play, this Digimon gets +1000 DP."
+    kind: aura
     target: {}
     active_when: { your_turn: true }
     dp_modifier:

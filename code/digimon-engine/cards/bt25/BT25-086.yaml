@@ -109,13 +109,15 @@ cost: 3
 traits: [ADAMAS, TS]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory"
     condition: { memory_lte: 4 }
     process:
       - gain_memory: 1
 
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] By suspending this Tamer, 1 of your [TS] trait Digimon gets +1000 DP for the turn for each memory your opponent has. After, that Digimon may attack."
+    when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] By suspending this Tamer, 1 of your [TS] Digimon gets +1000 DP for the turn for each memory your opponent has; after, that Digimon may attack"
     condition:
@@ -129,6 +131,7 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter:
             all_of:
@@ -149,7 +152,8 @@ effects:
           targets: any
           optional: true
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

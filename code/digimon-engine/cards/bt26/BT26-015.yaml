@@ -54,6 +54,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "TS"
@@ -61,10 +62,12 @@ alt_paths:
 
 effects:
   # ─── [OP][WD] -4000; then by bottom-decking 1 trash card, delete ≤5000 ────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP until their turn ends. Then, by returning 1 card in your trash to the bottom of the deck, delete 1 of your opponent's 5000 DP or lower Digimon."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 of your opponent's Digimon gets -4000 DP until their turn ends. Then, by returning 1 card in your trash to the bottom of the deck, delete 1 of your opponent's 5000 DP or lower Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: debuffed
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -4000 DP until their turn ends"
@@ -83,6 +86,7 @@ effects:
           then:
             - return_trash_list_to_deck_bottom: { of: you, cards: bottomed }
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:
@@ -93,7 +97,8 @@ effects:
 
   # ─── [Your Turn][OPT] When your effects add to decks, 1 of your Digimon may
   #     get +3000 DP until your opponent's turn ends and attack ──────────────
-  - when: on_add_to_deck
+  - text: "[Your Turn] [Once Per Turn] When your effects add to decks, 1 of your Digimon may get +3000 DP until your opponent's turn ends and attack."
+    when: on_add_to_deck
     once_per_turn: true
     active_when:
       your_turn: true
@@ -130,7 +135,8 @@ effects:
 
   # ─── Inherited [All Turns][OPT] When your effects add to decks, this
   #     Digimon with [Chronomon] in its text may unsuspend ──────────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When your effects add to decks, this Digimon with [Chronomon] in its text may unsuspend."
+    scope: inherited
     when: on_add_to_deck
     once_per_turn: true
     optional: true

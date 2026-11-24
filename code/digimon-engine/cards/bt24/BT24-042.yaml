@@ -61,6 +61,7 @@ alt_paths:
   # [Digivolve] [Tsunomon]/Lv.2 w/[TS] trait: Cost 0.
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: "Tsunomon"
         - all_of:
@@ -70,7 +71,8 @@ alt_paths:
 
 effects:
   # ─── [Your Turn] digivolving THIS into a [Demon]/[Titan] Digimon → -1 ─────
-  - kind: cost_reduction
+  - text: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Demon] or [Titan] trait, reduce the digivolution cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when:
       all_of:
@@ -88,7 +90,8 @@ effects:
   # ─── Inherited [Your Turn][OPT] your hand is trashed from → this [Demon] or
   #     [Titan] Digimon may digivolve into [Titamon] / a [Titan] trash card,
   #     cost -1 (BT26-066 idiom; trait gate widened to Demon OR Titan) ───────
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1."
+    scope: inherited
     when: on_discard_hand
     once_per_turn: true
     active_when:

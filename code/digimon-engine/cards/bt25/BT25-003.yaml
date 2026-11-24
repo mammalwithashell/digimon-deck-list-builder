@@ -56,7 +56,8 @@ form: In-Training
 effects:
   # ─── Inherited [When Attacking][OPT] By trashing your top security card,
   #     may digivolve into a [Glowing Dawn] hand card with the cost reduced by 1
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] By trashing your top security card, this Digimon may digivolve into a [Glowing Dawn] trait card in the hand with the cost reduced by 1."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     # The opt-in to pay "By trashing your top security card" (CR 4.3 15-7-1).

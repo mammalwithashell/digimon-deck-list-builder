@@ -77,6 +77,7 @@ alt_paths:
   # Special: "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0".
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - in_text_contains: "Three Musketeers"
@@ -84,7 +85,8 @@ alt_paths:
 
 effects:
   # ─── [Start of Your Main Phase] place a TM Option under 1 own Digimon → Draw 1
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By placing 1 Option card with the [Three Musketeers] trait from your hand or trash as 1 of your Digimon's bottom digivolution card, ＜Draw 1＞."
+    when: start_of_your_main_phase
     optional: true
     summary: "[Start of Your Main Phase] By placing 1 [Three Musketeers] Option from hand or trash as 1 of your Digimon's bottom digivolution card, Draw 1"
     condition:
@@ -112,6 +114,7 @@ effects:
       # NOT a token. `kind: digimon` accepts tokens on the field
       # (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT), so exclude them explicitly.
       - select_own_permanent:
+          optional: false
           bind_as: host
           filter:
             all_of:
@@ -124,7 +127,8 @@ effects:
       - draw: { of: you, count: 1 }
 
   # ─── Inherited <Retaliation> ────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Retaliation
     summary: "Inherited <Retaliation>"

@@ -30,11 +30,12 @@ alt_paths:
   # [Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0 (DCGO: HasAdventureTraits,
   # level 2, cost 0).
   - kind: digivolve
-    from: { level_eq: 2, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 2, trait_has: ADVENTURE }
     cost: 0
 
 effects:
-  - kind: flood_gate
+  - text: "[Opponent's Turn] Your opponent can't reduce digivolution costs."
+    kind: flood_gate
     summary: "[Opponent's Turn] Your opponent can't reduce digivolution costs"
     active_when: { opponents_turn: true }
     target_player: opponent

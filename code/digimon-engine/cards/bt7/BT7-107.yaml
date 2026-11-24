@@ -41,6 +41,7 @@ effects:
     summary: "[Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards from your trash to your hand"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter: { kind: digimon }
           prompt: "Delete 1 of your Digimon"
@@ -76,7 +77,8 @@ effects:
                   - add_to_hand_from_trash: { of: you, card: second }
 
   # ─── [Security] Add this card to its owner's hand ──────────────────────────
-  - scope: inherited
+  - text: "[Security] Add this card to its owner's hand."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] Add this card to its owner's hand"

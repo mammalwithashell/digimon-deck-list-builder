@@ -46,13 +46,14 @@ attribute: Vaccine
 # Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "Glowing Dawn" }
+    from: { any_color: true, level_eq: 2, trait_has: "Glowing Dawn" }
     cost: 0
 
 effects:
   # ─── [On Play] By placing 1 hand card face-down under a [Glowing Dawn] Tamer,
   #     <Draw 2> ───────────────────────────────────────────────────────────────
-  - when: on_play
+  - text: "[On Play] By placing 1 card from your hand face down under any of your Tamers with the [Glowing Dawn] trait, ＜Draw 2＞. (Draw 2 cards from your deck.)"
+    when: on_play
     # Gate so neither sub-prompt installs when the cost is unpayable: a hand card
     # AND a [Glowing Dawn] Tamer must both exist (DCGO CanActivateCondition).
     condition:
@@ -97,7 +98,8 @@ effects:
                   - draw: { of: you, count: 2 }
 
   # ─── Inherited <Blocker> ───────────────────────────────────────────────────
-  - scope: inherited
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Blocker
     summary: "Inherited <Blocker>"

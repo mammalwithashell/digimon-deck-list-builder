@@ -92,6 +92,7 @@ alt_paths:
     cost: 5
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - in_text_contains: "Three Musketeers"
@@ -138,7 +139,8 @@ effects:
     summary: "<Retaliation>"
 
   # ─── [On Deletion] may play 1 TM Digimon (cost ≤ 12) from hand or trash ───
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost."
+    when: on_deletion
     optional: true
     # DCGO CanActivateCondition: an eligible card exists in hand OR trash —
     # without one the optional gate is not offered at all.
@@ -155,6 +157,7 @@ effects:
     summary: "[On Deletion] You may play 1 [Three Musketeers] trait Digimon card with a play cost of 12 or less from your hand or trash without paying the cost"
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [hand, trash]
           bind_as: revive_pick

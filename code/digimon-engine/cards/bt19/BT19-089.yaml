@@ -129,6 +129,7 @@ effects:
     summary: "[Main] 1 of your Digimon isn't affected by opponent Option cards and its DP can't be reduced, until end of opponent's turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Select 1 of your Digimon to protect from opponent Option cards and DP reduction"
@@ -149,7 +150,8 @@ effects:
   #
   # DCGO: SecuritySkill, AddThisCardToHand(card) — mandatory, no
   # canNoSelect parameter on the factory.
-  - scope: inherited
+  - text: "[Security] Add this card to the hand."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security][Inherited] Add this card to the hand"

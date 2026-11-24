@@ -60,7 +60,8 @@ effects:
           from_hand: evolution
           cost: {reduce: 1}
           ignore_requirements: false
-  - scope: inherited
+  - text: "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     condition:
       not:

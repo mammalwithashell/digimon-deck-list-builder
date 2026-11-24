@@ -6,7 +6,9 @@ cost: 4
 traits: [LIBERATOR]
 
 effects:
-  - when: [start_of_your_main_phase, on_play]
+  - text: "[Start of Your Main Phase] [On Play] By trashing 1 card in your hand, gain 1 memory."
+    when: [start_of_your_main_phase, on_play]
+    optional: true
     summary: "[Start of Your Main Phase][On Play] Trash 1 card in hand to gain 1 memory"
     condition:
       count_gte:
@@ -16,6 +18,7 @@ effects:
         n: 1
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
@@ -23,7 +26,8 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - gain_memory: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
@@ -46,7 +50,8 @@ effects:
   # The shared trash-source reduced-cost digivolve idiom is proven by
   # BT25-024 Lekismon (select_trash -> effect_initiated_digivolve cost reduce 1);
   # the on_ally_attack + event_target(attacker) half by ST18-14 / BT25-016.
-  - when: [on_ally_attack]
+  - text: "[Your Turn] [Once Per Turn] When one of your Digimon attacks, if you have 4 or fewer cards in your hand, it may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash with the digivolution cost reduced by 1."
+    when: [on_ally_attack]
     optional: true
     once_per_turn: true
     active_when: { your_turn: true }
@@ -57,6 +62,7 @@ effects:
         n: 4
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: evo
           filter:

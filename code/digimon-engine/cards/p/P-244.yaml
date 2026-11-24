@@ -80,7 +80,8 @@ effects:
       - play_union_bound_free: { binding: pick }
       - place_self_as_delay_option: {}
 
-  - kind: delay
+  - text: "[Your Turn] When effects place [Vemmon] as any of your Digimon's digivolution cards, ＜Delay＞. ・1 of your Digimon with [Vemmon] in its text may digivolve into a Digimon card with [Vemmon] in its text in the hand or trash with the cost reduced by 3."
+    kind: delay
     trigger: on_add_digivolution_cards
     active_when:
       all_of:
@@ -122,7 +123,8 @@ effects:
           cost: { reduce: 3 }
           ignore_requirements: false
 
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     summary: "[Security] Activate [Main]: may play 1 [Vemmon]/[Zenith] from hand or trash free; then place this card in the battle area"
     process:

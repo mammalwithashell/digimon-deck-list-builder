@@ -51,6 +51,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: DM
@@ -58,7 +59,8 @@ alt_paths:
 
 effects:
   # ─── <Fragment <2>> ────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Fragment《2》＞"
+    kind: grant_keyword
     keyword: Fragment
     value: 2
 
@@ -74,6 +76,8 @@ effects:
   # The second half is always possible while this [Ver.3] Digimon is on the
   # field, so "nothing possible" does not arise.
   - when: [on_play, when_digivolving, counter]
+  - text: "[On Play] [When Digivolving] [Counter] [Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your Digimon with the [Ver.3] trait and all of your opponent's Digimon with the lowest play cost."
+    when: [on_play, when_digivolving, counter]
     once_per_turn: true
     summary: "[On Play][When Digivolving][Counter][Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your [Ver.3] Digimon and all of your opponent's Digimon with the lowest play cost"
     process:
@@ -123,6 +127,7 @@ effects:
                   trait_has: "Ver.3"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: ver3
                 filter:
                   all_of:
@@ -155,7 +160,8 @@ effects:
 
   # ─── Inherited [All Turns][OPT] when this Digimon would leave the battle
   #     area, trash your opponent's top security card ────────────────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, trash your opponent's top security card."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     once_per_turn: true

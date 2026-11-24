@@ -38,7 +38,7 @@ attribute: Navi
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:
@@ -54,7 +54,8 @@ effects:
   #   remaining → deck bottom
   # "App Driver" is a Tamer trait; eligible reveals include Tamers and any card
   # carrying that trait.
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [App Driver] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Appmon] and 1 [App Driver] card to hand; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

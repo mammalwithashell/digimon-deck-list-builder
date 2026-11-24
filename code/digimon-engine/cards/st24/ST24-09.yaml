@@ -48,13 +48,14 @@ traits: [Vegetation, DATA SQUAD]
 # Alt-digivolve: Lv.3 with the [DATA SQUAD] trait / cost 2.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 3, trait_has: "DATA SQUAD" }
     cost: 2
 
 effects:
   # ─── [On Play][When Digivolving] (A) optional suspend 1 opp Digimon/Tamer,
   #     then (B) optional place deck-top FD under a [DATA SQUAD] Tamer (indep) ───
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon or Tamers. Then, you may place the top card of your deck face down under any of your [DATA SQUAD] trait Tamers."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may suspend 1 opp Digimon or Tamer; then you may place the deck-top face down under a [DATA SQUAD] Tamer"
     process:
       # "You may suspend 1 of your opponent's Digimon or Tamers." — the optional
@@ -105,7 +106,8 @@ effects:
                       face_down: true
 
   # ─── Inherited [All Turns] +1000 DP ──────────────────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     dp_modifier: 1000

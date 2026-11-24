@@ -47,7 +47,7 @@ use_requirement:
     of: you
     zone: [battle_area]
     kind: digimon
-    trait_has: "Armor Form"
+    trait_contains: "Armor Form"
 
 effects:
   - when: main_from_hand
@@ -55,11 +55,12 @@ effects:
     summary: "[Main] Trash the top card of 1 of your [Armor Form] Digimon. Then, you may digivolve 1 of your Digimon into an [Armor Form] Digimon card in your hand for its digivolution cost; if you do, unsuspend that Digimon"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: trash_host
           filter:
             all_of:
               - kind: digimon
-              - trait_has: "Armor Form"
+              - trait_contains: "Armor Form"
               - stack_size_gte: 2
           prompt: "Choose 1 of your [Armor Form] Digimon to trash its top card"
       - trash_top_stacked_sources:
@@ -79,7 +80,7 @@ effects:
                   filter:
                     all_of:
                       - kind: digimon
-                      - trait_has: "Armor Form"
+                      - trait_contains: "Armor Form"
           prompt: "You may choose 1 of your Digimon to digivolve into an [Armor Form] Digimon card in your hand"
       - if:
           condition: { binding_present: evo_base }
@@ -91,7 +92,7 @@ effects:
                 filter:
                   all_of:
                     - kind: digimon
-                    - trait_has: "Armor Form"
+                    - trait_contains: "Armor Form"
                     - can_digivolve_onto_with_cost:
                         target: evo_base
                         cost: printed
@@ -106,7 +107,8 @@ effects:
                 then:
                   - unsuspend: { target: evo_base }
 
-  - scope: inherited
+  - text: "[Security] You may play 1 level 3 Digimon card with [Free] in its traits from your hand or trash without paying its memory cost."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] You may play 1 level 3 [Free] trait Digimon card from your hand or trash without paying its memory cost"
@@ -120,7 +122,7 @@ effects:
             all_of:
               - kind: digimon
               - level_eq: 3
-              - trait_has: Free
+              - trait_contains: Free
               - can_play_from_effect_without_cost: true
           prompt: "You may play 1 level 3 [Free] trait Digimon card from your hand or trash without paying its memory cost"
       - play_union_bound_free:

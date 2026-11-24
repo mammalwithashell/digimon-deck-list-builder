@@ -24,7 +24,8 @@ cost: 0
 traits: [Lesser, ADVENTURE]
 
 effects:
-  - scope: inherited
+  - text: "[On Deletion] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand."
+    scope: inherited
     when: on_deletion
     optional: true
     summary: "[Inherited][On Deletion] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand"

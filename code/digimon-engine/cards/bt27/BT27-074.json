@@ -1,0 +1,36 @@
+{
+  "index": 4561,
+  "norm_id": 0.22805,
+  "card_id": "BT27-074",
+  "card_index": 74,
+  "card_name_eng": "Falcomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_074",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Avian",
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] By placing 1 card from your hand face down under any of your [Keenan Crier]s, ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0"
+}

@@ -129,6 +129,7 @@ effects:
           condition: { binding_present: trashed_3 }
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: revived
                 filter:
@@ -143,6 +144,7 @@ effects:
                 condition: { binding_present: trashed_2 }
                 then:
                   - select_trash:
+                      optional: false
                       of: you
                       bind_as: revived
                       filter:
@@ -157,6 +159,7 @@ effects:
                       condition: { binding_present: trashed_1 }
                       then:
                         - select_trash:
+                            optional: false
                             of: you
                             bind_as: revived
                             filter:
@@ -168,6 +171,7 @@ effects:
                         - play_from_trash: { of: you, hand_index: revived, cost_delta: { reduce: 4 } }
                       else:
                         - select_trash:
+                            optional: false
                             of: you
                             bind_as: revived
                             filter:
@@ -180,7 +184,8 @@ effects:
 
   # ─── [Your Turn] when an effect plays one of your Digimon, delete 1 of your
   #     opponent's level 5 or lower Digimon; if nothing was deleted, <Draw 1> ─
-  - when: on_any_digimon_played
+  - text: "[Your Turn] When an effect plays one of your Digimon, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, ＜Draw 1＞."
+    when: on_any_digimon_played
     active_when:
       your_turn: true
     trigger_if:
@@ -191,6 +196,7 @@ effects:
     summary: "[Your Turn] When an effect plays one of your Digimon, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, <Draw 1>"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

@@ -121,7 +121,7 @@ alt_paths:
     cost: 5
 
   - kind: digivolve
-    from: { level_eq: 6, trait_has: DM }
+    from: { any_color: true, level_eq: 6, trait_has: DM }
     cost: 5
 
   - kind: dna_digivolve
@@ -209,7 +209,8 @@ effects:
   # battle-area Digimon, DCGO places this permanent on top of security. We gate
   # on the successful play bindings, which is the Rust DSL equivalent of the
   # printed "If this effect played" condition.
-  - when: end_of_attack
+  - text: "[End of Attack] You may play 1 card with [Greymon] in its name or the [Ver.1] trait and 1 card with [Garurumon] in its name or the [Ver.2] trait from this Digimon's digivolution cards without paying the costs. If this effect played, place this Digimon as your top security card."
+    when: end_of_attack
     summary: "[End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free; if played, place self as top security card"
     process:
       - select_effect_choice:
@@ -221,6 +222,7 @@ effects:
             equals: [end_attack_choice, 0]
           then:
             - select_material:
+                optional: false
                 of_permanent: source
                 bind_as: greymon_pick
                 filter:
@@ -236,6 +238,7 @@ effects:
                 cost_delta: free
                 bind_as: greymon_played
             - select_material:
+                optional: false
                 of_permanent: source
                 bind_as: garurumon_pick
                 filter:

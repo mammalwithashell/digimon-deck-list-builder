@@ -15,11 +15,13 @@ alt_paths:
     cost: 2
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] Trash the digivolution card at the bottom of 1 of your opponent's Digimon."
+    scope: inherited
     when: when_attacking
     summary: "[Inherited][When Attacking] Trash bottom source of 1 opponent Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:

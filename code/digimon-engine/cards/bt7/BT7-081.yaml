@@ -49,7 +49,8 @@ attribute: Vaccine
 traits: [Mutant]
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 5 cards of your deck. Add 1 card with [Hybrid] or [Ten Warriors] in its traits and 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 5; add 1 [Hybrid]/[Ten Warriors] card and 1 Tamer; bottom the rest in any order"
     process:
       - reveal_top_deck: { of: you, count: 5, bind_as: revealed }
@@ -73,7 +74,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: tamer }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - when: on_digivolve
+  - text: "[Your Turn][Once Per Turn] When one of your Tamers digivolves, gain 2 memory."
+    when: on_digivolve
     active_when: { your_turn: true }
     once_per_turn: true
     summary: "[Your Turn][Once Per Turn] When one of your Tamers digivolves, gain 2 memory"

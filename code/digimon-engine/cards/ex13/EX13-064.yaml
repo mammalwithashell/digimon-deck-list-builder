@@ -65,6 +65,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - in_text_contains: Knightmon
@@ -75,7 +76,8 @@ alt_paths:
     cost: 5
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] You may play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost."
+    when: when_digivolving
     summary: "[When Digivolving] You may play or use 1 play or use cost 8 or lower [Knightmon] text card from your hand or trash without paying the cost"
     process:
       - select_union_zone:
@@ -146,5 +148,6 @@ effects:
           keyword: Collision
           expiry: end_of_turn
       - may_attack_now:
+          optional: false
           attacker: knight
           targets: any

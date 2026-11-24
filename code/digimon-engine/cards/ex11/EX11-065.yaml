@@ -146,6 +146,7 @@ effects:
           condition: { equals: [zone_choice, 0] }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: source_card
                 filter:
@@ -160,6 +161,7 @@ effects:
           condition: { equals: [zone_choice, 1] }
           then:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: source_card
                 filter:
@@ -174,7 +176,8 @@ effects:
   # ─── Clause 2: [Security] Play this card without paying the cost ──────────
   #
   # Standard play_from_security pattern (EX10-063, P-169, EX8-067, ST21-13).
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

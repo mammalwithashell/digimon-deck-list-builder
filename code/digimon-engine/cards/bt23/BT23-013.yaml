@@ -15,6 +15,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: SaviorHuckmon
         - { level_eq: 5, trait_has: CS }
@@ -28,12 +29,15 @@ alt_paths:
       any_permanent: { of: opponent, kind: digimon, dp_gte: 10000 }
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
 
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] You may play 1 [Atho, René & Por] Token or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon. (Digimon/white/6000 DP/＜Reboot＞ ＜Blocker＞ ＜Decoy (Red)/(Black)＞)"
+    when: [when_digivolving, when_attacking]
     optional: true
     summary: "[When Digivolving][When Attacking] Play Atho/Rene/Por token or a name-safe Sistermon from hand/trash"
     process:
@@ -69,6 +73,7 @@ effects:
           condition: { equals: [play_choice, 1] }
           then:
             - select_union_zone:
+                optional: false
                 of: you
                 zones: [hand, trash]
                 bind_as: sistermon_pick
@@ -84,7 +89,8 @@ effects:
             - play_union_bound_free:
                 binding: sistermon_pick
 
-  - when: on_ally_played
+  - text: "[Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack."
+    when: on_ally_played
     optional: true
     once_per_turn: true
     active_when: { your_turn: true }

@@ -102,7 +102,7 @@ attribute: Vaccine
 # requirements still apply (no ignore flag).
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, name_contains: "Agumon", trait_has: Dinosaur }
+    from: { any_color: true, level_eq: 3, name_contains: "Agumon", trait_has: Dinosaur }
     cost: 2
 
 effects:
@@ -132,7 +132,8 @@ effects:
   #
   # `target: source` (the carrier permanent) — AD1-001 / EX9-012 idiom;
   # `cost: 0` + `ignore_requirements: true` for "without paying the cost".
-  - when: on_enter_field_anyone
+  - text: "[All Turns] [Once Per Turn] When any of your [Marcus Damon]s are played, this Digimon may digivolve into a yellow Digimon card with [RizeGreymon] in its name in the hand without paying the cost."
+    when: on_enter_field_anyone
     optional: true
     once_per_turn: true
     active_when: { all_turns: true }
@@ -165,7 +166,8 @@ effects:
   # condition: IsOwnerTurn). Standard self-aura (EX9-012 idiom): empty target
   # `{}` + `active_when: { your_turn: true }` + `scope: inherited`.
   # `Game::source_dp_contribution` reads `dp_modifier` gated by `active_when`.
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

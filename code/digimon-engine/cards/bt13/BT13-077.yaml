@@ -14,16 +14,19 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 5
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] Until the end of your opponent's turn, this Digimon isn't affected by the effects of your opponent's Digimon."
+    when: [on_play, when_digivolving]
     process:
       - grant_effect_immunity:
           target: self
           source_kind: digimon
           source_controller: opponent
           expiry: end_of_opponents_turn
-  - when: end_of_opponents_turn
+  - text: "[End of Opponent’s Turn] Choose 1 of your opponent's Digimon. Your opponent attacks with the chosen Digimon."
+    when: end_of_opponents_turn
     process:
       # Q2316/2317: choice is optional despite older printed wording.
       # Q2318: include Digimon that cannot legally attack.

@@ -39,16 +39,18 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 3, trait_has: "DATA SQUAD" }
     cost: 2
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
   # ─── [On Play][When Digivolving] trash 1 hand card OR place it under a
   #     [Keenan Crier] → delete 1 opp Lv.<=4 Digimon ─────────────────────────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand or placing it face down under any of your [Keenan Crier]s, delete 1 of your opponent's level 4 or lower Digimon."
+    when: [on_play, when_digivolving]
     condition:
       count_gte:
         filter: { of: you, zone: [hand] }
@@ -124,6 +126,7 @@ effects:
               - binding_present: placed_card
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:
@@ -133,7 +136,8 @@ effects:
             - delete_permanent: { target: victim }
 
   # ─── Inherited [On Deletion] your opponent trashes 1 card in their hand ────
-  - scope: inherited
+  - text: "[On Deletion] Your opponent trashes 1 card in their hand."
+    scope: inherited
     when: on_deletion
     summary: "Inherited [On Deletion] Your opponent trashes 1 card in their hand"
     process:
@@ -141,6 +145,7 @@ effects:
           of: opponent
           body:
             - select_hand:
+                optional: false
                 of: opponent
                 bind_as: discarded
                 filter: {}

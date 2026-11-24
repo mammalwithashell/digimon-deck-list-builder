@@ -13,10 +13,28 @@ use crate::spec::CardSpec;
 /// against `cards.json` (see Task 11) and does NOT validate semantically
 /// (see Task 12).
 pub fn load_file(path: &Path) -> Result<CardSpec, DslError> {
+    load_file_with_authoring_checks(path, true)
+}
+
+/// Migration snapshots may bypass source-presence checks, but not typed parsing.
+pub fn load_file_with_authoring_checks(
+    path: &Path,
+    enforce_authoring_fields: bool,
+) -> Result<CardSpec, DslError> {
     let raw = fs::read_to_string(path).map_err(|e| DslError::Io {
         path: path.display().to_string(),
         source: e,
     })?;
+    if enforce_authoring_fields {
+        let source: serde_json::Value = serde_yml::from_str(&raw).map_err(|e| DslError::Yaml {
+            path: path.display().to_string(),
+            source: e,
+        })?;
+        let errors = crate::authoring_fields::check(&source);
+        if !errors.is_empty() {
+            return Err(DslError::Validation(errors));
+        }
+    }
     let spec: CardSpec = serde_yml::from_str(&raw).map_err(|e| DslError::Yaml {
         path: path.display().to_string(),
         source: e,

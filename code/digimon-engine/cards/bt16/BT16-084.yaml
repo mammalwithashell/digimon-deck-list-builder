@@ -33,7 +33,8 @@ kind: tamer
 color: [red, yellow]
 cost: 4
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] You may play 1 [Hawkmon] or [Salamon] from your hand without paying the cost. At the next end of your opponent’s turn, return it to the hand."
+    when: start_of_your_main_phase
     optional: true
     condition:
       count_gte:
@@ -59,7 +60,8 @@ effects:
           body:
             - return_to_hand: { target: { played_carrier: played } }
 
-  - when: on_digivolve
+  - text: "[Your Turn] When one of your Digimon digivolves into a red or yellow Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, 1 of your opponent's Digimon gets -3000 DP for the turn."
+    when: on_digivolve
     optional: true
     active_when: { your_turn: true }
     condition: { source_is_unsuspended: true }
@@ -76,12 +78,14 @@ effects:
           condition: { dna_origin: true }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter: { kind: digimon }
                 prompt: "Select 1 of your opponent's Digimon to get -3000 DP for the turn"
             - add_dp_modifier: { target: victim, value: -3000, expiry: end_of_turn }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

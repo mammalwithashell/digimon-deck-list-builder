@@ -1,0 +1,27 @@
+{
+  "index": 4588,
+  "norm_id": 0.2294,
+  "card_id": "BT27-101",
+  "card_index": 101,
+  "card_name_eng": "Silver-Winged Yaksha",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_101",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When this card would be used, by trashing the bottom face-down card from under any of your Tamers, reduce the cost by 2.\r\n[Main] By placing 1 [Peckmon] and 1 [Crowmon] from your trash as 1 of your [Falcomon]'s bottom digivolution cards, that Digimon may digivolve into [Ravemon] in the trash, ignoring digivolution requirements and without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] You may play 1 [Falcomon] or [Keenan Crier] from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "evo_costs": [],
+  "xros_req": ""
+}

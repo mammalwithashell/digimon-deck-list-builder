@@ -147,10 +147,10 @@ alt_paths:
     from: { name_is: "WereGarurumon" }
     cost: 1
   - kind: digivolve
-    from: { level_eq: 4, name_contains: "Garurumon" }
+    from: { any_color: true, level_eq: 4, name_contains: "Garurumon" }
     cost: 3
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "ADVENTURE" }
+    from: { any_color: true, level_eq: 4, trait_has: "ADVENTURE" }
     cost: 3
 
 effects:
@@ -176,10 +176,12 @@ effects:
   # `selectedPermanent.UntilOwnerTurnEndEffects.Add(...)` which keys expiry
   # off the SELECTED PERMANENT'S OWNER (the opponent here). Same pattern as
   # BT17-027 lock branch and BT24-040 / BT15-101.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 opp Digimon/Tamer can't suspend until end of their turn"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:
@@ -229,6 +231,7 @@ effects:
             - event_card_name_contains: Matt Ishida
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -270,6 +273,7 @@ effects:
         - event_card_name_contains: Greymon
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -312,6 +316,7 @@ effects:
     summary: "[Inherited][When Attacking][OPT] <De-Digivolve 1> 1 of opp's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"

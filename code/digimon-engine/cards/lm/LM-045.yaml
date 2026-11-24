@@ -32,12 +32,14 @@ effects:
           prompt: "Add 1 red or yellow Digimon card to your hand"
       - add_to_hand_from_reveal: { of: you, card: picked }
       - place_remainder_on_deck: { of: you, position: bottom }
-  - kind: delay
+  - text: "Yellow also meets this card's color requirements."
+    kind: delay
     trigger: delayed
     summary: "[Main] <Delay> Gain 2 memory"
     process:
       - gain_memory: 2
-  - when: on_security
+  - text: "[Security] Place this card in the battle area."
+    when: on_security
     optional: false
     summary: "[Security] Place this card in the battle area"
     process:

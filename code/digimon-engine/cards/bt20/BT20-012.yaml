@@ -19,6 +19,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - name_is: Ryudamon
         - all_of:
@@ -27,7 +28,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_attacking
+  - text: "[When Attacking] This Digimon may digivolve into [Hisyaryumon] or a Digimon card with the [Chronicle] trait in the hand."
+    when: when_attacking
     summary: "[When Attacking] This Digimon may digivolve into [Hisyaryumon] or a [Chronicle] trait Digimon card in the hand"
     condition:
       count_gte:
@@ -60,7 +62,8 @@ effects:
           cost: printed
           ignore_requirements: false
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

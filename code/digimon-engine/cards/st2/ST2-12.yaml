@@ -5,7 +5,8 @@ color: [blue]
 cost: 2
 
 effects:
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If your opponent has a Digimon with no digivolution cards, gain 1 memory."
+    when: start_of_your_turn
     condition:
       any_permanent:
         of: opponent
@@ -15,7 +16,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying its memory cost."
+    when: on_security
     summary: "[Security] Play this Tamer without paying the cost"
     process:
       - play_from_security: {}

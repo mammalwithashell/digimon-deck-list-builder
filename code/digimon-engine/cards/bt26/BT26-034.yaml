@@ -47,6 +47,7 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: TS
@@ -54,7 +55,8 @@ alt_paths:
 
 effects:
   # ─── [Start of Your Main Phase] ≤4 memory → may free-digivolve from hand ────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with the [Vegetation] or [TS] trait in the hand without paying the cost."
+    when: start_of_your_main_phase
     active_when:
       all_of:
         - your_turn: true
@@ -91,7 +93,8 @@ effects:
           ignore_requirements: false
 
   # ─── Inherited [When Attacking][Once Per Turn] may suspend 1 opp Digimon ────
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] You may suspend 1 of your opponent's Digimon."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true
@@ -102,6 +105,7 @@ effects:
     summary: "[Inherited][When Attacking][Once Per Turn] You may suspend 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:

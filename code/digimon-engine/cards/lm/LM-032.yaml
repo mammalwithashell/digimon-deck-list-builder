@@ -103,6 +103,7 @@ effects:
           prompt: "Choose 1 of your purple Digimon to digivolve"
       # Step 2: choose the digivolve target from hand.
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           # DCGO DigivolveIntoHandOrTrashCard (CardEffectCommons.cs:859-885,
@@ -168,7 +169,8 @@ effects:
                 hand_index: to_play
 
   # ─── Clause C: [Security] (Inherited) ──────────────────────────────────────
-  - scope: inherited
+  - text: "[Security] You may play 1 purple Digimon card with 2000 DP or less from your trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 purple Digimon (≤2000 DP) from trash free; then add this card to hand"

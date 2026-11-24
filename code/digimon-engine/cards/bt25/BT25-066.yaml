@@ -31,7 +31,7 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
 
 effects:
@@ -49,7 +49,8 @@ effects:
     summary: "[All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave"
 
   # ─── Inherited [All Turns] +1000 DP ────────────────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     dp_modifier: 1000

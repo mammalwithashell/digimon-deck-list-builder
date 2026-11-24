@@ -6,20 +6,23 @@ cost: 4
 traits: [LIBERATOR]
 
 effects:
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     summary: "[Start of Your Turn] If memory is 2 or less, set it to 3"
     condition: { memory_lte: 2 }
     process:
       - set_memory: 3
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
 
   # [Your Turn] When effects play one of your Tokens or Puppet Digimon, by
   # suspending this Tamer, 1 of those Digimon gains Rush for the turn.
-  - when: on_any_digimon_played
+  - text: "[Your Turn] When effects play any of your Tokens or [Puppet] trait Digimon, by suspending this Tamer, 1 of those Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it was played.)"
+    when: on_any_digimon_played
     active_when: { your_turn: true }
     summary: "[Your Turn] When effects play your Token/Puppet, suspend this Tamer so it gains Rush"
     condition:

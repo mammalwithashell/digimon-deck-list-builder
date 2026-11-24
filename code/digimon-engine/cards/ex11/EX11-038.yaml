@@ -29,7 +29,8 @@ alt_paths:
 # already-fielded Sunarizamon does not react to a different Digimon moving.
 
 effects:
-  - when: on_play
+  - text: "[On Play] By trashing 1 [Mineral] or [Rock] trait card from your hand or your Digimon's digivolution cards, ＜Draw 1＞."
+    when: on_play
     summary: "[On Play] Trash 1 Mineral/Rock from hand or own Digimon sources to Draw 1"
     process:
       - select_union_zone:

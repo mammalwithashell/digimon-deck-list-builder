@@ -34,11 +34,13 @@ alt_paths:
     from: { name_is: Salamon }
     cost: 2
 effects:
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "<Barrier>"
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, return 1 level 6 or lower 2-color Digimon card that's red or purple from your trash to the hand."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] By trashing 1 card in your hand, return 1 level 6 or lower 2-color red/purple Digimon card from your trash to your hand"
     process:
@@ -51,6 +53,7 @@ effects:
           prompt: "You may trash 1 card in your hand"
       - trash_from_hand_by_index: { of: you, hand_index: cost_card }
       - select_trash:
+          optional: false
           of: you
           bind_as: recover
           filter:
@@ -65,7 +68,8 @@ effects:
           prompt: "Return 1 level 6 or lower 2-color red or purple Digimon card from your trash to the hand"
       - add_to_hand_from_trash: { of: you, card: recover }
 
-  - kind: aura
+  - text: "[Your Turn] All of your opponent's Security Digimon get -3000 DP."
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     dp_modifier: -3000

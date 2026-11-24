@@ -44,8 +44,8 @@ def _raw_game(*main_phase):
     ]
 
 
-def _attack(position, boards, indexes=None):
-    row = {"method": "TurnStateMachine.SetAttackingPermaent", "tp": YOU, "turn": 1, "args": [position, -1],
+def _attack(position, boards, indexes=None, target=-1):
+    row = {"method": "TurnStateMachine.SetAttackingPermaent", "tp": YOU, "turn": 1, "args": [position, target],
            "boards": boards}
     if indexes is not None:
         row["board_indexes"] = indexes
@@ -72,6 +72,21 @@ def test_attacker_second_copy_names_its_own_index():
     out, _ = convert_raw.convert(_raw_game(_attack(1, boards, [[57, 85, 55], [36]])), cards={})
     attack = _actions(out)[0]
     assert attack["operand_card_index"] == 85
+
+
+def test_attack_on_a_duplicate_defender_preserves_both_card_indexes():
+    boards = [["ST24-05", "ST24-05"], ["EX11-027", "EX11-027"]]
+    out, _ = convert_raw.convert(_raw_game(_attack(1, boards, [[57, 85], [36, 43]], target=0)), cards={})
+    [attack] = _actions(out)
+    assert attack["operand_card_index"] == 85
+    assert attack["attack_target_card_index"] == 36
+
+
+def test_security_attack_does_not_name_a_defender():
+    boards = [["ST24-05"], ["EX11-027", "EX11-027"]]
+    out, _ = convert_raw.convert(_raw_game(_attack(0, boards, [[57], [36, 43]])), cards={})
+    [attack] = _actions(out)
+    assert "attack_target_card_index" not in attack
 
 
 def test_unique_attacker_carries_no_operand_index():

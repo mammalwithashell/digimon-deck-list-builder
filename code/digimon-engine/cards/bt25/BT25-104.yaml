@@ -116,6 +116,7 @@ dual:
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 6
         - trait_has: "DATA SQUAD"
@@ -125,6 +126,7 @@ alt_paths:
     cost: 0
     extra_cost:
       - select_own_permanent:
+          optional: false
           bind_as: marcus
           filter: { kind: tamer, name_is: "Marcus Damon" }
           prompt: "Return Marcus Damon to hand"
@@ -134,11 +136,13 @@ alt_paths:
 
 effects:
   # ─── Digimon-face static keywords ───────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Raid＞"
+    kind: grant_keyword
     keyword: Raid
     summary: "<Raid>"
 
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 
@@ -147,11 +151,13 @@ effects:
     value: 1
     summary: "<Security A. +1>"
 
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "<Barrier>"
 
@@ -164,7 +170,8 @@ effects:
   # approach (per the audit) is to INLINE the same Option [Main] body here as a
   # single multi-timing OPT clause — the Option [Main] body is also authored as
   # the option-face `when: main_from_hand` clause below; both run the same steps.
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] Activate 1 [Main] effect on this card's Option side."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     # Official Q&A Q6496/Q6498 (+ DCGO ActivateMainOfOptionSide, which calls
     # SetIsDigimonEffect(false)): an effect activated from the Option side is an
@@ -174,6 +181,7 @@ effects:
     summary: "[WD][WA][OPT] Activate this card's Option [Main]: 1 opp Digimon -15000 DP; then you may play 1 Tamer from hand free"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -15000 DP for the turn"
@@ -208,7 +216,8 @@ effects:
   #    structured SynthIdentity payload "treated as a 12000 DP Digimon" (the aura
   #    path now carries SynthIdentity — previously it dropped the payload).
   #  - `grant_keyword: { keyword: Rush }` → "<Rush>".
-  - kind: aura
+  - text: "[Your Turn] All of your [Marcus Damon]s are also treated as 12000 DP Digimon and gain ＜Rush＞."
+    kind: aura
     target: { of: you, kind: tamer, name_is: "Marcus Damon" }
     active_when: { your_turn: true }
     modifier: TreatAsDigimon
@@ -230,6 +239,7 @@ effects:
     summary: "[Main] 1 opp Digimon -15000 DP for the turn; then you may play 1 Tamer from hand free"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -15000 DP for the turn"

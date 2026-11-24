@@ -18,6 +18,7 @@ alt_paths:
     cost: 4
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -38,7 +39,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By placing 1 level 6 or lower card with [Aqua] or [Sea Animal] in any of its traits or the [TB] trait from your hand as this Digimon's bottom digivolution card, return 1 of your opponent's Digimon with 1 or fewer digivolution cards to the hand."
+    when: [on_play, when_digivolving]
     condition:
       count_gte:
         filter:
@@ -69,6 +71,7 @@ effects:
           source: placed_source
           target: source
       - select_opponent_permanent:
+          optional: false
           bind_as: bounce_target
           filter:
             all_of:
@@ -86,6 +89,7 @@ effects:
     summary: "<Decode (Lv.4 or lower Aqua/Sea Animal/TB)> play 1 matching source when this would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source
           filter:
@@ -112,6 +116,7 @@ effects:
     summary: "[Inherited] <Decode (Lv.4 or lower Aqua/Sea Animal/TB)> play 1 matching source when this would leave outside battle"
     process:
       - select_material:
+          optional: false
           of_permanent: replacement_subject
           bind_as: decode_source_inh
           filter:

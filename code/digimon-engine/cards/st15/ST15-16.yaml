@@ -8,11 +8,13 @@ effects:
   - when: main_from_hand
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: Choose 1 opponent Digimon to De-Digivolve 3
       - de_digivolve: { target: dedigivolve_target, amount: 3, stop_at_level: 3 }
       - select_opponent_permanent:
+          optional: false
           bind_as: forced_target
           filter: { kind: digimon }
           prompt: Choose 1 opponent Digimon to gain the mandatory attack effect
@@ -28,6 +30,7 @@ effects:
   - when: on_security
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: Choose 1 opponent Digimon to De-Digivolve 3

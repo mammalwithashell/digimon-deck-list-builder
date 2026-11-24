@@ -95,6 +95,7 @@ effects:
     summary: "[On Play][When Digivolving][When Attacking][Counter][OPT] Delete 1 opponent 12000+ DP Digimon; if this effect didn't delete, trash their top security card"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: delete_target
           filter:
             all_of:

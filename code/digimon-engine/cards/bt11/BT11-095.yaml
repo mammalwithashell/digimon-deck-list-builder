@@ -6,10 +6,13 @@ cost: 4
 traits: [Xros Heart, Blue Flare, General]
 
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By placing 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    optional: true
     summary: "[Start of Main] Place 1 Xros Heart/Blue Flare Digimon from hand under this Tamer, gain 1 memory, draw 1"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: stash
           filter:
@@ -25,7 +28,8 @@ effects:
       - gain_memory: 1
       - draw: { of: you, count: 1 }
 
-  - kind: cost_reduction
+  - text: "[Your Turn] When 1 of your Digimon cards with DigiXros requirements would be played, by suspending this Tamer, you may also place cards from under your Tamers for its DigiXros."
+    kind: cost_reduction
     active_when: { your_turn: true }
     when_any_ally_played: { has_alt_path: digixros }
     optional: true
@@ -35,7 +39,8 @@ effects:
       - suspend: { target: source }
       - allow_digixros_material_zone: { zone: material }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

@@ -12,12 +12,14 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
 
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/\""
+    when: [on_play, when_digivolving]
     summary: "Play 1 Familiar Token; at end of opponent's turn delete that token"
     process:
       - play_token:
@@ -28,6 +30,7 @@ effects:
           binding: tok
           at: opponents_turn
 
-  - scope: inherited
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Barrier

@@ -15,7 +15,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Until the end of your opponent's turn, this Digimon can't be returned to the hand or deck by their effects."
+    when: [on_play, when_digivolving]
     summary: "This Digimon can't be returned to hand or deck by opponent effects"
     process:
       - add_modifier:
@@ -29,7 +30,8 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
 
-  - scope: inherited
+  - text: "[Opponent's Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { opponents_turn: true }
     target: {}

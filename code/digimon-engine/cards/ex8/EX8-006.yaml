@@ -22,7 +22,8 @@ traits: [Flame, NSo]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If this Digimon has the [NSo] trait, by trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true
@@ -46,6 +47,7 @@ effects:
           then:
             - trash_from_hand_by_index: { of: you, hand_index: trashed }
             - select_opponent_permanent:
+                optional: false
                 bind_as: victim
                 filter:
                   all_of:

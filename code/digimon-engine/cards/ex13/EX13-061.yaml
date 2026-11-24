@@ -53,6 +53,7 @@ alt_paths:
     cost: 5
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - in_text_contains: Huckmon
@@ -93,6 +94,7 @@ effects:
                 controller: you
                 token_name: hinukamuy
       - select_own_permanent:
+          optional: false
           bind_as: shielded
           filter:
             all_of:

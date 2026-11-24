@@ -39,7 +39,8 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: when_digivolving
+  - text: "[When Digivolving] If you don't have an [Arata Sanada] card in play, you may play one from your hand without paying its memory cost."
+    when: when_digivolving
     optional: true
     condition:
       all_of:
@@ -58,6 +59,7 @@ effects:
     summary: "[When Digivolving] If you don't have an [Arata Sanada] card in play, you may play one from your hand without paying its memory cost"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: arata
           filter:
@@ -67,7 +69,8 @@ effects:
           prompt: "Play 1 [Arata Sanada] from your hand without paying its memory cost"
       - play_from_hand_free: { of: you, hand_index: arata }
 
-  - kind: aura
+  - text: "[Your Turn] All of your other Digimon with the same name as this Digimon gain ＜Rush＞. (This Digimon can attack the turn it comes into play.)"
+    kind: aura
     scope: inherited
     active_when: { your_turn: true }
     target:

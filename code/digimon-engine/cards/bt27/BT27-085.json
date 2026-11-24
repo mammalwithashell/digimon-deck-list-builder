@@ -1,0 +1,84 @@
+{
+  "index": 4572,
+  "norm_id": 0.2286,
+  "card_id": "BT27-085",
+  "card_index": 85,
+  "card_name_eng": "Ravemon: Burst Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT27_085",
+  "play_cost": 6,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 4,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    3
+  ],
+  "type_eng": [
+    "Cyborg",
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Piercing＞ ＜Blocker＞ [When Digivolving] [When Attacking] You may activate 1 [Main] effect on this card's Option side. [All Turns] [Once Per Turn] When your opponent's hand is trashed from, this Digimon may unsuspend.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 5
+    },
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[DATA SQUAD] trait: Cost 5\r\n[Burst Digivolve] [Ravemon]: Cost 0 by returning 1 [Keenan Crier] to the hand.",
+  "dual": {
+    "digimon": {
+      "colors": [
+        "Purple",
+        "Green"
+      ],
+      "dp": 15000,
+      "effect_text": "＜Piercing＞ ＜Blocker＞ [When Digivolving] [When Attacking] You may activate 1 [Main] effect on this card's Option side. [All Turns] [Once Per Turn] When your opponent's hand is trashed from, this Digimon may unsuspend.",
+      "evo_costs": [
+        {
+          "card_color": 6,
+          "level": 6,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 5
+        }
+      ],
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "level": 7,
+      "traits": [
+        "Cyborg",
+        "DATA SQUAD"
+      ]
+    },
+    "option": {
+      "colors": [
+        "Purple"
+      ],
+      "effect_text": "＜Use Req. ([DATA SQUAD] trait)＞ (Specified conditions meet color requirements.) [Main] Your opponent trashes any 1 card from their hand or security stack. Then, delete 1 of their Digimon with a level as high as the number of cards in their hand or higher.",
+      "keywords": [
+        "ArtsDigivolve"
+      ],
+      "security_text": "",
+      "use_cost": 6
+    }
+  }
+}

@@ -41,6 +41,7 @@ alt_paths:
   # [Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -50,10 +51,12 @@ alt_paths:
 
 effects:
   # ─── [On Play][When Digivolving] 1 own Digimon gains Raid + Retaliation ───
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your Digimon gains ＜Raid＞ and ＜Retaliation＞ until your opponent's turn ends."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] 1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: buff
           filter: { kind: digimon }
           prompt: "1 of your Digimon gains <Raid> and <Retaliation> until your opponent's turn ends"
@@ -67,7 +70,8 @@ effects:
           expiry: end_of_opponents_turn
 
   # ─── [On Deletion] you may play 1 ADVENTURE card (cost <= 4) from trash ───
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost."
+    when: on_deletion
     optional: true
     summary: "[On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost"
     process:
@@ -86,7 +90,8 @@ effects:
       - play_from_trash_free: { of: you, hand_index: revive_pick }
 
   # ─── Inherited [On Deletion] — same body ──────────────────────────────────
-  - scope: inherited
+  - text: "[On Deletion] You may play 1 [ADVENTURE] trait card with a play cost 4 or less from your trash without paying the cost."
+    scope: inherited
     when: on_deletion
     optional: true
     summary: "[Inherited][On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost"

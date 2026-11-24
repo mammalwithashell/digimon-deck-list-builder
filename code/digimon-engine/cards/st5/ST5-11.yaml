@@ -15,6 +15,7 @@ alt_paths:
     cost: 3
 
 effects:
-  - scope: inherited
+  - text: "＜Blocker＞ (When an opponent's Digimon attacks, you may suspend this Digimon to force the opponent to attack it instead.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Blocker

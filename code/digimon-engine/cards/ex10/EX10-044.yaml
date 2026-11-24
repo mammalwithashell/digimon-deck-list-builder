@@ -49,7 +49,8 @@ alt_paths:
 
 effects:
   # ─── [On Play] place a [Bagra Army] card under a Tamer → Draw 1 ────────────
-  - when: on_play
+  - text: "[On Play] By placing 1 [Bagra Army] trait Digimon card from your hand or trash under any of your Tamers, ＜Draw 1＞."
+    when: on_play
     optional: true
     summary: "[On Play] By placing 1 [Bagra Army] trait Digimon card from your hand or trash under any of your Tamers, Draw 1"
     process:
@@ -64,6 +65,7 @@ effects:
           condition: { equals: [zone_choice, 0] }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: placed_pick
                 filter:
@@ -72,6 +74,7 @@ effects:
                     - trait_has: "Bagra Army"
                 prompt: "Select 1 [Bagra Army] trait Digimon card to place under a Tamer"
             - select_own_permanent:
+                optional: false
                 bind_as: dest_tamer
                 filter: { kind: tamer }
                 prompt: "Place it under one of your Tamers"
@@ -81,6 +84,7 @@ effects:
             - draw: { of: you, count: 1 }
           else:
             - select_trash:
+                optional: false
                 of: you
                 bind_as: placed_pick
                 filter:
@@ -89,6 +93,7 @@ effects:
                     - trait_has: "Bagra Army"
                 prompt: "Select 1 [Bagra Army] trait Digimon card to place under a Tamer"
             - select_own_permanent:
+                optional: false
                 bind_as: dest_tamer
                 filter: { kind: tamer }
                 prompt: "Place it under one of your Tamers"
@@ -98,7 +103,8 @@ effects:
             - draw: { of: you, count: 1 }
 
   # ─── [On Deletion] play a [Tuwarmon] from under Tamers; then <Save> ────────
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Tuwarmon] with a play cost of 7 or less from under your Tamers without paying the cost. Then, ＜Save＞."
+    when: on_deletion
     optional: true
     summary: "[On Deletion] You may play 1 [Tuwarmon] with a play cost of 7 or less from under your Tamers without paying the cost. Then, Save"
     process:

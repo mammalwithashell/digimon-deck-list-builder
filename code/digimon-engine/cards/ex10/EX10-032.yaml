@@ -113,11 +113,13 @@ effects:
             n: 1
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: landramon
           filter: { name_is: "Landramon" }
           prompt: "Choose 1 Landramon from your trash"
       - select_own_permanent:
+          optional: false
           bind_as: sunarizamon
           filter: { kind: digimon, name_is: "Sunarizamon" }
           prompt: "Choose 1 of your Sunarizamon to place Landramon under and digivolve"
@@ -165,7 +167,8 @@ effects:
   # bits 30-59, `hand_main_match`), so activating it IS the player's opt-in and
   # an `optional:` flag would double-prompt. DCGO matches: EX10_032.cs:20 passes
   # isOptional=false and its first inner select uses `canNoSelect: () => false`.
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] By trashing any 1 [Mineral] or [Rock] trait card from your Digimon's digivolution cards, 1 of your such Digimon gains ＜Collision＞, ＜Piercing＞ and +3000 DP until your opponent's turn ends."
+    when: [on_play, when_digivolving, when_attacking]
     optional: true
     outer_prompt: true
     summary: "[OP][WD][WA] MAY trash 1 Mineral/Rock source → 1 of your Mineral/Rock Digimon gains Collision + Piercing + +3000 DP until EoOT"
@@ -187,6 +190,7 @@ effects:
 
       # Step 3: Select 1 of your Mineral/Rock Digimon to receive the buffs.
       - select_own_permanent:
+          optional: false
           bind_as: target_digi
           filter:
             all_of:
@@ -236,6 +240,7 @@ effects:
     summary: "When this source is trashed from a Mineral/Rock Digimon, De-Digivolve 1"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 1"

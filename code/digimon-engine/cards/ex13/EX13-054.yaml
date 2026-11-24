@@ -39,15 +39,18 @@ alt_paths:
     cost: 2
 
 effects:
-  - when: on_security
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
     summary: "[Security] At the end of the battle, play this card without paying the cost"
     process:
       - play_from_security: {}
 
-  - when: [on_play, on_deletion]
+  - text: "[On Play] [On Deletion] 1 of your opponent's Digimon can't attack players until their turn ends."
+    when: [on_play, on_deletion]
     summary: "[On Play][On Deletion] 1 of your opponent's Digimon can't attack players until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon can't attack players until their turn ends"
@@ -57,7 +60,8 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
 
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true }

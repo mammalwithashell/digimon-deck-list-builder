@@ -26,7 +26,7 @@ alt_paths:
     from: { level_eq: 3, color_is: yellow }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
 effects:
   - when: on_discard_security
@@ -55,7 +55,8 @@ effects:
   - kind: grant_keyword
     keyword: Ascension
     summary: "<Ascension> (When deleted, you may place this card as top security)"
-  - kind: grant_keyword
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Barrier
     summary: "Inherited <Barrier>"

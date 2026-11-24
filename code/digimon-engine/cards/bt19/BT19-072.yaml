@@ -18,7 +18,8 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may play 1 level 4 or lower Digimon card from your trash without paying the cost."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] You may play 1 level 4 or lower Digimon from trash free"
     process:
@@ -45,10 +46,11 @@ effects:
         trait_has: "Royal Knight"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: redirect_target
           filter:
             all_of:
               - kind: digimon
               - trait_has: "Royal Knight"
           prompt: "Switch the attack target to 1 of your Royal Knight Digimon"
-      - redirect_attack_target: { new_target: redirect_target }
+      - redirect_attack_target: { optional: false, new_target: redirect_target }

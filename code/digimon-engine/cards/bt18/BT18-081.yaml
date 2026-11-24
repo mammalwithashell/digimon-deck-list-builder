@@ -24,9 +24,11 @@ alt_paths:
       any_of: [{color_is: purple}, {color_is: yellow}]
     cost: 3
 effects:
-  - kind: grant_keyword
+  - text: "＜Jamming＞"
+    kind: grant_keyword
     keyword: Jamming
-  - when: main_from_hand
+  - text: "[Hand] [Main] By placing 1 [Loweemon] and 1 [KaiserLeomon] from your trash under 1 of your purple or yellow Tamers, digivolve it into this card for a digivolution cost of 3, ignoring digivolution requirements."
+    when: main_from_hand
     condition:
       all_of:
         - count_gte:
@@ -42,6 +44,7 @@ effects:
             any_of: [{color_is: purple}, {color_is: yellow}]
     process:
       - select_own_permanent:
+          optional: false
           bind_as: host
           filter:
             kind: tamer
@@ -65,7 +68,8 @@ effects:
                 from_hand: self
                 cost: 3
                 ignore_requirements: true
-  - when: when_digivolving
+  - text: "[When Digivolving] You may play 1 Tamer card with inherited effects from your trash without paying the cost."
+    when: when_digivolving
     process:
       - select_trash:
           of: you
@@ -77,11 +81,13 @@ effects:
             can_play_from_effect_without_cost: true
           prompt: You may play 1 Tamer with inherited effects from your trash
       - play_from_trash_free: {of: you, hand_index: tamer}
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter: {kind: digimon}
           prompt: Choose 1 opponent Digimon to get -4000 DP for the turn

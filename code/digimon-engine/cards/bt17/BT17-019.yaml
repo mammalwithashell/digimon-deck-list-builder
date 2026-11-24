@@ -68,7 +68,8 @@ effects:
   # Printed text has no "you may" → mandatory once gated. DCGO uses
   # `isOptional: false`. The Draw step has no SelectCard prompt
   # (deterministic state delta), so no `pending_selection` will install.
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] If Matt Ishida tamer present, draw 1"
     condition:
       any_permanent:
@@ -89,7 +90,8 @@ effects:
   # `EffectTiming.OnEndTurn` activate). Predecessor `alt_path_registration
   # { kind: dna_digivolve }` (resolved 2026-05-02) registered a next-turn
   # alt-path and so could not satisfy the printed "AT end of turn" surface.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     # FAITHFULNESS FIX (G-FIX-BT12-EOT-DNA-PAYCOST, 2026-06-02): NORMAL DNA

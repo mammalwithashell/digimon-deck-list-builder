@@ -53,13 +53,15 @@ traits: [Hero]
 
 effects:
   # ─── Clause 1: [Security] play this card without paying the cost ──────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
 
   # ─── Clause 2: [Start of Your Main Phase] may digivolve, cost -N ──────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] 1 of your Digimon or Tamers may digivolve into a Digimon card with the [Hybrid] or [Hero] trait in the hand. For each of your red Tamers with different names, reduce this effect's digivolution cost by 1."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] 1 of your Digimon or Tamers may digivolve into a [Hybrid]/[Hero] Digimon in hand, cost -1 per red Tamer with a different name"
     process:
       - select_own_permanent:
@@ -101,6 +103,7 @@ effects:
           condition: { binding_present: evo_base }
           then:
             - select_hand:
+                optional: false
                 of: you
                 bind_as: evo_card
                 filter:
@@ -146,7 +149,8 @@ effects:
                 ignore_requirements: false
 
   # ─── Clause 3 (inherited): [Your Turn][OPT] opp security removed → play red Tamer
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, you may play 1 red Tamer card from your hand without paying the cost."
+    scope: inherited
     when: on_opponent_security_removed
     optional: true
     # DCGO BT21_082.cs:135 `isOptional: true`; its CanActivateCondition (:152) is

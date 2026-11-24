@@ -21,7 +21,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Add your top security card to the hand. Then, if [Wizardmon] or [X Antibody] is in this Digimon's digivolution cards, you may place 1 use cost 5 or lower yellow or purple Option card from your hand as the bottom security card."
+    when: [on_play, when_digivolving]
     summary: "Add top security to hand; with Wizardmon/X Antibody source, may place a yellow/purple Option costing 5 or less as bottom security"
     process:
       - add_top_security_to_hand: { of: you }
@@ -54,7 +55,8 @@ effects:
                 position: bottom
                 face_up: false
 
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this yellow Digimon with the [Data] or [Witchelny] trait would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave."
+    kind: replacement
     scope: inherited
     trigger: when_would_leave_battle_area
     optional: true

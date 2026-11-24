@@ -40,6 +40,7 @@ effects:
     summary: "[Main] De-Digivolve 2 one opponent Digimon; then optionally link this card to one of your Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
@@ -55,11 +56,13 @@ effects:
           filter: { kind: digimon, trait_has: TS }
 
   # [Security] Activate this card's [Main] effects.
-  - scope: inherited
+  - text: "[Security] Activate this card's [Main] effects."
+    scope: inherited
     when: on_security
     summary: "[Security] Activate [Main]: De-Digivolve 2 one opponent Digimon; then optionally link this card"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: sec_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon to De-Digivolve 2"

@@ -49,7 +49,8 @@ alt_paths:
 
 effects:
   # ─── Clause 0 — <Blocker> keyword grant ────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -67,7 +68,8 @@ effects:
   # nothing (min:0). With plain `select_reveal`, declining would set
   # `on_decline: None` and the tail would be silently dropped.
   #
-  - when: on_deletion
+  - text: "[On Deletion] Reveal the top 3 cards of your deck. You may play 1 [Mineral] or [Rock] trait Digimon card with a play cost of 5 or less among them without paying the cost. Trash the rest."
+    when: on_deletion
     summary: "[On Deletion] Reveal top 3; you may play 1 [Mineral]/[Rock] cost<=5 Digimon free; trash rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -102,11 +104,12 @@ effects:
   #
   # `new_target: source` resolves to the carrier (source permanent = this
   # Digimon). No intermediate select_own_permanent step.
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
+    scope: inherited
     when: on_opponent_attack
     optional: true
     once_per_turn: true
     active_when: { opponents_turn: true }
     summary: "[Opponent's Turn][OPT] When opponent's Digimon attacks, change the attack target to this Digimon"
     process:
-      - redirect_attack_target: { new_target: source }
+      - redirect_attack_target: { optional: false, new_target: source }

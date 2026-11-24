@@ -35,32 +35,38 @@ alt_paths:
     cost: 0
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
 
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Royal Knight] trait and 1 card with ＜Blocker＞ among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Royal Knight] trait card and 1 card with <Blocker> to hand; rest to deck bottom"
     process:
       - reveal_search:
           of: you
           count: 3
           buckets:
-            - filter: { trait_has: "Royal Knight" }
+            - optional: false
+              filter: { trait_has: "Royal Knight" }
               to: hand
               max: 1
               prompt: "Add 1 card with the [Royal Knight] trait to the hand"
-            - filter: { printed_keyword: Blocker }
+            - optional: false
+              filter: { printed_keyword: Blocker }
               to: hand
               max: 1
               prompt: "Add 1 card with <Blocker> to the hand"
           remainder: bottom
 
-  - when: when_attacking
+  - text: "[When Attacking] Lose 2 memory."
+    when: when_attacking
     summary: "[When Attacking] Lose 2 memory"
     process:
       - lose_memory: 2
 
-  - scope: inherited
+  - text: "[Opponent's Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { opponents_turn: true }
     target: {}

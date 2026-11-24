@@ -20,7 +20,8 @@ traits: [Baby Dragon]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[All Turns] While this Digimon has 2 or more colors, it gets +1000 DP."
+    scope: inherited
     kind: aura
     active_when:
       all_turns: true

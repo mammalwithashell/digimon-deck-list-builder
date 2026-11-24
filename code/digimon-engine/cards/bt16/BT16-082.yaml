@@ -13,7 +13,7 @@ traits: [Ancient Fairy]
 # faithful authoring (allowlisted in tests/alt_path_printed_cost_guard.rs).
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2 }
+    from: { any_color: true, level_eq: 2 }
     cost: 1
 
 # [Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding
@@ -33,7 +33,8 @@ alt_paths:
 #      level >= 3 which Tamers/Options never have), so this predicate never
 #      fires differently, but it is the faithful encoding of the printed text.
 effects:
-  - when: on_move
+  - text: "[Your Turn] [Once Per Turn] When any of your Digimon move from the breeding area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon card or Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, you may hatch in your breeding area."
+    when: on_move
     once_per_turn: true
     active_when: { your_turn: true }
     trigger_if:

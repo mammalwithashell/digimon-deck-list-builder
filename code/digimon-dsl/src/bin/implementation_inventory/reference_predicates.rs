@@ -19,6 +19,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             level_matches_aggregate,
             materials_count_matches_aggregate,
             color_is,
+            any_color,
             color_only,
             color_matches_any_field_digimon,
             color_matches_binding,
@@ -281,6 +282,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "UNCLASSIFIED_STRING",
         );
         color_is.walk(c, &format!("{}.color_is", path), "UNCLASSIFIED_STRING");
+        any_color.walk(c, &format!("{}.any_color", path), "METADATA");
         color_only.walk(c, &format!("{}.color_only", path), "UNCLASSIFIED_STRING");
         color_matches_any_field_digimon.walk(
             c,

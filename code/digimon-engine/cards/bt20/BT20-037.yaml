@@ -36,7 +36,8 @@ effects:
               - color_is: black
     exclude_cause: [own_effect, battle]
 
-  - when: when_digivolving
+  - text: "[When Digivolving] For each of this Digimon's level 6 digivolution cards, suspend 1 of your opponent's Digimon or Tamers and gain 1 memory. Then, none of their Digimon or Tamers can activate [On Play] effects or unsuspend until the end of their turn."
+    when: when_digivolving
     summary: "[When Digivolving] For each level 6 source, suspend 1 opponent Digimon/Tamer and gain 1 memory; lock all opponent Digimon/Tamers"
     process:
       - select_count_capped_multi:

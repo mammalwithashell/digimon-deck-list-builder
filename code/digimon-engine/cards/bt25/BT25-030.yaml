@@ -24,19 +24,22 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: TS
     cost: 0
 effects:
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By adding your top security card to the hand, gain 1 memory."
+    when: start_of_your_main_phase
     optional: true
     condition: { security_count_gte: 1 }
     summary: "[Start of Your Main Phase] By adding your top security card to the hand, gain 1 memory"
     process:
       - add_top_security_to_hand: { of: you }
       - gain_memory: 1
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     summary: "[When Attacking][OPT] You may add top security to hand; then if you have 0 security, Recovery +1"

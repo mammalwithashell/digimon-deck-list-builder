@@ -23,6 +23,7 @@ alt_paths:
   # Lv.2 with [ACCEL] trait.
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: ACCEL
@@ -39,6 +40,7 @@ effects:
     process:
       - reveal_top_deck: { of: you, count: 3 }
       - choose_from_reveal:
+          optional: false
           of: you
           filter:
             any_of:
@@ -52,7 +54,8 @@ effects:
           of: you
           destinations: [deck_top, deck_bottom]
   # Inherited [All Turns] This Digimon gets +1000 DP.
-  - kind: aura
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    kind: aura
     scope: inherited
     target: {}
     active_when: { all_turns: true }

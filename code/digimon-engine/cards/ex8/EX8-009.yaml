@@ -84,7 +84,8 @@ alt_paths:
 effects:
   # ─── Clause 1: [On Play] [When Digivolving] reveal 3, add 1 [Growlmon]/
   #     [Gallantmon]-named card and 1 [X Antibody], rest to deck bottom ───────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with [Growlmon] or [Gallantmon] in its name and 1 [X Antibody] among them to the hand. Return the rest to the bottom of the deck."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Reveal 3; add 1 [Growlmon]/[Gallantmon]-named card and 1 [X Antibody]; rest to deck bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -109,7 +110,8 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Clause 2: Inherited [Your Turn][OPT] opp Digimon deleted → +1 memory ───
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your opponent's Digimon are deleted, gain 1 memory."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     active_when: { your_turn: true }

@@ -48,7 +48,8 @@ effects:
   # at resolution time, and `materials_count_lte` filters each candidate by its own
   # digivolution-card count. Both counts are `card_sources.len() - 1` (top card
   # excluded), so the comparison is exactly "as many or fewer digivolution cards".
-  - when: when_digivolving
+  - text: "[When Digivolving] Suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon. Then, if DNA digivolving, none of their Digimon can unsuspend until the end of their turn."
+    when: when_digivolving
     summary: "[WD] Suspend qualifying opposing Digimon; then, if DNA digivolving, prevent opposing Digimon unsuspending"
     process:
       - for_each:
@@ -83,9 +84,9 @@ effects:
   # opponent Digimon), not merely whether a target was selected. This is the
   # faithful printed-text reading: the fallback fires whenever no opponent
   # Digimon was suspended this resolution.
-  - when: when_attacking
+  - text: "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's unsuspended Digimon. If this effect didn't suspend, unsuspend this Digimon."
+    when: when_attacking
     once_per_turn: true
-    optional: true
     summary: "[WA][OPT] Suspend 1 opp unsuspended Digimon; if it didn't suspend, unsuspend this Digimon"
     process:
       - select_opponent_permanent:
@@ -94,7 +95,7 @@ effects:
             all_of:
               - kind: digimon
               - is_unsuspended: true
-          optional: true
+          optional: false
           prompt: "Suspend 1 of your opponent's unsuspended Digimon"
       - suspend: { target: wa_target }
       - if:

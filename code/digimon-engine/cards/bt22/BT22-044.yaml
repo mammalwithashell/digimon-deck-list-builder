@@ -64,11 +64,12 @@ alt_paths:
     cost: 1
   # Printed alt evo box: "Digivolve Lv.2 w/[CS] trait: Cost 0".
   - kind: digivolve
-    from: { level_eq: 2, trait_has: CS }
+    from: { any_color: true, level_eq: 2, trait_has: CS }
     cost: 0
 
 effects:
-  - when: on_add_digivolution_cards
+  - text: "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, gain 1 memory."
+    when: on_add_digivolution_cards
     once_per_turn: true
     active_when: { your_turn: true }
     trigger_if:

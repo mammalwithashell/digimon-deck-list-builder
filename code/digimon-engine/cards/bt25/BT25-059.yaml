@@ -65,11 +65,11 @@ alt_paths:
     from: { level_eq: 5, color_is: yellow }
     cost: 4
   - kind: digivolve
-    from: { level_eq: 5, trait_has: TS }
+    from: { any_color: true, level_eq: 5, trait_has: TS }
     cost: 3
     ignore_requirements: true
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Vegetation }
+    from: { any_color: true, level_eq: 5, trait_has: Vegetation }
     cost: 3
     ignore_requirements: true
 
@@ -128,6 +128,7 @@ effects:
     summary: "[All Turns][OPT] When any Digimon suspend, give 1 opp Digimon -3000 DP for each suspended Digimon until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: debuff
           filter: { kind: digimon }
           prompt: "Give 1 of your opponent's Digimon -3000 DP for each suspended Digimon"

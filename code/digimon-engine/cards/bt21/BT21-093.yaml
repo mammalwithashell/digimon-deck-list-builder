@@ -70,6 +70,7 @@ effects:
       # `selector: highest_dp` restricts the prompt to the highest-DP
       # opponent Digimon; ties expose every tied permanent.
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           selector: highest_dp
           filter:
@@ -202,6 +203,7 @@ effects:
           then:
             # Select a Reptile/Dragonkin card from hand to digivolve into.
             - select_hand:
+                optional: false
                 of: you
                 bind_as: evo_card
                 filter:
@@ -238,10 +240,12 @@ effects:
   #     flag), exactly like BT24-089's `[Security]` clause. `scope: inherited`
   #     would make enqueue_from_permanent skip the clause on a top-card Option.
   #   - select_opponent_permanent with `selector: highest_dp` + delete_permanent.
-  - when: on_security
+  - text: "[Security] Delete 1 of your opponent's Digimon with the highest DP."
+    when: on_security
     summary: "[Security] Delete 1 opponent highest-DP Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           selector: highest_dp
           filter:

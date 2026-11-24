@@ -14,7 +14,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top card of your deck. If it's a green Digimon card, add it to your hand. Otherwise, place it at the bottom of your deck."
+    when: on_play
     summary: "[On Play] Reveal top card; add it if it is a green Digimon, otherwise bottom it"
     process:
       - reveal_top_deck: { of: you, count: 1, bind_as: revealed }

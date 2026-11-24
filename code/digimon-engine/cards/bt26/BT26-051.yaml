@@ -47,7 +47,7 @@ alt_paths:
     from: { level_eq: 2, color_is: black }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:
@@ -65,12 +65,14 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [Your Turn][OPT] When this Digimon gets linked → Collision + 3000 ──────
-  - when: when_card_linked_to_this
+  - text: "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your Digimon with the [Social], [Tool], [Open] or [Seven Code] trait gains ＜Collision＞ and +3000 DP for the turn."
+    when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }
     summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, 1 of your [Social]/[Tool]/[Open]/[Seven Code] Digimon gains <Collision> and +3000 DP for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: boosted
           filter:
             all_of:
@@ -108,6 +110,7 @@ effects:
     summary: "[When Linking] <De-Digivolve 2> 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dd_target
           filter: { kind: digimon }
           prompt: "<De-Digivolve 2> 1 of your opponent's Digimon"

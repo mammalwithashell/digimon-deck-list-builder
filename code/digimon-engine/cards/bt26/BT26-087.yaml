@@ -34,7 +34,8 @@ traits: [TS]
 effects:
   # ─── [Start of Your Main Phase] bottom-deck 1 [TS] Digimon from trash →
   #     gain 1 memory; after, may return 1 [Giant Slayer] trash → hand ──────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By returning 1 [TS] trait Digimon card from your trash to the bottom of the deck, gain 1 memory. After, you may return 1 [Giant Slayer] from your trash to the hand."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter:
@@ -70,7 +71,8 @@ effects:
             - add_to_hand_from_trash: { of: you, card: slayer }
 
   # ─── [On Play] By trashing 1 [TS] hand card, <Draw 2> ──────────────────────
-  - when: on_play
+  - text: "[On Play] By trashing 1 [TS] trait card from your hand, ＜Draw 2＞."
+    when: on_play
     condition:
       count_gte:
         filter:
@@ -93,7 +95,8 @@ effects:
             - trash_from_hand_by_index: { of: you, hand_index: discard }
             - draw: { of: you, count: 2 }
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

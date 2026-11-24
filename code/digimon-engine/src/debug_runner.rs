@@ -803,6 +803,160 @@ impl DebugRunner {
         self.pending_selection().map(|s| s.kind)
     }
 
+    /// Assert the complete prompt contract before making an explicit choice.
+    pub fn assert_prompt(&self, kind: SelectionKind, optional: bool, player: PlayerId) {
+        let actual = self.pending_selection_view();
+        assert!(
+            actual.as_ref().is_some_and(|s| s.kind == kind
+                && s.is_optional == optional
+                && s.selecting_player == player),
+            "expected {kind:?}, optional={optional}, player={player}; actual prompt: {actual:?}"
+        );
+    }
+
+    /// Legal card choices on the current page, in action order (duplicates retained).
+    /// Non-card prompts should be answered with `execute_branch` or
+    /// `accept_optional_trigger` instead.
+    pub fn prompt_card_candidates(&self) -> Vec<(u16, String)> {
+        use crate::action::space::*;
+        let sel = self.pending_selection().expect("no pending prompt");
+        if let Some(owner) = &sel.card_choice {
+            return owner
+                .view(&self.game, sel.selecting_player)
+                .rows
+                .into_iter()
+                .filter(|row| {
+                    matches!(
+                        row.operation,
+                        crate::owned_card_choice::CardChoiceOperation::CommitCard
+                    )
+                })
+                .filter(|row| owner.valid_action_ids(&self.game).contains(&row.action_id))
+                .filter_map(|row| row.card_id.map(|id| (row.action_id, id)))
+                .collect();
+        }
+        if let Some(candidates) = crate::runners::selection_resolve::pending_frame_card_candidates(&self.game) {
+            return candidates;
+        }
+        let player = sel.zone_owner.unwrap_or(sel.selecting_player);
+        sel.valid_action_ids
+            .iter()
+            .filter(|&&id| id != PASS)
+            .filter_map(|&id| {
+                let card = match sel.kind {
+                    SelectionKind::Hand => self
+                        .game
+                        .player(player)
+                        .hand
+                        .get(id.checked_sub(PLAY_HAND_START)? as usize),
+                    SelectionKind::Trash => self
+                        .game
+                        .player(player)
+                        .trash
+                        .get(id.checked_sub(TRASH_EFFECT_START)? as usize),
+                    SelectionKind::Reveal | SelectionKind::RevealBucket { .. } => self
+                        .game
+                        .revealed_cards
+                        .get(id.checked_sub(SEL_REVEAL_START)? as usize),
+                    SelectionKind::Security => {
+                        let (owner, base) =
+                            if (SEL_MY_SECURITY_START..SEL_MY_SECURITY_END).contains(&id) {
+                                (sel.selecting_player, SEL_MY_SECURITY_START)
+                            } else {
+                                (
+                                    self.game.next_clockwise(sel.selecting_player),
+                                    SEL_OPP_SECURITY_START,
+                                )
+                            };
+                        self.game
+                            .player(owner)
+                            .security
+                            .get(id.checked_sub(base)? as usize)
+                    }
+                    SelectionKind::Source => {
+                        let (slot, index) = decode_source_select(id);
+                        self.game
+                            .player(player)
+                            .battle_area
+                            .get(slot as usize)
+                            .and_then(|p| p.card_sources.get(index as usize))
+                    }
+                    SelectionKind::Material => {
+                        let host =
+                            crate::runners::selection_resolve::pending_material_source_carrier(
+                                &self.game,
+                            )
+                            .expect("material prompt has no carrier");
+                        self.game
+                            .player(host.player)
+                            .battle_area
+                            .get(host.index as usize)
+                            .and_then(|p| {
+                                p.card_sources
+                                    .get(id.checked_sub(SEL_REVEAL_START)? as usize)
+                            })
+                    }
+                    SelectionKind::OwnField
+                    | SelectionKind::OppField
+                    | SelectionKind::Target
+                    | SelectionKind::AnyField => {
+                        let (side, slot) = decode_attack(id);
+                        let owner = match sel.kind {
+                            SelectionKind::AnyField => side as PlayerId,
+                            SelectionKind::OwnField => player,
+                            _ => sel
+                                .zone_owner
+                                .unwrap_or(self.game.next_clockwise(sel.selecting_player)),
+                        };
+                        self.game
+                            .player(owner)
+                            .battle_area
+                            .get(slot as usize)
+                            .map(|p| p.top_card())
+                    }
+                    _ => panic!(
+                        "card candidates unsupported for prompt: {:?}; use explicit actions",
+                        self.pending_selection_view()
+                    ),
+                };
+                card.map(|card| (id, card.card_id(&self.game.card_data).to_string()))
+            })
+            .collect()
+    }
+
+    /// Choose a unique card, or a zero-based occurrence among duplicate candidates.
+    pub fn choose_prompt_card(
+        &mut self,
+        card_id: &str,
+        ordinal: Option<usize>,
+    ) -> Result<(), SelectionError> {
+        let candidates = self.prompt_card_candidates();
+        let matches: Vec<_> = candidates.iter().filter(|(_, id)| id == card_id).collect();
+        let index = ordinal.unwrap_or(0);
+        assert!(
+            ordinal.is_some() || matches.len() == 1,
+            "card {card_id} absent or ambiguous; candidates: {candidates:?}"
+        );
+        let action = matches
+            .get(index)
+            .unwrap_or_else(|| {
+                panic!("card {card_id}, ordinal {index} absent; candidates: {candidates:?}")
+            })
+            .0;
+        let player = self.pending_selection().unwrap().selecting_player;
+        self.execute_action(player, action)
+    }
+
+    /// Decline exactly one optional prompt using PASS.
+    pub fn decline_prompt(&mut self) -> Result<(), SelectionError> {
+        assert!(
+            self.pending_is_optional(),
+            "expected optional prompt; actual: {:?}",
+            self.pending_selection_view()
+        );
+        self.decline_optional_trigger()
+    }
+
     pub fn pending_is_optional(&self) -> bool {
         self.pending_selection()
             .map(|s| s.is_optional)
@@ -1813,6 +1967,80 @@ pub fn make_test_dna_card(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn prompt_fixture(optional: bool, actions: Vec<u16>) -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .add_card(make_test_card("PICK", "Pick"))
+            .hand(1, &["PICK", "PICK"])
+            .start();
+        r.game.current_phase = GamePhase::SelectHand;
+        r.game.pending_selection = Some(PendingSelection {
+            card_choice: None,
+            kind: SelectionKind::Hand,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: actions,
+            is_optional: optional,
+            prompt: "Pick an opponent hand card".into(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Rule,
+            callback: Box::new(|game, action| game.set_memory(action as i16)),
+            on_decline: Some(Box::new(|game| game.set_memory(7))),
+            zone_owner: Some(1),
+        });
+        r
+    }
+
+    #[test]
+    fn explicit_prompt_helpers_choose_and_decline() {
+        use crate::action::space::PLAY_HAND_START;
+        let mut r = prompt_fixture(false, vec![PLAY_HAND_START + 1]);
+        r.assert_prompt(SelectionKind::Hand, false, 0);
+        assert_eq!(
+            r.prompt_card_candidates(),
+            vec![(PLAY_HAND_START + 1, "PICK".into())]
+        );
+        r.choose_prompt_card("PICK", None).unwrap();
+        assert_eq!(r.memory(), (PLAY_HAND_START + 1) as i16);
+        let mut r = prompt_fixture(true, vec![PLAY_HAND_START]);
+        r.decline_prompt().unwrap();
+        assert_eq!(r.memory(), 7);
+        let mut r = prompt_fixture(false, vec![PLAY_HAND_START, PLAY_HAND_START + 1]);
+        r.choose_prompt_card("PICK", Some(1)).unwrap();
+        assert_eq!(r.memory(), (PLAY_HAND_START + 1) as i16);
+    }
+
+    #[test]
+    fn explicit_prompt_helpers_reject_wrong_empty_and_ambiguous_choices() {
+        use crate::action::space::PLAY_HAND_START;
+        use std::panic::{catch_unwind, AssertUnwindSafe};
+        let mut r = prompt_fixture(false, vec![PLAY_HAND_START, PLAY_HAND_START + 1]);
+        for (kind, optional, player) in [
+            (SelectionKind::Trash, false, 0),
+            (SelectionKind::Hand, true, 0),
+            (SelectionKind::Hand, false, 1),
+        ] {
+            assert!(
+                catch_unwind(AssertUnwindSafe(|| r.assert_prompt(kind, optional, player))).is_err()
+            );
+        }
+        assert!(catch_unwind(AssertUnwindSafe(|| r.choose_prompt_card("PICK", None))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| r.choose_prompt_card("MISSING", None))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| r.choose_prompt_card("PICK", Some(2)))).is_err());
+        assert!(catch_unwind(AssertUnwindSafe(|| r.decline_prompt())).is_err());
+        let mut r = prompt_fixture(false, vec![]);
+        assert!(r.prompt_card_candidates().is_empty());
+        assert!(catch_unwind(AssertUnwindSafe(|| r.choose_prompt_card("PICK", None))).is_err());
+        r.game.pending_selection = None;
+        assert!(catch_unwind(AssertUnwindSafe(|| r.assert_prompt(
+            SelectionKind::Hand,
+            false,
+            0
+        )))
+        .is_err());
+    }
 
     const RESTRICTED_EVOLUTION_YAML: &str = r#"
 card: TEST-RESTRICTED-EVOLUTION

@@ -23,7 +23,8 @@ cost: 0
 traits: [Baby Dragon]
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When any of your blue Tamers are played, this Digimon with [Veedramon] in its name may unsuspend."
+    scope: inherited
     when: on_ally_played
     once_per_turn: true
     optional: true

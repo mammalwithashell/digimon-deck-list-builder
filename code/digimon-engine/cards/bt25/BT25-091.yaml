@@ -7,7 +7,8 @@ traits: [TS]
 
 effects:
   # [Start of Your Turn] If you have 2 or less memory, set it to 3.
-  - when: start_of_your_turn
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
     condition: { memory_lte: 2 }
     summary: "[Start of Your Turn] If memory <= 2, set it to 3"
     process:
@@ -15,7 +16,8 @@ effects:
 
   # [On Play] You may return 1 [TS] trait Option card from your trash to the
   # hand. If this effect didn't return, <Draw 1>.
-  - when: on_play
+  - text: "[On Play] You may return 1 [TS] trait Option card from your trash to the hand. If this effect didn't return, ＜Draw 1＞."
+    when: on_play
     summary: "[On Play] May return 1 TS Option from trash to hand; if not, Draw 1"
     process:
       - select_trash:
@@ -57,7 +59,8 @@ effects:
   # a Digimon: DCGO's CanActivateCondition checks only the suspend cost, so
   # Monica may still be suspended for nothing (BT25_091.cs:119-123); only the
   # pick is skipped (`HasMatchConditionPermanent`, :142).
-  - when: on_use_option
+  - text: "[Your Turn] When you use [TS] trait Option cards, by suspending this Tamer, 1 of your opponent's Digimon can't attack until their turn ends."
+    when: on_use_option
     active_when: { your_turn: true }
     optional: true
     summary: "[Your Turn] When you use a [TS] trait Option card, you may suspend this Tamer: 1 opponent Digimon can't attack until their turn ends"
@@ -70,6 +73,7 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - select_opponent_permanent:
+          optional: false
           bind_as: locked
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon can't attack until their turn ends"
@@ -80,7 +84,8 @@ effects:
           expiry: end_of_opponents_turn
 
   # [Security] Play this card without paying the cost.
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

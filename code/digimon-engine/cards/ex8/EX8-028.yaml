@@ -134,7 +134,7 @@ alt_paths:
   # Printed alt evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3". DCGO
   # gates on EqualsTraits("Ice-Snow") && Level == 5 — no color restriction.
   - kind: digivolve
-    from: { level_eq: 5, trait_has: Ice-Snow }
+    from: { any_color: true, level_eq: 5, trait_has: Ice-Snow }
     cost: 3
 
 effects:
@@ -143,7 +143,8 @@ effects:
   # "(Other than against Security Digimon, compare the number of digivolution
   #  cards instead of DP in this Digimon's battles.)"
   # Engine Keyword::Iceclad is consumed at Game::resolve_battle. EX8-022 idiom.
-  - kind: grant_keyword
+  - text: "＜Iceclad＞"
+    kind: grant_keyword
     keyword: Iceclad
     summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
 
@@ -153,7 +154,8 @@ effects:
   #  of your security stack, prevent that deletion.)"
   # DCGO BarrierSelfEffect at WhenPermanentWouldBeDeleted; the engine
   # auto-installs the optional battle-deletion replacement. BT23-102 idiom.
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "<Barrier> (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion)"
 
@@ -169,7 +171,8 @@ effects:
   # cards" (EX8-023 idiom); the zone-count filter evaluates each opponent
   # battle-area PERMANENT, so only Digimon (not Tamers) raise the cap.
   # optional select — printed "you may" (DCGO canNoSelect: true).
-  - when: when_digivolving
+  - text: "[When Digivolving] You may play 1 level 4 or lower [Ice-Snow] trait Digimon card from your hand without paying the cost. For each of your opponent's Digimon with no digivolution cards, add 1 to this effect's level maximum."
+    when: when_digivolving
     optional: true
     summary: "[When Digivolving] You may play 1 level 4(+1 per sourceless opp Digimon) or lower [Ice-Snow] Digimon from hand free"
     process:
@@ -219,12 +222,14 @@ effects:
   # IPutSecurityPermanent toTop: false → topCard.Owner.SecurityCards);
   # the binding_owner branch routes the destination. Then this Digimon
   # unsuspends (see header divergence note 1 for the replacement corner).
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] By placing 1 Digimon with no digivolution cards as the bottom security card, this Digimon unsuspends."
+    when: [when_digivolving, when_attacking]
     optional: true
     once_per_turn: true
     summary: "[When Digivolving][When Attacking][Once Per Turn] By placing 1 sourceless Digimon as the bottom security card, this Digimon unsuspends"
     process:
       - select_any_permanent:
+          optional: false
           bind_as: pay
           filter:
             all_of:

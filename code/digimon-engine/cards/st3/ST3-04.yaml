@@ -13,7 +13,8 @@ alt_paths:
     from: { level_eq: 2, color_is: yellow }
     cost: 0
 effects:
-  - scope: inherited
+  - text: "[Your Turn][Once Per Turn] When an opponent's Digimon is deleted by dropping to 0 DP, gain 1 memory."
+    scope: inherited
     when: on_any_deletion
     once_per_turn: true
     active_when: { your_turn: true }

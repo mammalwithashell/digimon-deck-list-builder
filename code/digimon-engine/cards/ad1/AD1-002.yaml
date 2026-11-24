@@ -77,7 +77,8 @@ alt_paths:
 
 effects:
   # ─── ＜Rush＞ (face-up) ───────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Rush＞"
+    kind: grant_keyword
     keyword: Rush
     summary: "<Rush>"
 
@@ -86,7 +87,8 @@ effects:
   # DCGO: mandatory select (canNoSelect: false), gated on a match existing.
   # `dp_lte: { formula: { source_dp: {} } }` = "with as much or less DP as this
   # Digimon" (AD1-006 / AD1-016 idiom — reads the acting permanent's live DP).
-  - when: when_digivolving
+  - text: "[When Digivolving] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon."
+    when: when_digivolving
     summary: "[When Digivolving] Delete 1 opponent Digimon with DP <= this Digimon"
     condition:
       any_permanent:
@@ -96,6 +98,7 @@ effects:
         dp_lte: { formula: { source_dp: {} } }
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: del_target
           filter:
             all_of:
@@ -120,7 +123,8 @@ effects:
   #      `play_union_bound_free`, the AD1-016 idiom). Runs regardless of the
   #      trash/draw. `has_inherited: {}` = "with inherited effects" (BT17-009
   #      idiom). Color is red/blue/green via an `any_of` of `color_is`.
-  - when: [end_of_attack, on_deletion]
+  - text: "[End of Attack] [On Deletion] You may trash 1 [Hybrid] or [Ten Warriors] trait card from your hand. If this effect trashed, ＜Draw 2＞. Then, you may play 1 red, blue or green Tamer card with inherited effects from your hand or trash without paying the cost."
+    when: [end_of_attack, on_deletion]
     summary: "[EoA][OD] may trash Hybrid/Ten Warriors (if so Draw 2), then may free-play a R/U/G Tamer with inherited effects from hand/trash"
     process:
       # Step 1: optional trash.
@@ -173,7 +177,8 @@ effects:
   # DCGO: ChangeSelfDPStaticEffect(+4000, isInherited) gated IsOwnerTurn.
   # Self-aura (target: {}), flat `dp_modifier_fn: 4000` (BT16-055 literal idiom),
   # gated `active_when: your_turn` (BT12-022 inherited your-turn idiom).
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +4000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

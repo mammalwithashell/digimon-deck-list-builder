@@ -15,7 +15,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - scope: inherited
+  - text: "[End of Opponent's Turn] If your opponent didn't attack with a Digimon this turn, trigger ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: end_of_opponents_turn
     active_when:
       none_of:

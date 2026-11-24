@@ -30,7 +30,8 @@ also_treated_as: [Ken Ichijoji]
 
 effects:
   # ─── [Start of Your Main Phase] distinct-color memory ──────────────────────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] For every 2 colors your opponent's Digimon and Tamers have, gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] Gain 1 memory per 2 colors across opponent's Digimon and Tamers"
     process:
       - gain_memory_fn:
@@ -49,10 +50,12 @@ effects:
               - 2
 
   # ─── [On Play] delete → return opp-trash Digimon → play same-color Lv<=4 ────
-  - when: on_play
+  - text: "[On Play] Delete 1 of your opponent's play cost 5 or lower Digimon. Then, by returning 1 Digimon card from your opponent's trash to the bottom of the deck, from your hand or trash and without paying the cost, you may play 1 level 4 or lower Digimon card with the same color as the card this effect returned."
+    when: on_play
     summary: "[On Play] Delete 1 opp play-cost-5-or-lower Digimon; then return 1 opp-trash Digimon to deck bottom and may play a same-color Lv.4-or-lower Digimon free from hand/trash"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -101,7 +104,8 @@ effects:
           binding: play_pick
 
   # ─── [Security] play self without paying the cost ──────────────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

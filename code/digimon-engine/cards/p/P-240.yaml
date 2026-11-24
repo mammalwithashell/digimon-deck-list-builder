@@ -71,6 +71,7 @@ alt_paths:
     cost: 5
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -109,19 +110,23 @@ alt_paths:
     cost: 6
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Collision＞"
+    kind: grant_keyword
     keyword: Collision
     summary: "<Collision>"
 
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 
-  - kind: grant_keyword
+  - text: "＜Reboot＞"
+    kind: grant_keyword
     keyword: Reboot
     summary: "<Reboot>"
 
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -129,6 +134,7 @@ effects:
     summary: "[On Play][When Digivolving] <De-Digivolve 3> 1 opponent Digimon; then by placing 2 [Gammamon]-text/[VB] cards from trash as bottom sources, give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: degen_target
           filter: { kind: digimon }
           prompt: "<De-Digivolve 3> 1 of your opponent's Digimon"
@@ -163,6 +169,7 @@ effects:
                 then:
                   - place_cards_as_bottom_sources: { cards: placed, target: source }
                   - select_opponent_permanent:
+                      optional: false
                       bind_as: forced_target
                       filter: { kind: digimon }
                       prompt: "Give 1 of your opponent's Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
@@ -176,7 +183,8 @@ effects:
                             targets: any
                             prompt: "This Digimon attacks"
 
-  - when: on_deletion
+  - text: "[On Deletion] You may play 1 [Proximamon] from your hand or trash without paying the cost."
+    when: on_deletion
     optional: true
     condition:
       count_gte:
@@ -201,11 +209,12 @@ effects:
           prompt: "You may play 1 [Proximamon] from your hand or trash without paying the cost"
       - play_union_bound_free: { binding: proxima }
 
-  - scope: inherited
+  - text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     optional: true
     active_when: { opponents_turn: true }
     summary: "[Inherited][Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, you may change the attack target to this Digimon"
     process:
-      - redirect_attack_target: { new_target: source }
+      - redirect_attack_target: { optional: false, new_target: source }

@@ -19,7 +19,8 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 4
 effects:
-  - when: on_play
+  - text: "[On Play] Delete all of your opponent's Digimon with the lowest DP. If no Digimon is deleted by this effect, your opponent can't play Digimon with 5000 DP or less until the end of their turn."
+    when: on_play
     summary: Delete all opposing lowest-DP Digimon; if none are deleted, opponent cannot play Digimon with 5000 DP or less until their turn ends
     process:
       - delete_all_permanents:
@@ -33,7 +34,8 @@ effects:
                 modifier: CannotPlayDigimonWithDPAtMost
                 value: 5000
                 expiry: end_of_opponents_turn
-  - when: when_attacking
+  - text: "[When Attacking] If you have a Tamer in play, trash the top card of your opponent's security stack."
+    when: when_attacking
     summary: If you have a Tamer in play, trash the top card of opponent's security
     condition:
       any_permanent: { of: you, zone: [battle_area], kind: tamer }

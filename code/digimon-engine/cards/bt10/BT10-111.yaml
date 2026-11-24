@@ -46,11 +46,13 @@ effects:
       - register_digixros_wildcard_for_turn:
           card: source
 
-  - kind: grant_keyword
+  - text: "The name of this card/Digimon is also treated as [Shoutmon]."
+    kind: grant_keyword
     keyword: MaterialSave
     value: 1
 
-  - scope: inherited
+  - text: "[Your Turn] While this Digimon has [Shoutmon] in its name, it gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

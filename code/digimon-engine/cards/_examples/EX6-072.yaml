@@ -93,6 +93,7 @@ effects:
     summary: "[Security] Return 1 L6+ Digimon from trash to hand, then add this card to hand"
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: pick
           filter:

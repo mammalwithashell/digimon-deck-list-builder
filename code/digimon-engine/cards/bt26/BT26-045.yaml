@@ -45,6 +45,7 @@ attribute: Free
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -72,7 +73,8 @@ effects:
 
   # ─── [On Play][When Digivolving][When Attacking][OPT] may play 1 level 4 or
   #     lower [Insectoid]/[Titan] Digimon from hand free ─────────────────────
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 level 4 or lower [Insectoid] or [Titan] trait Digimon card from your hand without paying the cost."
+    when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     # DCGO BT26_045.cs:47-48 activates only with a PLAYABLE candidate in hand
     # (the :41-45 pick condition, incl. CanPlayAsNewPermanent), so an

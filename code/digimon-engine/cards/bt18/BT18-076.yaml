@@ -40,7 +40,8 @@ effects:
           optional: false
           prompt: Trash 1 card in your hand
       - trash_from_hand_by_index: { of: you, hand_index: discarded }
-  - when: when_attacking
+  - text: "[When Attacking] 1 of your Digimon or Tamers may digivolve into a purple or yellow Digimon card with the [Hybrid] trait in your trash."
+    when: when_attacking
     process:
       - select_own_permanent:
           bind_as: host
@@ -74,7 +75,8 @@ effects:
           source: hybrid
           cost: printed
           ignore_requirements: false
-  - scope: inherited
+  - text: "[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 Tamer card with inherited effects from this Digimon's digivolution cards without paying the cost."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

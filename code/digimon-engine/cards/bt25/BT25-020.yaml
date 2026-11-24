@@ -122,7 +122,7 @@ alt_paths:
   # Alt-digivolution: Lv.5 with [TS] trait / cost 3, ignoring requirements
   # (printed "[Digivolve] Lv.5 w/[TS] trait: Cost 3" digivolve box).
   - kind: digivolve
-    from: { level_eq: 5, trait_has: TS }
+    from: { any_color: true, level_eq: 5, trait_has: TS }
     cost: 3
     ignore_requirements: true
 
@@ -164,6 +164,7 @@ effects:
     process:
       # "1 of your Digimon gets +3000 DP for the turn." — mandatory pick.
       - select_own_permanent:
+          optional: false
           bind_as: buff_target
           filter: { kind: digimon }
           prompt: "Select 1 of your Digimon to gain +3000 DP for the turn"

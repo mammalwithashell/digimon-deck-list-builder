@@ -97,6 +97,7 @@ alt_paths:
   # [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 4 (whole-card HasText).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - in_text_contains: "Three Musketeers"
@@ -104,7 +105,8 @@ alt_paths:
 
 effects:
   # ─── Clause 1: [On Play][When Digivolving] may use TM Option free; draw to 6 ─
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] You may use 1 [Three Musketeers] trait Option card from your hand without paying the cost. Then, draw cards from the top of your deck until you have 6 in your hand."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may use 1 [Three Musketeers] Option from hand free; then draw until you have 6 in hand"
     process:
       - use_option_from_hand:
@@ -135,7 +137,8 @@ effects:
                     - 0
 
   # ─── Clause 2: [End of Your Turn][OPT] trash Option source → SA+1 + attack ─
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] By trashing 1 Option card from this Digimon's digivolution cards, 1 of your [Three Musketeers] trait Digimon gains ＜Security A. +1＞ for the turn, and attacks."
+    when: end_of_your_turn
     once_per_turn: true
     optional: true
     condition:
@@ -146,6 +149,7 @@ effects:
     summary: "[End of Your Turn][OPT] By trashing 1 Option from this Digimon's digivolution cards, 1 of your [Three Musketeers] Digimon gains <Security A. +1> for the turn and attacks"
     process:
       - select_union_zone:
+          optional: false
           of: you
           zones: [material]
           material_of: source
@@ -155,6 +159,7 @@ effects:
       - trash_union_bound:
           binding: option_source
       - select_own_permanent:
+          optional: false
           bind_as: attacker
           filter:
             all_of:

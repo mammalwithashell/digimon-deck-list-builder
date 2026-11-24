@@ -54,6 +54,7 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -78,7 +79,8 @@ alt_paths:
 
 effects:
   # ─── [On Play][When Digivolving] this Digimon may battle 1 opp Digimon ───
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] This Digimon may battle 1 of your opponent's Digimon."
+    when: [on_play, when_digivolving]
     condition:
       any_permanent:
         of: opponent
@@ -98,7 +100,8 @@ effects:
   # ─── [Start of Your Main Phase][On Play][When Digivolving] by suspending 1
   #     Digimon: own suspended [Insectoid]/[Titan] Digimon are unaffected by
   #     opp Option effects and get +3000 DP until opp turn ends ──────────────
-  - when: [start_of_your_main_phase, on_play, when_digivolving]
+  - text: "[Start of Your Main Phase] [On Play] [When Digivolving] By suspending 1 Digimon, until your opponent's turn ends, none of your suspended [Insectoid] or [Titan] trait Digimon are affected by your opponent's Option effects, and they get +3000 DP."
+    when: [start_of_your_main_phase, on_play, when_digivolving]
     condition:
       any_permanent:
         of: any

@@ -50,7 +50,7 @@ alt_paths:
 
   # ─── [Digivolve] Lv.2 w/[Appmon] trait: Cost 0 (DCGO alt condition) ─────────
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:
@@ -74,7 +74,8 @@ effects:
   # gain 1 memory." Cost is optional (DCGO canNoSelect: true); both payoffs
   # only fire when a card was actually trashed. Memory-then-draw order follows
   # DCGO (AddMemory before DrawClass).
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] By trashing 1 card with the [Appmon] trait from your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] By trashing 1 [Appmon] card from hand, draw 1 and gain 1 memory"
     process:
       - select_hand:
@@ -97,6 +98,7 @@ effects:
     summary: "[When Linking] 1 of your opponent's Digimon can't unsuspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter: { kind: digimon }
           prompt: "1 opponent Digimon can't unsuspend until their turn ends"

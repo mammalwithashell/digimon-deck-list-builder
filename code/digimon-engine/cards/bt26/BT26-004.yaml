@@ -36,7 +36,8 @@ traits: [Lesser, Glowing Dawn, BEATBREAK]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] By placing 1 card from your hand face down under any of your [Glowing Dawn] trait Tamers, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     optional: true
     once_per_turn: true
@@ -55,11 +56,13 @@ effects:
     summary: "Inherited [When Attacking][Once Per Turn] By placing 1 card from your hand face down under any of your [Glowing Dawn] trait Tamers, <Draw 1>"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: stash
           filter: {}
           prompt: "Place 1 card from your hand face down under one of your [Glowing Dawn] trait Tamers"
       - select_own_permanent:
+          optional: false
           bind_as: gd_tamer
           filter:
             all_of:

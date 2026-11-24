@@ -95,7 +95,7 @@ alt_paths:
     cost: 3
   # Alt-digivolution: Lv.4 with [TS] trait / cost 3.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: TS }
+    from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
 
 effects:
@@ -105,10 +105,12 @@ effects:
   # no eligible target exists. The lock targets an opp Digimon with NO
   # digivolution cards (materials_count_lte: 0); the CannotSuspend expires at the
   # end of the target's (opponent's) turn ("until their turn ends").
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon with no digivolution cards can't suspend until their turn ends."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Trash bottom 3 sources of 1 opp Digimon; then 1 opp Digimon with no sources can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: src_target
           filter: { kind: digimon }
           prompt: "Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon"
@@ -116,6 +118,7 @@ effects:
           target: src_target
           count: 3
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             all_of:
@@ -129,7 +132,8 @@ effects:
           expiry: end_of_opponents_turn
 
   # ─── Clause B — [Your Turn] red played/digivolve → digivolve into Dianamon (trash), cost -2 ─
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When your Digimon are played or digivolve, if any of them are red, this Digimon may digivolve into [Dianamon] in the trash with the cost reduced by 2."
+    when: [on_enter_field_anyone, on_digivolve]
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon are played/digivolve and any are red, this Digimon may digivolve into [Dianamon] in the trash with cost -2"
@@ -139,6 +143,7 @@ effects:
       event_target_owner: you
     process:
       - select_trash:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -153,7 +158,8 @@ effects:
           ignore_requirements: false
 
   # ─── Inherited [Your Turn] attack target can't change ────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon's attack target can't change."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

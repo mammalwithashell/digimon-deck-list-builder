@@ -53,13 +53,14 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
     ignore_requirements: true
 
 effects:
   # ─── Clause 0: [On Play][When Digivolving] grant Raid + 3000 DP for turn ─────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] 1 of your Digimon with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits or the [Shaman] or [TS] trait gains ＜Raid＞ and +3000 DP for the turn."
+    when: [on_play, when_digivolving]
     summary: "[OnPlay/WhenDigivolving] 1 of your [Beast]/[Animal]/[Sovereign] (not [Sea Animal]) or [Shaman]/[TS] Digimon gains Raid and +3000 DP for the turn"
     condition:
       any_permanent:
@@ -79,6 +80,7 @@ effects:
           - trait_has: TS
     process:
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:
@@ -105,7 +107,8 @@ effects:
           expiry: end_of_turn
 
   # ─── Clause 1: Inherited [All Turns] +1000 DP ───────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true }

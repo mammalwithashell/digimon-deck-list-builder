@@ -18,6 +18,7 @@ effects:
     summary: "Place this card as the bottom source of 1 own Digimon without X Antibody sources"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: host
           filter:
             all_of:

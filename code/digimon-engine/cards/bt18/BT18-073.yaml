@@ -143,7 +143,7 @@ attribute: Virus
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5, trait_has: "Composite" }
+    from: { any_color: true, level_eq: 5, trait_has: "Composite" }
     cost: 3
 
 effects:
@@ -163,12 +163,14 @@ effects:
   # (`candidate.optional.then(...)` in `game_actions/cost.rs`) and the
   # reducer becomes unconditionally forced. This matches DCGO's
   # `canNoSelect: true` cost pick behind a real "Use this?" decline surface.
-  - kind: cost_reduction
+  - text: "When this card would be played, by deleting 1 of your Digimon with the [Composite] trait, reduce the play cost by 4."
+    kind: cost_reduction
     when_playing_this: true
     optional: true
     amount: 4
     pay_cost:
       - select_own_permanent:
+          optional: false
           bind_as: sacrifice
           filter:
             all_of:
@@ -227,7 +229,8 @@ effects:
   # SelectPermanentEffect -> SelectCardEffect over Root.Trash) — identical
   # structure to BT18-015's sibling clause with Kimeramon/Machinedramon
   # roles swapped.
-  - when: on_deletion
+  - text: "[On Deletion] 1 of your [Kimeramon] and 1 [Machinedramon] in the trash may DNA digivolve into [Millenniummon] in the hand."
+    when: on_deletion
     optional: true
     condition:
       all_of:
@@ -359,6 +362,7 @@ effects:
           - trait_has: "Wicked God"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: redirect_target
           filter:
             all_of:
@@ -367,4 +371,4 @@ effects:
                   - trait_has: "Composite"
                   - trait_has: "Wicked God"
           prompt: "Switch the attack target to 1 of your [Composite] or [Wicked God] Digimon"
-      - redirect_attack_target: { new_target: redirect_target }
+      - redirect_attack_target: { optional: false, new_target: redirect_target }

@@ -125,7 +125,8 @@ effects:
   # opponent permanent is within the budget, and the pick is then mandatory
   # (DCGO canNoSelect: false); the running-sum + per-card cap let the player stop
   # after the first pick.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play][When Digivolving] Delete up to 3 play cost's total worth of your opponent's Digimon and Tamers. For each [Vemmon] in this Digimon's digivolution cards, add 1 to this effect's play cost maximum."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete opponent Digimon/Tamers with total play cost up to 3 + number of [Vemmon] in this Digimon's digivolution cards"
     condition:
       any_permanent:
@@ -169,7 +170,8 @@ effects:
   #    chosen Galacticmon's stack. `min: 2 / max: 2` is a mandatory cost.
   # 3) Redirect the attack to this Digimon (redirect_attack_target defaults to the
   #    inherited carrier when `new_target` is omitted).
-  - scope: inherited
+  - text: "[Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from any of your [Galacticmon]'s digivolution cards to the bottom of the deck, change the attack target to this Digimon."
+    scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     optional: true
@@ -187,6 +189,7 @@ effects:
     process:
       # 1) Choose 1 of your [Galacticmon] that carries ≥2 [Vemmon] sources.
       - select_own_permanent:
+          optional: false
           bind_as: chosen_galacticmon
           filter:
             all_of:
@@ -209,4 +212,4 @@ effects:
                 source_refs: returned_vemmon
                 position: bottom
             # 3) Switch the attack target to this Digimon.
-            - redirect_attack_target: {}
+            - redirect_attack_target: {optional: false}

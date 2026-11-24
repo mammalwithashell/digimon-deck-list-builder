@@ -89,7 +89,8 @@ effects:
   # Bucket 2: Tamer with [Davis Motomiya] in name.
   # `no_duplicate_cards: true` enforces DCGO's `mutualConditions: true`.
   # `place_remainder_on_deck { position: bottom }` — remainder to bottom.
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Imperialdramon] in its name or the [Free] trait and 1 card with [Davis Motomiya] in its name among them to your hand. Place the rest at the bottom of your deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 3; add one Imperialdramon/Free Digimon and one Davis Motomiya Tamer; bottom the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -144,7 +145,8 @@ effects:
   # happen for a legal target). Partner/target filters stay broad (any of your
   # Digimon / any Digimon card) per the printed text's lack of a name/colour
   # restriction; the DNA-requirement gate does the real filtering.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] This Digimon and one of your other Digimon in play may DNA digivolve into a Digimon card in your hand for the cost."
+    when: end_of_your_turn
     scope: inherited
     optional: true
     summary: "[EoT] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand (paying its DNA cost)"

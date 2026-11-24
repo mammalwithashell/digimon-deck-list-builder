@@ -23,7 +23,8 @@ effects:
   # replacing the default base-1 while active), so the formula must fold in the
   # base: floor((2 + material_count)/2) == 1 + floor(material_count/2). A bare
   # `base: 0` (= floor(n/2)) would drop the base-1 check and under-count.
-  - kind: aura
+  - text: "[Your Turn] For every 2 digivolution cards this Digimon has, it gains ＜Security Attack +1＞. (This Digimon checks 1 additional security card.)"
+    kind: aura
     target: {}
     active_when: { your_turn: true }
     security_attack_fn:

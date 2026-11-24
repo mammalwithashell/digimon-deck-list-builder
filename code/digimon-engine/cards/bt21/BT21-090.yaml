@@ -131,7 +131,8 @@ effects:
                 ignore_requirements: false
 
   # ─── Clause 3: [Security] may play a cost<=4 [Gammamon]-text card, then place
-  - scope: inherited
+  - text: "[Security] You may play 1 card with [Gammamon] in its text and a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area."
+    scope: inherited
     when: on_security
     optional: false
     summary: "[Security] You may play 1 card with [Gammamon] in its text and a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area"

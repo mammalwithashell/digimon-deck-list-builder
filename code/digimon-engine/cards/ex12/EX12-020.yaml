@@ -14,11 +14,12 @@ alt_paths:
     from: { level_eq: 2, color_is: blue }
     cost: 0
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Shambala }
+    from: { any_color: true, level_eq: 2, trait_has: Shambala }
     cost: 0
 
 effects:
-  - kind: cost_reduction
+  - text: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [TB] trait, reduce the cost by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     active_when:
       all_of:
@@ -31,7 +32,8 @@ effects:
     amount: 1
     summary: "[Your Turn] When this Digimon would digivolve into a [TB] Digimon, reduce the cost by 1"
 
-  - scope: inherited
+  - text: "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞."
+    scope: inherited
     when: when_attacking
     once_per_turn: true
     active_when: { your_turn: true }

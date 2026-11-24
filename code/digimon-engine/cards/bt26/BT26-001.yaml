@@ -33,7 +33,8 @@ traits: [Bulb, Iliad, TS]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[Your Turn] [Once Per Turn] When your effects add to decks, this Digimon may digivolve into a Digimon card with [Chronomon] in its text in the hand with the cost reduced by 1."
+    scope: inherited
     when: on_add_to_deck
     once_per_turn: true
     optional: true
@@ -53,6 +54,7 @@ effects:
     summary: "Inherited [Your Turn][OPT] When your effects add to decks, this Digimon may digivolve into a [Chronomon]-text Digimon card in the hand with the cost reduced by 1"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: chrono_evo
           filter:

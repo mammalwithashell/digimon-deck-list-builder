@@ -50,12 +50,13 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, trait_has: TS }
+    from: { any_color: true, level_eq: 2, trait_has: TS }
     cost: 0
 
 effects:
   # ─── Clause 0: [Start of Your Main Phase] free-digivolve self from hand ──────
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If you have 4 or less memory, this Digimon may digivolve into a Digimon card with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits or the [TS] trait in the hand without paying the cost."
+    when: start_of_your_main_phase
     optional: true
     active_when:
       all_of:
@@ -64,6 +65,7 @@ effects:
     summary: "[SOMP] If <=4 memory, this Digimon may free-digivolve into a [Beast]/[Animal]/[Sovereign] (not [Sea Animal])/[TS] Digimon from hand"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -87,7 +89,8 @@ effects:
           ignore_requirements: true
 
   # ─── Clause 1: Inherited [All Turns] +1000 DP ───────────────────────────────
-  - scope: inherited
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { all_turns: true }

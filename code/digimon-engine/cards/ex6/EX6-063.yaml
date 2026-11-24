@@ -6,10 +6,12 @@ color: [yellow]
 cost: 4
 
 effects:
-  - when: [start_of_your_main_phase, on_play]
+  - text: "[Start of Your Main Phase] [On Play] 1 of your yellow Digimon gains ＜Barrier＞ until the end of your opponent's turn."
+    when: [start_of_your_main_phase, on_play]
     summary: "1 of your yellow Digimon gains Barrier until the end of your opponent's turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: target
           filter:
             all_of:
@@ -21,7 +23,8 @@ effects:
           keyword: Barrier
           expiry: end_of_opponents_turn
 
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When one of your Digimon is played or digivolves, if that Digimon has the [Angel], [Archangel] or [Three Great Angels] trait, by suspending this Tamer, gain 1 memory."
+    when: [on_enter_field_anyone, on_digivolve]
     active_when: { your_turn: true }
     optional: true
     trigger_if:
@@ -40,7 +43,8 @@ effects:
       - activation_cost: { suspend_self: true }
       - gain_memory: 1
 
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

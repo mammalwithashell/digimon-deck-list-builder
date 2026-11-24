@@ -93,6 +93,7 @@ effects:
     process:
       - activation_cost: { suspend_self: true }
       - select_own_permanent:
+          optional: false
           bind_as: tgt
           filter:
             all_of:
@@ -105,7 +106,8 @@ effects:
           expiry: end_of_turn
 
   # ─── Inherited [Security] Play this card without paying the cost ───────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

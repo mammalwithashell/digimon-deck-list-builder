@@ -7,7 +7,6 @@
 
 use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
 
-use crate::card_source::CardHandle;
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::formula_eval;
@@ -15,36 +14,6 @@ use crate::dsl_cards::step::permanent_scan::scan;
 use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
 use crate::permanent::PermanentHandle;
-
-/// The stable identity of the permanent referenced by `handle`: the
-/// `CardHandle` of its top card (`card_index` is unique per game). Returns
-/// `None` if the handle does not currently point at a battle-area permanent.
-fn top_card_handle(ctx: &EffectContext<'_>, handle: PermanentHandle) -> Option<CardHandle> {
-    ctx.game
-        .players
-        .get(handle.player as usize)?
-        .battle_area
-        .get(handle.index as usize)
-        .map(|p| p.top_card().handle())
-}
-
-/// Re-resolve a positional `PermanentHandle` from a permanent's stable
-/// top-card identity. Searches every battle area for the permanent whose top
-/// card has `stable_id`. Returns `None` if no such permanent is on the field
-/// (it left since the snapshot was taken).
-fn resolve_by_top_card(ctx: &EffectContext<'_>, stable_id: CardHandle) -> Option<PermanentHandle> {
-    for (player_idx, player) in ctx.game.players.iter().enumerate() {
-        for (index, perm) in player.battle_area.iter().enumerate() {
-            if perm.top_card().handle() == stable_id {
-                return Some(PermanentHandle {
-                    player: player_idx as u8,
-                    index: index as u8,
-                });
-            }
-        }
-    }
-    None
-}
 
 fn repeat_formula_target(ctx: &EffectContext<'_>) -> PermanentHandle {
     ctx.source_permanent.unwrap_or(PermanentHandle {
@@ -69,13 +38,15 @@ fn run_repeated_effect_choice(
     }
 
     let mut steps = Vec::with_capacity(body.len() + 2);
-    steps.push(CompiledStep::SelectEffectChoice {
-        labels: labels.to_vec(),
-        legal_when: None,
-        bind_as: bind_as.clone(),
-        prompt: prompt.to_string(),
-        prompt_key: prompt_key.clone(),
-    });
+    if !labels.is_empty() {
+        steps.push(CompiledStep::SelectEffectChoice {
+            labels: labels.to_vec(),
+            legal_when: None,
+            bind_as: bind_as.clone(),
+            prompt: prompt.to_string(),
+            prompt_key: prompt_key.clone(),
+        });
+    }
     steps.extend_from_slice(body);
     if remaining > 1 {
         steps.push(CompiledStep::RepeatEffectChoiceRemaining {
@@ -105,8 +76,9 @@ pub fn try_run(
             bind_as,
             body,
         } => {
-            let members=scan(ctx,over,Some(bindings)).into_iter().map(|h|(h.player,ctx.game.capture_digivolve_host_identity(h))).collect::<Vec<_>>();
-            Some(run_for_each_remaining(&members,bind_as,body,ctx,bindings,runtime))
+            let targets = scan(ctx, over, Some(bindings));
+            let members = capture_members(ctx, &targets);
+            Some(run_for_each_remaining(&members, bind_as, body, ctx, bindings, runtime))
         }
         CompiledStep::ForEachRemaining { members,bind_as,body } => Some(run_for_each_remaining(members,bind_as,body,ctx,bindings,runtime)),
         CompiledStep::PerSelected {
@@ -117,35 +89,10 @@ pub fn try_run(
             let bref = CompiledBindingRef::Named(selection.clone());
             match resolve_binding_ref(&bref, ctx, bindings) {
                 Some(ResolvedBinding::PermanentList(v)) => {
-                    // Positional `PermanentHandle`s are invalidated the moment a
-                    // body step removes a permanent (e.g. `per_selected {
-                    // delete_permanent }` from `select_count_capped_multi`):
-                    // every higher-indexed permanent shifts down by one, so a
-                    // later handle in `v` points at the wrong permanent (or out
-                    // of bounds). Snapshot each selected permanent's STABLE
-                    // identity (its top card's `CardHandle`) up front, then
-                    // re-resolve the positional handle at the START of each
-                    // iteration, skipping any that already left play. Mirrors
-                    // the `ForEach` machinery above. See
-                    // G-PER-SELECTED-DELETE-INDEX-SHIFT.
-                    let snapshot: Vec<CardHandle> =
-                        v.iter().filter_map(|h| top_card_handle(ctx, *h)).collect();
-                    for stable_id in snapshot {
-                        let Some(h) = resolve_by_top_card(ctx, stable_id) else {
-                            // Permanent left the field (e.g. an earlier
-                            // iteration's body deleted it). Skip it.
-                            continue;
-                        };
-                        let mut iter_bindings = bindings.clone();
-                        let cursor = iter_bindings.result_log_cursor();
-                        iter_bindings.insert_permanent(bind_as, h);
-                        let outcome =
-                            run_steps_with_runtime(body, ctx, &mut iter_bindings, runtime);
-                        bindings.merge_result_log_from_since(&iter_bindings, cursor);
-                        if matches!(outcome, RunOutcome::Parked) {
-                            return Some(RunOutcome::Parked);
-                        }
-                    }
+                    let members = capture_members(ctx, &v);
+                    return Some(run_for_each_remaining(
+                        &members, bind_as, body, ctx, bindings, runtime,
+                    ));
                 }
                 Some(ResolvedBinding::CardList(v)) => {
                     for c in v {
@@ -210,6 +157,20 @@ pub fn try_run(
         )),
         _ => None,
     }
+}
+
+fn capture_members(ctx: &mut EffectContext<'_>, targets: &[PermanentHandle]) -> Vec<(u8, u64)> {
+    targets
+        .iter()
+        .filter_map(|&target| {
+            ctx.game
+                .players
+                .get(target.player as usize)?
+                .battle_area
+                .get(target.index as usize)?;
+            Some((target.player, ctx.game.capture_digivolve_host_identity(target)))
+        })
+        .collect()
 }
 
 /// A parked body retains each later physical incarnation and its original lexical

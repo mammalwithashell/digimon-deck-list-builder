@@ -74,7 +74,8 @@ effects:
                       then:
                         - trash_top_security: { of: opponent }
 
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, you may play 1 purple or yellow Digimon card with 6000 DP or less from your hand or trash without paying the cost."
+    when: [when_digivolving, when_attacking]
     optional: true
     once_per_turn: true
     # CR 4.3 15-7-4: "By trashing your top security card" is an optional

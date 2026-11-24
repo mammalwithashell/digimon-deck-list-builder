@@ -36,6 +36,7 @@ effects:
     summary: "[Main] 1 of your Digimon gains '[On Deletion] Play this card without paying its memory cost' for the turn"
     process:
       - select_own_permanent:
+          optional: false
           bind_as: revenge_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain '[On Deletion] Play this card without paying its memory cost.'"

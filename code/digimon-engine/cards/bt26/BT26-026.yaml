@@ -46,6 +46,7 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Glowing Dawn"
@@ -53,14 +54,16 @@ alt_paths:
 
 effects:
   # ─── <Barrier> ─────────────────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Barrier＞"
+    kind: grant_keyword
     keyword: Barrier
     summary: "<Barrier>"
 
   # ─── [When Attacking][OPT] by trashing a Tamer's bottom face-down card or
   #     your top security card, may use 1 [Glowing Dawn] Option from hand with
   #     the cost reduced by 2 ─────────────────────────────────────────────────
-  - when: when_attacking
+  - text: "[When Attacking] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers or your top security card, you may use 1 Option card with the [Glowing Dawn] trait from your hand with the cost reduced by 2."
+    when: when_attacking
     once_per_turn: true
     condition:
       any_of:
@@ -164,7 +167,8 @@ effects:
                 cost: { reduce: 2 }
 
   # ─── Inherited <Barrier> ───────────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Barrier
     summary: "Inherited <Barrier>"

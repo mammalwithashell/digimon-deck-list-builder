@@ -35,7 +35,8 @@ traits: [App Driver, Appmon]
 effects:
   # ─── [Start of Your Main Phase] if opp has a Digimon, gain 1 memory ─────────
   # Mandatory (no "you may" in the printed text).
-  - when: start_of_your_main_phase
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
     condition:
       count_gte:
         filter: { of: opponent, zone: [battle_area], kind: digimon }
@@ -68,7 +69,8 @@ effects:
 
   # ─── [End of Your Turn][Once Per Turn] 1 of your Digimon may app fuse into a
   #     Digimon card in the hand ("may" → optional) ───────────────────────────
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a Digimon card in the hand."
+    when: end_of_your_turn
     once_per_turn: true
     summary: "[End of Your Turn][OPT] 1 of your Digimon may app fuse into a Digimon card in the hand"
     process:
@@ -81,7 +83,8 @@ effects:
             - refund_opt: {}
 
   # ─── [Security] Play this card without paying the cost ─────────────────────
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

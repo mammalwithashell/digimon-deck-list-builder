@@ -172,7 +172,8 @@ effects:
   # (Game::resolve_battle): when either combatant has it, the battle compares
   # `card_sources.len()` instead of effective DP. Security battles route
   # through resolve_player_security_loop and are unaffected. EX8-022 idiom.
-  - kind: grant_keyword
+  - text: "＜Iceclad＞ (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.)"
+    kind: grant_keyword
     keyword: Iceclad
     summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
 
@@ -189,7 +190,8 @@ effects:
   # note in the header. The "Then" Tamer select is gated on the POST-trash
   # board (sibling steps; the dispatcher parks the outer tail across the
   # in-branch selections) and silently skips when the opponent has no Tamer.
-  - when: when_digivolving
+  - text: "[When Digivolving] Trash any 4 digivolution cards under your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, return 1 of their Tamers to the bottom of the deck."
+    when: when_digivolving
     summary: "[WD] Trash any 4 digivolution cards of opp Digimon; then if opp has no Digimon with digivolution cards, return 1 opp Tamer to the bottom of the deck"
     process:
       # Trash half — availability ladder encoding DCGO's min(total, 4) cap.
@@ -315,6 +317,7 @@ effects:
               stack_size_gte: 2
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: tamer_target
                 filter: { kind: tamer }
                 prompt: "Return 1 of your opponent's Tamers to the bottom of the deck"
@@ -341,7 +344,8 @@ effects:
   # NOTE: CannotSuspend is enforced engine-wide (attack declaration, action
   # mask, effect suspends, suspend-as-cost) — the old "no consult site" gap
   # is closed; the enforcement test runs un-ignored.
-  - kind: aura
+  - text: "[Opponent's Turn] None of your opponent's Digimon with as many or fewer digivolution cards as this Digimon can suspend."
+    kind: aura
     active_when: { opponents_turn: true }
     target:
       of: opponent

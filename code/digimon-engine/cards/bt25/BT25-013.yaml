@@ -57,12 +57,13 @@ attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3, trait_has: TS }
+    from: { any_color: true, level_eq: 3, trait_has: TS }
     cost: 2
 
 effects:
   # ─── Clause 0: [On Play][When Digivolving] trash 1 → recover red/blue Iliad ──
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, you may return 1 red or blue [Iliad] trait Digimon card from your trash to the hand."
+    when: [on_play, when_digivolving]
     optional: true
     summary: "[OnPlay/WhenDigivolving] By trashing 1 hand card, may return 1 red/blue [Iliad] Digimon from trash to hand"
     process:
@@ -93,7 +94,8 @@ effects:
 
   # ─── Clause 1: [Your Turn] on blue Digimon play/digivolve, may digivolve into
   #              [Flaremon] from hand, cost -1 ─────────────────────────────────
-  - when: [on_enter_field_anyone, on_digivolve]
+  - text: "[Your Turn] When your Digimon are played or digivolve, if any of them are blue, this Digimon may digivolve into [Flaremon] in the hand with the cost reduced by 1."
+    when: [on_enter_field_anyone, on_digivolve]
     optional: true
     active_when: { your_turn: true }
     condition:
@@ -104,6 +106,7 @@ effects:
     summary: "[Your Turn] When a blue Digimon of yours is played/digivolves, may digivolve this into [Flaremon] from hand, cost -1"
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: flaremon
           # DCGO BT25_013.cs:153-169 -> DigivolveIntoHandOrTrashCard
@@ -121,7 +124,8 @@ effects:
           cost: { reduce: 1 }
 
   # ─── Clause 2: Inherited [Your Turn] +2000 DP ───────────────────────────────
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     target: {}
     active_when: { your_turn: true }

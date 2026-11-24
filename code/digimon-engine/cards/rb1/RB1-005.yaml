@@ -48,7 +48,8 @@ attribute: Virus
 traits: [Ceratopsian]
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text and 1 [Hiro Amanokawa] among them to the hand. Place the rest at the bottom of the deck in any order."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 [Gammamon]-text card and 1 [Hiro Amanokawa]; bottom the rest in any order"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -69,7 +70,8 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: hiro }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  - scope: inherited
+  - text: "[Your Turn] While this Digimon has [Gammamon] in its text, it gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when:
       all_of:

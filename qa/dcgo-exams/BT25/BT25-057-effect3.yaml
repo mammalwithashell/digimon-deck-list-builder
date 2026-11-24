@@ -31,14 +31,7 @@
 # over YOUR Digimon -> GainRush + SAttack+1 + DP+5000 -> "then may attack"
 # = SelectAttackEffect; Arts Digivolve = CardEffectFactory.ArtsDigivolveEffect):
 #   * Use from hand: no face-choice prompt (the Digimon face has no play cost).
-#   * "Then, it may attack" (FIXED 2026-11-23, 32d148445): ours used to lower
-#     `may_attack_now ... windowed: true` to an end-of-turn MayAttack modifier,
-#     so no attack was asked inside the [Main] and the Arts Digivolve prompt
-#     came first. Ours now asks the attack inside the effect, before the
-#     Arts/trash decision, as DCGO's SelectAttackEffect does (CR 4.3 15-1-2,
-#     11-1-5). This line DECLINES that in-effect attack (one new step after the
-#     Option's target pick; every later `at:` moved up by one); Cougarmon
-#     keeps <Rush>, so the rest of the line is unchanged.
+#   * The immediate SelectAttackEffect precedes the Arts/trash decision.
 #   * The Arts Digivolve prompt (ours: OwnField "Choose a card for Arts
 #     Digivolve, or pass to trash this Option") has no DCGO prompt kind pinned
 #     here; its shape on the wire is unverified.
@@ -109,7 +102,6 @@ steps:
   - actor: 0
     do: { select: { targets: [own.field.1] } }
     expect: { prompt: SelectPermanentEffect, count: 1 }
-  # "Then, it may attack": the attack asked inside the [Main] -- declined.
   - actor: 0
     do: { select: { decline: true } }
     expect: { prompt: SelectAttackEffect }

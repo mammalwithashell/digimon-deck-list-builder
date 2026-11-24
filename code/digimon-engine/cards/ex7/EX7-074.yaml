@@ -106,7 +106,8 @@ effects:
   # ─── Clause 0: Color bypass flood_gate ─────────────────────────────────────
   # "While you have [LIBERATOR] trait Digimon or Tamer, ignore color requirements."
   # G-IGNORE-COLOR-MASK: compiled but not enforced in Rust action mask at runtime.
-  - kind: flood_gate
+  - text: "While you have a Digimon or Tamer with the [LIBERATOR] trait, you may ignore this card's color requirements."
+    kind: flood_gate
     active_when:
       any_permanent:
         of: you
@@ -180,6 +181,7 @@ effects:
       # `CanPlayCardTargetFrame(target, PayCost: true, ...)` with the -4
       # applied: a route onto `target` AND the reduced cost payable.
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -200,7 +202,8 @@ effects:
   #  then add this card to the hand."
   # DCGO: EffectTiming.SecuritySkill, optional ("you may").
   # scope: inherited — security effect on an option card (inherited by carrier).
-  - scope: inherited
+  - text: "[Security] You may play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
     when: on_security
     optional: true
     summary: "[Security][Inherited] You may play 1 LIBERATOR (cost ≤4) from hand or trash free; add this card to hand"

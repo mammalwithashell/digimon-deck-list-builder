@@ -8,7 +8,8 @@ traits: [Lesser]
 form: In-Training
 
 effects:
-  - scope: inherited
+  - text: "[On Deletion] Trash the top 2 cards of your deck."
+    scope: inherited
     when: on_deletion
     summary: "[On Deletion] Trash the top 2 cards of your deck"
     process:

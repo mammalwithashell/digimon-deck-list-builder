@@ -14,6 +14,7 @@ alt_paths:
     cost: 0
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 2
         - trait_has: "Xros Heart"
@@ -24,7 +25,8 @@ effects:
     keyword: Save
     summary: "<Save>"
 
-  - scope: inherited
+  - text: "[When Attacking] If this Digimon has [Shoutmon] in its name, ＜Draw 1＞. (Draw 1 card from your deck.)"
+    scope: inherited
     when: when_attacking
     condition:
       source_name_contains: "Shoutmon"

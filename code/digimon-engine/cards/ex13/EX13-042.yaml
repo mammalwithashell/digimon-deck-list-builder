@@ -36,10 +36,12 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
 
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] [Once Per Turn] You may play 1 play cost 4 or lower Digimon card with [Beast], [Animal] or [Sovereign], other than [Sea Animal], in any of its traits from your hand without paying the cost."
+    when: [when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[When Digivolving][When Attacking][OPT] You may play 1 play cost 4 or lower [Beast]/[Animal]/[Sovereign] (not [Sea Animal]) trait Digimon card from your hand for free"
     process:
@@ -69,6 +71,7 @@ effects:
           else:
             - refund_opt: {}
 
-  - scope: inherited
+  - text: "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Alliance

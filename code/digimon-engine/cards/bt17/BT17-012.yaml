@@ -87,7 +87,8 @@ effects:
   # processing then can't be executed (CR 4.3 15-14-1-4 counts such a use), so
   # the outer confirm is the player's own decision and an accepted pick with no
   # legal card simply ends.
-  - when: when_attacking
+  - text: "[When Attacking] This Digimon may digivolve into a Digimon card with the [Hybrid] trait in the hand with the digivolution cost reduced by 1."
+    when: when_attacking
     optional: true
     outer_prompt: true
     condition:
@@ -116,7 +117,8 @@ effects:
           cost: { reduce: 1 }
           ignore_requirements: false
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

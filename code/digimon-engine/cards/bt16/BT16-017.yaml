@@ -39,7 +39,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: [on_ally_played, on_digivolve]
+  - text: "[Your Turn][Once Per Turn] When one of your other Digimon is played or digivolves, if it has the [Free] trait or is green, gain 1 memory."
+    when: [on_ally_played, on_digivolve]
     active_when: { your_turn: true }
     once_per_turn: true
     condition:
@@ -55,7 +56,8 @@ effects:
     process:
       - gain_memory: 1
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

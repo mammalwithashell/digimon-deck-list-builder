@@ -61,13 +61,14 @@ traits: [Fairy, DATA SQUAD]
 # Alt-digivolve: Lv.4 with the [DATA SQUAD] trait / cost 3.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 4, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
   # ─── [OP][WD][WA][OPT] suspend+lock 1 opp Digimon/Tamer; then trash 2 FD under
   #     Tamers → may free-digivolve into a [DATA SQUAD] hand card ───────────────
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend until their turn ends. Then, by trashing 2 bottom face-down cards from under any of your Tamers, this Digimon may digivolve into a [DATA SQUAD] trait Digimon card in the hand without paying the cost."
+    when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[OP][WD][WA][OPT] Suspend 1 opp Digimon/Tamer (can't unsuspend until their turn ends); then trash 2 FD under Tamers to free-digivolve into a [DATA SQUAD] hand card"
     process:
@@ -75,6 +76,7 @@ effects:
       # their turn ends." — DCGO canNoSelect:false → mandatory when a target
       # exists; the selection short-circuits cleanly when none do.
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:
@@ -126,7 +128,8 @@ effects:
 
   # ─── Inherited [All Turns][OPT] Rosemon-name/DATA SQUAD carrier would leave →
   #     trash 1 bottom FD under a Tamer → it doesn't leave ──────────────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [Rosemon] in its name or the [DATA SQUAD] trait would leave the battle area, by trashing the bottom face-down card from under any of your Tamers, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
@@ -145,5 +148,5 @@ effects:
             - source_permanent_trait_has: "DATA SQUAD"
     summary: "Inherited [All Turns][OPT] When this [Rosemon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}

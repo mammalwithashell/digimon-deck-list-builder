@@ -57,7 +57,7 @@ alt_paths:
     cost: 0
   # [Digivolve] Lv.2 w/[Appmon] trait: Cost 0.
   - kind: digivolve
-    from: { level_eq: 2, trait_has: Appmon }
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
     cost: 0
 
 effects:
@@ -75,7 +75,8 @@ effects:
     summary: "<Detach ([Seven Code] trait)> When this Digimon would leave the battle area other than by your effects, by trashing 1 of its [Seven Code] link cards, it doesn't leave"
 
   # ─── [When Attacking] If hand <= 7, <Draw 1> ────────────────────────────────
-  - when: when_attacking
+  - text: "[When Attacking] If your hand has 7 or fewer cards, ＜Draw 1＞."
+    when: when_attacking
     active_when:
       count_lte:
         filter: { owner: you, zone: [hand] }
@@ -102,6 +103,7 @@ effects:
     summary: "[When Linking] 1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: lock_target
           filter:
             any_of:

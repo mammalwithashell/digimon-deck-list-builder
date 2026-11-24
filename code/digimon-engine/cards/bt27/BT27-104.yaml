@@ -1,0 +1,81 @@
+card: BT27-104
+name: King Drasil
+kind: tamer
+color: [white]
+cost: 4
+traits: [Royal Knight, TS]
+also_treated_as: [King Drasil_7D6]
+
+effects:
+  - text: "[Start of Your Main Phase] By placing 1 card from your hand under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: {}
+          prompt: "Place 1 card from your hand under this Tamer?"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer: { card: stash, tamer: source, bind_as: stashed }
+            - if:
+                condition: { binding_present: stashed }
+                then:
+                  - draw: { of: you, count: 1 }
+                  - gain_memory: 1
+  - text: "[End of Your Turn] By suspending this Tamer, activate 1 of the effects below: ・1 of your Digimon may digivolve into a [Royal Knight] trait card under this Tamer with the cost reduced by 2. ・You may use 1 use cost 5 or higher [Royal Knight] trait Option card from under this Tamer with the cost reduced by 3."
+    when: end_of_your_turn
+    optional: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_effect_choice:
+          bind_as: branch
+          labels: ["Digivolve into a Royal Knight under this Tamer", "Use a Royal Knight Option under this Tamer"]
+          prompt: "Choose one effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_own_permanent:
+                bind_as: receiver
+                optional: true
+                filter:
+                  kind: digimon
+                  has_digivolve_candidate:
+                    zone: [material]
+                    filter: { kind: digimon, trait_has: Royal Knight }
+                    cost: { reduce: 2 }
+                prompt: "Choose a Digimon that can digivolve from under this Tamer"
+            - if:
+                condition: { binding_present: receiver }
+                then:
+                  - select_own_sources:
+                      target: source
+                      bind_as: evolution
+                      min: 1
+                      max: 1
+                      filter:
+                        kind: digimon
+                        trait_has: Royal Knight
+                        can_digivolve_onto_with_cost: { target: receiver, cost: { reduce: 2 } }
+                      prompt: "Choose a Royal Knight under this Tamer"
+                  - effect_initiated_digivolve: { target: receiver, source: evolution, cost: { reduce: 2 } }
+          else:
+            - select_own_sources:
+                target: source
+                bind_as: option
+                min: 0
+                max: 1
+                filter:
+                  kind: option
+                  trait_has: Royal Knight
+                  play_cost_gte: 5
+                  can_play_or_use_from_effect: true
+                  affordable_with_cost: { reduce: 3 }
+                prompt: "Use a Royal Knight Option under this Tamer?"
+            - use_option_from_sources: { of: you, card: option, cost: { reduce: 3 } }
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    process:
+      - play_from_security: {}

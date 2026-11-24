@@ -46,6 +46,7 @@ alt_paths:
     cost: 3
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - any_of:
@@ -54,13 +55,15 @@ alt_paths:
     cost: 3
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. If your Tamers have 2 or more total colors, add 1 to this effect's level maximum."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon (level 5 or lower if your Tamers have 2 or more total colors)"
     process:
       - if:
           condition: { distinct_tamer_colors_gte: 2 }
           then:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter:
                   all_of:
@@ -70,6 +73,7 @@ effects:
             - delete_permanent: { target: delete_target }
           else:
             - select_opponent_permanent:
+                optional: false
                 bind_as: delete_target
                 filter:
                   all_of:
@@ -78,7 +82,8 @@ effects:
                 prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
             - delete_permanent: { target: delete_target }
 
-  - when: [on_ally_played, on_digivolve]
+  - text: "[Your Turn] [Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains ＜Alliance＞ for the turn. Then, 1 of your Digimon may attack."
+    when: [on_ally_played, on_digivolve]
     active_when: { your_turn: true }
     once_per_turn: true
     summary: "[Your Turn][Once Per Turn] When your other Digimon are played or digivolve, if any of them have the [ADVENTURE] trait, 1 of your Digimon gains <Alliance> for the turn. Then, 1 of your Digimon may attack"
@@ -90,6 +95,7 @@ effects:
         - event_target_trait_has: ADVENTURE
     process:
       - select_own_permanent:
+          optional: false
           bind_as: alliance_target
           filter: { kind: digimon }
           prompt: "Choose 1 of your Digimon to gain <Alliance> for the turn"
@@ -108,7 +114,8 @@ effects:
           optional: true
           prompt: "Attack with the selected Digimon?"
 
-  - scope: inherited
+  - text: "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, this Digimon gains ＜Security A. +1＞ and the suspended Digimon's DP for the attack.)"
+    scope: inherited
     kind: grant_keyword
     keyword: Alliance
     summary: "Inherited <Alliance>"

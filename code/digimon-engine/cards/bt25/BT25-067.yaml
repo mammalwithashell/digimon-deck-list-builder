@@ -78,11 +78,11 @@ alt_paths:
     cost: 3
   # Alt-digivolution: Lv.3 with [D-Brigade] trait / cost 2.
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "D-Brigade" }
+    from: { any_color: true, level_eq: 3, trait_has: "D-Brigade" }
     cost: 2
   # Alt-digivolution: Lv.3 with [ACCEL] trait / cost 2.
   - kind: digivolve
-    from: { level_eq: 3, trait_has: ACCEL }
+    from: { any_color: true, level_eq: 3, trait_has: ACCEL }
     cost: 2
 
 effects:
@@ -94,7 +94,8 @@ effects:
   # with cost reduced by 2. Optional ("may"). The select_hand finds no
   # candidate when the hand holds no D-Brigade/ACCEL Digimon, so the clause
   # self-gates (DCGO CanActivateCondition: HasMatchConditionOwnersHand).
-  - when: on_ally_played
+  - text: "[Your Turn] When any of your [D-Brigade] or [ACCEL] trait Digimon are played, this Digimon may digivolve into a [D-Brigade] or [ACCEL] trait Digimon card in the hand with the cost reduced by 2."
+    when: on_ally_played
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your D-Brigade/ACCEL Digimon are played, this Digimon may digivolve into a D-Brigade/ACCEL Digimon in hand with cost -2"
@@ -106,6 +107,7 @@ effects:
             - event_card_trait_has: ACCEL
     process:
       - select_hand:
+          optional: false
           of: you
           bind_as: evo
           filter:
@@ -128,7 +130,8 @@ effects:
           ignore_requirements: false
 
   # ─── Inherited [All Turns] +1000 DP ─────────────────────────────────────────
-  - kind: aura
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    kind: aura
     scope: inherited
     target: {}
     dp_modifier: 1000

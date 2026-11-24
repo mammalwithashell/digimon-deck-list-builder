@@ -41,7 +41,8 @@ effects:
   # card_count_in_zone uses the Group 7 filtered count form so only opponent
   # Digimon contribute. Tamers and Option permanents in battle_area do not
   # reduce the cost.
-  - kind: cost_reduction
+  - text: "For each of your opponent's Digimon, reduce this card's use cost in the hand by 1."
+    kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
     amount_fn:
@@ -101,7 +102,8 @@ effects:
   # DCGO: AddActivateMainOptionSecurityEffect — standard security-mirror of the
   # Main clause. Mandatory (no canNoSelect). Mirrors Clause B exactly:
   # install floodgate + delete all opp Digimon ≤6000 DP.
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
     summary: "[Security] Activate [Main] effects: floodgate + delete opp Digimon ≤6000 DP"
     process:
       - add_player_modifier:

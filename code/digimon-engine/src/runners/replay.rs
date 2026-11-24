@@ -888,6 +888,10 @@ pub trait RecordingSource: Send {
     fn dcgo_action_operand_index(&self, _row: u32) -> Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)> {
         None
     }
+
+    fn dcgo_attack_target_index(&self, _row: u32) -> Option<i32> {
+        None
+    }
 }
 
 /// The single shared decision point for whether mulligan-phase actions
@@ -1144,6 +1148,7 @@ pub struct DcgoAdapter {
     /// `ActionRow::operand_card_index` (+ source) of each step, parallel to
     /// `steps`. Read through `RecordingSource::dcgo_action_operand_index`.
     action_operand_indexes: Vec<Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)>>,
+    attack_target_indexes: Vec<Option<i32>>,
 }
 
 impl DcgoAdapter {
@@ -1231,6 +1236,7 @@ impl DcgoAdapter {
         let mut steps = Vec::new();
         let mut action_card_indexes: Vec<Option<i32>> = Vec::new();
         let mut action_operand_indexes: Vec<Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)>> = Vec::new();
+        let mut attack_target_indexes = Vec::new();
         let mut skipped_incomplete_plays: u32 = 0;
         for row in &recording.rows {
             match row {
@@ -1271,12 +1277,14 @@ impl DcgoAdapter {
                     });
                     action_card_indexes.push(a.card_index);
                     action_operand_indexes.push(a.operand_card_index.map(|k| (k, a.operand_card_index_source)));
+                    attack_target_indexes.push(a.attack_target_card_index);
                 }
                 // Semantic selection payload (task 3.5) — resolved against
                 // the live PendingSelection at step time.
                 Row::Selection(s) => {
                     action_card_indexes.push(None);
                     action_operand_indexes.push(None);
+                    attack_target_indexes.push(None);
                     steps.push(StepSpec {
                     actor: s.actor,
                     action_id: 0,
@@ -1326,6 +1334,7 @@ impl DcgoAdapter {
             skipped_incomplete_plays,
             action_card_indexes,
             action_operand_indexes,
+            attack_target_indexes,
         })
     }
 }
@@ -1341,6 +1350,10 @@ impl RecordingSource for DcgoAdapter {
 
     fn dcgo_action_operand_index(&self, row: u32) -> Option<(i32, Option<crate::dcgo_recording::CardIndexSource>)> {
         self.action_operand_indexes.get(row as usize).copied().flatten()
+    }
+
+    fn dcgo_attack_target_index(&self, row: u32) -> Option<i32> {
+        self.attack_target_indexes.get(row as usize).copied().flatten()
     }
 
     fn omits_dcgo_silent_prompts(&self) -> bool {
@@ -6765,6 +6778,43 @@ impl ReplayDriver {
         })
     }
 
+    fn named_attack_target(
+        &self,
+        game: &Game,
+        actor: PlayerId,
+        cur: u32,
+        raw: u16,
+        remapped: u16,
+    ) -> Result<(u16, bool), String> {
+        use crate::action::space::{decode_attack, encode_attack, ATTACK_END, ATTACK_START, SECURITY_TARGET};
+        let unchanged = Ok((remapped, false));
+        let Some(index) = self.source.dcgo_attack_target_index(cur) else {
+            return unchanged;
+        };
+        if !(ATTACK_START..ATTACK_END).contains(&raw) {
+            return unchanged;
+        }
+        let (_, target) = decode_attack(raw);
+        if target == SECURITY_TARGET {
+            return unchanged;
+        }
+        let opponent = 1 - actor;
+        let step = &self.source.steps()[cur as usize];
+        let board = if opponent == 0 { &step.board_p0 } else { &step.board_p1 };
+        let Some(card) = board.as_ref().and_then(|board| board.get(target as usize)) else {
+            return Err(format!("attack target card index {index} has no recorded board entry"));
+        };
+        let copies: Vec<_> = engine_board_ids(game, opponent)
+            .iter()
+            .enumerate()
+            .filter_map(|(slot, id)| (id == card).then_some(slot))
+            .collect();
+        let slot = self.dcgo_identity_slot(game, opponent, index, &copies).ok_or_else(|| {
+            format!("attack target {card} has DCGO card index {index}, which no earlier row paired with an engine card")
+        })??;
+        Ok((encode_attack(decode_attack(remapped).0, slot as u16), true))
+    }
+
     /// The own-board operand of the ACTION row at `cur` (the attacker, the
     /// digivolve target, the host of an activated permanent effect) when the
     /// recorded board holds several copies of its card: `remapped` (the action
@@ -8849,10 +8899,9 @@ impl ReplayDriver {
     /// eligible Digimon), so the recording has no row for it, while the engine
     /// parks the pick. `apply_selection_step` already answers such a prompt when
     /// a SELECTION row arrives; this covers the case where the next row is an
-    /// action. Applied only when that action is not currently legal: the field-
-    /// pick ids (100..) overlap the attack ids, so a legal action means the
-    /// prompt is not what the row is about. The single candidate leaves no
-    /// choice, so legality proves the answer.
+    /// action. A defender index identifies an attack even when its action ID
+    /// overlaps the field pick's ID. Without that evidence, leave a currently
+    /// legal ID alone: it could be an answer to the prompt.
     fn answer_dcgo_silent_lone_target_pick(&mut self, game: &mut Game, at: usize) {
         for _ in 0..4 {
             let Some(step) = self.source.steps().get(at) else {
@@ -8864,19 +8913,19 @@ impl ReplayDriver {
             let Some((actor, action)) = self.dcgo_silent_lone_field_pick(game) else {
                 return;
             };
-            // Would the recorded action be legal as it stands? Then the row is
-            // an answer to something else, not a prompt DCGO skipped.
-            let mask = crate::action::build_action_mask(game, step.actor);
-            let remapped = remap_board_slots(
-                game,
-                step.action_id,
-                step.actor,
-                step.board_p0.as_ref(),
-                step.board_p1.as_ref(),
-            );
-            let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
-            if legal(step.action_id) || legal(remapped) {
-                return;
+            if self.source.dcgo_attack_target_index(at as u32).is_none() {
+                let mask = crate::action::build_action_mask(game, step.actor);
+                let remapped = remap_board_slots(
+                    game,
+                    step.action_id,
+                    step.actor,
+                    step.board_p0.as_ref(),
+                    step.board_p1.as_ref(),
+                );
+                let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
+                if legal(step.action_id) || legal(remapped) {
+                    return;
+                }
             }
             game.decode_action(action, actor);
             // Answering the pick can park the NEXT prompt DCGO skips - the one-card deck order that ends the same
@@ -9451,6 +9500,21 @@ impl ReplayDriver {
         // identity (`operand_card_index`) names the permanent, else the
         // occurrence-order pairing above stands (and says so when it is a guess).
         let (action_id, operand_named) = self.named_operand_action(game, actor, cur as u32, raw_action_id, action_id);
+        let (action_id, attack_target_named) = match self.named_attack_target(game, actor, cur as u32, raw_action_id, action_id) {
+            Ok(action) => action,
+            Err(reason) => {
+                self.divergences.push(Divergence {
+                    step: self.cursor,
+                    action_id,
+                    actor,
+                    phase: phase_rec.clone(),
+                    kind: DivergenceKind::SelectionResolution { reason },
+                    board: describe_board(game),
+                });
+                self.paused = true;
+                return self.no_progress_result(game);
+            }
+        };
         let action_id = if operand_named { action_id } else { resolve_duplicate_attacker(game, actor, action_id) };
 
         // The frame-order remap trusts the row's board snapshot, which lists
@@ -9582,7 +9646,7 @@ impl ReplayDriver {
         // A copy named by DCGO's own card identity is never swapped for the
         // recorded position's other copy when the named one's action is illegal:
         // that is a divergence to report, not a guess to make.
-        let action_id = if action_id != raw_action_id && !operand_named {
+        let action_id = if action_id != raw_action_id && !operand_named && !attack_target_named {
             let mask = crate::action::build_action_mask(game, actor);
             let legal = |id: u16| mask.get(id as usize).copied().unwrap_or(0.0) > 0.5;
             if !legal(action_id) && legal(raw_action_id) {
@@ -11274,6 +11338,7 @@ mod tests {
             card_index: None,
             operand_card_index: None,
             operand_card_index_source: None,
+            attack_target_card_index: None,
             memory_before: None,
         })
     }

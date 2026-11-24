@@ -59,6 +59,7 @@ alt_paths:
   # IsLevel4 && HasTSTraits).
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: TS
@@ -66,10 +67,12 @@ alt_paths:
 
 effects:
   # ─── [On Play] [When Digivolving] return 1 cost<=3 Digimon/Tamer to top ──
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Return 1 of your opponent's play cost 3 or lower Digimon or Tamers to the top of the deck."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Return 1 of your opponent's play cost 3 or lower Digimon or Tamers to the top of the deck"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: to_top
           filter:
             all_of:
@@ -87,6 +90,7 @@ effects:
     summary: "Inherited [When Attacking][Once Per Turn] <De-Digivolve 1> 1 of your opponent's Digimon"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: dedigivolve_target
           filter: { kind: digimon }
           prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"

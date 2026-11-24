@@ -214,12 +214,14 @@ effects:
     process:
       - draw: { of: you, count: 2 }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_a
           filter: {}
           prompt: "Trash 1 of 2 cards from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: trash_a }
       - select_hand:
+          optional: false
           of: you
           bind_as: trash_b
           filter: {}
@@ -305,12 +307,14 @@ effects:
     process:
       - draw: { of: you, count: 2 }
       - select_hand:
+          optional: false
           of: you
           bind_as: sec_trash_a
           filter: {}
           prompt: "Trash 1 of 2 cards from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: sec_trash_a }
       - select_hand:
+          optional: false
           of: you
           bind_as: sec_trash_b
           filter: {}

@@ -69,6 +69,7 @@ alt_paths:
 
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 5
         - any_of:
@@ -109,7 +110,8 @@ effects:
   # ("until your opponent's turn ends"). When the formula evaluates to 0
   # (0–1 tamer colors) the multi-select completes synchronously with no
   # prompt and grants no immunity — DCGO's `Math.Max(0, count)`.
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Until your opponent's turn ends, for every 2 colors your Tamers have, their Digimon's effects don't affect 1 of your Digimon."
+    when: [on_play, when_digivolving]
     summary: "[OP][WD] Grant opponent-Digimon-effect immunity to floor(tamer-colors/2) of your Digimon"
     process:
       - select_count_capped_multi:
@@ -165,7 +167,8 @@ effects:
   #   than only those tied for lowest DP. Tests that assert only the lowest-DP
   #   target is offered are #[ignore]'d in the companion st20_11.rs with the
   #   gap tag.
-  - when: [when_digivolving, when_attacking]
+  - text: "[When Digivolving] [When Attacking] Delete 1 of your opponent's lowest DP Digimon."
+    when: [when_digivolving, when_attacking]
     summary: "[WD][WA] Delete 1 of your opponent's lowest-DP Digimon"
     condition:
       any_permanent:
@@ -174,6 +177,7 @@ effects:
         kind: digimon
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:

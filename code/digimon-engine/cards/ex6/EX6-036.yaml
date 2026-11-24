@@ -35,7 +35,8 @@ alt_paths:
     cost: 0
 
 effects:
-  - when: on_play
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Tamer card or Option card with [Diaboromon] in its text and 1 card with the [Unidentified] trait among them to the hand. Trash the rest."
+    when: on_play
     summary: "[On Play] Reveal 3; add 1 Tamer/Option with [Diaboromon] in text and 1 [Unidentified] card; trash the rest"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
@@ -65,7 +66,8 @@ effects:
           body:
             - trash_from_reveal: { of: you, card: rest }
 
-  - when: on_deletion
+  - text: "[On Deletion] If this Digimon had the [Unidentified] trait, you may play 1 [Diaboromon] token without paying the cost. (Digimon/Cost 14/Lv. 6/White/Mega/Unknown/Unidentified/3000 DP)"
+    when: on_deletion
     scope: inherited
     optional: true
     trigger_if: { event_target_trait_has: Unidentified }

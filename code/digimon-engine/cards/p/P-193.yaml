@@ -196,7 +196,8 @@ effects:
   # (trash-cost-gated Draw 2 AND "then place this card in the battle area"),
   # matching the BT8-097 idiom of mirroring the Main clause's full process
   # under `when: on_security`.
-  - when: on_security
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
     optional: true
     summary: "[Security] Activate [Main] effects: by trashing 1 [Composite]/[Wicked God] card, Draw 2; then place this card in the battle area"
     condition:

@@ -78,13 +78,14 @@ alt_paths:
     cost: 3
   # [Digivolve] Lv.4 with the [DATA SQUAD] trait: cost 3.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: "DATA SQUAD" }
+    from: { any_color: true, level_eq: 4, trait_has: "DATA SQUAD" }
     cost: 3
 
 effects:
   # ─── [OP][WD][WA][OPT] -5000 DP to 1 opp Digimon; then trash 2 FD under
   #     Tamers → may play/use a [DATA SQUAD] hand card (cost ≤5) for free ───────
-  - when: [on_play, when_digivolving, when_attacking]
+  - text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, by trashing 2 bottom face-down cards from under any of your Tamers, you may play or use 1 [DATA SQUAD] trait card with a play or use cost of 5 or less from your hand without paying the cost."
+    when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[OP][WD][WA][OPT] 1 opp Digimon -5000 DP for the turn; then trash 2 FD under Tamers to play/use a [DATA SQUAD] hand card (play/use cost ≤5) for free"
     process:
@@ -92,6 +93,7 @@ effects:
       # canNoSelect:false → mandatory when a target exists; short-circuits when
       # none do.
       - select_opponent_permanent:
+          optional: false
           bind_as: dp_target
           filter: { kind: digimon }
           prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
@@ -148,7 +150,8 @@ effects:
 
   # ─── Inherited [All Turns][OPT] ShineGreymon-name / DATA SQUAD carrier would
   #     leave → trash 1 bottom FD under a Tamer → it doesn't leave ──────────────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon with [ShineGreymon] in its name or the [DATA SQUAD] trait would leave the battle area, by trashing the bottom face-down card from under any of your Tamers, it doesn't leave."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
@@ -168,5 +171,5 @@ effects:
             - source_permanent_trait_has: "DATA SQUAD"
     summary: "Inherited [All Turns][OPT] When this [ShineGreymon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
     process:
-      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
       - cancel_replacement: {}

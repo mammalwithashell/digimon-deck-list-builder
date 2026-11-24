@@ -51,11 +51,12 @@ alt_paths:
     from: { level_eq: 3, color_is: red }
     cost: 2
   - kind: digivolve
-    from: { level_eq: 3, trait_has: ADVENTURE }
+    from: { any_color: true, level_eq: 3, trait_has: ADVENTURE }
     cost: 2
 
 effects:
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] If your Tamers with the [ADVENTURE] trait have 3 or more total colors, this Digimon may digivolve into a Digimon card with the [ADVENTURE] trait in the hand without paying the cost."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] If your [ADVENTURE] Tamers have 3+ colors, may digivolve into an [ADVENTURE] Digimon in hand for free"
     condition:
       distinct_colors_gte:
@@ -84,7 +85,8 @@ effects:
                 from_hand: adv_evo
                 cost: free
 
-  - scope: inherited
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    scope: inherited
     kind: aura
     active_when: { your_turn: true }
     target: {}

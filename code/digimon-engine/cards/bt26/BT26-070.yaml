@@ -48,6 +48,7 @@ attribute: Virus
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 3
         - trait_has: "Glowing Dawn"
@@ -60,6 +61,7 @@ effects:
     process:
       - draw: { of: you, count: 1 }
       - select_hand:
+          optional: false
           of: you
           bind_as: discard
           filter: {}
@@ -85,7 +87,8 @@ effects:
           prompt: "You may use 1 [Glowing Dawn] Option card from your trash with the cost reduced by 2"
 
   # ─── Inherited <Retaliation> ───────────────────────────────────────────────
-  - kind: grant_keyword
+  - text: "＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.)"
+    kind: grant_keyword
     scope: inherited
     keyword: Retaliation
     summary: "Inherited <Retaliation>"

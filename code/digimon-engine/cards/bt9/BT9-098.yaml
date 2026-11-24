@@ -47,9 +47,11 @@ effects:
               value: 1
               expiry: end_of_opponents_turn
               opponent_only: true
-- when: on_security
+- text: "[Security] Return 1 card with [Magnamon] in its name from your trash to your hand, and add this card to your hand."
+  when: on_security
   process:
   - select_trash:
+      optional: false
       of: you
       bind_as: recover
       filter:

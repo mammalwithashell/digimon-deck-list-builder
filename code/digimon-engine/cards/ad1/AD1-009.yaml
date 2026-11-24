@@ -20,6 +20,7 @@ alt_paths:
 
   - kind: digivolve
     from:
+      any_color: true
       any_of:
         - { level_eq: 5, name_contains: "Greymon" }
         - { level_eq: 5, trait_has: ADVENTURE }
@@ -30,17 +31,20 @@ effects:
   # ─── Declarative keywords ────────────────────────────────────────────────
   #
   # <Alliance> — DCGO: AllianceSelfEffect on OnAllyAttack timing.
-  - kind: grant_keyword
+  - text: "＜Alliance＞"
+    kind: grant_keyword
     keyword: Alliance
     summary: "<Alliance>"
 
   # <Piercing> — DCGO: PierceSelfEffect on OnDetermineDoSecurityCheck.
-  - kind: grant_keyword
+  - text: "＜Piercing＞"
+    kind: grant_keyword
     keyword: Piercing
     summary: "<Piercing>"
 
   # <Blocker> — DCGO: BlockerSelfStaticEffect on EffectTiming.None.
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     keyword: Blocker
     summary: "<Blocker>"
 
@@ -77,6 +81,7 @@ effects:
     process:
       # Step 1: De-Digivolve 3 target select (mandatory, opponent Digimon).
       - select_opponent_permanent:
+          optional: false
           bind_as: tgt
           filter: { kind: digimon }
           prompt: "Select 1 of your opponent's Digimon to De-Digivolve 3"
@@ -96,6 +101,7 @@ effects:
               name_contains: "Garurumon"
           then:
             - select_own_permanent:
+                optional: false
                 bind_as: garu
                 filter:
                   all_of:
@@ -135,7 +141,8 @@ effects:
   #   - `may_attack_now` was unblocked 2026-05-03 (qa/dsl-vocab-gaps.md
   #     G-MAY-ATTACK-NOW) — `attacker: atk` resolves a previously-bound
   #     own permanent.
-  - when: end_of_your_turn
+  - text: "[End of Your Turn] 2 of your Digimon may DNA digivolve into [Omnimon Alter-S] in the hand. Then, 1 of your Digimon may attack."
+    when: end_of_your_turn
     optional: true
     summary: "[End of Your Turn] May DNA digivolve 2 own Digimon into Omnimon Alter-S in hand; then 1 own Digimon may attack"
     condition:

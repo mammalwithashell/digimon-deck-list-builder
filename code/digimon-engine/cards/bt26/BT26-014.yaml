@@ -51,6 +51,7 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from:
+      any_color: true
       all_of:
         - level_eq: 4
         - trait_has: "Shambala"
@@ -68,10 +69,12 @@ alt_paths:
 
 effects:
   # ─── [On Play][When Digivolving] delete 1 opp Digimon with ≤ 7000 DP ─────
-  - when: [on_play, when_digivolving]
+  - text: "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 7000 DP or less."
+    when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 of your opponent's Digimon with 7000 DP or less"
     process:
       - select_opponent_permanent:
+          optional: false
           bind_as: victim
           filter:
             all_of:
@@ -82,7 +85,8 @@ effects:
 
   # ─── [On Deletion] may return 1 [Shambala] from trash to hand; then may play
   #     1 [TB] Digimon with ≤ 6000 DP from hand free ──────────────────────────
-  - when: on_deletion
+  - text: "[On Deletion] You may return 1 [Shambala] trait card from your trash to the hand. Then, you may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost."
+    when: on_deletion
     summary: "[On Deletion] You may return 1 [Shambala] trait card from your trash to the hand. Then, you may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost"
     process:
       - select_trash:
@@ -115,7 +119,8 @@ effects:
             - play_from_hand_free: { of: you, hand_index: tb_pick }
 
   # ─── Inherited [On Deletion] may play 1 [TB] Digimon ≤ 6000 DP free ──────
-  - scope: inherited
+  - text: "[On Deletion] You may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost."
+    scope: inherited
     when: on_deletion
     summary: "Inherited [On Deletion] You may play 1 [TB] trait Digimon card with 6000 DP or less from your hand without paying the cost"
     process:
