@@ -5,6 +5,7 @@ use digimon_engine::build_action_mask;
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::events::{GameEvent, RevealZone};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
 
@@ -419,7 +420,22 @@ pub fn reina_and_makoto_can_stash_two_or_suspend_without_stashing(card: &str) {
             encode_attack(attacker.index as u16, SECURITY_TARGET),
         );
         r.assert_prompt(SelectionKind::EffectChoice, false, 0);
+        let events_before = r.game.events.len();
         r.execute_branch(branch).unwrap();
+        assert!(
+            r.game.pending_selection.is_none(),
+            "{card}: placing deck-top cards does not prompt for order"
+        );
+        assert!(
+            !r.game.events[events_before..].iter().any(|event| matches!(
+                event,
+                GameEvent::Reveal {
+                    source_zone: RevealZone::DeckTop,
+                    ..
+                }
+            )),
+            "{card}: placing deck-top cards does not reveal them"
+        );
         let permanent = &r.game.players[0].battle_area[tamer.index as usize];
         assert_eq!(permanent.is_suspended, branch != 2);
         let stashed = if branch == 0 { deck_size.min(2) } else { 0 };
