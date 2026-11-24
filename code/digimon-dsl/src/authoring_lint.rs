@@ -193,9 +193,10 @@ pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
 /// (`if (!isUsed)` / `if (!digivolved)`), and the clause refunds on exactly
 /// that path. A [Main] whose DCGO script has no `RemoveUse()` there (Logimon
 /// (BT25-052), Logamon (BT25-070), Greymon (BT23-008), ...) keeps spending
-/// and must not be listed; NightChiropmon (BT26-070) and EX13-071 refund in
-/// DCGO only on a cancelled cost pick that ours does not surface (declaring
-/// and cancelling is the same as not declaring), so they are not listed.
+/// and must not be listed; NightChiropmon (BT26-070) and Richard Sampson
+/// (EX13-071) refund in DCGO only on a cancelled cost pick that ours does not
+/// surface (declaring and cancelling is the same as not declaring), so they
+/// are not listed.
 pub const MAIN_REFUND_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("BT26-012", "effects[0]"),
     ("BT26-021", "effects[1]"),

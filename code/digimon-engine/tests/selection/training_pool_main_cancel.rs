@@ -7,7 +7,9 @@
 //! activateClass.RemoveUse();`), and the main-declaration loop guard keeps
 //! the identical declaration from reopening on the unchanged state. A clone
 //! taken mid-prompt must agree with the original on all of it.
-//! NightChiropmon (BT26-070) has no RemoveUse on its [Main] and still spends.
+//! NightChiropmon (BT26-070) still spends: DCGO BT26_070.cs:235 RemoveUse()s
+//! only when its face-down cost pick is cancelled, which ours does not
+//! surface; once the cost is paid a passed Option pick spends in both.
 use digimon_engine::{
     action::{
         build_action_mask,
