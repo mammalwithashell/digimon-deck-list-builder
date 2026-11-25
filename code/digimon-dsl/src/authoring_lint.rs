@@ -876,11 +876,106 @@ fn walk(value: &Value, path: &str, out: &mut Vec<AuthoringFinding>) {
         }
         Value::Sequence(items) => {
             for (index, child) in items.iter().enumerate() {
+                if let Some(bind) = unpayable_payer_pick(child) {
+                    if !pays_deletion_next(&items[index + 1..], bind) {
+                        out.push(AuthoringFinding {
+                            rule: "unpayable-payers-without-paid-deletion",
+                            path: format!("{path}[{index}]"),
+                            message: "`offer_unpayable_deletion_payers: true` is only meaningful on the payer pick of a \"by deleting 1 ... Digimon, it doesn't leave\" clause: the pick must have a `bind_as`, and the next two steps must be `delete_permanent: { target: <that binding> }` and `cancel_replacement`".into(),
+                        });
+                    }
+                }
                 walk(child, &format!("{path}[{index}]"), out);
             }
         }
         _ => {}
     }
+}
+
+const PERMANENT_PICKS: &[&str] = &["select_own_permanent", "select_opponent_permanent", "select_any_permanent"];
+
+/// The step `item`, if it is a permanent pick with
+/// `offer_unpayable_deletion_payers: true`: its `bind_as` ("" when absent).
+fn unpayable_payer_pick(item: &Value) -> Option<&str> {
+    let map = item.as_mapping()?;
+    PERMANENT_PICKS.iter().find_map(|verb| {
+        let args = map.get(*verb)?.as_mapping()?;
+        (args.get("offer_unpayable_deletion_payers").and_then(Value::as_bool) == Some(true))
+            .then(|| args.get("bind_as").and_then(Value::as_str).unwrap_or(""))
+    })
+}
+
+/// Whether `rest` starts with `delete_permanent { target: bind }` then
+/// `cancel_replacement` (the engine's paid-deletion pair).
+fn pays_deletion_next(rest: &[Value], bind: &str) -> bool {
+    let step = |i: usize, verb: &str| rest.get(i).and_then(Value::as_mapping).and_then(|m| m.get(verb));
+    !bind.is_empty()
+        && step(0, "delete_permanent")
+            .and_then(Value::as_mapping)
+            .and_then(|m| m.get("target"))
+            .and_then(Value::as_str)
+            == Some(bind)
+        && step(1, "cancel_replacement").is_some()
+}
+
+/// The closed list of paid-deletion clauses whose payer pick keeps payers that
+/// can't be deleted (`offer_unpayable_deletion_payers: true`). Owner ruling
+/// 2026-11-24 on these four "by deleting 1 other ... Digimon, it doesn't
+/// leave" clauses: follow DCGO and offer a Digimon that cannot be deleted as
+/// the payment ("You can pick a target that is immune from the removal, and it
+/// will fizzle. Nothing is deleted, right? That is a valid choice."). Every
+/// other paid-deletion clause keeps the CR 4.3 15-7-4 filter.
+pub const UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING: &[(&str, &str)] = &[
+    ("EX13-027", "effects[1]"),
+    ("EX13-028", "effects[2]"),
+    ("EX13-048", "effects[1]"),
+    ("EX13-052", "effects[2]"),
+];
+
+/// The clauses (`effects[i]`) of the spec text `raw` with a pick that sets
+/// `offer_unpayable_deletion_payers: true`, at any depth.
+pub fn unpayable_deletion_payer_clauses(raw: &str) -> Vec<String> {
+    let Ok(value) = serde_yml::from_str::<Value>(raw) else {
+        return Vec::new();
+    };
+    let Some(effects) = value.as_mapping().and_then(|m| m.get("effects")).and_then(Value::as_sequence) else {
+        return Vec::new();
+    };
+    fn has_flag(v: &Value) -> bool {
+        match v {
+            Value::Mapping(m) => m.iter().any(|(k, child)| {
+                (k.as_str() == Some("offer_unpayable_deletion_payers") && child.as_bool() == Some(true))
+                    || has_flag(child)
+            }),
+            Value::Sequence(items) => items.iter().any(has_flag),
+            _ => false,
+        }
+    }
+    effects
+        .iter()
+        .enumerate()
+        .filter(|(_, clause)| has_flag(clause))
+        .map(|(i, _)| format!("effects[{i}]"))
+        .collect()
+}
+
+/// Every `(card, clause)` in the production pool that offers unpayable
+/// deletion payers, sorted.
+pub fn pool_unpayable_deletion_payer_offers(cards_root: &std::path::Path) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for file in pool_card_files(cards_root) {
+        let Ok(raw) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        let Some(card) = serde_yml::from_str::<Value>(&raw).ok().and_then(|v| card_id(&v).map(str::to_string)) else {
+            continue;
+        };
+        for clause in unpayable_deletion_payer_clauses(&raw) {
+            out.push((card.clone(), clause));
+        }
+    }
+    out.sort();
+    out
 }
 
 #[cfg(test)]
@@ -1138,5 +1233,47 @@ mod tests {
     fn nested_granted_effect_is_walked() {
         let raw = "effects:\n  - when: on_play\n    process:\n      - grant_triggered_effect:\n          effect:\n            when: [on_deletion, on_any_deletion]\n            process: []\n";
         assert_eq!(rules(raw), vec!["self-and-observer-timing"]);
+    }
+
+    const PAYER_CLAUSE: &str = "card: TEST-1
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    process:
+      - select_own_permanent:
+          bind_as: cost
+          optional: true
+          continue_on_decline: true
+          offer_unpayable_deletion_payers: true
+          filter: { kind: digimon }
+          prompt: p
+      - delete_permanent: { target: cost }
+      - cancel_replacement: {}
+";
+
+    #[test]
+    fn unpayable_payers_flag_is_accepted_on_a_paid_deletion_pick() {
+        assert!(!rules(PAYER_CLAUSE).contains(&"unpayable-payers-without-paid-deletion"));
+        assert_eq!(unpayable_deletion_payer_clauses(PAYER_CLAUSE), vec!["effects[0]".to_string()]);
+    }
+
+    #[test]
+    fn unpayable_payers_flag_needs_the_paid_deletion_pair() {
+        let no_cancel = PAYER_CLAUSE.replace("      - cancel_replacement: {}
+", "");
+        assert!(rules(&no_cancel).contains(&"unpayable-payers-without-paid-deletion"));
+        let other_target = PAYER_CLAUSE.replace("target: cost", "target: source");
+        assert!(rules(&other_target).contains(&"unpayable-payers-without-paid-deletion"));
+        let unbound = PAYER_CLAUSE.replace("          bind_as: cost
+", "");
+        assert!(rules(&unbound).contains(&"unpayable-payers-without-paid-deletion"));
+    }
+
+    #[test]
+    fn unpayable_payers_closed_list_is_the_four_ruled_clauses() {
+        assert_eq!(UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING.len(), 4);
+        for (card, clause) in UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING {
+            assert!(COST_DECLINED_BY_OWNER_RULING.contains(&(*card, *clause)), "{card} {clause} is a row-(f) clause");
+        }
     }
 }
