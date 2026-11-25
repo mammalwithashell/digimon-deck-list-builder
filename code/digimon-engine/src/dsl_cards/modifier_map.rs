@@ -14,6 +14,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotBeDestroyed" => ModifierType::CannotBeDestroyed,
         "CannotBeDestroyedByBattle" => ModifierType::CannotBeDestroyedByBattle,
         "CannotBeDestroyedByEffect" => ModifierType::CannotBeDestroyedByEffect,
+        "CannotBeDestroyedOutsideBattle" => ModifierType::CannotBeDestroyedOutsideBattle,
         "CannotBeRemoved" => ModifierType::CannotBeRemoved,
         "CannotBeReturnedToDeck" => ModifierType::CannotBeReturnedToDeck,
         "CannotBeReturnedToHand" => ModifierType::CannotBeReturnedToHand,
@@ -139,6 +140,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotBeDestroyed
         | ModifierType::CannotBeDestroyedByBattle
         | ModifierType::CannotBeDestroyedByEffect
+        | ModifierType::CannotBeDestroyedOutsideBattle
         | ModifierType::CannotBeRemoved
         | ModifierType::CannotBeReturnedToDeck
         | ModifierType::CannotBeReturnedToHand
@@ -260,6 +262,7 @@ mod tests {
             ModifierType::CannotBeDestroyed,
             ModifierType::CannotBeDestroyedByBattle,
             ModifierType::CannotBeDestroyedByEffect,
+            ModifierType::CannotBeDestroyedOutsideBattle,
             ModifierType::CannotBeRemoved,
             ModifierType::CannotBeReturnedToDeck,
             ModifierType::CannotBeReturnedToHand,

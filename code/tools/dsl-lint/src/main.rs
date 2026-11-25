@@ -7,7 +7,10 @@
 //! `--printed` enables the security-icon check: `scope: security` clauses must
 //! match a pink `{Security}` (face-up) effect on the printed card and
 //! `when: on_security` clauses a blue `[Security]` effect
-//! (`digimon_dsl::security_icon_lint`).
+//! (`digimon_dsl::security_icon_lint`). It also enables the printed-duration
+//! check: a printed "until your turn ends" / "until your opponent's turn ends"
+//! needs the matching player-relative expiry, not `end_of_turn`
+//! (`digimon_dsl::printed_duration_lint`).
 //!
 //! Exit codes:
 //!   0 — no diagnostics
@@ -197,6 +200,18 @@ fn lint_file(
                 path: f.path,
                 message: format!("security-icon/{:?}: {}", f.rule, f.message),
             });
+        }
+        if let Ok(raw) = std::fs::read_to_string(path) {
+            for f in digimon_engine::dsl::printed_duration_lint::check_printed_durations(
+                &spec.card, &raw, sections,
+            ) {
+                diags.push(Diagnostic {
+                    file: file.clone(),
+                    severity: Severity::Error,
+                    path: f.path,
+                    message: format!("printed-duration: {}", f.message),
+                });
+            }
         }
     }
 

@@ -30,6 +30,11 @@
       "card_color": 1,
       "level": 5,
       "memory_cost": 4
+    },
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
     }
   ],
   "xros_req": "[Digivolve] [Paildramon]/[Dinobeemon]: Cost 3"

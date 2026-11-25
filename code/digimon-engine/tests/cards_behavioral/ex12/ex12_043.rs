@@ -210,3 +210,94 @@ fn ex12_043_pick_excludes_digimon_under_play_prohibition() {
         Some(vec!["SW-OPT-YELLOW".to_string()])
     );
 }
+
+// --- [Main] use accounting: owner ruling 2026-11-24 "Match dcgo on the main use" ---
+// DCGO EX12_043.cs:179 `if (!isUsed) activateClass.RemoveUse();`, with isUsed
+// set only when a card is picked (:95): a passed pick gives the use back,
+// a picked card spends it whatever the play then does. The owner chose DCGO
+// parity over the CR 4.3 15-14-1-4 / 15-8-4-1/-2 reading that a declared
+// [Main] spends. A kept use on an unchanged state is withheld by the
+// main-declaration loop guard (docs/RUST_ENGINE_API.md "Main-declaration
+// guard") until the state changes.
+
+fn ex12_043_main_bit(field_index: u8) -> usize {
+    use digimon_engine::action::space::{EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START};
+    (FIELD_EFFECT_START + field_index as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+}
+
+fn ex12_043_main_offered(r: &DebugRunner, field_index: u8) -> bool {
+    digimon_engine::action::build_action_mask(&r.game, 0)[ex12_043_main_bit(field_index)] > 0.5
+}
+
+/// Once-per-turn uses recorded on the permanent (a refund leaves no entry).
+fn ex12_043_uses(r: &DebugRunner, field_index: u8) -> u32 {
+    r.game.players[0].battle_area[field_index as usize]
+        .effect_activations
+        .values()
+        .map(|&n| n as u32)
+        .sum()
+}
+
+fn ex12_043_use_board() -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-043 YAML loads")
+        .add_card(yellow_sw("SW-PLAY", 3))
+        .hand(0, &["SW-PLAY"])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+    runner.game.enter_main_phase();
+    runner
+}
+
+fn ex12_043_hand(r: &DebugRunner) -> Vec<String> {
+    r.game.players[0].hand.iter().map(|c| c.card_id(&r.game.card_data).to_string()).collect()
+}
+
+#[test]
+fn ex12_043_main_declared_then_pick_passed_keeps_the_once_per_turn() {
+    use digimon_engine::action::space::PASS;
+    let mut r = ex12_043_use_board();
+    let m = r.place_on_field(0, CARD_ID, Some(0));
+    let other = r.place_on_field(0, CARD_ID, Some(0));
+    let memory = r.memory();
+    let field = r.battle_area_size(0);
+    let trash = r.game.players[0].trash.len();
+    assert!(ex12_043_main_offered(&r, m.index));
+    r.game.decode_action(ex12_043_main_bit(m.index) as u16, 0);
+    assert_eq!(ex12_043_uses(&r, m.index), 1, "the declaration records the use");
+    assert!(r.pending_selection_view().expect("the hand pick").is_optional);
+    r.execute_action(0, PASS).expect("pass the pick");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(r.game.pending_selection.is_none(), "the effect ended");
+    assert_eq!(ex12_043_hand(&r), vec!["SW-PLAY"], "nothing was played");
+    assert_eq!(r.memory(), memory, "no cost was paid");
+    assert_eq!(r.battle_area_size(0), field);
+    assert_eq!(r.game.players[0].trash.len(), trash);
+    assert_eq!(ex12_043_uses(&r, m.index), 0, "DCGO RemoveUse: the passed pick keeps the use");
+    assert!(!ex12_043_main_offered(&r, m.index), "loop guard: withheld while nothing changed");
+    assert!(ex12_043_main_offered(&r, other.index), "the other copy has its own use");
+}
+
+#[test]
+fn ex12_043_main_pass_then_state_change_redeclares_and_spends() {
+    use digimon_engine::action::space::PASS;
+    let mut r = ex12_043_use_board();
+    let m = r.place_on_field(0, CARD_ID, Some(0));
+    r.game.decode_action(ex12_043_main_bit(m.index) as u16, 0);
+    r.execute_action(0, PASS).expect("pass the pick");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(!ex12_043_main_offered(&r, m.index));
+    r.game.memory -= 1;
+    assert!(ex12_043_main_offered(&r, m.index), "the state changed: the kept use is offered again");
+    let memory = r.memory();
+    r.game.decode_action(ex12_043_main_bit(m.index) as u16, 0);
+    select_hand_card(&mut r, 0, "SW-PLAY");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(ex12_043_hand(&r).is_empty(), "the picked card was played");
+    assert_eq!(memory - r.memory(), 1, "play cost 3 reduced by 2");
+    assert_eq!(ex12_043_uses(&r, m.index), 1, "a picked card spends the use");
+    r.game.memory -= 1;
+    assert!(!ex12_043_main_offered(&r, m.index), "spent for the turn, whatever else changes");
+}

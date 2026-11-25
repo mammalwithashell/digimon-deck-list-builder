@@ -36,10 +36,10 @@
 #       DP <= the comparator's DP (canNoSelect: false). → Clause 3 below.
 #
 # DCGO ALSO registers `EffectTiming.OnEndTurn` → EndOfTurnLinkedEffect
-# ("[End of Your Turn] this Digimon may attack"). That clause does NOT appear
-# in the printed `effect_description_eng` / `inherited_effect_description_eng`
-# for ST22-08 in `data/cards.json`. Per the project source-priority rule
-# (printed text outranks DCGO C#), it is intentionally NOT implemented.
+# ("[End of Your Turn] this Digimon may attack"). The card face prints it in
+# the link box together with DP +2000 (official bundle "### Link Effect" /
+# "### Link DP"); `data/cards.json` drops the link box. Both are authored
+# at the end of `effects:` (an earlier note here called the clause unprinted).
 #
 # ─── Dual-mode Plug-In Option (G-LINK-OPTION-DUAL-PLAY-MODE RESOLVED) ─────────
 #
@@ -244,3 +244,41 @@ effects:
     cost: 2
     filter: { level_gte: 3 }
     summary: "[Link] Lv.3 or higher: Cost 2 — plug in sideways to a Lv.3+ Digimon"
+
+  # ─── Link Effect: [End of Your Turn][Once Per Turn] This Digimon may attack ─
+  # Card face ST22-08.webp link box + official bundle "### Link Effect" (the
+  # API ingest behind cards.json drops the link box). DCGO ST22_08.cs
+  # EndOfTurnLinkedEffect: SetIsLinkedEffect, isOptional true (the printed
+  # "may", one Yes/No), maxCountPerTurn 1, CanActivateCondition = the host
+  # CanAttack, then SelectAttackEffect inline with the host as attacker.
+  # scope: linked -> `source` is the host permanent (BT21-018 idiom); the
+  # `condition` keeps the effect from activating while the host cannot attack
+  # (AD1-020 idiom), so no empty prompt is offered.
+  - text: "[End of Your Turn] [Once Per Turn] This Digimon may attack."
+    scope: linked
+    when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    outer_prompt: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        is_source: true
+        kind: digimon
+        can_attack: { targets: any }
+    summary: "[Link][End of Your Turn][Once Per Turn] This Digimon may attack"
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: false
+          prompt: "Attack with this Digimon"
+
+  # ─── Link DP +2000 (card-face link box) ─────────────────────────────────
+  - text: "+2000 DP"
+    scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon (host)"

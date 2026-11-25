@@ -142,11 +142,13 @@ fn union_play_opens_nothing_when_only_a_locked_trash_copy_qualifies() {
 
 #[test]
 fn the_commit_refuses_the_locked_trash_copy_the_filter_now_drops() {
-    // A filter without the leaf still offers the trash copy; choosing it plays
-    // nothing, which is the dead choice the leaf removes.
+    // A filter whose authored leaf admits every card still offers the trash
+    // copy; choosing it plays nothing, which is the dead choice the leaf
+    // removes. (A filter with NO leaf gets one from the DSL lowering,
+    // `digimon_dsl::play_candidates`, so the opt-out has to be authored.)
     let yaml = UNION_PLAY.replace(
         "filter: {can_play_from_effect_without_cost: true}",
-        "filter: {kind: digimon}",
+        "filter: {kind: digimon, any_of: [{can_play_from_effect_without_cost: true}, {not: {can_play_from_effect_without_cost: true}}]}",
     );
     let (mut r, source) = fixture(&yaml, "ZP-DIGIMON");
     lock_trash(&mut r);

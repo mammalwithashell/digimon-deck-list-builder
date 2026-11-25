@@ -157,6 +157,19 @@ dual:
               value: 1
               expiry: end_of_opponents_turn
           - add_dp_modifier: { target: buffed, value: 5000, expiry: end_of_opponents_turn }
+          # "Then, it may attack." -- the attack is declared inside this
+          # [Main] effect, by the chosen Digimon (CR 4.3 15-1-2). DCGO
+          # BT25_057.cs:286-294 runs SelectAttackEffect inline right after the
+          # buffs (declinable). The Option then finishes -- the pending trash /
+          # <Arts Digivolve> -- at the attack's DECLARATION, before its [When
+          # Attacking] effects and counter timing, as DCGO does
+          # (AttackProcess.cs:242, CardController.cs:2026-2129,
+          # TurnStateMachine.cs:1277-1286; Q4962, Q4346; owner default "match
+          # dcgo", applied by the orchestrator; resolved by reversal:
+          # G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD). Q6344: the Digimon that attacked
+          # and then Arts digivolved into this card cannot activate its [When
+          # Attacking]. (Was `windowed: true`, which deferred the attack to the
+          # end-of-turn window -- scan finding F02.)
           - may_attack_now:
               attacker: buffed
               targets: any

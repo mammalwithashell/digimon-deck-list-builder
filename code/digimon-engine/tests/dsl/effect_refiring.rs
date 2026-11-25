@@ -1,7 +1,89 @@
 use digimon_dsl::compiled::{CompiledClause, CompiledStep};
 use digimon_dsl::validator::{validate, ValidationContext};
 use digimon_dsl::{compile::compile, spec::CardSpec};
+use digimon_engine::action::space::{encode_digivolve, PASS};
+use digimon_engine::build_action_mask;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl::raw_rust_registry::StubRegistry;
+use digimon_engine::enums::EffectSourceKind;
+use digimon_engine::selection::SelectionKind;
+
+#[test]
+fn dual_option_main_refire_uses_option_attribution_without_playing_the_option() {
+    let yaml = r#"
+card: TEST-DUAL-REFIRE
+name: Dual Refire Test
+kind: dual
+level: 4
+dp: 5000
+color: [red]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+dual:
+  digimon:
+    level: 4
+    dp: 5000
+    colors: [red]
+    effects:
+      - when: when_digivolving
+        process:
+          - refire_effect: { source: source, timing: option_main, optional: true }
+  option:
+    use_cost: 5
+    colors: [purple]
+    effects:
+      - when: main
+        process:
+          - select_opponent_permanent:
+              bind_as: victim
+              optional: false
+              filter: { kind: digimon }
+              prompt: Choose an opposing Digimon to delete
+          - delete_permanent: { target: victim }
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let registry = StubRegistry::empty();
+    validate(&spec, &ValidationContext { raw_rust: &registry }).unwrap();
+
+    for accept in [false, true] {
+        let mut runner = DebugRunner::builder()
+            .from_dsl_yaml(yaml)
+            .unwrap()
+            .add_card(make_test_card("BASE", "Base"))
+            .add_card(make_test_card("TARGET", "Target"))
+            .hand(0, &["TEST-DUAL-REFIRE"])
+            .deck(0, &["BASE"])
+            .memory(10)
+            .start();
+        let base = runner.place_on_field(0, "BASE", Some(0));
+        runner.place_on_field(1, "TARGET", Some(0));
+        runner.game.enter_main_phase();
+        let action = encode_digivolve(0, base.index as u16);
+        assert_eq!(build_action_mask(&runner.game, 0)[action as usize], 1.0);
+        runner.game.decode_action(action, 0);
+        runner.assert_prompt(SelectionKind::EffectChoice, true, 0);
+        assert_eq!(runner.pending_action_count(), 1);
+        assert_eq!(build_action_mask(&runner.game, 0)[PASS as usize], 1.0);
+        if accept {
+            runner.execute_branch(0).unwrap();
+            runner.assert_prompt(SelectionKind::OppField, false, 0);
+            let prompt = runner.pending_selection_view().unwrap();
+            assert_eq!(prompt.source_kind, EffectSourceKind::Option);
+            assert_eq!(prompt.source_permanent, Some(runner.perm_handle(0, 0)));
+            assert_eq!(runner.prompt_card_candidates().len(), 1);
+            runner.choose_prompt_card("TARGET", None).unwrap();
+        } else {
+            runner.decline_prompt().unwrap();
+        }
+        assert!(runner.pending_selection().is_none());
+        assert_eq!(runner.battle_area_size(0), 1);
+        assert_eq!(runner.battle_area_size(1), usize::from(!accept));
+        assert_eq!(runner.memory(), 7);
+        assert!(runner.game.pending_option.is_none());
+    }
+}
 
 #[test]
 fn refire_effect_yaml_lowers_to_compiled_step() {

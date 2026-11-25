@@ -18,13 +18,18 @@
 # [Main] OPT (OnDeclaration, maxCountPerTurn 1, CanUseCondition: a [TB] hand
 #   card exists): canNoSelect:true SelectHandEffect over [TB] cards →
 #   ChangeCostClass -2 → PlayOptionCards (Option) / PlayPermanentCards
-#   (Digimon/Tamer), payCost:true. This local DCGO source calls RemoveUse() on
-#   decline, conflicting with CR 4.3 15-14-1-1/4: activation spends the use.
-#   Preserve the use even when the optional processing is declined.
+#   (Digimon/Tamer), payCost:true. BT26_012.cs:138 `if (!isUsed)
+#   activateClass.RemoveUse();` (isUsed set at :81 once a card is picked, before
+#   the play): a passed pick KEEPS the use, a picked card spends it. We follow
+#   that by the owner ruling of 2026-11-24 "Match dcgo on the main use"; the
+#   owner chose DCGO parity over the CR 4.3 15-14-1-4 / 15-8-4-1/-2 reading,
+#   reversing the 2026-10-25 record. The main-declaration loop guard withholds
+#   the identical declaration until the state changes.
 #   → `when: main_on_field` + once_per_turn + condition (a [TB] card in hand);
 #   optional `select_hand` (non-cost: decline still runs the tail) → `play_or_use_from_hand
 #   { cost_delta: { reduce: 2 } }` (kind-routing verb, G-PLAY-OR-USE-FROM-HAND;
-#   DUAL cards are used as Options, CR 4.3 4-6-2). No OPT refund on decline.
+#   DUAL cards are used as Options, CR 4.3 4-6-2); `else: refund_opt` on a
+#   passed pick.
 #   DCGO pre-filters candidates (and the activation) by CanPlayOrUse(fixedCost);
 #   mirrored by `can_play_or_use_from_effect` + `affordable_with_cost` on both
 #   the pick and the condition (select-hand audit 2026-11-13).
@@ -75,8 +80,8 @@ effects:
           of: you
           bind_as: pick
           optional: true
-          # Choosing this Main effect already spent its once-per-turn use.
-          # Declining its optional processing does not undo that activation.
+          # Passing this pick gives the use back (the `else` below; DCGO
+          # BT26_012.cs:138, owner ruling 2026-11-24).
           # DCGO BT26_012.cs:42-44 `EqualsTraits("TB") && CanPlayOrUse(card,
           # fixedCost: Max(0, cost - 2))` (PlayEffects.cs:286-294): a usable
           # Option (no "can't use Options" lock, colour requirement met, CR
@@ -96,6 +101,9 @@ effects:
                 of: you
                 hand_index: pick
                 cost_delta: { reduce: 2 }
+          # DCGO BT26_012.cs:138 RemoveUse (owner ruling 2026-11-24).
+          else:
+            - refund_opt: {}
 
   # ─── Inherited [When Attacking][OPT] opp Digimon -2000 for the turn ───────
   - text: "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."

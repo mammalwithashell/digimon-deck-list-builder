@@ -1,0 +1,44 @@
+card: BT27-047
+name: WezenGammamon
+kind: digimon
+level: 4
+color: [green, yellow]
+cost: 4
+dp: 5000
+form: Champion
+attribute: Data
+traits: [Ceratopsian, VB]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, any_of: [{ name_is: Gammamon }, { level_eq: 3, trait_has: VB }] }
+    cost: 2
+
+effects:
+  - text: "[When Moving] [On Play] Suspend 1 of your opponent's Digimon."
+    when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter: { kind: digimon }
+          prompt: "Suspend an opponent's Digimon"
+      - suspend: { target: victim }
+  - text: "[When Attacking] [Once Per Turn] This Digimon gets +5000 DP for the turn."
+    when: when_attacking
+    once_per_turn: true
+    process:
+      - add_dp_modifier: { target: source, value: 5000, expiry: end_of_turn }
+  - text: "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)"
+    scope: inherited
+    kind: grant_keyword
+    keyword: Piercing

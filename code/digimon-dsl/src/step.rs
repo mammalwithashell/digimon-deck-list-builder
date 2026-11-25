@@ -1703,6 +1703,20 @@ pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     /// the suspend. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`.
     #[serde(default)]
     pub optional: bool,
+    /// Requires `optional`. On a declined Tamer pick the steps AFTER this one
+    /// still run, with `bind_as` unbound, instead of being dropped; a pick
+    /// trashes the card, binds `bind_as` to the Tamer and runs them as usual.
+    /// Lets a clause tell "the cost was declined" from "paid" with
+    /// `binding_present` / `binding_absent`, e.g. to `refund_opt` on the
+    /// decline (DCGO `canNoSelect` + `RemoveUse()`: BT26-044 Lilamon's
+    /// inherited save, EX13-032 Chirinmon; owner ruling 2026-11-23).
+    /// `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-DECLINE-TAIL`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub continue_on_decline: bool,
+    /// Binds the chosen Tamer for the steps after this one (see
+    /// `continue_on_decline`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 /// Args for `trash_bottom_face_down_sources_under_tamers` — the multi-count /
@@ -1894,6 +1908,8 @@ pub struct SuspendAllPreventionArgs {
 pub struct TrashBottomSourcesArgs {
     pub target: BindingRef,
     pub count: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_trashed_as: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1977,8 +1993,6 @@ pub struct MayAttackNowArgs {
     pub ignore_summoning_sickness: bool,
     #[serde(default)]
     pub optional: bool,
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub windowed: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3551,6 +3565,7 @@ pub enum FieldSelector {
     /// "delete 1 of your opponent's Digimon with the fewest digivolution
     /// cards".
     LowestMaterialCount,
+    LowestMaterialCountRedirection,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -3574,6 +3589,21 @@ pub struct SelectFieldArgs {
     /// Tamer"). G-OPT-REFUND-ON-DECLINE.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub continue_on_decline: bool,
+    /// Paid-deletion picks only ("by deleting 1 ... Digimon, it doesn't
+    /// leave": this pick binds the payer, then `delete_permanent` of that
+    /// binding and `cancel_replacement`). By default such a pick, and the
+    /// replacement's offer, skip payers whose deletion is impossible (CR 4.3
+    /// 15-7-4). `true` keeps them: the clause is offered while any printed
+    /// match exists and every printed match is listed. Choosing one that
+    /// can't be deleted deletes nothing and does not cancel the removal (the
+    /// paid-deletion receipt is never filled), so the carrier still leaves;
+    /// the pick was made, so a binding-gated refund does not run. DCGO parity
+    /// on the clauses the owner ruled onto it (2026-11-24: Chuumon (EX13-027),
+    /// Sukamon (EX13-028), Kotemon (EX13-048), Gladimon (EX13-052));
+    /// `authoring_lint::UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING` is the
+    /// closed list. G-DSL-OFFER-UNPAYABLE-DELETION-PAYERS.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub offer_unpayable_deletion_payers: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]

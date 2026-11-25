@@ -18,10 +18,17 @@ effects:
       source_controller: opponent
   - when: main_on_field
     once_per_turn: true
+    # DCGO EX2_007.cs:122-143 CanUseCondition: offered only when an
+    # [ADR-02 Searcher] can be chosen, in play (top card) or in the hand.
+    # Owner ruling 2026-11-24: "Generally let's look to match dcgo".
     condition:
-      count_lte:
-        filter: { of: you, zone: [battle_area], name_is: Mother D-Reaper }
-        n: 1
+      all_of:
+        - count_lte:
+            filter: { of: you, zone: [battle_area], name_is: Mother D-Reaper }
+            n: 1
+        - count_gte:
+            filter: { of: you, zone: [hand, battle_area], name_is: ADR-02 Searcher }
+            n: 1
     process:
       - select_zone_cards:
           zones: [hand, battle_area]

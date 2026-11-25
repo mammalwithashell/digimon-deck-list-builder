@@ -105,7 +105,7 @@ fn select_paid_prevention_member(ctx:&mut EffectContext<'_>,members:&[(u8,u16,u6
     let selection_filter=CompiledPredicate{not:Some(Box::new(CompiledPredicate{not_in_binding:Some("__paid_prevention_candidates".into()),..Default::default()})),..Default::default()};
     let finalizer=CompiledStep::PreventDeletionMemberFinalize{binding:"__paid_prevention_target".into(),members:members.to_vec(),filter:filter.clone(),cause,cause_player};
     let choice=CompiledStep::SelectOwnPermanent {filter:selection_filter,bind_as:Some("__paid_prevention_target".into()),selector:None,
-        prompt:"Choose which Digimon's deletion to prevent".into(),prompt_key:None,optional:false,continue_on_decline:false,then:vec![finalizer]};
+        prompt:"Choose which Digimon's deletion to prevent".into(),prompt_key:None,optional:false,continue_on_decline:false,offer_unpayable_deletion_payers:false,then:vec![finalizer]};
     super::run_steps_with_runtime(&[choice],ctx,&mut bindings,&super::StepRuntime::default());
 }
 

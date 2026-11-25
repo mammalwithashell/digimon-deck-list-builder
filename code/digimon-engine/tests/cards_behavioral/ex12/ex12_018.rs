@@ -256,3 +256,113 @@ fn ex12_018_checked_from_security_battles_as_a_security_digimon() {
     assert!(super::support::trash_contains(&runner, 0, "ATTACKER"));
     assert!(super::support::trash_contains(&runner, 1, CARD_ID), "the checked card is trashed (13-1-8-4)");
 }
+
+/// Option face (Q6749 names it "Planet Punch"): "[Main] Delete 1 of your
+/// opponent's highest DP Digimon. Then, 1 of your Digimon may attack." plus
+/// <Arts Digivolve>. The attack is declared inside the effect and the Option
+/// FINISHES at that declaration: its own <Arts Digivolve> offer comes before
+/// the attack's [When Attacking] effects, the counter timing and any security
+/// check (DCGO: AttackProcess.cs:242 returns at the declaration,
+/// CardController.cs:2026-2129 resolves the Arts or trashes the card before
+/// TurnStateMachine.cs:1277-1286 runs the attack; official Q4962 / Q4346).
+/// G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD, resolved by reversal (owner default
+/// "Generally let's look to match dcgo", applied here by the orchestrator).
+#[test]
+fn ex12_018_option_face_finishes_at_the_attack_declaration() {
+    use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
+    use digimon_engine::debug_runner::make_test_card;
+    use digimon_engine::selection::OptionPlayResult;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-018 YAML loads")
+        .add_card(vb_digimon("BASE", CardColor::Red, 5, 8000))
+        .add_card(plain_digimon("OPP", CardColor::Purple, 5, 9000))
+        .add_card(make_test_card("SEC", "Sec"))
+        .hand(0, &[CARD_ID])
+        .security(1, &["SEC", "SEC", "SEC"])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    runner.place_on_field(1, "OPP", Some(0));
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    let attack_id = encode_attack(base.index as u16, SECURITY_TARGET);
+    // Answer the deletion, "Attack", and the attacker pick until the attack
+    // target prompt is up.
+    for _ in 0..6 {
+        let view = runner
+            .pending_selection_view()
+            .expect("the [Main] parks until its attack prompt");
+        if view.kind == SelectionKind::Target {
+            break;
+        }
+        let action = match view
+            .effect_choices
+            .as_ref()
+            .filter(|_| view.kind == SelectionKind::EffectChoice)
+        {
+            Some(choices) => choices
+                .iter()
+                .find(|c| c.label == "Attack")
+                .map(|c| c.action_id)
+                .expect("an Attack choice"),
+            None => view
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != PASS)
+                .expect("a legal pick"),
+        };
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("answer the [Main]");
+    }
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Target));
+    assert_eq!(runner.game.players[1].battle_area.len(), 0, "OPP deleted first");
+    runner
+        .execute_action(0, attack_id)
+        .expect("BASE attacks the player");
+
+    let arts = runner
+        .pending_selection_view()
+        .expect("the Arts offer follows the declaration");
+    assert_eq!(arts.kind, SelectionKind::OwnField, "the Arts offer");
+    assert!(arts.is_optional);
+    assert!(
+        arts.valid_action_ids
+            .contains(&encode_attack(0, base.index as u16)),
+        "the red Lv.5 attacker is an Arts host: {:?}",
+        arts.valid_action_ids
+    );
+    assert!(runner.game.pending_attack.is_some(), "the attack is open");
+    assert_eq!(runner.security_count(1), 3, "no check before the Option finished");
+    runner.execute_action(0, PASS).expect("decline the Arts Digivolve");
+    let sirius_in_trash = runner.game.players[0]
+        .trash
+        .iter()
+        .filter(|c| c.card_id(&runner.game.card_data) == CARD_ID)
+        .count();
+    assert_eq!(sirius_in_trash, 1, "trashed at the declaration");
+    assert!(runner.game.pending_option.is_none());
+
+    for _ in 0..10 {
+        let Some(view) = runner.pending_selection_view() else {
+            break;
+        };
+        let action = if view.is_optional {
+            PASS
+        } else {
+            view.valid_action_ids[0]
+        };
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("drive the attack");
+    }
+    assert!(runner.game.pending_attack.is_none(), "the attack ended");
+    assert_eq!(runner.security_count(1), 2, "one security check");
+}

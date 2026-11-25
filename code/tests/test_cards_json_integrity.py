@@ -89,6 +89,11 @@ PRINTED_OVER_MIRROR = {
     "P-058": {"dp": 4000},
     "BT22-001": {"dp": None},
     "BT18-086": {"dp": 0},
+    # The mirror lists red|purple Lv.5 / 6; the face prints a red|blue|purple circle (read
+    # 2026-11-22, agreeing with the DCGO asset). Every circle the mirror gets wrong is in
+    # FACE_READ_CIRCLES (code/digimon-engine/tests/support/printed_circles.rs), which
+    # tests/data_official_parity.rs pins; this entry only lets a REVIEWED card carry it.
+    "EX10-011": {"evo_costs": [(0, 5, 6), (1, 5, 6), (6, 5, 6)]},
 }
 
 
@@ -153,6 +158,11 @@ def _section_field(label, card, text=""):
     return None
 
 
+def _circles(rows):
+    """Sorted (colour, level, cost) tuples of an evo_costs / digivolve_costs array."""
+    return sorted((d["card_color"], d["level"], d["memory_cost"]) for d in rows or [])
+
+
 def stats_violations(cards, official, ids, printed=None):
     """Every printed-data disagreement for `ids`, as strings. Empty means clean.
 
@@ -178,8 +188,8 @@ def stats_violations(cards, official, ids, printed=None):
         colors = fixed.get("card_colors") or [_COLOR[c.lower()] for c in page["colors"].split()]
         if sorted(card.get("card_colors") or []) != sorted(colors):
             out.append(f"{cid}: card_colors {card.get('card_colors')} != official {page['colors']!r}")
-        circles = sorted((d["card_color"], d["level"], d["memory_cost"]) for d in page.get("digivolve_costs") or [])
-        have = sorted((d["card_color"], d["level"], d["memory_cost"]) for d in card.get("evo_costs") or [])
+        circles = fixed.get("evo_costs") or _circles(page.get("digivolve_costs"))
+        have = _circles(card.get("evo_costs"))
         if have != circles:
             out.append(f"{cid}: evo_costs {have} != official circles {circles}")
         for field, key in (("type_eng", "type"), ("form_eng", "form"), ("attribute_eng", "attribute")):
@@ -250,6 +260,8 @@ def _mirror_value(page, field):
         return _number(page.get("play_cost")) or 0
     if field == "dp":
         return _number(page.get("dp"))
+    if field == "evo_costs":
+        return _circles(page.get("digivolve_costs"))
     return sorted(_COLOR[c.lower()] for c in page.get("colors", "").split())
 
 
@@ -259,6 +271,8 @@ def test_cards_keep_printed_values_where_the_official_mirror_is_wrong():
     for cid, fields in PRINTED_OVER_MIRROR.items():
         for field, value in fields.items():
             have = cards[cid].get(field)
+            if field == "evo_costs":
+                have, value = _circles(have), sorted(value)
             if field == "card_colors":
                 have, value = sorted(have or []), sorted(value)
             if have != value:

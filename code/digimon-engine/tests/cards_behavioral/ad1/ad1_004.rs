@@ -262,19 +262,23 @@ fn ad1_004_security_attack_aura_grants_one_extra_check_per_three_colors() {
     );
 }
 
-// ─── End-of-Turn attack: windowed grant (not synchronous inline) ─────────────
-// 2026-06-02: AD1-004's "[End of Your Turn] 1 of your Digimon may attack" must
-// GRANT a windowed MayAttack to the chosen Digimon (deferred to the EOT-action
-// window) rather than declaring + resolving the attack inline. The windowed
-// model lets sibling end-of-turn effects (e.g. an inherited DNA digivolve)
-// resolve first and remove the attacker, so its attack fizzles — faithful to
-// general_rule.pdf §15-4-2-3 (EOT triggers activate one at a time) and the
-// "attack ends if the attacker leaves before it resolves" rule.
-#[test]
-fn ad1_004_eot_attack_is_windowed_grant_not_synchronous() {
-    use digimon_engine::action::space::PASS;
+// ─── End-of-Turn attack: declared inside the effect ───────────────────────────
+// Printed (card image + official bundle): "[End of Your Turn] 1 of your Digimon
+// may attack." The attack is the effect's own processing (CR 4.3 15-1-2): DCGO
+// AD1_004.cs selects the Digimon (`canNoSelect: true`, the printed "may") and
+// then runs `SelectAttackEffect.Activate()` inline in the same coroutine. Any
+// other end-of-turn trigger is ordered by the turn player against this whole
+// effect (CR 4.3 15-4-2-3); see the BT20-036 official Q&A ("the 2nd [End of
+// Your Turn] effect can be activated before the counter timing" of the first
+// effect's attack) for the same timing.
+//
+// These two tests used to pin the opposite: a `windowed: true` MayAttack grant
+// that deferred the attack to a later end-of-turn window, letting the player
+// choose a Digimon, resolve other effects, and attack later (or never). That
+// device is gone from the DSL (scan finding F02, BT25-057).
+fn ad1_004_eot_runner() -> (DebugRunner, PermanentHandle, usize) {
     use digimon_engine::debug_runner::make_test_card;
-    use digimon_engine::enums::{EffectTiming, ModifierType};
+    use digimon_engine::enums::EffectTiming;
     use digimon_engine::selection::TriggerSource;
 
     let mut runner = DebugRunner::builder()
@@ -287,106 +291,92 @@ fn ad1_004_eot_attack_is_windowed_grant_not_synchronous() {
     runner.game.turn_count = 3;
     let wg = runner.place_on_field(0, "AD1-004", Some(0)); // not summoning-sick (can attack)
     let sec_before = runner.game.players[1].security.len();
-
     runner
         .game
         .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(wg));
     runner.game.drain_effect_queue();
-    // Drive the optional EOT clause: accept + pick WarGreymon as the attacker.
+    // Accept any outer "may" prompt, then pick WarGreymon as the attacker.
     let mut guard = 0;
-    while let Some(view) = runner.pending_selection_view() {
+    while runner.pending_kind() != Some(SelectionKind::Target) {
         guard += 1;
-        assert!(guard < 8, "selection loop runaway");
-        let pick = view
+        assert!(guard < 6, "never reached the attack prompt");
+        let view = runner
+            .pending_selection_view()
+            .expect("a pick before the attack prompt");
+        let pick = if view
             .valid_action_ids
-            .iter()
-            .copied()
-            .find(|a| *a != PASS)
-            .unwrap_or(PASS);
+            .contains(&encode_attack(0, wg.index as u16))
+        {
+            encode_attack(0, wg.index as u16)
+        } else {
+            view.valid_action_ids
+                .iter()
+                .copied()
+                .find(|a| *a != PASS)
+                .unwrap_or(PASS)
+        };
         runner
             .execute_action(view.selecting_player, pick)
             .expect("drive EOT clause");
-        if runner.game.modifiers.has(wg, ModifierType::MayAttack) {
-            break;
-        }
     }
+    (runner, wg, sec_before)
+}
 
+#[test]
+fn ad1_004_eot_attack_is_declared_inside_the_effect() {
+    use digimon_engine::action::space::SECURITY_TARGET;
+    use digimon_engine::enums::ModifierType;
+
+    let (mut runner, wg, sec_before) = ad1_004_eot_runner();
+    let view = runner.pending_selection_view().unwrap();
+    let attack_id = encode_attack(wg.index as u16, SECURITY_TARGET);
+    assert!(view.is_optional, "\"may attack\" is declinable");
     assert!(
-        runner.game.modifiers.has(wg, ModifierType::MayAttack),
-        "AD1-004 EOT attack must grant a windowed MayAttack to the chosen Digimon (deferred), not resolve inline"
+        view.valid_action_ids.contains(&attack_id),
+        "the chosen Digimon may attack the player now: {:?}",
+        view.valid_action_ids
+    );
+    assert!(
+        !runner.game.modifiers.has(wg, ModifierType::MayAttack),
+        "no deferred MayAttack grant"
+    );
+
+    runner.execute_action(0, attack_id).expect("attack");
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.players[0].battle_area[wg.index as usize].is_suspended,
+        "WarGreymon attacked inside the effect"
     );
     assert_eq!(
         runner.game.players[1].security.len(),
-        sec_before,
-        "windowed grant must NOT check security synchronously during the EOT trigger"
+        sec_before - 1,
+        "the attack checked security inside the end-of-turn effect"
     );
 }
 
-// Capstone fizzle: once AD1-004's EOT attack is a windowed grant, removing the
-// chosen attacker (the user's DNA-digivolve-into-Omnimon line consuming
-// WarGreymon) before it takes its deferred attack leaves the grant orphaned —
-// no attack happens and the opponent's security is untouched. This is the
-// system-level outcome the inline path could never produce.
 #[test]
-fn ad1_004_eot_attack_fizzles_when_attacker_is_removed_before_it_acts() {
-    use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
-    use digimon_engine::debug_runner::make_test_card;
-    use digimon_engine::enums::{EffectTiming, ModifierType};
-    use digimon_engine::selection::TriggerSource;
+fn ad1_004_eot_attack_declined_leaves_no_deferred_attack() {
+    use digimon_engine::action::space::SECURITY_TARGET;
+    use digimon_engine::enums::ModifierType;
 
-    let mut runner = DebugRunner::builder()
-        .dsl_card("AD1-004")
-        .expect("AD1-004 in pack")
-        .add_card(make_test_card("SEC", "SecCard"))
-        .security(1, &["SEC", "SEC", "SEC"])
-        .memory(10)
-        .start();
-    runner.game.turn_count = 3;
-    let wg = runner.place_on_field(0, "AD1-004", Some(0)); // not summoning-sick (can attack)
-    let sec_before = runner.game.players[1].security.len();
-
-    // EOT: grant the windowed attack to WarGreymon.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(wg));
+    let (mut runner, wg, sec_before) = ad1_004_eot_runner();
+    runner.execute_action(0, PASS).expect("decline the attack");
     runner.game.drain_effect_queue();
-    let mut guard = 0;
-    while runner.pending_selection().is_some() {
-        guard += 1;
-        assert!(guard < 8, "selection loop runaway");
-        let view = runner.pending_selection_view().unwrap();
-        let pick = view
-            .valid_action_ids
-            .iter()
-            .copied()
-            .find(|a| *a != digimon_engine::action::space::PASS)
-            .unwrap_or(digimon_engine::action::space::PASS);
-        runner.execute_action(view.selecting_player, pick).unwrap();
-        if runner.game.modifiers.has(wg, ModifierType::MayAttack) {
-            break;
-        }
-    }
     assert!(
-        runner.game.modifiers.has(wg, ModifierType::MayAttack),
-        "precondition: WarGreymon has the windowed MayAttack grant"
+        !runner.game.modifiers.has(wg, ModifierType::MayAttack),
+        "declining leaves no MayAttack grant behind"
     );
-
-    // The DNA digivolve consumes WarGreymon (simulated by removing it).
-    runner.game.delete_permanent_with_effects(wg);
-
-    // The granted attack is orphaned: no attack action for the gone attacker,
-    // and security is untouched (the attack fizzled).
+    // In the end-of-turn action window, no attack is left over for WarGreymon
+    // (the old windowed grant exposed one here).
+    runner.set_phase(digimon_engine::enums::GamePhase::EndOfTurnAction);
     let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
     assert_eq!(
         mask[encode_attack(wg.index as u16, SECURITY_TARGET) as usize],
         0.0,
-        "a removed attacker must expose no end-of-turn attack action"
+        "no later end-of-turn attack is offered by the resolved effect"
     );
-    assert_eq!(
-        runner.game.players[1].security.len(),
-        sec_before,
-        "DNA'ing the attacker away before its deferred attack must leave opponent security untouched (fizzle)"
-    );
+    assert!(!runner.game.players[0].battle_area[wg.index as usize].is_suspended);
+    assert_eq!(runner.game.players[1].security.len(), sec_before);
 }
 
 // ─── Inherited [When Attacking][OPT] name-gated delete (Greymon/Omnimon) ─────

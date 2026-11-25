@@ -183,6 +183,18 @@ fn delete_and_expect_replacement(
     matches!(r.pending_kind(), Some(SelectionKind::Replacement))
 }
 
+/// Accept the inherited save and pay with Tamer `t`. The Tamer pick is
+/// declinable (owner ruling 2026-11-23, DCGO parity), so the payment is chosen
+/// explicitly rather than by `auto_resolve`.
+fn accept_and_pay_with(r: &mut DebugRunner, t: digimon_engine::permanent::PermanentHandle) {
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept the save");
+    let id = digimon_engine::action::space::ATTACK_START + t.index as u16;
+    let v = r.pending_selection_view().expect("Tamer pick");
+    assert!(v.valid_action_ids.contains(&id), "{v:?}");
+    r.execute_action(0, id).expect("pay with the Tamer");
+}
+
 #[test]
 fn bt26_044_inherited_prevents_leaving_for_data_squad_carrier() {
     let mut r = setup();
@@ -192,9 +204,7 @@ fn bt26_044_inherited_prevents_leaving_for_data_squad_carrier() {
         delete_and_expect_replacement(&mut r, carrier),
         "optional replacement prompt"
     );
-    let v = r.pending_selection_view().unwrap();
-    r.execute_action(v.selecting_player, v.valid_action_ids[0])
-        .unwrap();
+    accept_and_pay_with(&mut r, t);
     let _ = r.auto_resolve();
     assert!(
         field_ids(&r, 0).contains(&"DS6".to_string()),
@@ -252,12 +262,187 @@ fn bt26_044_inherited_save_only_for_carrier_audit() {
         delete_and_expect_replacement(&mut r, carrier),
         "the carrier is still offered the save"
     );
-    let v = r.pending_selection_view().unwrap();
-    r.execute_action(v.selecting_player, v.valid_action_ids[0])
-        .unwrap();
+    accept_and_pay_with(&mut r, t);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"DS6".to_string()), "the carrier stays");
     assert_eq!(sources(&r, t), 0, "cost paid");
+}
+
+// ─── Inherited [OPT] save: DCGO parity (owner ruling 2026-11-23) ─────────────
+//
+// DCGO BT26_044.cs: offered only while one of your Tamers has a face-down
+// card under it (`CanActivateCondition`); after the accept, a Tamer
+// `SelectPermanentEffect` with canNoSelect true. No Tamer chosen ->
+// `RemoveUse()` and the carrier leaves. A Tamer chosen -> `isUsed` (spent),
+// its bottom face-down card is trashed and the carrier doesn't leave.
+// qa/rules/mechanics-gaps-2026-10.md W14 row (f). <Evade> on the carrier keeps
+// it after the would-leave window so the use can be observed on a later
+// removal the same turn.
+
+fn grant_evade(r: &mut DebugRunner, h: digimon_engine::permanent::PermanentHandle) {
+    r.game.modifiers.grant_keyword(
+        h,
+        digimon_engine::enums::Keyword::Evade,
+        digimon_engine::enums::Expiry::Permanent,
+        0,
+    );
+}
+
+/// While <Evade> can also answer the deletion, the engine first asks which
+/// immediate replacement effect applies next (CR 4.3 15-8-5); pick <Evade>
+/// (`evade`) or Lilamon's inherited save. With one candidate left, its own
+/// accept prompt is already pending.
+fn pick_replacement(r: &mut DebugRunner, evade: bool) {
+    let v = r.pending_selection_view().expect("replacement prompt");
+    if v.kind == SelectionKind::EffectChoice && v.prompt.contains("immediate replacement") {
+        let row = v
+            .effect_choices
+            .as_ref()
+            .and_then(|rows| rows.iter().find(|c| c.label.contains("Evade") == evade))
+            .unwrap_or_else(|| panic!("replacement order rows: {:?}", v.effect_choices))
+            .action_id;
+        r.execute_action(v.selecting_player, row).expect("order pick");
+    }
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+/// Delete the carrier with <Evade> also able to answer, and open the save's
+/// own accept prompt.
+fn delete_and_pick_the_save(
+    r: &mut DebugRunner,
+    carrier: digimon_engine::permanent::PermanentHandle,
+) {
+    r.game
+        .delete_permanents_batch(vec![carrier], ReplacementCause::OpponentEffect);
+    pick_replacement(r, false);
+}
+
+/// PASS is legal at the pending prompt (the action mask, not the raw ids).
+fn pass_legal(r: &DebugRunner) -> bool {
+    let p = r.pending_selection().expect("prompt").selecting_player;
+    digimon_engine::action::build_action_mask(&r.game, p)
+        [digimon_engine::action::space::PASS as usize]
+        == 1.0
+}
+
+fn bt26_044_accept_evade(r: &mut DebugRunner) {
+    pick_replacement(r, true);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept <Evade>");
+    assert!(
+        r.pending_selection().is_none(),
+        "the same removal does not offer the declined clause again"
+    );
+}
+
+fn carrier_handle(r: &DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+    let i = field_ids(r, 0)
+        .iter()
+        .position(|c| c == "DS6")
+        .expect("DS6 on the field");
+    digimon_engine::permanent::PermanentHandle { player: 0, index: i as u8 }
+}
+
+#[test]
+fn bt26_044_inherited_outer_decline_keeps_opt() {
+    let mut r = setup();
+    let carrier = r.place_stack(0, &[CARD_ID, "DS6"]);
+    let t = tamer_with_face_down(&mut r, 0, "TAMER", 2);
+    grant_evade(&mut r, carrier);
+    delete_and_pick_the_save(&mut r, carrier);
+    r.execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the save");
+    bt26_044_accept_evade(&mut r);
+    assert_eq!(sources(&r, t), 2, "nothing trashed");
+    let carrier = carrier_handle(&r);
+    assert!(
+        delete_and_expect_replacement(&mut r, carrier),
+        "declined at the accept prompt: offered again this turn"
+    );
+}
+
+#[test]
+fn bt26_044_inherited_accept_then_decline_cost_keeps_opt() {
+    let mut r = setup();
+    let carrier = r.place_stack(0, &[CARD_ID, "DS6"]);
+    let t = tamer_with_face_down(&mut r, 0, "TAMER", 2);
+    grant_evade(&mut r, carrier);
+    delete_and_pick_the_save(&mut r, carrier);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept the save");
+    assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField), "Tamer pick");
+    assert!(
+        pass_legal(&r),
+        "DCGO BT26_044.cs canNoSelect: the Tamer pick may be declined after the accept"
+    );
+    r.execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the cost");
+    assert_eq!(sources(&r, t), 2, "nothing trashed");
+    bt26_044_accept_evade(&mut r);
+    let carrier = carrier_handle(&r);
+    assert!(
+        delete_and_expect_replacement(&mut r, carrier),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+    accept_and_pay_with(&mut r, t);
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(field_ids(&r, 0).contains(&"DS6".to_string()), "saved this time");
+    assert_eq!(sources(&r, t), 1, "one face-down card paid");
+}
+
+#[test]
+fn bt26_044_inherited_declined_cost_lets_carrier_leave() {
+    let mut r = setup();
+    let carrier = r.place_stack(0, &[CARD_ID, "DS6"]);
+    let t = tamer_with_face_down(&mut r, 0, "TAMER", 1);
+    assert!(delete_and_expect_replacement(&mut r, carrier));
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept the save");
+    assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField), "Tamer pick");
+    assert!(pass_legal(&r), "the Tamer pick may be declined after the accept");
+    r.execute_action(0, digimon_engine::action::space::PASS)
+        .expect("decline the cost");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(!field_ids(&r, 0).contains(&"DS6".to_string()), "not paid: the carrier leaves");
+    // The carrier left, so the Tamer moved down a slot.
+    let _ = t;
+    let tamer = field_ids(&r, 0)
+        .iter()
+        .position(|c| c == "TAMER")
+        .expect("Tamer still on the field");
+    let tamer = digimon_engine::permanent::PermanentHandle { player: 0, index: tamer as u8 };
+    assert_eq!(sources(&r, tamer), 1, "nothing trashed");
+}
+
+#[test]
+fn bt26_044_inherited_paid_spends_opt() {
+    let mut r = setup();
+    let carrier = r.place_stack(0, &[CARD_ID, "DS6"]);
+    let t = tamer_with_face_down(&mut r, 0, "TAMER", 2);
+    assert!(delete_and_expect_replacement(&mut r, carrier));
+    accept_and_pay_with(&mut r, t);
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert_eq!(sources(&r, t), 1);
+    let carrier = carrier_handle(&r);
+    assert!(
+        !delete_and_expect_replacement(&mut r, carrier),
+        "spent: not offered again this turn though a face-down card remains"
+    );
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(!field_ids(&r, 0).contains(&"DS6".to_string()));
+}
+
+#[test]
+fn bt26_044_inherited_not_offered_without_a_face_down_tamer_card() {
+    let mut r = setup();
+    let carrier = r.place_stack(0, &[CARD_ID, "DS6"]);
+    r.place_on_field(0, "TAMER", Some(0));
+    assert!(
+        !delete_and_expect_replacement(&mut r, carrier),
+        "no face-down card under a Tamer: not offered (DCGO CanActivateCondition)"
+    );
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(!field_ids(&r, 0).contains(&"DS6".to_string()));
 }
 
 /// Q845 / Q1782: "You may suspend 1 of your opponent's Digimon or Tamers" may

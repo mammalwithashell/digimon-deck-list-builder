@@ -481,3 +481,359 @@ fn bt24_037_dna_accepts_printed_color_pair() {
         "a Yellow Lv.4 + Green Lv.4 pair is a legal Yellow Lv.4 + red/green Lv.4 DNA pair"
     );
 }
+
+// ─── [All Turns][Once Per Turn] would-leave play (main + inherited) ──────────
+//
+// Silphymon (BT24-037) prints the same clause twice, once as its own effect
+// and once as its inherited effect (card face, official bundle, DCGO
+// BT24_037.cs "All Turns - OPT" + "All Turns - OPT - ESS", two hash keys):
+//   "[All Turns] [Once Per Turn] When this Digimon would leave the battle area
+//    other than by your effects, you may play 1 level 4 or lower yellow, red
+//    or [TS] trait Digimon card from its digivolution cards without paying
+//    the cost."
+// DCGO: WhenRemoveField, optional, NOT IsByEffect(own owner); candidate =
+// IsDigimon && Level <= 4 && (Yellow || Red || HasTSTraits) &&
+// CanPlayAsNewPermanent(payCost false). The play does not stop the leave.
+
+mod would_leave_play {
+    use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
+    use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT};
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+    use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    use digimon_engine::permanent::PermanentHandle;
+    use digimon_engine::replacement::ReplacementCause;
+
+    const ID: &str = "BT24-037";
+
+    fn digimon(id: &str, color: CardColor, level: u8, dp: i32, traits: &[&str]) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.colors = vec![color];
+        c.level = Some(level);
+        c.dp = Some(dp);
+        c.play_cost = 5;
+        c.traits = traits.iter().map(|t| t.to_string()).collect();
+        c
+    }
+
+    fn tamer(id: &str, color: CardColor) -> CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Tamer;
+        c.colors = vec![color];
+        c.level = None;
+        c.dp = None;
+        c
+    }
+
+    fn runner() -> DebugRunner {
+        DebugRunner::builder()
+            .dsl_card(ID)
+            .expect("BT24-037 YAML")
+            .dsl_card("BT24-040")
+            .expect("BT24-040 YAML")
+            .add_card(digimon("Y4", CardColor::Yellow, 4, 5000, &[]))
+            .add_card(digimon("R4", CardColor::Red, 4, 5000, &[]))
+            .add_card(digimon("TS4", CardColor::Blue, 4, 5000, &["TS"]))
+            .add_card(digimon("Y3", CardColor::Yellow, 3, 4000, &[]))
+            .add_card(digimon("B4", CardColor::Blue, 4, 5000, &[]))
+            .add_card(digimon("Y5", CardColor::Yellow, 5, 7000, &[]))
+            .add_card(digimon("WEAK", CardColor::Yellow, 4, 3000, &[]))
+            .add_card(digimon("TOP", CardColor::Blue, 6, 12000, &[]))
+            .add_card(digimon("TSTOP", CardColor::Blue, 6, 12000, &["TS"]))
+            .add_card(digimon("BODY-A", CardColor::Blue, 3, 3000, &[]))
+            .add_card(digimon("BODY-B", CardColor::Blue, 3, 3000, &[]))
+            .add_card(tamer("YT", CardColor::Yellow))
+            .add_card(make_test_card("PAD", "Pad"))
+            .deck(0, &["PAD"; 10])
+            .deck(1, &["PAD"; 10])
+            .memory(5)
+            .start()
+    }
+
+    fn on_field(r: &DebugRunner, player: usize, id: &str) -> bool {
+        r.game.players[player]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == id)
+    }
+
+    fn non_pass(r: &DebugRunner) -> Vec<u16> {
+        r.pending_selection()
+            .expect("a pending choice")
+            .valid_action_ids
+            .iter()
+            .copied()
+            .filter(|&a| a != PASS && a != REPLACEMENT_ACCEPT)
+            .collect()
+    }
+
+    fn bt24_037_accept(r: &mut DebugRunner) {
+        assert!(r.pending_is_optional(), "the printed 'you may' is a yes/no");
+        r.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+    }
+
+    fn bt24_037_pick_nth(r: &mut DebugRunner, n: usize) {
+        let a = non_pass(r)[n];
+        let p = r.pending_selection().unwrap().selecting_player;
+        r.execute_action(p, a).expect("pick");
+    }
+
+    fn played_ids(r: &DebugRunner, candidates: &[&str]) -> Vec<String> {
+        candidates
+            .iter()
+            .filter(|id| on_field(r, 0, id))
+            .map(|s| s.to_string())
+            .collect()
+    }
+
+    const ALL: [&str; 8] = ["Y4", "R4", "TS4", "Y3", "B4", "Y5", "WEAK", "YT"];
+
+    #[test]
+    fn bt24_037_prints_two_once_per_turn_would_leave_clauses() {
+        let r = runner();
+        let card = r.compiled_card(ID).expect("compiled BT24-037");
+        let mut scopes: Vec<String> = card
+            .effects
+            .iter()
+            .filter_map(|c| match c {
+                CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                    trigger,
+                    scope,
+                    optional,
+                    once_per_turn,
+                    ..
+                }) if trigger == "when_would_leave_battle_area" => {
+                    assert!(*optional, "'you may play'");
+                    assert!(*once_per_turn, "[Once Per Turn]");
+                    Some(format!("{scope:?}"))
+                }
+                _ => None,
+            })
+            .collect();
+        scopes.sort();
+        let mut want = vec![
+            format!("{:?}", CompiledScope::Inherited),
+            format!("{:?}", CompiledScope::FaceUp),
+        ];
+        want.sort();
+        assert_eq!(scopes, want, "one own and one inherited would-leave clause");
+    }
+
+    /// The pick offers exactly the level-4-or-lower yellow / red / [TS] Digimon
+    /// cards: not a blue untraited Lv.4, not a Lv.5, not a Tamer.
+    #[test]
+    fn bt24_037_main_offers_level_4_or_lower_yellow_red_or_ts_digimon() {
+        let mut played = Vec::new();
+        for n in 0..4 {
+            let mut r = runner();
+            let mut stack = ALL.to_vec();
+            stack.retain(|id| *id != "WEAK");
+            stack.push(ID);
+            let h = r.place_stack(0, &stack);
+            let mem = r.memory();
+            r.game
+                .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+            bt24_037_accept(&mut r);
+            assert_eq!(non_pass(&r).len(), 4, "Y4, R4, TS4 and Y3 are the picks");
+            bt24_037_pick_nth(&mut r, n);
+            assert!(r.pending_selection().is_none(), "no decision is left");
+            let p = played_ids(&r, &ALL);
+            assert_eq!(p.len(), 1, "exactly one card is played: {p:?}");
+            played.extend(p);
+            assert!(!on_field(&r, 0, ID), "the play does not stop the leave");
+            assert_eq!(r.memory(), mem, "without paying the cost");
+        }
+        played.sort();
+        assert_eq!(played, vec!["R4", "TS4", "Y3", "Y4"]);
+    }
+
+    #[test]
+    fn bt24_037_main_applies_to_battle_and_opponent_effects_not_your_own() {
+        for cause in [ReplacementCause::Battle, ReplacementCause::OpponentEffect] {
+            let mut r = runner();
+            let h = r.place_stack(0, &["Y4", ID]);
+            r.game.delete_permanent_with_cause(h, cause);
+            bt24_037_accept(&mut r);
+            bt24_037_pick_nth(&mut r, 0);
+            assert!(r.pending_selection().is_none(), "no decision is left");
+            assert!(on_field(&r, 0, "Y4"), "{cause:?}");
+        }
+        let mut r = runner();
+        let h = r.place_stack(0, &["Y4", ID]);
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OwnEffect);
+        assert!(r.pending_selection().is_none(), "other than by your effects");
+        assert!(!on_field(&r, 0, "Y4"));
+        assert!(!on_field(&r, 0, ID));
+    }
+
+    #[test]
+    fn bt24_037_main_decline_plays_nothing() {
+        let mut r = runner();
+        let h = r.place_stack(0, &["Y4", ID]);
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+        assert!(r.pending_is_optional());
+        r.execute_action(0, PASS).expect("decline");
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(!on_field(&r, 0, "Y4"));
+        assert!(!on_field(&r, 0, ID));
+    }
+
+    /// A card that can't be played (here: a "can't play Digimon with 3000 DP
+    /// or less" lock) is never offered; with only such a card the effect is
+    /// not offered at all.
+    #[test]
+    fn bt24_037_main_offers_only_playable_cards() {
+        let lock = |r: &mut DebugRunner| {
+            r.game.modifiers.add_player_modifier(
+                0,
+                PlayerModifierEntry::simple(
+                    ModifierType::CannotPlayDigimonWithDPAtMost,
+                    3000,
+                    Expiry::Permanent,
+                    None,
+                    1,
+                ),
+            );
+        };
+        let mut r = runner();
+        let h = r.place_stack(0, &["WEAK", ID]);
+        lock(&mut r);
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+        assert!(r.pending_selection().is_none(), "nothing playable, nothing offered");
+        assert!(!on_field(&r, 0, "WEAK"));
+
+        let mut r = runner();
+        let h = r.place_stack(0, &["WEAK", "Y4", ID]);
+        lock(&mut r);
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+        bt24_037_accept(&mut r);
+        assert_eq!(non_pass(&r).len(), 1, "only the playable Y4");
+        bt24_037_pick_nth(&mut r, 0);
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(on_field(&r, 0, "Y4"));
+        assert!(!on_field(&r, 0, "WEAK"));
+    }
+
+    #[test]
+    fn bt24_037_inherited_plays_from_the_carriers_digivolution_cards() {
+        let mut r = runner();
+        let h = r.place_stack(0, &["R4", "B4", ID, "TOP"]);
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+        bt24_037_accept(&mut r);
+        assert_eq!(
+            non_pass(&r).len(),
+            1,
+            "the red Lv.4 (Silphymon itself is Lv.5, the blue Lv.4 has no TS)"
+        );
+        bt24_037_pick_nth(&mut r, 0);
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(on_field(&r, 0, "R4"));
+        assert!(!on_field(&r, 0, "TOP"), "the carrier still leaves");
+    }
+
+    #[test]
+    fn bt24_037_inherited_does_not_apply_to_your_own_effects() {
+        let mut r = runner();
+        let h = r.place_stack(0, &["R4", ID, "TOP"]);
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OwnEffect);
+        assert!(r.pending_selection().is_none());
+        assert!(!on_field(&r, 0, "R4"));
+    }
+
+    /// A Silphymon on top of another Silphymon has both clauses; they are
+    /// separate effects with separate [Once Per Turn] counts (DCGO hash keys
+    /// BT24_037_AT and BT24_037_AT_ESS), so both play a card.
+    #[test]
+    fn bt24_037_main_and_inherited_are_separate_once_per_turn_effects() {
+        let mut r = runner();
+        let h = r.place_stack(0, &["Y4", "R4", ID, ID]);
+        r.game
+            .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
+        // Two would-leave effects apply to one event: the player first
+        // chooses which resolves first (an EffectChoice, no auto-order).
+        let order = r.pending_selection_view().expect("order choice");
+        assert_eq!(
+            order.kind,
+            digimon_engine::selection::SelectionKind::EffectChoice
+        );
+        assert_eq!(order.valid_action_ids.len(), 2, "both clauses are offered");
+        let mut accepted = 0;
+        let mut guard = 0;
+        while r.pending_selection().is_some() && guard < 10 {
+            guard += 1;
+            if r.pending_is_optional() {
+                accepted += 1;
+                r.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+            } else {
+                bt24_037_pick_nth(&mut r, 0);
+            }
+        }
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert_eq!(accepted, 2, "each clause asks its own 'you may'");
+        assert!(on_field(&r, 0, "Y4"));
+        assert!(on_field(&r, 0, "R4"));
+        assert!(r.pending_selection().is_none());
+    }
+
+    /// [Once Per Turn]: Venusmon (BT24-040) keeps the [TS] Silphymon on the
+    /// field the first time, after Silphymon's effect played a card. A second
+    /// "would leave" in the same turn offers Silphymon's effect no more.
+    fn once_per_turn_case(stack: &[&str]) {
+        let mut r = runner();
+        r.place_on_field(0, "BT24-040", Some(0));
+        let body = r.place_on_field(0, "BODY-A", Some(0));
+        r.place_on_field(0, "BODY-B", Some(0));
+        let h = r.place_stack(0, stack);
+        r.game.return_to_hand_from_effect(h, 1);
+        // Both would-leave effects apply; accept each and pick: Venusmon pays
+        // with BODY-A, Silphymon plays its first candidate.
+        let mut guard = 0;
+        while r.pending_selection().is_some() && guard < 8 {
+            guard += 1;
+            if r.pending_is_optional() {
+                r.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
+                continue;
+            }
+            let ids = non_pass(&r);
+            let body_action = encode_attack(0, body.index as u16);
+            let a = if ids.contains(&body_action) { body_action } else { ids[0] };
+            let p = r.pending_selection().unwrap().selecting_player;
+            r.execute_action(p, a).expect("pick");
+        }
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(on_field(&r, 0, "Y4"), "Silphymon's effect played Y4");
+        assert!(!on_field(&r, 0, "BODY-A"), "Venusmon paid with BODY-A");
+        let top = *stack.last().unwrap();
+        let now = r.game.players[0]
+            .battle_area
+            .iter()
+            .position(|p| p.top_card().card_id(&r.game.card_data) == top)
+            .expect("Venusmon kept the TS Digimon on the field");
+        let h2 = PermanentHandle { player: 0, index: now as u8 };
+        r.game.return_to_hand_from_effect(h2, 1);
+        assert!(
+            r.pending_selection().is_none(),
+            "both [Once Per Turn] effects are spent"
+        );
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(!on_field(&r, 0, "R4"), "no second play this turn");
+    }
+
+    #[test]
+    fn bt24_037_main_is_once_per_turn() {
+        once_per_turn_case(&["Y4", "R4", ID]);
+    }
+
+    #[test]
+    fn bt24_037_inherited_is_once_per_turn() {
+        once_per_turn_case(&["Y4", "R4", ID, "TSTOP"]);
+    }
+}
