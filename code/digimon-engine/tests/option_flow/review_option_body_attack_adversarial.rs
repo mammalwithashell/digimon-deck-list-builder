@@ -545,6 +545,21 @@ fn outer_option_used_from_trash_by_an_effect() {
     ];
     let (seen, _) = drive_accepting_with_attack(&mut r, &mut rules, atk);
     assert!(rules.is_empty(), "{seen:#?}");
+    // The order: the outer Option finishes at the declaration. Any Arts
+    // offer comes before the attacker's [When Attacking], and by the time
+    // that [When Attacking] asks its first question the outer card is back
+    // in the trash.
+    let when_attacking = seen
+        .iter()
+        .position(|s| s.contains("Option card from your hand"))
+        .unwrap_or_else(|| panic!("the [When Attacking] use is asked: {seen:#?}"));
+    if let Some(arts) = seen.iter().position(|s| s.contains("Arts")) {
+        assert!(arts < when_attacking, "the Arts offer comes first: {seen:#?}");
+    }
+    assert!(
+        seen[when_attacking].ends_with("monarch_in_trash=1"),
+        "the outer Option was already trashed when [When Attacking] asked: {seen:#?}"
+    );
     assert_eq!(trash_has(&r, 0, "T-PLAINOPT"), 1, "{seen:#?}");
     assert_eq!(r.security_count(1), 2, "two checks: {seen:#?}");
     assert_eq!(trash_has(&r, 0, MONARCH), 1, "back in the trash once: {seen:#?}");
@@ -598,7 +613,11 @@ fn drive_accepting_until_target(
         let actor = sel.selecting_player;
         let ids = sel.valid_action_ids.clone();
         let prompt = sel.prompt.clone();
-        seen.push(format!("p{actor} {:?} {prompt:?} {ids:?}", sel.kind));
+        seen.push(format!(
+            "p{actor} {:?} {prompt:?} {ids:?} monarch_in_trash={}",
+            sel.kind,
+            trash_has(r, 0, MONARCH)
+        ));
         let rule = rules.iter().position(|(needle, _)| prompt.contains(needle));
         let action = match rule {
             Some(i) => match rules.remove(i).1 {
