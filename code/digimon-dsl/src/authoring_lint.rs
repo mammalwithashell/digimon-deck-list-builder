@@ -660,15 +660,15 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         reason: concat!(
             "Rie Kishibe [Main] [Once Per Turn] \"... it may digivolve into [LordKnightmon] in the hand or trash ...\": ",
             "DCGO EX13_074.cs RemoveUse()s on \"Don't digivolve\" (:218-222) and `if (!digivolved)` (:245). The refund is ",
-            "the `else` of `binding_present: lordknightmon`. DCGO does not offer the [Main] without a [LordKnightmon] in ",
-            "hand or trash; ours does (the printed condition), and the empty pick then refunds, so the use is uncounted on ",
-            "that path in both engines.",
+            "the `else` of `binding_present: lordknightmon`. Neither engine offers the [Main] without a [LordKnightmon] in ",
+            "hand or trash (EX13_074.cs:185-190; our clause `condition:`), so the refund is reached on a declined pick, or ",
+            "on an empty one when Rie can't digivolve (the pick's candidate leaf checks that, as DCGO's filtered pick does).",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_may_decline",
             "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_is_once_per_turn",
             "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_decline_then_state_change_redeclares_and_spends",
-            "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_without_lordknightmon_keeps_the_once_per_turn",
+            "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_when_rie_cannot_digivolve_no_card_is_offered_and_the_use_is_kept",
         ],
     },
 ];

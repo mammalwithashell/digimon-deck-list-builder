@@ -14,12 +14,12 @@
 #   (The per-card JSON files the [Security] line under inherited text; the
 #   official DB has it as the Security Effect.)
 #
-# DCGO: no EX13_074.cs at b9a0638cd. Nearest behavioural analogue:
-# BT22_090.cs (older Rie Kishibe, "this Tamer may digivolve into
-# [LordKnightmon] in the hand …") — `DigivolveIntoHandOrTrashCard(targetPermanent:
-# card.PermanentOfThisCard(), …)`: a plain digivolve onto the Tamer permanent,
-# so the Tamer card and every card under it become digivolution cards of the
-# new Digimon, the digivolution draw happens and [When Digivolving] fires.
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX13/Purple/EX13_074.cs (absent at
+# b9a0638cd; present in the current submodule). Its [Main] uses
+# `DigivolveIntoHandOrTrashCard(targetPermanent: card.PermanentOfThisCard(), …)`:
+# a plain digivolve onto the Tamer permanent, so the Tamer card and every card
+# under it become digivolution cards of the new Digimon, the digivolution draw
+# happens and [When Digivolving] fires.
 #
 # ─── Clauses ─────────────────────────────────────────────────────────────────
 # 1. [Start of Your Turn] memory floor 3 (BT21-102 / BT22-084 idiom; mandatory).
@@ -38,9 +38,12 @@
 #    (G-TAMER-DIGIVOLVE-INTO-DIGIMON, resolved 2026-10-01).
 #    [Once Per Turn]: a declined or empty pick gives the use back (owner
 #    ruling 2026-11-24, DCGO EX13_074.cs RemoveUse; see the clause).
-#    Face-down cards under the Tamer are counted by their printed text like
-#    any other source (DCGO `CardSource.HasText` does not consult
-#    `IsFlipped`); unverified against general_rule.pdf (not in this checkout).
+#    Only FACE-UP cards under the Tamer count (EX13_074.cs:178-180
+#    `!cardSource.IsFaceDown && HasText("Knightmon")`; CR 4.3 4-7-9: a
+#    face-down card under another card has no card information, so
+#    `in_text_contains` never matches it).
+#    Offer gate (EX13_074.cs:185-190 CanUseCondition): a [LordKnightmon]
+#    (by name) must be in the hand or trash, else the [Main] is not offered.
 # 4. [Security] play self free.
 
 card: EX13-074
@@ -93,11 +96,22 @@ effects:
   - when: main_on_field
     once_per_turn: true
     summary: "[Main][OPT] With 3+ [Knightmon] text cards under this Tamer, it may digivolve into [LordKnightmon] in hand/trash for cost 3, ignoring digivolution requirements"
+    # DCGO EX13_074.cs:185-190 `CanUseCondition`: 3+ face-up [Knightmon]
+    # text cards under this Tamer AND a card named [LordKnightmon] in the hand
+    # or trash; otherwise the [Main] is not offered (owner ruling 2026-11-24:
+    # "Generally let's look to match dcgo").
     condition:
-      self_source_count:
-        filter: { in_text_contains: Knightmon }
-        op: gte
-        value: 3
+      all_of:
+        - self_source_count:
+            filter: { in_text_contains: Knightmon }
+            op: gte
+            value: 3
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand, trash]
+              name_is: LordKnightmon
+            n: 1
     process:
       - select_union_zone:
           of: you
@@ -115,6 +129,14 @@ effects:
       # use"; the owner chose DCGO parity over the CR 4.3 15-14-1-4 /
       # 15-8-4-1/-2 reading. The main-declaration loop guard withholds the
       # identical declaration until the state changes.
+      # DCGO's other refund path, a [LordKnightmon] chosen but Rie not
+      # digivolving (:245), is unreachable here: the compile pass gives this
+      # pick `can_digivolve_onto_with_cost { ignore_requirements }`
+      # (G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT), which checks the same
+      # `CannotDigivolve` / `CannotDigivolveDigimonByEffect` / payment gates as
+      # the digivolve, so a chosen card always digivolves; a Rie that can't
+      # digivolve is offered no card and takes the `else` below, as DCGO's
+      # filtered pick does.
       - if:
           condition: { binding_present: lordknightmon }
           then:

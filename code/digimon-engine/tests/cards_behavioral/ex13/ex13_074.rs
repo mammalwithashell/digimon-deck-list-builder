@@ -426,21 +426,67 @@ fn ex13_074_main_only_offers_lordknightmon() {
 }
 
 /// No [LordKnightmon] in hand or trash: DCGO does not offer the [Main]
-/// (EX13_074.cs CanUseCondition), so no use is ever counted. Ours offers it
-/// (the condition is the printed one) and the empty pick gives the use back
-/// (owner ruling 2026-11-24, DCGO :245); the loop guard then withholds the
-/// identical declaration, and a [LordKnightmon] arriving offers it again.
+/// (EX13_074.cs:185-190 CanUseCondition: `HasMatchConditionOwnersHand ||
+/// HasMatchConditionOwnersCardInTrash` of `EqualsCardName("LordKnightmon")`),
+/// so it is never declared and no use is counted. Owner ruling 2026-11-24:
+/// "Generally let's look to match dcgo". A [LordKnightmon] arriving in the
+/// trash makes it declarable.
 #[test]
-fn ex13_074_main_without_lordknightmon_keeps_the_once_per_turn() {
+fn ex13_074_main_not_offered_without_lordknightmon_in_hand_or_trash() {
     let mut r = builder().memory(5).start();
     let rie = rie_with_knights(&mut r, 3);
+    assert!(!main_offered(&r, rie), "DCGO CanUseCondition: no [LordKnightmon]");
+    assert!(!r.game.activate_field_main(0, rie.index as usize), "not declarable");
+    assert_eq!(rie_uses(&r, rie), 0, "the use is not counted");
+    r.inject_trash(0, "LKM");
+    assert!(main_offered(&r, rie), "a [LordKnightmon] in the trash: offered");
+}
+
+/// DCGO counts only FACE-UP [Knightmon] text cards under Rie
+/// (EX13_074.cs:178-180 `!cardSource.IsFaceDown && HasText("Knightmon")`). A
+/// face-down card under another card has no card information (CR 4.3
+/// 4-7-9), so 2 face-up + 1 face-down is
+/// not enough.
+#[test]
+fn ex13_074_main_face_down_knightmon_cards_do_not_count() {
+    let mut r = builder().hand(0, &["LKM"]).memory(5).start();
+    let rie = rie_with_knights(&mut r, 3);
+    let i = rie.index as usize;
+    r.game.players[0].battle_area[i].card_sources[0].face_down = true;
+    assert!(!main_offered(&r, rie), "only 2 face-up [Knightmon] text cards");
+    r.push_source(rie, "KNIGHT");
+    assert!(main_offered(&r, rie), "3 face-up: offered");
+}
+
+/// The path "a [LordKnightmon] is picked but Rie does not digivolve" (DCGO
+/// :245 `if (!digivolved) RemoveUse()`) is not reachable here: the pick
+/// carries the compile-time candidate leaf `can_digivolve_onto_with_cost
+/// { ignore_requirements }` (G-DSL-PAID-DIGIVOLVE-PICK-PAYMENT), which checks
+/// the same `CannotDigivolve` / `CannotDigivolveDigimonByEffect` / payment
+/// gates as the digivolve. So a Rie that can't digivolve is offered no card,
+/// as in DCGO (`DigivolveIntoHandOrTrashCard` filters by `CanNotEvolve` /
+/// `CanPlayCardTargetFrame`), and the empty pick keeps the use (DCGO
+/// RemoveUse; the `else: refund_opt`).
+#[test]
+fn ex13_074_main_when_rie_cannot_digivolve_no_card_is_offered_and_the_use_is_kept() {
+    let mut r = builder().hand(0, &["LKM"]).memory(5).start();
+    let rie = rie_with_knights(&mut r, 3);
+    r.game.modifiers.add(
+        rie,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotDigivolve,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            1,
+        ),
+    );
+    assert!(main_offered(&r, rie), "DCGO CanUseCondition does not check digivolvability");
     assert!(r.game.activate_field_main(0, rie.index as usize));
     r.auto_resolve().ok();
-    assert!(r.pending_selection().is_none(), "nothing to choose");
-    assert_eq!(rie_uses(&r, rie), 0, "the use is not counted");
+    assert!(r.pending_selection().is_none(), "no [LordKnightmon] can digivolve: nothing to choose");
+    assert_eq!(stack(&r, rie).last().map(|(id, _)| id.as_str()), Some(CARD_ID));
+    assert_eq!(rie_uses(&r, rie), 0, "DCGO RemoveUse: the use is kept");
     assert!(!main_offered(&r, rie), "loop guard: withheld while nothing changed");
-    r.inject_trash(0, "LKM");
-    assert!(main_offered(&r, rie), "a [LordKnightmon] arrived: offered again");
 }
 
 /// Digivolving spends the [Once Per Turn] (DCGO keeps the use once
