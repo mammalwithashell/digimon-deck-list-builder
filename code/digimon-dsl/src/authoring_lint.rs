@@ -448,11 +448,14 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         row: RefundRow::CostDeclinedByOwnerRuling,
         reason: concat!(
             "Sukamon's inherited copy of Chuumon's clause: owner ruling 2026-11-23, parity with DCGO (EX13_028.cs, ",
-            "same body as EX13_027.cs; Q7288). Offered only while another [Sukamon]-named Digimon exists, so the ",
-            "refund runs only on a declined pick; a chosen Digimon spends the use.",
+            "same body as EX13_027.cs; Q7288). Offered while another [Sukamon]-named Digimon exists, deletable or ",
+            "not (owner ruling 2026-11-24, `offer_unpayable_deletion_payers`), so the refund runs only on a declined ",
+            "pick; a chosen Digimon, even one that can't be deleted, spends the use.",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_undeletable_only_pass_keeps_opt",
+            "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing",
             "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_once_per_turn",
             "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_not_offered_without_other_sukamon",
         ],
