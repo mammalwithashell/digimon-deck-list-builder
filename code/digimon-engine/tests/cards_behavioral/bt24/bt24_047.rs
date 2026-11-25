@@ -347,3 +347,97 @@ fn bt24_047_unsuspend_matches_bird_as_substring_of_any_trait() {
         assert_eq!(offered, eligible, "{traits:?}: unsuspend eligibility");
     }
 }
+
+// ─── Inherited [All Turns][Once Per Turn] battle deletion → gain 1 memory ────
+//
+// Kokatorimon (BT24-047) card face inherited box; DCGO BT24_047.cs
+// "All Turns - ESS" (OnEndBattle, inherited, maxCountPerTurn 1).
+
+mod inherited_memory {
+    use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+    use digimon_engine::enums::CardKind;
+
+    fn digimon(id: &str, dp: i32) -> digimon_engine::CardData {
+        let mut c = make_test_card(id, id);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(5);
+        c.dp = Some(dp);
+        c
+    }
+
+    fn runner() -> DebugRunner {
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT24-047")
+            .expect("BT24-047 YAML")
+            .add_card(digimon("CARRIER", 9000))
+            .add_card(digimon("WEAK-A", 1000))
+            .add_card(digimon("WEAK-B", 1000))
+            .add_card(digimon("STRONG", 15000))
+            .add_card(make_test_card("PAD", "Pad"))
+            .deck(0, &["PAD"; 8])
+            .deck(1, &["PAD"; 8])
+            .memory(3)
+            .start();
+        r.game.turn_count = 1;
+        r
+    }
+
+    fn index_of(r: &DebugRunner, player: usize, id: &str) -> Option<usize> {
+        r.game.players[player]
+            .battle_area
+            .iter()
+            .position(|p| p.top_card().card_id(&r.game.card_data) == id)
+    }
+
+    /// The carrier deletes an opponent's Digimon in battle: +1 memory. A second
+    /// battle deletion in the same turn gains nothing ([Once Per Turn]).
+    #[test]
+    fn bt24_047_inherited_battle_deletion_gains_one_memory_once_per_turn() {
+        let mut r = runner();
+        let carrier = r.place_stack(0, &["BT24-047", "CARRIER"]);
+        let a = r.place_on_field(1, "WEAK-A", Some(0));
+        r.place_on_field(1, "WEAK-B", Some(0));
+        let mem = r.memory();
+        r.attack_digimon(carrier, a, false);
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(index_of(&r, 1, "WEAK-A").is_none(), "deleted in battle");
+        assert_eq!(r.memory(), mem + 1, "gain 1 memory");
+
+        let ci = index_of(&r, 0, "CARRIER").expect("carrier survives");
+        r.game.players[0].battle_area[ci].is_suspended = false;
+        let carrier = digimon_engine::permanent::PermanentHandle { player: 0, index: ci as u8 };
+        let bi = index_of(&r, 1, "WEAK-B").expect("second target");
+        let b = digimon_engine::permanent::PermanentHandle { player: 1, index: bi as u8 };
+        r.attack_digimon(carrier, b, false);
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(index_of(&r, 1, "WEAK-B").is_none(), "second deletion in battle");
+        assert_eq!(r.memory(), mem + 1, "[Once Per Turn]: no second gain");
+    }
+
+    /// Losing the battle (the carrier is deleted) gains nothing.
+    #[test]
+    fn bt24_047_inherited_no_memory_when_the_carrier_loses() {
+        let mut r = runner();
+        let carrier = r.place_stack(0, &["BT24-047", "CARRIER"]);
+        let s = r.place_on_field(1, "STRONG", Some(0));
+        let mem = r.memory();
+        r.attack_digimon(carrier, s, false);
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(index_of(&r, 0, "CARRIER").is_none());
+        assert_eq!(r.memory(), mem);
+    }
+
+    /// It is an inherited effect: Kokatorimon itself on top does not gain.
+    #[test]
+    fn bt24_047_face_up_kokatorimon_does_not_gain_from_its_inherited_box() {
+        let mut r = runner();
+        let own = r.place_on_field(0, "BT24-047", Some(0));
+        // Kokatorimon has 4000 DP; WEAK-A has 1000.
+        let a = r.place_on_field(1, "WEAK-A", Some(0));
+        let mem = r.memory();
+        r.attack_digimon(own, a, false);
+        assert!(r.pending_selection().is_none(), "no decision is left");
+        assert!(index_of(&r, 1, "WEAK-A").is_none());
+        assert_eq!(r.memory(), mem);
+    }
+}

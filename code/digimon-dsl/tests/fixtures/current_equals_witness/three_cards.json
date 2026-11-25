@@ -11043,7 +11043,8 @@
                       "trashed_source_trait_has": null,
                       "would_link_card_trait_any_of": null,
                       "your_turn": null,
-                      "zone": []
+                      "zone": [],
+                      "can_play_from_effect_without_cost": true
                     },
                     "material_carrier_filter": null,
                     "material_of": null,
@@ -12359,7 +12360,8 @@
                             "trashed_source_trait_has": null,
                             "would_link_card_trait_any_of": null,
                             "your_turn": null,
-                            "zone": []
+                            "zone": [],
+                            "can_play_from_effect_without_cost": true
                           },
                           "of": "You",
                           "optional": true,
@@ -13708,7 +13710,8 @@
                                   "trashed_source_trait_has": null,
                                   "would_link_card_trait_any_of": null,
                                   "your_turn": null,
-                                  "zone": []
+                                  "zone": [],
+                                  "can_play_from_effect_without_cost": true
                                 },
                                 "of": "You",
                                 "optional": false,

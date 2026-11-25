@@ -35,10 +35,19 @@
 # over YOUR Digimon -> GainRush + SAttack+1 + DP+5000 -> "then may attack"
 # = SelectAttackEffect; Arts Digivolve = CardEffectFactory.ArtsDigivolveEffect):
 #   * Use from hand: no face-choice prompt (the Digimon face has no play cost).
-#   * The immediate SelectAttackEffect precedes the Arts/trash decision.
+#   * The immediate SelectAttackEffect precedes the Arts/trash decision, and
+#     that decision comes at the attack DECLARATION, before ST23-01's [When
+#     Attacking] and before any security check (asserted at 19: security 5,
+#     BT25-057 already in the trash). DCGO: AttackProcess.cs:242 returns at the
+#     declaration; CardController.cs:2026-2129 resolves the Arts or trashes the
+#     card; TurnStateMachine.cs:1277-1286 then runs [When Attacking] and the
+#     attack. Official Q4962 / Q4346. (Owner default "Generally let's look to
+#     match dcgo", applied to this card by the orchestrator, 2026-11-25.)
 #   * The Arts Digivolve prompt (ours: OwnField "Choose a card for Arts
-#     Digivolve, or pass to trash this Option") has no DCGO prompt kind pinned
-#     here; its shape on the wire is unverified.
+#     Digivolve, or pass to trash this Option") is pinned to DCGO's
+#     SelectPermanentEffect (ArtsDigivolve.cs: SelectPermanentEffect,
+#     canNoSelect: true) -- the order discriminator. The Arts-ACCEPTED twin of
+#     this line is BT25-057-effect4-arts-at-declaration.yaml.
 #   * ST23-01's inherited [When Attacking] (ours: one declinable Hand pick;
 #     DCGO OptionalSkill per its YAML) is declined.
 card: BT25-057
@@ -109,8 +118,15 @@ steps:
   - actor: 0
     do: { select: { targets: [opp.security] } }
     expect: { prompt: SelectAttackEffect }
+  # ORDER PIN (2026-11-25): the Option finishes at the attack DECLARATION, so
+  # the first decision after `opp.security` is its own <Arts Digivolve>
+  # (DCGO ArtsDigivolve.cs: SelectPermanentEffect, canNoSelect), before
+  # ST23-01's [When Attacking] and before any security check -- see the
+  # assert at 19. Under the former "hold until the attack ends" order this
+  # step would meet ST23-01's OptionalSkill instead and abort.
   - actor: 0
     do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
   - actor: 0
     do: { select: { decline: true } }
   - actor: 0
@@ -120,6 +136,12 @@ steps:
     do: { pass: {} }
     expect: { prompt: breeding_action }
 assert:
+  - at: 19
+    that:
+      turn: 5
+      p1.security: 5
+      p1.trash: []
+      p0.trash: [BT25-057]
   - at: 20
     that:
       turn: 5

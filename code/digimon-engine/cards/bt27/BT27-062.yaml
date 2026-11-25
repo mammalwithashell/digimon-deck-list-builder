@@ -1,0 +1,47 @@
+card: BT27-062
+name: Maildramon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+form: Armor Form
+attribute: Free
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] You may play or use 1 card with [Knightmon] in its text from your hand with the cost reduced by 2."
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], in_text_contains: Knightmon, can_play_or_use_from_effect: true, affordable_with_cost: { reduce: 2 } }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: candidate
+          optional: true
+          filter: { in_text_contains: Knightmon, can_play_or_use_from_effect: true, affordable_with_cost: { reduce: 2 } }
+          prompt: "Play or use a Knightmon-text card with its cost reduced by 2?"
+      - play_or_use_from_hand: { of: you, hand_index: candidate, cost_delta: { reduce: 2 } }
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by deleting 1 of your other Digimon with [Knightmon] in its text, it doesn't leave."
+    scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    once_per_turn: true
+    active_when: { is_source: true, replacement_subject_is_mine: true, kind: digimon }
+    process:
+      - select_own_permanent:
+          bind_as: payment
+          optional: true
+          filter: { kind: digimon, other: true, in_text_contains: Knightmon }
+          prompt: "Delete another Knightmon-text Digimon to prevent this Digimon from leaving?"
+      - delete_permanent: { target: payment }
+      - cancel_replacement: {}

@@ -23,6 +23,97 @@ fn ex12_071_has_sw_use_requirement() {
     );
 }
 
+// ─── <Use Req. ([SW] trait)> met by a lone Saneiketsu Mega ──────────────────
+//
+// Nezhamon (EX12-019), Erlangmon (EX12-034) and Takutoumon (EX12-057) print
+// .../Shambala/SW on the card face. Each has two of Saneiketsu Invitation's three
+// colours (black/blue/red), so alone on the field it fails the colour requirement
+// (CR 4.3 4-22-3: all of an Option's colours) and only the <Use Req.> (16-42-3)
+// lets the Option be used. cards.json and the YAML left [SW] out, so the Option
+// stayed in hand. DCGO EX12_071.cs:16-20 `UseRequirements` gates on
+// `cardSource.EqualsTraits("SW")`.
+
+const SANEIKETSU_MEGAS: [&str; 3] = ["EX12-019", "EX12-034", "EX12-057"];
+
+/// EX12-071 in hand, `mega` alone in the battle area, enough memory.
+fn lone_mega_board(runner: DebugRunner, mega: &str) -> DebugRunner {
+    let mut runner = runner;
+    runner.place_on_field(0, mega, Some(0));
+    runner
+}
+
+fn invitation_usable(runner: &mut DebugRunner) -> bool {
+    let slot = hand_index(runner, 0, CARD_ID);
+    runner.game.play_option_from_hand(0, slot)
+        != digimon_engine::selection::OptionPlayResult::Invalid
+}
+
+/// The production card (built from data/cards.json, as in every real game).
+#[test]
+fn ex12_071_use_req_is_met_by_a_lone_production_saneiketsu_mega() {
+    let production = digimon_engine::deck_tools::full_card_data();
+    for mega in SANEIKETSU_MEGAS {
+        let card = production
+            .get(mega)
+            .unwrap_or_else(|| panic!("{mega} in production cards.json"))
+            .clone();
+        assert!(
+            card.traits.iter().any(|t| t == "SW"),
+            "{mega} prints the [SW] trait; production traits {:?}",
+            card.traits
+        );
+        let runner = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("EX12-071 YAML loads")
+            .add_card(card)
+            .hand(0, &[CARD_ID])
+            .memory(5)
+            .start();
+        let mut runner = lone_mega_board(runner, mega);
+        assert!(
+            invitation_usable(&mut runner),
+            "a lone {mega} meets Saneiketsu Invitation's <Use Req. ([SW] trait)>"
+        );
+    }
+}
+
+/// The DSL spec (what DebugRunner fixtures see).
+#[test]
+fn ex12_071_use_req_is_met_by_a_lone_dsl_saneiketsu_mega() {
+    for mega in SANEIKETSU_MEGAS {
+        let runner = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("EX12-071 YAML loads")
+            .dsl_card(mega)
+            .expect("Saneiketsu Mega YAML loads")
+            .hand(0, &[CARD_ID])
+            .memory(5)
+            .start();
+        let mut runner = lone_mega_board(runner, mega);
+        assert!(
+            invitation_usable(&mut runner),
+            "a lone {mega} (DSL spec) meets Saneiketsu Invitation's <Use Req. ([SW] trait)>"
+        );
+    }
+}
+
+/// Negative control: a red/black Mega without [SW] does not meet the colour
+/// requirement (blue missing) nor the <Use Req.>.
+#[test]
+fn ex12_071_use_req_is_not_met_by_a_lone_red_black_digimon_without_sw() {
+    let mut no_sw = super::support::digimon("NO-SW", CardColor::Red, 6, 12, 12000, &["Shambala"]);
+    no_sw.colors = vec![CardColor::Red, CardColor::Black];
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-071 YAML loads")
+        .add_card(no_sw)
+        .hand(0, &[CARD_ID])
+        .memory(5)
+        .start();
+    let mut runner = lone_mega_board(runner, "NO-SW");
+    assert!(!invitation_usable(&mut runner));
+}
+
 #[test]
 fn ex12_071_main_trashes_sw_card_draws_two_and_places_delay_option() {
     let mut runner = DebugRunner::builder()

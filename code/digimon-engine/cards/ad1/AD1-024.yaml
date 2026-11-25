@@ -42,17 +42,38 @@
 #     - The suspend pick is DECLINABLE (DCGO canNoSelect: true); unsuspend-self
 #       is coupled to the pick actually happening (DCGO AfterSelect
 #       permanents.Count > 0) via `binding_exists: suspend_target`.
-#     - When the opponent has NO Digimon at all, DCGO offers a standalone
-#       "Will you unsuspend this card?" — encoded as an optional
-#       `select_own_permanent` filtered `is_source: true` + `is_suspended`
-#       so the Yes/No stays RL-visible.
+#     - When the opponent has NO Digimon at all, DCGO (AD1_024.cs L211-235)
+#       asks "Will you unsuspend this card?" Yes/No WHATEVER this Digimon's
+#       state -- a `select_effect_choice` [Yes, No]. Yes unsuspends this
+#       Digimon (a no-op if it is already unsuspended) and sets DCGO's
+#       `executed`, so the use is spent; No executes nothing.
 #     - The deck-bottom leg is gated on the triggering play/digivolve being
 #       effect-initiated (DCGO CardEffectCommons.IsByEffect →
 #       `event_is_effect_initiated`) and is INDEPENDENT of the suspend pick;
 #       its select is optional (DCGO canNoSelect: true).
-#     - If NOTHING executed (every binding absent), `refund_opt` un-records
-#       the once-per-turn — DCGO's executed-flag RemoveUse for the
-#       accepted-then-declined-everything path.
+#     - If NOTHING executed (no suspend pick, no Yes, no return pick),
+#       `refund_opt` un-records the once-per-turn -- DCGO's executed-flag
+#       RemoveUse (AD1_024.cs L265) for the accepted-then-declined-everything
+#       path, including No on the nothing-possible board (no opponent
+#       Digimon, this Digimon unsuspended): DCGO asks there too and No keeps
+#       the use, Yes spends it. Owner ruling 2026-11-24: "Generally let's
+#       look to match dcgo".
+#     - Recorded departure (owner default, the same ruling): the suspend
+#       pick's candidates are ALL opponent Digimon, as in DCGO (no
+#       is-suspended / can-suspend filter), so a player may pick an
+#       already-suspended Digimon and still unsuspend this one while a
+#       suspendable Digimon was available. Official Q6916 ("if your opponent
+#       has a Digimon that can suspend, you must suspend it when possible")
+#       reads the other way; we follow DCGO. The printed effect is "you
+#       may suspend ... Then, ... you may return ...", the owner-decided W13
+#       shape (qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21): both
+#       halves declined means the effect was not activated, so the use is
+#       kept (CR 4.3 15-14-1-4 is silent on declined optional parts; Q1818).
+#       The outer confirm is DCGO's unprinted always-shown Yes/No
+#       (SetUpActivateClass isOptional false + SetIsSkippable), not a printed
+#       whole-effect "you may", so accepting it is not by itself the
+#       activation. Reviewed exemption: authoring_lint
+#       REFUND_AFTER_ACCEPT_REVIEWED.
 
 card: AD1-024
 name: "Imperialdramon: Fighter Mode"
@@ -164,16 +185,14 @@ effects:
                     zone: [battle_area]
                     kind: digimon
           then:
-            - select_own_permanent:
+            - select_effect_choice:
                 bind_as: standalone_unsuspend
-                optional: true
-                continue_on_decline: true
-                filter:
-                  all_of:
-                    - is_source: true
-                    - is_suspended: true
+                labels: ["Yes", "No"]
                 prompt: "Will you unsuspend this Digimon?"
-            - unsuspend: { target: standalone_unsuspend }
+            - if:
+                condition: { equals: [standalone_unsuspend, 0] }
+                then:
+                  - unsuspend: { target: source }
       # By-effect leg — independent of the suspend pick (DCGO runs it inside
       # the accepted confirm regardless of the pick outcome).
       - if:
@@ -189,12 +208,17 @@ effects:
                     - is_suspended: true
                 prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
             - return_to_deck: { target: byeffect_bounce, position: bottom }
-      # DCGO executed-flag: nothing ran → RemoveUse (refund the OPT).
+      # DCGO executed-flag: nothing ran -> RemoveUse (AD1_024.cs L265; W13:
+      # keep the OPT). "Nothing ran" = no suspend pick, the standalone Yes/No
+      # not answered Yes (absent when the opponent had Digimon; `equals` on an
+      # absent binding is false), and no return pick. There is no separate
+      # nothing-possible row: with no opponent Digimon DCGO always asks the
+      # Yes/No, Yes spends and No keeps (owner ruling 2026-11-24).
       - if:
           condition:
             all_of:
               - binding_absent: suspend_target
-              - binding_absent: standalone_unsuspend
+              - not: { equals: [standalone_unsuspend, 0] }
               - binding_absent: byeffect_bounce
           then:
             - refund_opt: {}

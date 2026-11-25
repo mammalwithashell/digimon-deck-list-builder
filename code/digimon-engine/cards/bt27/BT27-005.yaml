@@ -1,0 +1,21 @@
+card: BT27-005
+name: Motimon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+form: In-Training
+traits: [Lesser]
+
+effects:
+  - text: "[Your Turn] [Once Per Turn] When any of your black Digimon are played, ＜Draw 1＞."
+    scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      event_target_owner: you
+      event_target_kind: digimon
+      event_target_color_any_of: [black]
+    process:
+      - draw: { of: you, count: 1 }

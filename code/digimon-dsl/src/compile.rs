@@ -112,6 +112,9 @@ fn compile_field_selector(s: crate::step::FieldSelector) -> CompiledFieldSelecto
         crate::step::FieldSelector::LowestMaterialCount => {
             CompiledFieldSelector::LowestMaterialCount
         }
+        crate::step::FieldSelector::LowestMaterialCountRedirection => {
+            CompiledFieldSelector::LowestMaterialCountRedirection
+        }
     }
 }
 
@@ -1104,6 +1107,7 @@ fn compile_predicate(
             }),
         }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
+        link_requirement_met_by_self: p.link_requirement_met_by_self,
         can_play_or_use_from_effect: p.can_play_or_use_from_effect,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
         can_play_to_breeding_from_trash: p.can_play_to_breeding_from_trash,
@@ -1217,7 +1221,7 @@ fn compile_predicate(
         has_refireable_effect: p.has_refireable_effect.as_ref().and_then(|timing| {
             if matches!(
                 timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "on_deletion"
             ) {
                 Some(timing.clone())
             } else {
@@ -1225,7 +1229,7 @@ fn compile_predicate(
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.has_refireable_effect"),
                     message: format!(
-                        "unknown refire timing `{timing}`: expected `on_play`, `when_digivolving` or \
+                        "unknown refire timing `{timing}`: expected `on_play`, `when_digivolving`, `on_deletion` or \
                          `on_play_or_when_digivolving`"
                     ),
                 });
@@ -3471,6 +3475,7 @@ fn compile_step(
         S::TrashBottomSources(a) => CompiledStep::TrashBottomSources {
             target: compile_binding_ref(&a.target),
             count: a.count,
+            bind_trashed_as: a.bind_trashed_as.clone(),
         },
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),
@@ -3479,6 +3484,8 @@ fn compile_step(
             CompiledStep::TrashBottomFaceDownSourceUnderTamer {
                 of: compile_player_ref(a.of),
                 optional: a.optional,
+                continue_on_decline: a.continue_on_decline,
+                bind_as: a.bind_as.clone(),
             }
         }
         S::TrashBottomFaceDownSourcesUnderTamers(a) => {
@@ -4171,6 +4178,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             continue_on_decline: a.continue_on_decline,
+            offer_unpayable_deletion_payers: a.offer_unpayable_deletion_payers,
             then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectOpponentPermanent(a) => CompiledStep::SelectOpponentPermanent {
@@ -4181,6 +4189,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             continue_on_decline: a.continue_on_decline,
+            offer_unpayable_deletion_payers: a.offer_unpayable_deletion_payers,
             then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectAnyPermanent(a) => CompiledStep::SelectAnyPermanent {
@@ -4192,6 +4201,7 @@ fn compile_step(
             optional: a.optional,
             then: compile_then_tail(&a.then, prefix, card_id, errors),
             continue_on_decline: a.continue_on_decline,
+            offer_unpayable_deletion_payers: a.offer_unpayable_deletion_payers,
         },
         S::SelectDnaPair(a) => CompiledStep::SelectDnaPair {
             left_filter: compile_predicate(
@@ -4801,7 +4811,6 @@ fn compile_step(
             without_suspending: a.without_suspending,
             ignore_summoning_sickness: a.ignore_summoning_sickness,
             optional: a.optional,
-            windowed: a.windowed,
             prompt: a.prompt.clone(),
             cost_upgrade: a.cost_upgrade.map(|u| CompiledAttackCostUpgrade {
                 dp: u.dp.unwrap_or(0),
@@ -4860,7 +4869,11 @@ fn compile_step(
                 source: compile_binding_ref(&a.source),
                 timing: if matches!(
                     a.timing.as_str(),
-                    "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "option_main"
+                    "on_play"
+                        | "when_digivolving"
+                        | "on_play_or_when_digivolving"
+                        | "on_deletion"
+                        | "option_main"
                 ) {
                     a.timing.clone()
                 } else {

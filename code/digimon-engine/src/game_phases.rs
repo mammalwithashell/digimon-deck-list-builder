@@ -44,6 +44,9 @@ impl Game {
     /// Begin a new turn for the current turn player.
     pub(crate) fn begin_turn(&mut self) {
         let tp = self.turn_player();
+        // CR 4.3 15-14-1-5-1: a new turn; nothing of the main-declaration
+        // guard survives it (`game::main_declare_guard`).
+        self.main_declare_guard = Default::default();
 
         // CR 4.3 15-14-1-5-1: reset when the turn changes, before
         // start-turn effects (and their derived events) can spend new uses.
@@ -433,6 +436,7 @@ impl Game {
         // §18-3: the turn change hands the next decision to the other
         // player; the loop watch starts over (see `drain_effect_queue`).
         self.reset_loop_watch();
+        self.note_turn_action();
         self.turn_end_check_deferred = false;
 
         self.set_turn_phase(GamePhase::EndTurn);

@@ -397,6 +397,7 @@ fn bind_of(step: &CompiledStep) -> Option<&String> {
         | S::SelectZoneCards { bind_as, .. }
         | S::SelectReveal { bind_as, .. }
         | S::SelectUnionZone { bind_as, .. }
+        | S::SelectOwnSources { bind_as, .. }
         | S::SelectOwnPermanent { bind_as, .. }
         | S::SelectOpponentPermanent { bind_as, .. }
         | S::SelectOwnBreedingPermanent { bind_as, .. }
@@ -412,7 +413,8 @@ fn card_filter(step: &mut CompiledStep) -> Option<&mut CompiledPredicate> {
         | S::SelectTrash { filter, .. }
         | S::SelectZoneCards { filter, .. }
         | S::SelectReveal { filter, .. }
-        | S::SelectUnionZone { filter, .. } => Some(filter),
+        | S::SelectUnionZone { filter, .. }
+        | S::SelectOwnSources { filter, .. } => Some(filter),
         _ => None,
     }
 }

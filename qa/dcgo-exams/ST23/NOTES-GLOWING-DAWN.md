@@ -149,7 +149,7 @@ the ones without a committed exam line: `qa/archetype-qa/glowing-dawn-repros/`.
 | Severity | Finding | Where it shows |
 |---|---|---|
 | ✅ | **Fixed by #708** (G-ENGINE-BARRIER-CANDIDATE-NOT-CARRIER-GATED). Was: `<Barrier>` replacement not scoped to its carrier: offered to the OPPONENT when an inherited-Barrier attacker deletes their Digimon; accepting spared their Digimon, and either answer dropped the attacker's `<Piercing>` check (G-ENGINE-BARRIER-CONDITION-NOT-CARRIER-SCOPED) | `ST23-02-inherited0`, `BT25-057-effect2`, repro (all now assert the correct result) |
-| 🔴 | Face-down cards under a Tamer grant it inherited effects (Barrier, [End of Attack]) (G-ENGINE-FACE-DOWN-TAMER-SOURCES-INHERIT) | `BT25-090-effect1` variant (header) |
+| ✅ | **Fixed 2026-11-22** (CR 4.3 4-7-9: `effects_for_card` yields nothing for a face-down card under a card; `tests/face_down_source_effects.rs`). Was: face-down cards under a Tamer granted it inherited effects (Barrier, [End of Attack]) (G-ENGINE-FACE-DOWN-TAMER-SOURCES-INHERIT) | `BT25-090-effect1` variant (header) |
 | ✅ | **Fixed by #708** (G-ENGINE-DUAL-END-OF-TURN-WINDOW). Was: `<Execute>` (and Vortex/Overclock/Engage) never opened on a DUAL Digimon: `is_digimon` excludes `CardKind::Dual` (G-ENGINE-END-OF-TURN-KEYWORDS-SKIP-DUAL) | `BT26-075-effect1` (now witnesses the clause), `BT26-075-effect6` |
 | 🔴 | BT25-043 / ST23-05 / ST20-15 leave-prevention gated on `any_permanent { zone: [security] }` is always false; never offered (G-GD-SECURITY-ZONE-EXISTENTIAL) | `BT25-043-effect3` |
 | 🔴 | BT25-049's Option-use −3 fires on a digivolve into a DUAL card (cost 3 → 0) (G-GD-BT25-049-DUAL-REDUCER) | repro |

@@ -1,0 +1,41 @@
+card: BT27-086
+name: Kanata Hondo
+kind: tamer
+color: [red]
+cost: 3
+traits: [ALYSION]
+
+effects:
+  - when: start_of_your_main_phase
+    text: "[Start of Your Main Phase] If you have a Digimon with [Gemmon] in its text, gain 1 memory."
+    condition:
+      any_permanent: { of: you, zone: [battle_area], kind: digimon, in_text_contains: Gemmon }
+    summary: "[Start of Your Main Phase] If you have a Digimon with [Gemmon] in its text, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: [on_ally_played, on_digivolve]
+    text: "[Your Turn] When your Digimon are played or digivolve, if any of them have the [ALYSION] trait, by suspending this Tamer, 1 of your Digimon gets +3000 DP for the turn. After, if you have a Digimon with 8000 DP or more, ＜Draw 1＞."
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if: { event_target_owner: you, event_target_kind: digimon, event_target_trait_has: ALYSION }
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When your ALYSION Digimon is played or digivolves, suspend this Tamer to give 1 of your Digimon +3000 DP, then draw 1 if you have an 8000 DP or higher Digimon"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          optional: false
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gets +3000 DP for the turn"
+      - add_dp_modifier: { target: boosted, value: 3000, expiry: end_of_turn }
+      - if:
+          condition:
+            any_permanent: { of: you, zone: [battle_area], kind: digimon, dp_gte: 8000 }
+          then:
+            - draw: { of: you, count: 1 }
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}
