@@ -1,0 +1,83 @@
+# Source: data/card_bundles/BT27-095.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/*/BT27_095.cs
+# Q&A: the placed card goes to the bottom of the cards under the Tamer.
+card: BT27-095
+name: Homer Yushima
+kind: tamer
+color: [black, blue]
+cost: 4
+traits: [DATA SQUAD]
+
+effects:
+  - text: "[Start of Your Main Phase] By placing 1 [Cyborg] or [Aquatic] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of: [{ trait_has: Cyborg }, { trait_has: Aquatic }]
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [Cyborg]/[Aquatic] trait card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter:
+            any_of: [{ trait_has: Cyborg }, { trait_has: Aquatic }]
+          prompt: "Place 1 [Cyborg]/[Aquatic] trait card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - text: "[Main] By suspending this Tamer and trashing 2 bottom face-down cards from under any of your Tamers, 1 of your Digimon may digivolve into a [Cyborg] or [Aquatic] trait Digimon card in the hand with the cost reduced by 2."
+    when: main_on_field
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - face_down_sources_under_tamers_gte: 2
+    summary: "[Main] By suspending this Tamer and trashing 2 bottom face-down cards from under your Tamers, 1 of your Digimon may digivolve into a [Cyborg] or [Aquatic] trait Digimon card in the hand with the cost reduced by 2"
+    process:
+      - activation_cost: { suspend_self: true }
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+      - select_own_permanent:
+          bind_as: base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - any_of: [{ trait_has: Cyborg }, { trait_has: Aquatic }]
+          prompt: "Select 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_onto: base
+              - any_of: [{ trait_has: Cyborg }, { trait_has: Aquatic }]
+          prompt: "Digivolve into a [Cyborg] or [Aquatic] trait Digimon card in your hand with the cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: evo
+          cost: { reduce: 2 }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

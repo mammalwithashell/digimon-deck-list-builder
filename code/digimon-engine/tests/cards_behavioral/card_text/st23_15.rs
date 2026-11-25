@@ -102,9 +102,9 @@ fn start_of_your_main_phase_may_place_itself_face_down_at_bottom_under_only_beat
         r.place_on_field(0, "TEXT-UNRELATED-TAMER", Some(0));
         action(&mut r, 0, PLAY_HAND_START);
         assert!(r.pending_selection().is_none());
-        next_turn(&mut r);
+        advance_turn(&mut r);
         let hand_before = r.hand_size(0);
-        next_turn(&mut r);
+        advance_turn(&mut r);
         r.assert_prompt(SelectionKind::OwnField, true, 0);
         assert_eq!(candidates(&r), ["TEXT-TAMER"]);
         if accept {

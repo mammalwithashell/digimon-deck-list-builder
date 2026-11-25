@@ -816,7 +816,9 @@ BT26-103 missing_text 2
 BT26-103 missing_text 3
 BT26-103 missing_text 4
 BT26-103 missing_text 5
-BT27-092 timing_tag_mismatch 2
+BT27-028 optional_without_may 0
+BT27-028 optional_without_may 1
+BT27-031 optional_without_may 0
 BT27-034 optional_without_may 5
 BT27-034 optional_without_may 6
 BT3-105 missing_text 0

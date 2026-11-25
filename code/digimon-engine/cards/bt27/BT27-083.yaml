@@ -1,0 +1,124 @@
+card: BT27-083
+name: Ravemon
+kind: dual
+level: 6
+color: [purple, green]
+dp: 12000
+traits: [Cyborg, DATA SQUAD, Birdkin]
+form: Mega
+attribute: Vaccine
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [purple, green]
+    traits: [Cyborg, DATA SQUAD, Birdkin]
+    effect_text: "<Blocker> <Retaliation> [When Digivolving] Your opponent trashes any 1 card from their hand or security stack. [On Deletion] If your opponent's hand has 7 or fewer cards, you may play 1 play cost 7 or lower purple Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost. (Rule) Trait: Has [Birdkin] Type."
+  option:
+    use_cost: 5
+    colors: [purple]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
+        trait_has: DATA SQUAD
+    effect_text: "<Use Req. ([DATA SQUAD] trait)> [Main] Your opponent trashes cards in their hand so that they have 7 left. If this effect didn't trash, delete 1 of their Digimon. <Arts Digivolve>"
+    keywords: [ArtsDigivolve]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Crowmon }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, any_color: true, trait_has: DATA SQUAD }
+    cost: 3
+effects:
+  - kind: grant_keyword
+    text: "＜Blocker＞"
+    keyword: Blocker
+  - kind: grant_keyword
+    text: "＜Retaliation＞"
+    keyword: Retaliation
+  - when: when_digivolving
+    text: "[When Digivolving] Your opponent trashes any 1 card from their hand or security stack."
+    summary: "[When Digivolving] Your opponent trashes any 1 card from their hand or security stack"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_effect_choice:
+                labels: ["Trash 1 card from your hand", "Trash 1 of your security cards"]
+                legal_when:
+                  - count_gte: { filter: { of: opponent, zone: [hand] }, n: 1 }
+                  - opponent_security_count_gte: 1
+                bind_as: where
+                prompt: "Trash any 1 card from your hand or security stack"
+            - if:
+                condition: { equals: [where, 0] }
+                then:
+                  - select_hand:
+                      optional: false
+                      of: opponent
+                      bind_as: discard
+                      filter: {}
+                      prompt: "Trash 1 card from your hand"
+                  - trash_from_hand_by_index: { of: opponent, hand_index: discard }
+            - if:
+                condition: { equals: [where, 1] }
+                then:
+                  - select_security:
+                      optional: false
+                      of: opponent
+                      bind_as: sec
+                      filter: {}
+                      prompt: "Trash 1 of your security cards"
+                  - trash_selected_security: { of: opponent, card: sec }
+  - when: on_deletion
+    text: "[On Deletion] If your opponent's hand has 7 or fewer cards, you may play 1 play cost 7 or lower purple Digimon card with [Avian] or [Bird] in any of its traits from your trash without paying the cost."
+    optional: true
+    condition:
+      count_lte: { filter: { of: opponent, zone: [hand] }, n: 7 }
+    summary: "[On Deletion] If your opponent's hand has 7 or fewer cards, you may play 1 play cost 7 or lower purple [Avian]/[Bird] Digimon card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - play_cost_lte: 7
+              - can_play_from_effect_without_cost: true
+              - any_of:
+                  - trait_contains: Avian
+                  - trait_contains: Bird
+          prompt: "You may play 1 play cost 7 or lower purple [Avian]/[Bird] Digimon card from your trash without paying the cost"
+      - if:
+          condition: { binding_present: revived }
+          then:
+            - play_from_trash:
+                of: you
+                hand_index: revived
+                cost_delta: free
+  - when: main_from_hand
+    text: "[Main] Your opponent trashes cards in their hand so that they have 7 left. If this effect didn't trash, delete 1 of their Digimon."
+    summary: "[Main] Your opponent trashes cards in their hand so that they have 7 left. If this effect didn't trash, delete 1 of their Digimon"
+    process:
+      - trash_opponent_hand_to_count:
+          opponent: opponent
+          target_count: 7
+          bind_count_as: trimmed
+      - if:
+          condition: { equals: [trimmed, 0] }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                optional: false
+                filter: { kind: digimon }
+                prompt: "Delete 1 of your opponent's Digimon"
+            - delete_permanent: { target: victim }

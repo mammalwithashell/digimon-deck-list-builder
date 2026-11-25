@@ -1,0 +1,77 @@
+# Source: data/card_bundles/BT27-019.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Blue/BT27_019.cs
+#   (shared When Moving / On Play: skippable hand pick placed face down at the
+#   bottom of a [Thomas H. Norstein]; both players draw 1. Inherited When
+#   Attacking OPT, mandatory: both players draw 1.)
+card: BT27-019
+name: Gaomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Beast, DATA SQUAD]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      any_of:
+        - name_is: "Wanyamon"
+        - all_of:
+            - level_eq: 2
+            - trait_has: DATA SQUAD
+    cost: 0
+
+effects:
+  - text: "[When Moving] [On Play] By placing 1 card from your hand face down under any of your [Thomas H. Norstein]s, both players ＜Draw 1＞."
+    when: [on_play, on_move]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    condition:
+      all_of:
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            name_is: "Thomas H. Norstein"
+    summary: "[When Moving][On Play] By placing 1 hand card face down under 1 of your [Thomas H. Norstein]s, both players <Draw 1>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter: {}
+          prompt: "Place 1 card from your hand face down under 1 of your [Thomas H. Norstein]s"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - select_own_permanent:
+                optional: false
+                bind_as: thomas
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - name_is: "Thomas H. Norstein"
+                prompt: "Choose the [Thomas H. Norstein] to place the card under"
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: thomas
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - draw: { of: opponent, count: 1 }
+
+  - text: "[When Attacking] [Once Per Turn] Both players ＜Draw 1＞."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] Both players <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+      - draw: { of: opponent, count: 1 }

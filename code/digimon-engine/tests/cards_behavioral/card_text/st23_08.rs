@@ -34,9 +34,9 @@ fn on_play_and_when_digivolving_gain_three_thousand_dp_until_opponents_turn_ends
         };
         assert!(r.pending_selection().is_none());
         assert_eq!(r.dp_of(index), Some(10000));
-        next_turn(&mut r);
+        advance_turn(&mut r);
         assert_eq!(r.dp_of(index), Some(10000));
-        next_turn(&mut r);
+        advance_turn(&mut r);
         assert_eq!(r.dp_of(index), Some(7000));
     }
 }

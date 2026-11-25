@@ -272,6 +272,16 @@ impl Game {
         let target = self
             .resolve_source_move_anchor(state.target, state.target_breeding)
             .expect("distinct receiving host survives compaction");
+        // A token is removed instead, but still counts as placed (CR 4-21-5, 15-1-9).
+        if let Some(id) = state.result_receipt {
+            if let Some((_, result)) = self
+                .field_source_receipts
+                .iter_mut()
+                .find(|(receipt, _)| *receipt == id)
+            {
+                *result = Some(top_card);
+            }
+        }
         if !card.is_token {
             let host = if state.target_breeding {
                 self.player_mut(target.player)
@@ -285,15 +295,6 @@ impl Game {
                 host.push_as_top_source(card);
             } else {
                 host.push_under(card);
-            }
-            if let Some(id) = state.result_receipt {
-                if let Some((_, result)) = self
-                    .field_source_receipts
-                    .iter_mut()
-                    .find(|(receipt, _)| *receipt == id)
-                {
-                    *result = Some(top_card);
-                }
             }
             self.note_effect_added_sources(
                 target,

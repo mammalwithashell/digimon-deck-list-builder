@@ -1,0 +1,118 @@
+card: BT27-032
+name: MirageGaogamon
+kind: dual
+level: 6
+color: [blue, black]
+dp: 12000
+traits: [Beast Knight, DATA SQUAD]
+form: Mega
+attribute: Data
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [blue, black]
+    traits: [Beast Knight, DATA SQUAD]
+    effect_text: "<Reboot> <Blocker> <Evade> [When Digivolving] For every 4 cards your opponent's hand has, 1 of their Digimon or Tamers can't suspend until their turn ends. [All Turns] [Once Per Turn] When effects add to your opponent's hand, or effects trash cards under your Tamers, you may activate 1 [Main] effect on this card's Option side."
+  option:
+    use_cost: 5
+    colors: [blue]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
+        trait_has: DATA SQUAD
+    effect_text: "<Use Req. ([DATA SQUAD] trait)> [Main] Return 1 of your opponent's highest level Digimon to the hand. <Arts Digivolve>"
+    keywords: [ArtsDigivolve]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      level_eq: 5
+      any_color: true
+      any_of:
+        - name_contains: Gaogamon
+        - trait_has: DATA SQUAD
+    cost: 3
+effects:
+  - kind: grant_keyword
+    text: "＜Reboot＞"
+    keyword: Reboot
+  - kind: grant_keyword
+    text: "＜Blocker＞"
+    keyword: Blocker
+  - kind: grant_keyword
+    text: "＜Evade＞"
+    keyword: Evade
+  - when: when_digivolving
+    text: "[When Digivolving] For every 4 cards your opponent's hand has, 1 of their Digimon or Tamers can't suspend until their turn ends."
+    summary: "For every 4 opposing hand cards, 1 opposing Digimon or Tamer can't suspend until their turn ends"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              floor_div:
+                - base: 0
+                  per: { card_count_in_zone: { of: opponent, zone: hand } }
+                  delta: 1
+                - 4
+          clamp_to_available: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: locked
+          prompt: "Choose opposing Digimon or Tamers that can't suspend"
+      - per_selected:
+          selection: locked
+          bind_as: target
+          body:
+            - add_modifier:
+                target: target
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+  - when: [on_add_to_hand, on_digivolution_card_trashed]
+    text: "[All Turns] [Once Per Turn] When effects add to your opponent's hand, or effects trash cards under your Tamers, you may activate 1 [Main] effect on this card's Option side."
+    active_when: { all_turns: true }
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    timing_conditions:
+      - when: on_add_to_hand
+        condition:
+          all_of:
+            - event_add_to_hand_player: opponent
+            - event_is_effect_initiated: true
+      - when: on_digivolution_card_trashed
+        condition:
+          all_of:
+            - event_host_is_own_tamer: true
+            - any_of:
+                - event_cause: own_effect
+                - event_cause: opponent_effect
+                - event_cause: cost
+    summary: "[All Turns] [Once Per Turn] When effects add to your opponent's hand, or effects trash cards under your Tamers, you may activate 1 [Main] effect on this card's Option side"
+    process:
+      - refire_effect: { source: source, timing: option_main, optional: false }
+  - when: main_from_hand
+    text: "[Main] Return 1 of your opponent's highest level Digimon to the hand."
+    summary: "[Main] Return 1 of your opponent's highest level Digimon to the hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounced
+          optional: false
+          filter:
+            kind: digimon
+            level_matches_aggregate: { selector: highest_level, of: opponent }
+          prompt: "Return 1 of your opponent's highest level Digimon to the hand"
+      - return_to_hand: { target: bounced }

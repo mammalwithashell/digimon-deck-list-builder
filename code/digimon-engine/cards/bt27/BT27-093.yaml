@@ -1,0 +1,83 @@
+# Source: data/card_bundles/BT27-093.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/*/BT27_093.cs
+# Q&A: the placed card goes to the bottom of the cards under the Tamer.
+card: BT27-093
+name: "Miki Kurosaki & Megumi Shirakawa"
+kind: tamer
+color: [black, yellow]
+cost: 4
+traits: [DATA SQUAD]
+
+effects:
+  - text: "[Start of Your Main Phase] By placing 1 card with [Chessmon] in its text from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          in_text_contains: Chessmon
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [Chessmon]-in-text card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter:
+            in_text_contains: Chessmon
+          prompt: "Place 1 [Chessmon]-in-text card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - text: "[Main] By suspending this Tamer and trashing 2 bottom face-down cards from under any of your Tamers, 1 of your Digimon may digivolve into a Digimon card with [Chessmon] in its name in the hand with the cost reduced by 2."
+    when: main_on_field
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - face_down_sources_under_tamers_gte: 2
+    summary: "[Main] By suspending this Tamer and trashing 2 bottom face-down cards from under your Tamers, 1 of your Digimon may digivolve into a Digimon card with [Chessmon] in its name in the hand with the cost reduced by 2"
+    process:
+      - activation_cost: { suspend_self: true }
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+      - select_own_permanent:
+          bind_as: base
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - has_digivolve_candidate:
+                  of: you
+                  zone: [hand]
+                  filter:
+                    all_of:
+                      - kind: digimon
+                      - name_contains: Chessmon
+          prompt: "Select 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_onto: base
+              - name_contains: Chessmon
+          prompt: "Digivolve into a Digimon card with [Chessmon] in its name in your hand with the cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: evo
+          cost: { reduce: 2 }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,96 @@
+# Source: data/card_bundles/BT27-081.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Purple/BT27_081.cs
+# Q&A: the Then cost may be paid even when the opponent has 5 or fewer cards.
+card: BT27-081
+name: Crowmon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+traits: [Mysterious Bird, DATA SQUAD]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, level_eq: 4, trait_has: DATA SQUAD }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving, when_attacking]
+    text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] If your opponent's hand has 6 or more cards, they trash 1 card in their hand. Then, by trashing 2 bottom face-down cards from under any of your Tamers, you may play or use 1 [DATA SQUAD] trait card with a play or use cost of 5 or less from your hand without paying the cost."
+    once_per_turn: true
+    summary: "If the opponent has 6+ hand cards they trash 1; then trash 2 bottom face-down Tamer cards to play/use a cost 5 or lower DATA SQUAD hand card free"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: { of: opponent, zone: [hand] }
+              n: 6
+          then:
+            - as_selecting_player:
+                of: opponent
+                body:
+                  - select_hand:
+                      optional: false
+                      of: opponent
+                      bind_as: discarded
+                      filter: {}
+                      prompt: "Trash 1 card in your hand"
+                  - trash_from_hand_by_index: { of: opponent, hand_index: discarded }
+      # The independent Then cost is optional and may be paid even without a
+      # playable hand card. Never gate it on successfully bouncing a target.
+      - if:
+          condition: { face_down_sources_under_tamers_gte: 2 }
+          then:
+            - select_effect_choice:
+                bind_as: pay_trash
+                labels: ["Trash 2 face-down cards", "Don't"]
+                prompt: "Trash 2 bottom face-down cards from under your Tamers?"
+            - if:
+                condition: { equals: [pay_trash, 0] }
+                then:
+                  - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+                  - select_hand:
+                      of: you
+                      bind_as: squad
+                      optional: true
+                      filter:
+                        all_of:
+                          - trait_has: DATA SQUAD
+                          - play_or_use_cost_lte: 5
+                          - can_play_or_use_from_effect: true
+                      prompt: "Play or use a cost 5 or lower DATA SQUAD card without paying the cost?"
+                  - if:
+                      condition: { binding_present: squad }
+                      then:
+                        - play_or_use_from_hand:
+                            of: you
+                            hand_index: squad
+                            cost_delta: free
+
+  - scope: inherited
+    text: "[On Deletion] You may play 1 play cost 5 or lower card with [Avian] or [Bird] in any of its traits or the [DATA SQUAD] trait from your trash without paying the cost."
+    when: on_deletion
+    summary: "[Inherited][On Deletion] You may play 1 play cost 5 or lower [Avian]/[Bird]/[DATA SQUAD] card from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - play_cost_lte: 5
+              - can_play_from_effect_without_cost: true
+              - any_of:
+                  - trait_contains: Avian
+                  - trait_contains: Bird
+                  - trait_has: DATA SQUAD
+          prompt: "You may play 1 play cost 5 or lower [Avian]/[Bird]/[DATA SQUAD] card from your trash without paying the cost"
+      - if:
+          condition: { binding_present: revived }
+          then:
+            - play_from_trash:
+                of: you
+                hand_index: revived
+                cost_delta: free
