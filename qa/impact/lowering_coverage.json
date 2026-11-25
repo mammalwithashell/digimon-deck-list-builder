@@ -829,8 +829,8 @@
     "verb:if",
     "verb:refund_opt",
     "verb:return_to_deck",
+    "verb:select_effect_choice",
     "verb:select_opponent_permanent",
-    "verb:select_own_permanent",
     "verb:suspend",
     "verb:unsuspend",
     "predicate:all_of",
@@ -840,9 +840,9 @@
     "predicate:binding_absent",
     "predicate:binding_exists",
     "predicate:color_is",
+    "predicate:equals",
     "predicate:event_is_effect_initiated",
     "predicate:event_target_kind",
-    "predicate:is_source",
     "predicate:is_suspended",
     "predicate:kind",
     "predicate:level_eq",
@@ -2693,12 +2693,14 @@
    "constructs": [
     "verb:add_modifier",
     "verb:cancel_replacement",
+    "verb:if",
     "verb:place_as_bottom_source",
     "verb:return_selected_sources_to_deck",
     "verb:select_own_sources",
     "verb:select_trash",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:binding_count_eq",
     "predicate:color_is",
     "predicate:count_gte",
     "predicate:is_source",
@@ -15534,9 +15536,11 @@
     "predicate:count_lte",
     "predicate:kind",
     "predicate:level_eq",
+    "predicate:link_requirement_met_by_self",
     "predicate:name_in",
     "predicate:name_is",
     "predicate:owner",
+    "predicate:self_source_count",
     "predicate:trait_has",
     "predicate:your_turn",
     "predicate:zone",
@@ -16435,8 +16439,8 @@
    "clause_count": 8,
    "constructs": [
     "verb:cancel_replacement",
+    "verb:delete_all_permanents",
     "verb:delete_permanent",
-    "verb:for_each",
     "verb:if",
     "verb:refund_opt",
     "verb:select_hand",
@@ -16449,7 +16453,6 @@
     "predicate:binding_present",
     "predicate:color_is",
     "predicate:count_gte",
-    "predicate:dp_gte",
     "predicate:event_discard_player",
     "predicate:event_is_effect_initiated",
     "predicate:kind",
@@ -17385,6 +17388,7 @@
     "verb:add_dp_modifier",
     "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:refund_opt",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:affordable_with_cost",
@@ -17625,6 +17629,7 @@
     "verb:add_modifier",
     "verb:if",
     "verb:play_from_trash",
+    "verb:refund_opt",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "verb:select_own_permanent",
@@ -24982,11 +24987,14 @@
    "behaviourally_covered": true,
    "clause_count": 6,
    "constructs": [
+    "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:refund_opt",
     "verb:select_hand",
     "predicate:affordable_with_cost",
     "predicate:all_of",
     "predicate:any_of",
+    "predicate:binding_present",
     "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:count_gte",
@@ -25776,6 +25784,7 @@
     "verb:add_dp_modifier",
     "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:refund_opt",
     "verb:select_hand",
     "verb:select_opponent_permanent",
     "predicate:affordable_with_cost",
@@ -25831,10 +25840,13 @@
    "behaviourally_covered": true,
    "clause_count": 4,
    "constructs": [
+    "verb:if",
     "verb:play_or_use_from_hand",
+    "verb:refund_opt",
     "verb:select_hand",
     "predicate:affordable_with_cost",
     "predicate:all_of",
+    "predicate:binding_present",
     "predicate:can_play_or_use_from_effect",
     "predicate:color_is",
     "predicate:count_gte",
@@ -27237,7 +27249,9 @@
     "verb:add_modifier",
     "verb:cancel_replacement",
     "verb:delete_permanent",
+    "verb:if",
     "verb:per_selected",
+    "verb:refund_opt",
     "verb:select_count_capped_multi",
     "verb:select_materials",
     "verb:select_opponent_permanent",
@@ -27245,6 +27259,7 @@
     "predicate:all_of",
     "predicate:any_of",
     "predicate:any_permanent",
+    "predicate:binding_present",
     "predicate:color_is",
     "predicate:kind",
     "predicate:level_eq",
@@ -28006,6 +28021,7 @@
     "predicate:any_of",
     "predicate:any_permanent",
     "predicate:color_is",
+    "predicate:controller_can_add_security",
     "predicate:equals",
     "predicate:kind",
     "predicate:level_eq",
@@ -29308,6 +29324,7 @@
     "verb:if",
     "verb:place_as_bottom_source",
     "verb:play_from_security",
+    "verb:refund_opt",
     "verb:select_union_zone",
     "verb:set_memory",
     "predicate:all_of",
@@ -29447,6 +29464,7 @@
     "verb:select_zone_cards",
     "predicate:all_of",
     "predicate:cost_target_from_hand",
+    "predicate:count_gte",
     "predicate:count_lte",
     "predicate:in_breeding",
     "predicate:name_is",
@@ -29458,7 +29476,7 @@
     "timing:main_on_field"
    ],
    "effect_clause_count": 4,
-   "has_card_test": false,
+   "has_card_test": true,
    "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
@@ -54968,6 +54986,29 @@
     "dsl::constructs/play_digivolve_link.rs::link_card_count_filtered_empty_filter_and_unreachable"
    ]
   },
+  "predicate:link_requirement_met_by_self": {
+   "kind": "predicate",
+   "name": "link_requirement_met_by_self",
+   "parsed_only": false,
+   "signals": {
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_ignores_the_link_cost": [
+     "variant"
+    ],
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_is_false_without_a_source_permanent": [
+     "variant"
+    ],
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_reads_the_requirement_against_the_effect_permanent": [
+     "variant"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_ignores_the_link_cost",
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_is_false_without_a_source_permanent",
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_reads_the_requirement_against_the_effect_permanent"
+   ]
+  },
   "predicate:materials_count": {
    "kind": "predicate",
    "name": "materials_count",
@@ -59482,6 +59523,15 @@
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast": [
      "yaml_key"
     ],
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_ignores_the_link_cost": [
+     "yaml_key"
+    ],
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_is_false_without_a_source_permanent": [
+     "yaml_key"
+    ],
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_reads_the_requirement_against_the_effect_permanent": [
+     "yaml_key"
+    ],
     "dsl::constructs/meta_event_color.rs::event_color_observer_does_not_fire_at_adjacent_on_play_timing": [
      "yaml_key"
     ],
@@ -60276,6 +60326,9 @@
     "dsl::constructs/evolution_candidate_cost.rs::own_host_existence_does_not_substitute_other_hosts_route",
     "dsl::constructs/evolution_candidate_cost.rs::reduced_boundary_host_and_hand_choices_agree_and_clone_commit",
     "dsl::constructs/identity_state.rs::trait_contains_versus_trait_has_contrast",
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_ignores_the_link_cost",
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_is_false_without_a_source_permanent",
+    "dsl::constructs/link_requirement_met_by_self.rs::link_requirement_met_by_self_reads_the_requirement_against_the_effect_permanent",
     "dsl::constructs/meta_event_color.rs::event_color_observer_does_not_fire_at_adjacent_on_play_timing",
     "dsl::constructs/meta_event_color.rs::matching_played_event_choice_can_be_declined",
     "dsl::constructs/meta_event_color.rs::played_event_color_intersection_uses_event_subject_and_exposes_choices",
@@ -86988,7 +87041,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2312,
+  "behavioural_tests": 2317,
   "cards": {
    "behaviourally_covered": 1306,
    "lowering_covered": 1324,
@@ -87007,11 +87060,11 @@
    },
    "predicate": {
     "parsed_only": 7,
-    "tested": 208,
-    "tested_behaviourally": 201,
-    "total": 240,
+    "tested": 209,
+    "tested_behaviourally": 202,
+    "total": 241,
     "untested": 32,
-    "used_by_cards": 213,
+    "used_by_cards": 214,
     "used_untested": 24
    },
    "timing": {
@@ -87151,8 +87204,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 424,
-  "scanned_tests": 2738,
+  "scanned_files": 426,
+  "scanned_tests": 2743,
   "top_untested": [
    {
     "cards_blocked": 3,

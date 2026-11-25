@@ -709,9 +709,9 @@
         "binding_absent",
         "binding_exists",
         "color_is",
+        "equals",
         "event_is_effect_initiated",
         "event_target_kind",
-        "is_source",
         "is_suspended",
         "kind",
         "level_eq",
@@ -731,8 +731,8 @@
         "if",
         "refund_opt",
         "return_to_deck",
+        "select_effect_choice",
         "select_opponent_permanent",
-        "select_own_permanent",
         "suspend",
         "unsuspend"
       ]
@@ -2280,6 +2280,7 @@
       "predicates": [
         "all_of",
         "any_of",
+        "binding_count_eq",
         "color_is",
         "count_gte",
         "is_source",
@@ -2301,6 +2302,7 @@
       "verbs": [
         "add_modifier",
         "cancel_replacement",
+        "if",
         "place_as_bottom_source",
         "return_selected_sources_to_deck",
         "select_own_sources",
@@ -13191,9 +13193,11 @@
         "count_lte",
         "kind",
         "level_eq",
+        "link_requirement_met_by_self",
         "name_in",
         "name_is",
         "owner",
+        "self_source_count",
         "trait_has",
         "your_turn",
         "zone"
@@ -13966,7 +13970,6 @@
         "binding_present",
         "color_is",
         "count_gte",
-        "dp_gte",
         "event_discard_player",
         "event_is_effect_initiated",
         "kind",
@@ -13986,8 +13989,8 @@
       ],
       "verbs": [
         "cancel_replacement",
+        "delete_all_permanents",
         "delete_permanent",
-        "for_each",
         "if",
         "refund_opt",
         "select_hand",
@@ -14790,6 +14793,7 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -14994,6 +14998,7 @@
         "add_modifier",
         "if",
         "play_from_trash",
+        "refund_opt",
         "select_hand",
         "select_opponent_permanent",
         "select_own_permanent",
@@ -21183,6 +21188,7 @@
         "affordable_with_cost",
         "all_of",
         "any_of",
+        "binding_present",
         "can_play_or_use_from_effect",
         "color_is",
         "count_gte",
@@ -21197,7 +21203,9 @@
         "main_on_field"
       ],
       "verbs": [
+        "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand"
       ]
     },
@@ -21845,6 +21853,7 @@
         "add_dp_modifier",
         "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand",
         "select_opponent_permanent"
       ]
@@ -21873,6 +21882,7 @@
       "predicates": [
         "affordable_with_cost",
         "all_of",
+        "binding_present",
         "can_play_or_use_from_effect",
         "color_is",
         "count_gte",
@@ -21885,7 +21895,9 @@
         "main_on_field"
       ],
       "verbs": [
+        "if",
         "play_or_use_from_hand",
+        "refund_opt",
         "select_hand"
       ]
     },
@@ -23078,6 +23090,7 @@
         "all_of",
         "any_of",
         "any_permanent",
+        "binding_present",
         "color_is",
         "kind",
         "level_eq",
@@ -23096,7 +23109,9 @@
         "add_modifier",
         "cancel_replacement",
         "delete_permanent",
+        "if",
         "per_selected",
+        "refund_opt",
         "select_count_capped_multi",
         "select_materials",
         "select_opponent_permanent",
@@ -23706,6 +23721,7 @@
         "any_of",
         "any_permanent",
         "color_is",
+        "controller_can_add_security",
         "equals",
         "kind",
         "level_eq",
@@ -24838,6 +24854,7 @@
         "if",
         "place_as_bottom_source",
         "play_from_security",
+        "refund_opt",
         "select_union_zone",
         "set_memory"
       ]
@@ -24934,6 +24951,7 @@
       "predicates": [
         "all_of",
         "cost_target_from_hand",
+        "count_gte",
         "count_lte",
         "in_breeding",
         "name_is",
@@ -36309,6 +36327,7 @@
     ],
     "binding_count_eq": [
       "BT12-031",
+      "BT13-075",
       "BT13-083",
       "BT24-017",
       "BT24-021",
@@ -36520,6 +36539,7 @@
       "EX12-006",
       "EX12-008",
       "EX12-012",
+      "EX12-013",
       "EX12-015",
       "EX12-017",
       "EX12-018",
@@ -36529,6 +36549,7 @@
       "EX12-036",
       "EX12-038",
       "EX12-041",
+      "EX12-043",
       "EX12-054",
       "EX12-056",
       "EX12-059",
@@ -36545,6 +36566,7 @@
       "EX13-011",
       "EX13-012",
       "EX13-015",
+      "EX13-016",
       "EX13-018",
       "EX13-021",
       "EX13-026",
@@ -37962,6 +37984,7 @@
     "controller_can_add_security": [
       "BT18-042",
       "EX11-025",
+      "EX13-036",
       "EX5-054",
       "P-153"
     ],
@@ -38190,6 +38213,7 @@
       "EX13-074",
       "EX13-076",
       "EX13-077",
+      "EX2-007",
       "EX2-046",
       "EX4-006",
       "EX5-054",
@@ -38371,7 +38395,6 @@
       "BT25-018",
       "BT25-019",
       "BT25-020",
-      "BT25-084",
       "BT27-011",
       "BT27-014",
       "BT27-018",
@@ -38586,6 +38609,7 @@
     "equals": [
       "AD1-007",
       "AD1-017",
+      "AD1-024",
       "BT13-112",
       "BT15-003",
       "BT16-082",
@@ -39821,7 +39845,6 @@
       "AD1-015",
       "AD1-020",
       "AD1-023",
-      "AD1-024",
       "BT11-040",
       "BT11-043",
       "BT11-112",
@@ -42165,6 +42188,9 @@
       "BT25-085",
       "BT26-086"
     ],
+    "link_requirement_met_by_self": [
+      "BT25-052"
+    ],
     "materials_count_gte": [
       "AD1-007",
       "BT13-030",
@@ -44301,6 +44327,7 @@
       "BT20-026",
       "BT21-006",
       "BT21-052",
+      "BT25-052",
       "BT25-085",
       "BT26-033",
       "BT7-038",
@@ -50325,6 +50352,7 @@
       "BT13-092",
       "BT18-042",
       "BT24-065",
+      "BT25-084",
       "BT26-033",
       "BT26-055",
       "BT26-059",
@@ -51053,7 +51081,6 @@
       "BT25-018",
       "BT25-028",
       "BT25-075",
-      "BT25-084",
       "BT25-093",
       "BT6-103",
       "BT9-103",
@@ -51482,6 +51509,7 @@
       "BT13-012",
       "BT13-015",
       "BT13-033",
+      "BT13-075",
       "BT13-083",
       "BT13-092",
       "BT13-095",
@@ -51783,6 +51811,7 @@
       "EX12-006",
       "EX12-008",
       "EX12-012",
+      "EX12-013",
       "EX12-015",
       "EX12-017",
       "EX12-018",
@@ -51794,6 +51823,7 @@
       "EX12-037",
       "EX12-038",
       "EX12-041",
+      "EX12-043",
       "EX12-045",
       "EX12-047",
       "EX12-054",
@@ -51820,6 +51850,7 @@
       "EX13-013",
       "EX13-014",
       "EX13-015",
+      "EX13-016",
       "EX13-018",
       "EX13-019",
       "EX13-020",
@@ -53324,8 +53355,10 @@
       "BT25-089",
       "BT25-103",
       "BT26-007",
+      "BT26-012",
       "BT26-015",
       "BT26-016",
+      "BT26-021",
       "BT26-025",
       "BT26-035",
       "BT26-036",
@@ -53340,14 +53373,18 @@
       "BT26-069",
       "BT26-074",
       "BT26-086",
+      "EX12-013",
       "EX12-017",
       "EX12-021",
       "EX12-034",
+      "EX12-041",
+      "EX12-043",
       "EX13-004",
       "EX13-005",
       "EX13-012",
       "EX13-014",
       "EX13-015",
+      "EX13-016",
       "EX13-019",
       "EX13-020",
       "EX13-022",
@@ -53365,6 +53402,7 @@
       "EX13-059",
       "EX13-060",
       "EX13-061",
+      "EX13-074",
       "EX13-076",
       "EX8-060",
       "P-247"
@@ -53862,6 +53900,7 @@
     "select_effect_choice": [
       "AD1-007",
       "AD1-017",
+      "AD1-024",
       "BT13-112",
       "BT15-003",
       "BT16-082",
@@ -54967,7 +55006,6 @@
       "AD1-018",
       "AD1-021",
       "AD1-022",
-      "AD1-024",
       "BT10-048",
       "BT10-053",
       "BT10-057",
