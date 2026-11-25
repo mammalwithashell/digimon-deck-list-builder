@@ -1,20 +1,37 @@
-//! An attack declared inside an Option's `[Main]` body holds that Option in
-//! flight until the attack ends, and Options used DURING that attack resolve
-//! on their own. G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD.
+//! An attack declared inside an Option's `[Main]` body: the Option finishes
+//! (its own <Arts Digivolve> offer, or the trash, or its placement) as soon as
+//! that attack has been DECLARED -- before the attack's queued [When
+//! Attacking] effects resolve and before the counter timing. Options used
+//! during that attack therefore find no Option in flight.
+//! G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD (resolved by reversal).
 //!
 //! Monarchlizamon (BT25-057) Option face "Final Judgment": "[Main] 1 of your
-//! Digimon gains <Rush>, <Security A. +1> and +5000 DP for the turn. Then, it
-//! may attack." The attack is one of the effect's processes (CR 4.3 15-1-2,
-//! 15-1-4; 11-1-5), so the Option is trashed / offered for <Arts Digivolve>
-//! only after it (9-1-5, 4-20-1/4-20-2). DCGO BT25_057.cs runs
-//! `SelectAttackEffect.Activate()` inside the OptionSkill coroutine, and the
-//! attack's own [When Attacking] effects may use further Options there.
+//! Digimon gains <Rush>, <Security A. +1> and +5000 DP until your opponent's
+//! turn ends. Then, it may attack." plus <Arts Digivolve>.
 //!
-//! Commit 32d148445 kept the Option in `Game::pending_option` for the whole
-//! attack, and `play_option_core` allows one in-flight Option, so any Option
-//! used during that attack panicked ("reentrant Option play while another is
-//! mid-resolution"). The engine now moves the Option to `Game::held_options`
-//! when the attack is installed and puts it back when the attack ends.
+//! Why the declaration and not the end of the attack: the project owner's
+//! standing default (2026-11-24) is "Generally let's look to match dcgo"; the
+//! application of that default to this card is the orchestrator's, not a new
+//! owner ruling. DCGO finishes the Option at the declaration:
+//! `AttackProcess.Attack()` returns once the attack is declared
+//! (AttackProcess.cs:242 `State = AttackState.Counter`), `SelectAttackEffect`
+//! awaits only that (SelectAttackEffect.cs:547), `CardController.UseOption`
+//! then resolves the card's own Arts Digivolve or trashes it
+//! (CardController.cs:2026-2129), and only afterwards does the phase loop
+//! resolve the queued [When Attacking] effects and run counter / block /
+//! battle (TurnStateMachine.cs:1277-1286). Official Q&A agrees: Q4962 ("If
+//! you use BT22-010 [Meramon]'s effect to attack, you gain 1 memory after the
+//! attack declaration") and Q4346 (an effect's attack resolves at the
+//! declaration; the next effect activates before the counter timing). CR 4.3
+//! 11-2-4 (no new attack while one is in progress) still holds: a second
+//! "it may attack" during the attack offers nothing.
+//!
+//! Before the reversal the engine held the Option until the attack ended
+//! (`Game::held_options`, commits 32d148445 / a7a55dac1); these tests were
+//! that mechanism's tests and are re-expressed for the declaration order.
+//! The one DCGO detail not copied: DCGO runs an `IsBackgroundProcess` on-ally-
+//! attack effect inline during the declaration (AutoProcessing.cs:1006),
+//! before the Option finishes; the engine queues every [When Attacking].
 
 use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_data::CardData;
@@ -30,7 +47,8 @@ const MONARCH: &str = "BT25-057";
 
 /// A Lv.5 [Glowing Dawn] Digimon whose [When Attacking] may use any Option
 /// card from hand for free (the shape of EX7-059 / BT26-026 / EX13-014 /
-/// BT25-083 without their costs).
+/// BT25-083 without their costs). Lv.5, so never an <Arts Digivolve> host
+/// for Monarchlizamon (BT25-057).
 const ATTACKER_YAML: &str = r#"
 card: T-ATK
 name: Attacker
@@ -143,6 +161,25 @@ effects:
       - end_attack: true
 "#;
 
+/// A green Lv.4 [Glowing Dawn] Digimon whose OWN (non-inherited) [When
+/// Attacking] gains 1 memory: an <Arts Digivolve> host that, when it is the
+/// attacker, has a [When Attacking] pending at the declaration.
+const MEMORY_HOST_YAML: &str = r#"
+card: T-MEMHOST
+name: Memory Host
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: ["Glowing Dawn"]
+effects:
+  - when: when_attacking
+    summary: "[When Attacking] Gain 1 memory"
+    process:
+      - gain_memory: 1
+"#;
+
 fn gd_base(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
@@ -172,6 +209,15 @@ fn ts_digimon(id: &str) -> CardData {
     c.play_cost = 4;
     c.colors = vec![CardColor::Black];
     c.traits = vec!["TS".to_string()];
+    c
+}
+
+fn blocker(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Blocker");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(3);
+    c.dp = Some(1000);
+    c.keywords = vec![Keyword::Blocker];
     c
 }
 
@@ -206,9 +252,10 @@ enum Pick {
 
 /// Answer the parked selections. Each `(prompt substring, pick)` rule answers
 /// the first prompt whose text contains it and is then spent; any other
-/// prompt is declined when optional and otherwise answered with its first
-/// action. Stops when no selection is parked, or before answering when
-/// `stop` returns true. Returns the prompts seen.
+/// prompt is declined when optional (a trigger-order prompt takes its first
+/// entry) and otherwise answered with its first action. Stops when no
+/// selection is parked, or before answering when `stop` returns true.
+/// Returns the prompts seen.
 fn drive(
     r: &mut DebugRunner,
     rules: &mut Vec<(&str, Pick)>,
@@ -229,6 +276,7 @@ fn drive(
         let rule = rules.iter().position(|(needle, _)| prompt.contains(needle));
         let pick = match rule {
             Some(i) => rules.remove(i).1,
+            None if sel.kind == SelectionKind::TriggerOrder => Pick::First,
             None if sel.is_optional => Pick::Pass,
             None => Pick::First,
         };
@@ -265,28 +313,29 @@ fn top_id(r: &DebugRunner, h: PermanentHandle) -> String {
         .to_string()
 }
 
-fn held_ids(r: &DebugRunner) -> Vec<String> {
+fn in_flight_id(r: &DebugRunner) -> Option<String> {
     r.game
-        .held_options
-        .iter()
-        .map(|h| h.option.card.card_id(&r.game.card_data).to_string())
-        .collect()
+        .pending_option
+        .as_ref()
+        .map(|p| p.card.card_id(&r.game.card_data).to_string())
 }
 
-fn arts_on(base: PermanentHandle) -> impl Fn(&DebugRunner) -> bool {
+/// The <Arts Digivolve> offer with `host` among its legal hosts.
+fn arts_on(host: PermanentHandle) -> impl Fn(&DebugRunner) -> bool {
     move |r: &DebugRunner| {
         r.game.pending_selection.as_ref().is_some_and(|s| {
             s.kind == SelectionKind::OwnField
                 && s.is_optional
+                && s.prompt.contains("Arts Digivolve")
                 && s.valid_action_ids
-                    .contains(&encode_attack(0, base.index as u16))
+                    .contains(&encode_attack(0, host.index as u16))
         })
     }
 }
 
 /// Use Monarchlizamon (BT25-057) from hand index `hand_index`, give `buffed`
-/// the buffs and declare its attack on the opponent. Leaves the engine at the
-/// first decision of the attack.
+/// the buffs and declare its attack on the opponent. Leaves the engine right
+/// after the declaration.
 fn use_monarch_and_attack(r: &mut DebugRunner, hand_index: usize, buffed: PermanentHandle) {
     assert_eq!(
         r.game.play_option_from_hand(0, hand_index),
@@ -303,19 +352,28 @@ fn use_monarch_and_attack(r: &mut DebugRunner, hand_index: usize, buffed: Perman
         .expect("attack the player");
 }
 
-// ─── 1. The reviewer's reproduction ─────────────────────────────────────────
+/// Right after the declaration with no <Arts Digivolve> host: the Option is
+/// already in the trash, nothing is in flight, the attack is open, and no
+/// security card has been checked.
+fn assert_finished_at_declaration(r: &DebugRunner, security_before: usize) {
+    assert!(r.game.pending_attack.is_some(), "the attack is declared and open");
+    assert_eq!(trash_has(r, 0, MONARCH), 1, "trashed at the declaration");
+    assert!(r.game.pending_option.is_none(), "no Option in flight");
+    assert_eq!(r.security_count(1), security_before, "no security check yet");
+}
+
+// ─── 1. The reproduction line ───────────────────────────────────────────────
 
 /// BT25-057 used from hand on an attacker whose [When Attacking] may use an
-/// Option from hand: the attack declared inside the Option's effect opens,
-/// the [When Attacking] uses another Option, that Option resolves completely
-/// (draw, trash), the attack continues through its two security checks
-/// (<Security A. +1>), and only then is BT25-057 trashed (no Lv.4 for its
-/// <Arts Digivolve>). Red before the fix: panic "reentrant Option play while
-/// another is mid-resolution: player=0 incoming_card=T-PLAINOPT
-/// from_source=Hand(0) in_flight_card=BT25-057
-/// in_flight_resolution_phase=MainEffectDrain in_counter_window=false".
+/// Option from hand. The attack is declared inside the Option's effect; the
+/// Option is trashed at once (no Lv.4 host for its <Arts Digivolve>); THEN
+/// the [When Attacking] uses another Option, which finds the in-flight slot
+/// free, resolves completely (draw, trash), and the attack continues through
+/// its two security checks (<Security A. +1>). (Under the former hold this
+/// line needed `held_options`; before that it panicked "reentrant Option
+/// play while another is mid-resolution".)
 #[test]
-fn option_used_by_when_attacking_during_an_option_body_attack() {
+fn option_used_by_when_attacking_after_the_option_finished_at_declaration() {
     let mut r = base_builder()
         .security(1, &["SEC", "SEC", "SEC", "SEC"])
         .hand(0, &[MONARCH, "T-PLAINOPT"])
@@ -327,14 +385,9 @@ fn option_used_by_when_attacking_during_an_option_body_attack() {
 
     use_monarch_and_attack(&mut r, 0, atk);
 
-    // The [When Attacking] prompt: BT25-057 is held, not in flight and in
-    // no zone; the attack is open.
+    // The [When Attacking] prompt comes after the Option finished.
     assert_eq!(r.pending_kind(), Some(SelectionKind::Hand));
-    assert_eq!(held_ids(&r), vec![MONARCH.to_string()]);
-    assert!(r.game.pending_option.is_none(), "the slot is free for the inner use");
-    assert!(r.game.pending_attack.is_some());
-    assert_eq!(trash_has(&r, 0, MONARCH), 0);
-    assert_eq!(hand_has(&r, 0, MONARCH), 0);
+    assert_finished_at_declaration(&r, 4);
 
     let mut rules = vec![("Use 1 Option card", Pick::First)];
     let seen = drive(&mut r, &mut rules, |_| false);
@@ -343,8 +396,7 @@ fn option_used_by_when_attacking_during_an_option_body_attack() {
     assert_eq!(trash_has(&r, 0, "T-PLAINOPT"), 1, "inner trashed: {seen:#?}");
     assert!(r.game.pending_attack.is_none(), "the attack ended: {seen:#?}");
     assert_eq!(r.security_count(1), 2, "two security checks (<Security A. +1>)");
-    assert_eq!(trash_has(&r, 0, MONARCH), 1, "BT25-057 trashed after its attack");
-    assert!(r.game.held_options.is_empty());
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "trashed once");
     assert!(r.game.pending_option.is_none(), "no Option left in flight");
     assert!(r.game.pending_selection.is_none(), "{seen:#?}");
     // Both Options left the hand and the inner one drew 1.
@@ -352,18 +404,12 @@ fn option_used_by_when_attacking_during_an_option_body_attack() {
 }
 
 /// Same line with a <Blocker> on the defending side: at the block timing
-/// (after the [When Attacking] effects, 11-1-3) the inner Option has fully
-/// resolved, the outer one is still held, and no security check has been
-/// made yet.
+/// (after the [When Attacking] effects, 11-1-3) both Options have finished
+/// and no security check has been made yet.
 #[test]
-fn inner_option_finishes_before_the_outer_attack_checks_security() {
-    let mut blocker = make_test_card("OPP-BLK", "Blocker");
-    blocker.card_kind = CardKind::Digimon;
-    blocker.level = Some(3);
-    blocker.dp = Some(1000);
-    blocker.keywords = vec![Keyword::Blocker];
+fn both_options_finish_before_the_block_timing() {
     let mut r = base_builder()
-        .add_card(blocker)
+        .add_card(blocker("OPP-BLK"))
         .security(1, &["SEC", "SEC", "SEC", "SEC"])
         .hand(0, &[MONARCH, "T-PLAINOPT"])
         .memory(8)
@@ -372,6 +418,7 @@ fn inner_option_finishes_before_the_outer_attack_checks_security() {
     r.place_on_field(1, "OPP-BLK", None);
     r.game.enter_main_phase();
     use_monarch_and_attack(&mut r, 0, atk);
+    assert_finished_at_declaration(&r, 4);
 
     let mut rules = vec![("Use 1 Option card", Pick::First)];
     let defender_decides = |r: &DebugRunner| {
@@ -386,24 +433,24 @@ fn inner_option_finishes_before_the_outer_attack_checks_security() {
     assert_eq!(trash_has(&r, 0, "T-PLAINOPT"), 1, "inner resolved: {seen:#?}");
     assert!(r.game.pending_attack.is_some(), "the attack is still open");
     assert_eq!(r.security_count(1), 4, "no security check yet");
-    assert_eq!(held_ids(&r), vec![MONARCH.to_string()], "outer still held");
     assert!(r.game.pending_option.is_none());
-    assert_eq!(trash_has(&r, 0, MONARCH), 0);
+    assert_eq!(trash_has(&r, 0, MONARCH), 1);
 
-    // No block: the attack checks twice, then the outer Option is trashed.
+    // No block: the attack checks twice.
     let seen = drive(&mut r, &mut Vec::new(), |_| false);
     assert_eq!(r.security_count(1), 2, "{seen:#?}");
     assert_eq!(trash_has(&r, 0, MONARCH), 1);
-    assert!(r.game.held_options.is_empty());
 }
 
-// ─── 4. Inner Options that are placed / Arts-digivolve ──────────────────────
+// ─── 2. <Arts Digivolve> at the declaration ─────────────────────────────────
 
-/// The inner Option places itself in the battle area: it lands there (not in
-/// the trash), the attack continues, and the outer Option is offered for
-/// <Arts Digivolve> after the attack (GD-BASE is a green Lv.4) and accepted.
+/// GD-BASE (a green Lv.4 [Glowing Dawn] Digimon) is on the field: right after
+/// the declaration the outer Option offers its <Arts Digivolve>, before any
+/// [When Attacking] and with no security card checked. Accepted onto GD-BASE;
+/// then the [When Attacking] uses an Option that places itself in the battle
+/// area, and the attack checks twice.
 #[test]
-fn inner_placed_option_during_the_outer_attack_then_outer_arts() {
+fn outer_arts_at_declaration_then_inner_placed_option() {
     let mut r = base_builder()
         .security(1, &["SEC", "SEC", "SEC", "SEC"])
         .hand(0, &[MONARCH, "T-PLACEDOPT"])
@@ -414,12 +461,22 @@ fn inner_placed_option_during_the_outer_attack_then_outer_arts() {
     r.game.enter_main_phase();
     use_monarch_and_attack(&mut r, 0, atk);
 
+    assert!(arts_on(base)(&r), "the Arts offer follows the declaration");
+    assert!(r.game.pending_attack.is_some(), "the attack is open");
+    assert_eq!(in_flight_id(&r).as_deref(), Some(MONARCH));
+    assert_eq!(r.security_count(1), 4, "no security check before the Arts offer");
+    assert_eq!(hand_has(&r, 0, "T-PLACEDOPT"), 1, "no [When Attacking] yet");
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("accept the Arts Digivolve");
+    assert_eq!(top_id(&r, base), MONARCH, "Arts Digivolved onto GD-BASE");
+    assert!(r.game.pending_option.is_none(), "the Option finished");
+    assert_eq!(r.security_count(1), 4);
+
     let mut rules = vec![("Use 1 Option card", Pick::First)];
-    let seen = drive(&mut r, &mut rules, arts_on(base));
-    assert!(arts_on(base)(&r), "the outer Arts Digivolve offer: {seen:#?}");
+    let seen = drive(&mut r, &mut rules, |_| false);
     assert!(rules.is_empty(), "{seen:#?}");
-    assert!(r.game.pending_attack.is_none(), "Arts is offered after the attack");
-    assert_eq!(r.security_count(1), 2, "both checks happened first");
+    assert!(r.game.pending_attack.is_none(), "{seen:#?}");
+    assert_eq!(r.security_count(1), 2, "both checks after the Arts Digivolve");
     let placed = r
         .game
         .player(0)
@@ -429,18 +486,92 @@ fn inner_placed_option_during_the_outer_attack_then_outer_arts() {
         .count();
     assert_eq!(placed, 1, "the inner Option was placed in the battle area");
     assert_eq!(trash_has(&r, 0, "T-PLACEDOPT"), 0);
-    assert!(r.game.held_options.is_empty(), "released for its Arts offer");
-
-    r.execute_action(0, encode_attack(0, base.index as u16))
-        .expect("accept the outer Arts Digivolve");
-    let _ = drive(&mut r, &mut Vec::new(), |_| false);
-    assert_eq!(top_id(&r, base), MONARCH, "outer Arts Digivolved onto GD-BASE");
     assert_eq!(trash_has(&r, 0, MONARCH), 0);
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
-// ─── 2. Real pool attackers ─────────────────────────────────────────────────
+/// Arts accepted onto the ATTACKER itself in the middle of the declaration
+/// (4-20-1). The attacker (T-MEMHOST, a green Lv.4 [Glowing Dawn] Digimon
+/// whose own [When Attacking] gains 1 memory) becomes Monarchlizamon and
+/// stays the
+/// attacker: the attack continues through the counter timing, the block
+/// timing (the defender has a <Blocker> and is asked) and two security
+/// checks (<Security A. +1> stays on the permanent).
+///
+/// Monarchlizamon (BT25-057)'s own "[When Digivolving] [When Attacking]
+/// [Once Per Turn] ... <De-Digivolve 1>" does not activate as a [When
+/// Attacking] for this attack (official Q6344: "Can I then activate the [When
+/// Attacking] effect on the Digimon that attacked? -- No"): it was not on the
+/// attacker when the attack was declared. Its [When Digivolving] effects do
+/// trigger from the Arts Digivolve.
+///
+/// The old top card's own [When Attacking] (T-MEMHOST's "Gain 1 memory") was
+/// pending from the declaration and the Arts Digivolve took that text away
+/// before it activated. Neither DCGO nor the official Q&A settles this case
+/// (DCGO was not traced past `PlayCard`), so the test follows CR 4.3
+/// 15-4-4-4: "When a card with an effect that's pending activation loses the
+/// effect before it activates, the effect can no longer be activated." No
+/// memory is gained.
+#[test]
+fn arts_onto_the_attacker_at_declaration_keeps_the_attack_going() {
+    let mut r = base_builder()
+        .from_dsl_yaml(MEMORY_HOST_YAML)
+        .expect("memory host")
+        .add_card(blocker("OPP-BLK"))
+        .security(1, &["SEC", "SEC", "SEC", "SEC"])
+        .hand(0, &[MONARCH])
+        .memory(8)
+        .start();
+    let atk = r.place_on_field(0, "T-MEMHOST", Some(0));
+    r.place_on_field(1, "OPP-BLK", None);
+    r.game.enter_main_phase();
+    use_monarch_and_attack(&mut r, 0, atk);
+
+    assert!(arts_on(atk)(&r), "the Arts offer names the attacker");
+    assert!(r.game.pending_attack.is_some());
+    r.execute_action(0, encode_attack(0, atk.index as u16))
+        .expect("Arts Digivolve onto the attacker");
+    assert_eq!(top_id(&r, atk), MONARCH, "the attacker is now Monarchlizamon");
+    assert!(r.game.pending_option.is_none(), "the Option finished");
+    assert!(r.game.pending_attack.is_some(), "still attacking");
+    assert_eq!(r.security_count(1), 4);
+    let memory_after_arts = r.game.memory;
+
+    // Answer everything up to the defender's block decision, recording the
+    // attacker side's prompts on the way.
+    let defender_decides = |r: &DebugRunner| {
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_some_and(|s| s.selecting_player == 1)
+    };
+    let seen = drive(&mut r, &mut Vec::new(), defender_decides);
+    assert!(defender_decides(&r), "the block timing is reached: {seen:#?}");
+    assert!(r.game.pending_attack.is_some(), "{seen:#?}");
+    assert_eq!(r.security_count(1), 4, "no check before the block timing");
+    assert_eq!(
+        r.game.memory, memory_after_arts,
+        "CR 15-4-4-4: the old top card's pending [When Attacking] (Gain 1 memory) lost its text and did not activate: {seen:#?}"
+    );
+    let de_digivolve_offers = seen
+        .iter()
+        .filter(|s| s.contains("De-Digivolve") || s.contains("face-down"))
+        .count();
+    assert!(
+        de_digivolve_offers <= 1,
+        "Monarchlizamon's [When Digivolving]/[When Attacking] is offered at most \
+         once, as [When Digivolving] (Q6344): {seen:#?}"
+    );
+
+    // No block: the attack checks security twice.
+    let seen = drive(&mut r, &mut Vec::new(), |_| false);
+    assert!(r.game.pending_attack.is_none(), "{seen:#?}");
+    assert_eq!(r.security_count(1), 2, "two checks after the Arts: {seen:#?}");
+    assert_eq!(top_id(&r, atk), MONARCH);
+    assert_eq!(trash_has(&r, 0, MONARCH), 0);
+}
+
+// ─── 3. Real pool attackers ─────────────────────────────────────────────────
 
 fn cougarmon_runner() -> (DebugRunner, PermanentHandle, PermanentHandle) {
     let mut r = base_builder()
@@ -457,106 +588,107 @@ fn cougarmon_runner() -> (DebugRunner, PermanentHandle, PermanentHandle) {
     (r, cougar, base)
 }
 
+const COUGAR_RULES: [(&str, Pick); 2] = [
+    ("Will you pay the cost", Pick::First),
+    ("with the cost reduced by 2", Pick::First),
+];
+
 /// Cougarmon (BT26-026) [When Attacking][Once Per Turn]: "By trashing ...
 /// your top security card, you may use 1 Option card with the [Glowing Dawn]
 /// trait from your hand with the cost reduced by 2." Used during the attack
 /// that Monarchlizamon (BT25-057)'s "Final Judgment" declared, on a second
-/// copy of Final Judgment. The inner copy buffs Cougarmon again, offers no
-/// attack (11-2-4: an attack is in progress), is declined for <Arts
-/// Digivolve> and trashed; the outer attack then checks security three times
-/// (<Security A. +1> from each copy) and the outer copy Arts-digivolves.
+/// copy of Final Judgment. The first copy has already finished at the
+/// declaration (its Arts offer declined: trashed). The second copy buffs
+/// Cougarmon again, offers no attack (11-2-4: an attack is in progress), and
+/// is offered its own Arts at its own end: accepted onto GD-BASE. The attack
+/// then checks three times (<Security A. +1> from each copy).
 #[test]
-fn cougarmon_uses_a_second_final_judgment_during_the_first_ones_attack() {
+fn cougarmon_uses_a_second_final_judgment_after_the_first_finished() {
     let (mut r, cougar, base) = cougarmon_runner();
     use_monarch_and_attack(&mut r, 0, cougar);
+    assert!(arts_on(base)(&r), "the first copy's Arts offer at the declaration");
+    assert!(r.game.pending_attack.is_some());
+    assert_eq!(r.security_count(1), 5);
+    r.execute_action(0, PASS).expect("decline the first copy's Arts");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "the first copy is trashed");
+    assert!(r.game.pending_option.is_none());
     let memory_after_outer = r.game.memory;
-    assert_eq!(held_ids(&r), vec![MONARCH.to_string()]);
 
-    let mut rules = vec![
-        ("Will you pay the cost", Pick::First),
-        ("with the cost reduced by 2", Pick::First),
-        (
-            "Choose 1 of your Digimon to gain",
-            Pick::Id(encode_attack(0, cougar.index as u16)),
-        ),
-    ];
-    // Stop at the inner copy's Arts offer (it is in flight; outer held).
+    let mut rules = COUGAR_RULES.to_vec();
+    rules.push((
+        "Choose 1 of your Digimon to gain",
+        Pick::Id(encode_attack(0, cougar.index as u16)),
+    ));
+    // Stop at the second copy's Arts offer.
     let seen = drive(&mut r, &mut rules, |r| {
-        r.game.pending_option.is_some() && arts_on(base)(r)
+        in_flight_id(r).as_deref() == Some(MONARCH) && arts_on(base)(r)
     });
-    assert!(arts_on(base)(&r), "inner Arts offer: {seen:#?}");
+    assert!(arts_on(base)(&r), "second copy's Arts offer: {seen:#?}");
     assert!(rules.is_empty(), "{seen:#?}");
-    assert!(r.game.pending_attack.is_some(), "still inside the outer attack");
-    assert_eq!(held_ids(&r), vec![MONARCH.to_string()]);
+    assert!(
+        seen.iter().all(|s| !s.contains("Target")),
+        "no second attack during the attack (11-2-4): {seen:#?}"
+    );
+    assert!(r.game.pending_attack.is_some(), "inside the attack");
     assert_eq!(r.security_count(0), 1, "Cougarmon paid with its top security card");
     assert_eq!(r.game.memory, memory_after_outer - 2, "Use 4 reduced by 2");
-    r.execute_action(0, PASS)
-        .expect("decline the inner Arts Digivolve");
-    assert_eq!(trash_has(&r, 0, MONARCH), 1, "the inner copy is trashed");
-    // (No further decision belongs to the attack here, so it runs to its end
-    // within this action and the outer copy is released for its own offer.)
-
-    let seen = drive(&mut r, &mut Vec::new(), arts_on(base));
-    assert!(arts_on(base)(&r), "outer Arts offer after the attack: {seen:#?}");
-    assert!(r.game.pending_attack.is_none());
-    assert_eq!(r.security_count(1), 2, "3 checks: <Security A. +1> from each copy");
-    assert!(r.game.held_options.is_empty());
     r.execute_action(0, encode_attack(0, base.index as u16))
-        .expect("accept the outer Arts Digivolve");
-    let _ = drive(&mut r, &mut Vec::new(), |_| false);
+        .expect("second copy Arts Digivolves onto GD-BASE");
     assert_eq!(top_id(&r, base), MONARCH);
-    assert_eq!(trash_has(&r, 0, MONARCH), 1, "only the inner copy is in the trash");
+
+    let seen = drive(&mut r, &mut Vec::new(), |_| false);
+    assert!(r.game.pending_attack.is_none(), "{seen:#?}");
+    assert_eq!(r.security_count(1), 2, "3 checks: <Security A. +1> from each copy");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "only the first copy is in the trash");
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
-/// Same line with the inner copy ACCEPTING its <Arts Digivolve> onto the
-/// attacking Cougarmon mid-attack (4-20-1): Cougarmon becomes Monarchlizamon,
-/// keeps attacking, and the outer copy is still offered its own Arts
-/// Digivolve after the attack (onto GD-BASE).
+/// The first copy Arts-digivolves onto GD-BASE at the declaration; the second
+/// copy, used by Cougarmon (BT26-026)'s [When Attacking], Arts-digivolves
+/// onto the ATTACKING Cougarmon (4-20-1): Cougarmon becomes Monarchlizamon
+/// and keeps attacking.
 #[test]
-fn inner_final_judgment_arts_digivolves_the_attacker_mid_attack() {
+fn second_final_judgment_arts_digivolves_the_attacker_mid_attack() {
     let (mut r, cougar, base) = cougarmon_runner();
     use_monarch_and_attack(&mut r, 0, cougar);
-    let mut rules = vec![
-        ("Will you pay the cost", Pick::First),
-        ("with the cost reduced by 2", Pick::First),
-        (
-            "Choose 1 of your Digimon to gain",
-            Pick::Id(encode_attack(0, cougar.index as u16)),
-        ),
-    ];
+    assert!(arts_on(base)(&r), "first copy's Arts offer at the declaration");
+    r.execute_action(0, encode_attack(0, base.index as u16))
+        .expect("first copy onto GD-BASE");
+    assert_eq!(top_id(&r, base), MONARCH);
+    assert!(r.game.pending_option.is_none());
+
+    let mut rules = COUGAR_RULES.to_vec();
+    rules.push((
+        "Choose 1 of your Digimon to gain",
+        Pick::Id(encode_attack(0, cougar.index as u16)),
+    ));
     let seen = drive(&mut r, &mut rules, |r| {
-        r.game.pending_option.is_some() && arts_on(base)(r)
+        in_flight_id(r).as_deref() == Some(MONARCH) && arts_on(cougar)(r)
     });
-    assert!(arts_on(base)(&r), "inner Arts offer: {seen:#?}");
+    assert!(arts_on(cougar)(&r), "second copy's Arts offer: {seen:#?}");
     r.execute_action(0, encode_attack(0, cougar.index as u16))
-        .expect("inner Arts Digivolve onto the attacker");
+        .expect("second copy Arts Digivolves onto the attacker");
     assert_eq!(top_id(&r, cougar), MONARCH, "the attacker Arts-digivolved");
 
-    let seen = drive(&mut r, &mut Vec::new(), arts_on(base));
-    assert!(arts_on(base)(&r), "outer Arts offer after the attack: {seen:#?}");
+    let seen = drive(&mut r, &mut Vec::new(), |_| false);
+    assert!(r.game.pending_attack.is_none(), "{seen:#?}");
     assert_eq!(
         r.security_count(1),
         2,
         "the attack kept checking after the Arts Digivolve: {seen:#?}"
     );
-    r.execute_action(0, encode_attack(0, base.index as u16))
-        .expect("accept the outer Arts Digivolve");
-    let _ = drive(&mut r, &mut Vec::new(), |_| false);
-    assert_eq!(top_id(&r, base), MONARCH);
     assert_eq!(trash_has(&r, 0, MONARCH), 0, "both copies Arts-digivolved");
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
 /// BeelStarmon ACE (EX7-059) [When Attacking][Once Per Turn]: "By trashing 1
 /// Option card from this Digimon's digivolution cards, you may use 1 [Three
 /// Musketeers] trait Option card from your hand without paying the cost."
 /// The inner Option is Hurricane Screw Shot (EX7-071), whose [Main] places it
-/// as the bottom digivolution card of a [Three Musketeers] Digimon.
+/// as the bottom digivolution card of a [Three Musketeers] Digimon. Final
+/// Judgment's Arts offer comes first, at the declaration (declined: trashed).
 #[test]
-fn beelstarmon_ace_uses_hurricane_screw_shot_during_final_judgments_attack() {
+fn beelstarmon_ace_uses_hurricane_screw_shot_after_final_judgment_finished() {
     let mut r = base_builder()
         .dsl_card("EX7-059")
         .expect("EX7-059")
@@ -572,7 +704,10 @@ fn beelstarmon_ace_uses_hurricane_screw_shot_during_final_judgments_attack() {
     let base = r.place_on_field(0, "GD-BASE", Some(1));
     r.game.enter_main_phase();
     use_monarch_and_attack(&mut r, 0, beel);
-    assert_eq!(held_ids(&r), vec![MONARCH.to_string()]);
+    assert!(arts_on(base)(&r), "Arts offer at the declaration");
+    assert_eq!(trash_has(&r, 0, "T-SRCOPT"), 0, "no [When Attacking] yet");
+    r.execute_action(0, PASS).expect("decline the Arts Digivolve");
+    assert_finished_at_declaration(&r, 4);
 
     let mut rules = vec![
         ("Trash 1 Option card from this Digimon", Pick::First),
@@ -582,10 +717,9 @@ fn beelstarmon_ace_uses_hurricane_screw_shot_during_final_judgments_attack() {
             Pick::Id(encode_attack(0, beel.index as u16)),
         ),
     ];
-    let seen = drive(&mut r, &mut rules, arts_on(base));
+    let seen = drive(&mut r, &mut rules, |_| false);
     assert!(rules.is_empty(), "every inner prompt was offered: {seen:#?}");
-    assert!(arts_on(base)(&r), "outer Arts offer after the attack: {seen:#?}");
-    assert!(r.game.pending_attack.is_none());
+    assert!(r.game.pending_attack.is_none(), "{seen:#?}");
     assert_eq!(r.security_count(1), 2, "two checks (<Security A. +1>)");
     assert_eq!(trash_has(&r, 0, "T-SRCOPT"), 1, "the cost was paid");
     let beel_sources = &r.game.player(0).battle_area[beel.index as usize].card_sources;
@@ -595,20 +729,16 @@ fn beelstarmon_ace_uses_hurricane_screw_shot_during_final_judgments_attack() {
         "Hurricane Screw Shot was placed under BeelStarmon ACE"
     );
     assert_eq!(trash_has(&r, 0, "EX7-071"), 0);
-    r.execute_action(0, PASS)
-        .expect("decline the outer Arts Digivolve");
-    let _ = drive(&mut r, &mut Vec::new(), |_| false);
-    assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer trashed");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1);
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
-// ─── 3. Security Options checked during the held attack ─────────────────────
+// ─── 4. Security Options checked during the attack ──────────────────────────
 
 /// "[Security] Activate this card's [Main] effect" on a Plug-In Option, Iron
-/// Slash (BT25-100): its link step must link IRON SLASH to its owner's [TS]
-/// Digimon. While Final Judgment sat in `pending_option` the link step read
-/// it as the Option being linked.
+/// Slash (BT25-100): its link step links IRON SLASH to its owner's [TS]
+/// Digimon. Final Judgment finished at the declaration, so nothing else is in
+/// flight when the security check uses the Option.
 #[test]
 fn security_iron_slash_links_itself_during_final_judgments_attack() {
     let mut r = base_builder()
@@ -632,6 +762,7 @@ fn security_iron_slash_links_itself_during_final_judgments_attack() {
     };
     let seen = drive(&mut r, &mut Vec::new(), is_link);
     assert!(is_link(&r), "Iron Slash's owner is offered the link: {seen:#?}");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "Final Judgment finished long before");
     let link_pick = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     r.execute_action(1, link_pick).expect("link Iron Slash");
     let seen = drive(&mut r, &mut Vec::new(), |_| false);
@@ -641,12 +772,11 @@ fn security_iron_slash_links_itself_during_final_judgments_attack() {
         1,
         "Iron Slash linked to its owner's [TS] Digimon: {seen:#?}"
     );
-    assert_eq!(trash_has(&r, 0, MONARCH), 1, "Final Judgment trashed after the attack");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1);
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
-/// A plain [Security] effect on an Option checked during the held attack.
+/// A plain [Security] effect on an Option checked during the attack.
 #[test]
 fn plain_security_option_effect_during_final_judgments_attack() {
     let mut r = base_builder()
@@ -669,13 +799,15 @@ fn plain_security_option_effect_during_final_judgments_attack() {
     assert_eq!(trash_has(&r, 1, "T-SECDRAW"), 1);
     assert_eq!(trash_has(&r, 0, MONARCH), 1);
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
-// ─── 5. No attack: no hold ──────────────────────────────────────────────────
+// ─── 5. No attack ───────────────────────────────────────────────────────────
 
+/// Declining "it may attack" leaves no attack behind: no attack opens, no
+/// MayAttack grant is left for later, the Option is trashed, no security is
+/// checked.
 #[test]
-fn declined_attack_holds_nothing() {
+fn declined_attack_leaves_nothing_deferred() {
     let mut r = base_builder()
         .security(1, &["SEC", "SEC", "SEC", "SEC"])
         .hand(0, &[MONARCH])
@@ -688,18 +820,24 @@ fn declined_attack_holds_nothing() {
         .unwrap();
     assert_eq!(r.pending_kind(), Some(SelectionKind::Target));
     r.execute_action(0, PASS).expect("decline the attack");
-    assert!(r.game.held_options.is_empty(), "nothing held");
     let _ = drive(&mut r, &mut Vec::new(), |_| false);
+    assert!(r.game.pending_attack.is_none(), "no attack opened");
+    assert!(
+        !r.game
+            .modifiers
+            .has(atk, digimon_engine::enums::ModifierType::MayAttack),
+        "no deferred MayAttack grant"
+    );
+    assert!(!r.game.player(0).battle_area[atk.index as usize].is_suspended);
     assert_eq!(trash_has(&r, 0, MONARCH), 1);
     assert_eq!(r.security_count(1), 4);
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
 /// The buffed Digimon is suspended, so it cannot attack: no attack prompt,
-/// no hold, the Option goes to the trash.
+/// the Option goes to the trash.
 #[test]
-fn no_legal_attack_holds_nothing() {
+fn no_legal_attack_trashes_the_option() {
     let mut r = base_builder()
         .security(1, &["SEC", "SEC", "SEC", "SEC"])
         .hand(0, &[MONARCH])
@@ -718,10 +856,12 @@ fn no_legal_attack_holds_nothing() {
     );
     assert_eq!(trash_has(&r, 0, MONARCH), 1);
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
 // ─── 6. The attack ends early ───────────────────────────────────────────────
+//
+// The Option finished at the declaration, so an attack that ends early has
+// nothing left to finish: the Option must be in the trash exactly once.
 
 fn early_end_runner(yaml: &str, id: &str) -> (DebugRunner, PermanentHandle) {
     let mut r = base_builder()
@@ -737,38 +877,37 @@ fn early_end_runner(yaml: &str, id: &str) -> (DebugRunner, PermanentHandle) {
 }
 
 /// The attacker's [When Attacking] deletes it: 11-1-5 still runs the
-/// attack's timings, then it ends; the held Option is finished exactly once.
+/// attack's timings, then it ends.
 #[test]
-fn attacker_deleted_by_its_when_attacking_finishes_the_held_option_once() {
+fn attacker_deleted_by_its_when_attacking_after_the_option_finished() {
     let (mut r, atk) = early_end_runner(SELF_DELETE_ATTACKER_YAML, "T-SELFDEL");
     use_monarch_and_attack(&mut r, 0, atk);
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "trashed at the declaration");
     let seen = drive(&mut r, &mut Vec::new(), |_| false);
     assert!(r.game.pending_attack.is_none(), "{seen:#?}");
     assert_eq!(trash_has(&r, 0, "T-SELFDEL"), 1, "the attacker was deleted");
     assert_eq!(r.security_count(1), 4, "no security check");
     assert_eq!(trash_has(&r, 0, MONARCH), 1, "trashed exactly once");
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
 /// The attacker's [When Attacking] ends the attack (15-15-1).
 #[test]
-fn attack_ended_by_an_effect_finishes_the_held_option_once() {
+fn attack_ended_by_an_effect_after_the_option_finished() {
     let (mut r, atk) = early_end_runner(END_ATTACK_ATTACKER_YAML, "T-ENDATK");
     use_monarch_and_attack(&mut r, 0, atk);
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "trashed at the declaration");
     let seen = drive(&mut r, &mut Vec::new(), |_| false);
     assert!(r.game.pending_attack.is_none(), "{seen:#?}");
     assert_eq!(r.security_count(1), 4, "the attack ended before any check");
     assert_eq!(trash_has(&r, 0, MONARCH), 1, "trashed exactly once");
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
 /// The attacker loses a security battle (7000 + 5000 against a 15000-DP
-/// security Digimon) and is deleted: the attack ends after the first check
-/// and the held Option is finished once.
+/// security Digimon) and is deleted: the attack ends after the first check.
 #[test]
-fn attacker_deleted_in_a_security_battle_finishes_the_held_option_once() {
+fn attacker_deleted_in_a_security_battle_after_the_option_finished() {
     let mut big = make_test_card("SEC-BIG", "Big Security");
     big.card_kind = CardKind::Digimon;
     big.level = Some(6);
@@ -781,6 +920,8 @@ fn attacker_deleted_in_a_security_battle_finishes_the_held_option_once() {
         .start();
     let atk = r.place_on_field(0, "T-ATK", Some(0));
     r.game.enter_main_phase();
+    // No decision follows the declaration here (the [When Attacking] has no
+    // Option to use), so the whole attack runs inside this call.
     use_monarch_and_attack(&mut r, 0, atk);
     let seen = drive(&mut r, &mut Vec::new(), |_| false);
     assert!(r.game.pending_attack.is_none(), "{seen:#?}");
@@ -788,70 +929,74 @@ fn attacker_deleted_in_a_security_battle_finishes_the_held_option_once() {
     assert_eq!(r.security_count(1), 3, "the second check never happened");
     assert_eq!(trash_has(&r, 0, MONARCH), 1, "trashed exactly once");
     assert!(r.game.pending_option.is_none());
-    assert!(r.game.held_options.is_empty());
 }
 
-// ─── 7. Clone mid-state ─────────────────────────────────────────────────────
+// ─── 7. Clone safety ────────────────────────────────────────────────────────
 
-/// Clone the game while Final Judgment is held and the second copy is in
-/// flight (parked on its own buff pick); drive the original and the clone
-/// with the same decisions; they end in the same state.
+/// Clone the game (a) at the <Arts Digivolve> offer made at the declaration
+/// and (b) at the first [When Attacking] prompt, then drive the original and
+/// each clone with the same decisions: they reach identical digests.
 #[test]
-fn clone_while_held_and_inner_in_flight_replays_identically() {
-    let (mut r, cougar, _base) = cougarmon_runner();
+fn clone_at_the_arts_offer_and_at_the_first_when_attacking_prompt() {
+    let (mut r, cougar, base) = cougarmon_runner();
     use_monarch_and_attack(&mut r, 0, cougar);
-    let mut rules = vec![
-        ("Will you pay the cost", Pick::First),
-        ("with the cost reduced by 2", Pick::First),
-    ];
-    let seen = drive(&mut r, &mut rules, |r| r.game.pending_option.is_some());
-    assert!(r.game.pending_option.is_some(), "inner in flight: {seen:#?}");
-    assert_eq!(held_ids(&r), vec![MONARCH.to_string()]);
-    assert!(r.game.pending_selection.is_some());
+    assert!(arts_on(base)(&r), "the Arts offer at the declaration");
+    let at_arts = r.game.clone();
+    assert_eq!(at_arts.verification_digest(), r.game.verification_digest());
 
-    let mut c = DebugRunner::wrap(r.game.clone());
-    assert_eq!(r.game.verification_digest(), c.game.verification_digest());
+    r.execute_action(0, PASS).expect("decline the first copy's Arts");
+    assert!(r.game.pending_attack.is_some());
+    assert!(r.game.pending_selection.is_some(), "the first [When Attacking] prompt");
+    assert!(r.game.pending_option.is_none());
+    let at_when_attacking = r.game.clone();
     assert_eq!(
-        format!("{:?}", r.game.held_options),
-        format!("{:?}", c.game.held_options)
+        at_when_attacking.verification_digest(),
+        r.game.verification_digest()
     );
 
     let script = || {
-        vec![(
+        let mut rules = COUGAR_RULES.to_vec();
+        rules.push((
             "Choose 1 of your Digimon to gain",
             Pick::Id(encode_attack(0, cougar.index as u16)),
-        )]
+        ));
+        rules
     };
     let a = drive(&mut r, &mut script(), |_| false);
+    let end = r.game.verification_digest();
+    assert_eq!(r.security_count(1), 2, "three checks");
+    assert_eq!(trash_has(&r, 0, MONARCH), 2, "both copies declined Arts: trashed");
+    assert!(r.game.pending_option.is_none() && r.game.pending_attack.is_none());
+
+    let mut c = DebugRunner::wrap(at_when_attacking);
     let b = drive(&mut c, &mut script(), |_| false);
     assert_eq!(a, b, "same prompts in the same order");
-    assert_eq!(r.game.verification_digest(), c.game.verification_digest());
-    assert_eq!(r.security_count(1), c.security_count(1));
-    assert_eq!(r.security_count(1), 2, "three checks in both");
-    assert_eq!(trash_has(&r, 0, MONARCH), 2, "both copies declined Arts: trashed");
-    assert_eq!(trash_has(&c, 0, MONARCH), 2);
-    assert!(r.game.held_options.is_empty() && c.game.held_options.is_empty());
-    assert!(r.game.pending_option.is_none() && c.game.pending_option.is_none());
+    assert_eq!(c.game.verification_digest(), end, "clone at the [When Attacking]");
+
+    let mut c = DebugRunner::wrap(at_arts);
+    c.execute_action(0, PASS)
+        .expect("decline the first copy's Arts on the clone");
+    let b = drive(&mut c, &mut script(), |_| false);
+    assert_eq!(a, b, "same prompts in the same order");
+    assert_eq!(c.game.verification_digest(), end, "clone at the Arts offer");
 }
 
 // ─── 8. The guard still fires ───────────────────────────────────────────────
 
-/// A second Option starting while another Option's body is mid-resolution
-/// with no attack hold is still refused loudly.
+/// A second Option starting while another Option's body is mid-resolution is
+/// still refused loudly.
 #[test]
 #[should_panic(expected = "reentrant Option play while another is mid-resolution")]
-fn reentrant_option_use_without_an_attack_hold_still_panics() {
+fn reentrant_option_use_while_another_is_mid_resolution_still_panics() {
     let mut r = base_builder()
         .hand(0, &[MONARCH, "T-PLAINOPT"])
         .memory(8)
         .start();
     r.place_on_field(0, "T-ATK", Some(0));
     r.game.enter_main_phase();
-    // Final Judgment parks on its buff pick: its body is mid-resolution and
-    // no attack holds it.
+    // Final Judgment parks on its buff pick: its body is mid-resolution.
     assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
     assert!(r.game.pending_option.is_some());
-    assert!(r.game.held_options.is_empty());
     // Hand index 0 is now T-PLAINOPT.
     let _ = r.game.use_option_from_hand_without_paying_cost(0, 0);
 }

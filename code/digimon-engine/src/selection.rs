@@ -944,35 +944,6 @@ pub struct PendingOption {
     pub subtype: OptionSubtype,
 }
 
-/// An in-flight Option whose `[Main]` body declared an attack that is still
-/// running ("Then, it may attack." -- Monarchlizamon (BT25-057) "Final
-/// Judgment"). The attack is one of the body's processes, so the effect has
-/// not resolved until the attack has ended (CR 4.3 15-1-2, 15-1-4, 11-1-5)
-/// and the Option is not yet trashed or offered for <Arts Digivolve> (9-1-5,
-/// 4-20-1/4-20-2). The card stays out of every area (9-1-4).
-///
-/// `Game::hold_option_for_body_attack` moves the Option, with the per-use
-/// body state that `play_option_core` would otherwise overwrite, here when
-/// the attack is installed. That frees `Game::pending_option` for Options
-/// used during the attack (a [When Attacking] "use 1 Option card", a
-/// defender's [Counter] Option, a security card's effect).
-/// `Game::release_held_option_after_attack` puts it back once the attack has
-/// ended and finishes it as before (trash / <Arts Digivolve> / placement).
-/// G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD.
-#[derive(Debug, Clone)]
-pub struct HeldOptionBody {
-    pub option: PendingOption,
-    /// `Game::option_body_pending` of the held use.
-    pub(crate) body_pending: bool,
-    /// `Game::option_body_outer_deferred` of the held use.
-    pub(crate) outer_deferred: u32,
-    /// `Game::option_first_main_resolved` of the held use.
-    pub(crate) first_main_resolved: bool,
-    /// `Game::on_use_option_armed` of the held use: its board-wide
-    /// `OnUseOption` observers, owed once its body has resolved.
-    pub(crate) on_use_option_armed: Option<(PlayerId, CardHandle)>,
-}
-
 /// Source zone for an in-flight Option use.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OptionUseSource {

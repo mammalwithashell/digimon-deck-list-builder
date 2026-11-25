@@ -195,6 +195,116 @@ fn bt19_090_attack_mode_unsuspends_shoutmon_ex6_and_shootingstarmon_then_attacks
     );
 }
 
+/// A "Shoutmon EX6" whose own [When Attacking] may draw 1: an optional
+/// prompt that parks right after the attack is declared.
+const SHOUTMON_WA_YAML: &str = r#"
+card: T-SHOUT-WA
+name: Shoutmon EX6
+kind: digimon
+level: 6
+color: [red]
+cost: 7
+dp: 5000
+traits: []
+effects:
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+
+/// Attack mode: "... Then, 1 of your Digimon may attack the player" -- here
+/// mandatory (`optional: false`, DCGO BT19_090.cs). Meteor Rock Soul has no
+/// <Arts Digivolve>, so the Option finishing at the declaration means it is
+/// already in the trash when the attacker's [When Attacking] is offered and
+/// before any security check (DCGO: AttackProcess.cs:242 returns at the
+/// declaration and CardController.cs:2126-2129 trashes the card before
+/// TurnStateMachine.cs:1277-1286 resolves [When Attacking] and runs the
+/// attack). G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD, resolved by reversal.
+#[test]
+fn bt19_090_attack_mode_trashes_the_option_at_the_declaration() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT19-090 YAML loads")
+        .from_dsl_yaml(SHOUTMON_WA_YAML)
+        .expect("Shoutmon EX6 fixture")
+        .add_card(named_digimon("SHOOTING-STARMON", "ShootingStarmon"))
+        .add_card(security_filler("SECURITY-CARD"))
+        .add_card(security_filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .hand(0, &[CARD_ID])
+        .security(1, &["SECURITY-CARD", "SECURITY-CARD"])
+        .memory(10)
+        .start();
+    let shoutmon = runner.place_on_field(0, "T-SHOUT-WA", Some(0));
+    let shooting = runner.place_on_field(0, "SHOOTING-STARMON", Some(0));
+    runner.game.players[0].battle_area[shoutmon.index as usize].is_suspended = true;
+    runner.game.players[0].battle_area[shooting.index as usize].is_suspended = true;
+    runner.game.enter_main_phase();
+
+    let _ = runner.game.play_option_from_hand(0, 0);
+    choose_effect_mode(&mut runner, 0, "attack");
+    let attack_id = encode_attack(shoutmon.index as u16, SECURITY_TARGET);
+    for _ in 0..8 {
+        let view = runner
+            .pending_selection_view()
+            .expect("the attack mode parks until its attack prompt");
+        if view.kind == SelectionKind::Target {
+            break;
+        }
+        let action = if view
+            .valid_action_ids
+            .contains(&digimon_engine::action::space::encode_attack(0, shoutmon.index as u16))
+            && view.prompt.contains("attack")
+        {
+            encode_attack(0, shoutmon.index as u16)
+        } else {
+            view.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != PASS)
+                .expect("a legal pick")
+        };
+        runner.execute_action(0, action).expect("answer the attack mode");
+    }
+    let target = runner.pending_selection_view().expect("the attack prompt");
+    assert_eq!(target.kind, SelectionKind::Target);
+    assert!(target.valid_action_ids.contains(&attack_id), "{:?}", target.valid_action_ids);
+    runner.execute_action(0, attack_id).expect("Shoutmon EX6 attacks");
+
+    // The attacker's [When Attacking] prompt: the Option has finished.
+    let wa = runner
+        .pending_selection_view()
+        .expect("the [When Attacking] prompt");
+    assert!(wa.is_optional, "the optional [When Attacking]: {wa:?}");
+    assert!(runner.game.pending_attack.is_some(), "the attack is open");
+    assert!(runner.game.pending_option.is_none(), "no Option in flight");
+    let in_trash = runner.game.players[0]
+        .trash
+        .iter()
+        .filter(|c| c.card_id(&runner.game.card_data) == CARD_ID)
+        .count();
+    assert_eq!(in_trash, 1, "Meteor Rock Soul trashed at the declaration");
+    assert_eq!(runner.security_count(1), 2, "no security check yet");
+
+    for _ in 0..10 {
+        let Some(view) = runner.pending_selection_view() else {
+            break;
+        };
+        let action = if view.is_optional {
+            PASS
+        } else {
+            view.valid_action_ids[0]
+        };
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("drive the attack");
+    }
+    assert!(runner.game.pending_attack.is_none(), "the attack ended");
+    assert_eq!(runner.security_count(1), 1, "one security check");
+}
+
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
 

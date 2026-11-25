@@ -1093,22 +1093,6 @@ pub struct Game {
     /// trashed in the step that finishes its body too, before any rule check
     /// (F-ENGINE-EFFECT-USED-OPTION-MAIN-IS-ORDERABLE residual).
     pub(crate) option_body_outer_deferred: u32,
-    /// Options whose `[Main]` body declared the attack now in progress ("Then,
-    /// it may attack." -- Monarchlizamon (BT25-057) "Final Judgment"), held
-    /// out of `pending_option` until that attack has ended so Options used
-    /// during the attack get the single in-flight slot. The attack is one of
-    /// the body's processes: the effect has not resolved until it has ended
-    /// (CR 4.3 15-1-2, 15-1-4, 11-1-5), so the held Option is not trashed /
-    /// offered for <Arts Digivolve> (9-1-5, 4-20-1) while it runs. Plain data
-    /// (cloned with the game); its cards are in no area (9-1-4) and are
-    /// counted through `Game::in_flight_option_cards`. At most one entry in
-    /// every state reachable through play: an Option is held only when an
-    /// attack is installed and 11-2-4 allows one attack at a time. It is a
-    /// stack so that an Option used during the attack that outlived it and
-    /// then declared an attack of its own would nest instead of overwrite.
-    /// See `Game::hold_option_for_body_attack`;
-    /// G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD.
-    pub held_options: Vec<crate::selection::HeldOptionBody>,
     /// §9-1-5 "as soon as the timing when its 1st [Main] effect has been
     /// resolved": set when the in-flight Option's first `OptionMain` entry has
     /// run; an Option with two `[Main]` effects (none in the current pool --

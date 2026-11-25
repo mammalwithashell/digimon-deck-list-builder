@@ -3110,12 +3110,8 @@ fn effect_footprint_parts(game: &Game) -> Vec<(&'static str, u64)> {
         (
             "the attack, security check or option in progress",
             digest(format!(
-                "{:?}|{:?}|{:?}|{:?}|{:?}",
-                game.pending_attack,
-                game.pending_security,
-                game.security_resolution,
-                game.pending_option,
-                game.held_options
+                "{:?}|{:?}|{:?}|{:?}",
+                game.pending_attack, game.pending_security, game.security_resolution, game.pending_option
             )),
         ),
         ("the replacement state", digest(format!("{fired:?}|{:?}", game.after_selection_resume_hooks))),

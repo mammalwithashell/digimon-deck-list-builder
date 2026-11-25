@@ -285,7 +285,6 @@ impl Game {
             on_use_option_armed: None,
             option_body_pending: false,
             option_body_outer_deferred: 0,
-            held_options: Vec::new(),
             option_first_main_resolved: false,
             pending_cost_reduction_amount_override: None,
             cost_payment_receipts: Vec::new(),
@@ -500,7 +499,6 @@ impl Game {
         self.on_use_option_armed = None;
         self.option_body_pending = false;
         self.option_body_outer_deferred = 0;
-        self.held_options.clear();
         self.option_first_main_resolved = false;
         self.pending_cost_reduction_amount_override = None;
         self.cost_payment_receipts.clear();

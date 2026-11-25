@@ -1,16 +1,22 @@
-//! Adversarial review of the held-Option slot (G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD).
+//! Adversarial lines for Options used during an attack that an Option's own
+//! `[Main]` declared (G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD, resolved by
+//! reversal).
 //!
 //! Monarchlizamon (BT25-057) Option face "Final Judgment": "[Main] 1 of your
-//! Digimon gains <Rush>, <Security A. +1> and +5000 DP for the turn. Then, it
-//! may attack." The attack is one of the effect's processes (CR 4.3 15-1-2,
-//! 15-1-4, 11-1-5), so the Option is trashed / offered for <Arts Digivolve>
-//! only after that attack has ended (9-1-5, 4-20-1/4-20-2). These lines use
-//! further Options during that attack in shapes the lane's own tests do not:
-//! an inner Option that removes the attacker, two [When Attacking] uses in
-//! one attack, an Option used by the DEFENDING player when the attack target
+//! Digimon gains <Rush>, <Security A. +1> and +5000 DP until your opponent's
+//! turn ends. Then, it may attack." The Option finishes (its <Arts Digivolve>
+//! offer, or the trash) as soon as the attack has been DECLARED, before the
+//! attack's [When Attacking] effects and the counter timing, as DCGO does
+//! (AttackProcess.cs:242, CardController.cs:2026-2129,
+//! TurnStateMachine.cs:1277-1286; Q4962, Q4346). The project owner's default
+//! is "Generally let's look to match dcgo"; applying it here is the
+//! orchestrator's call. These lines were written against the former hold
+//! (`Game::held_options`, removed) and are re-expressed for that order: an
+//! inner Option that removes the attacker, two [When Attacking] uses in one
+//! attack, an Option used by the DEFENDING player when the attack target
 //! changes (the shape of Wolvermon (BT26-053)), a blocked attack, the outer
 //! Option used from the trash by another card's effect, the game ending
-//! during the held attack, and a clone taken at every decision of one line.
+//! during the attack, and a clone taken at every decision of one line.
 
 use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_data::CardData;
@@ -331,14 +337,13 @@ fn settled(r: &DebugRunner) {
     assert!(r.game.pending_selection.is_none(), "no decision left");
     assert!(r.game.pending_attack.is_none(), "the attack ended");
     assert!(r.game.pending_option.is_none(), "no Option in flight");
-    assert!(r.game.held_options.is_empty(), "no Option held");
 }
 
-/// The inner Option deletes the attacker, then parks a second pick while it
-/// is still in flight. The attack ends with no security check, the inner
-/// Option is trashed, and the outer one is offered <Arts Digivolve> onto
-/// GD-BASE only once the inner Option has finished; declined, it is trashed
-/// exactly once.
+/// The outer Option is offered <Arts Digivolve> onto GD-BASE at the
+/// declaration (declined: trashed). The inner Option then deletes the
+/// attacker and parks a second pick while it is still in flight; the outer
+/// one is already in the trash and is not touched again. The attack ends with
+/// no security check and the inner Option is trashed.
 #[test]
 fn inner_option_deletes_the_attacker_then_parks_a_pick() {
     let mut r = builder()
@@ -350,6 +355,17 @@ fn inner_option_deletes_the_attacker_then_parks_a_pick() {
     let base = r.place_on_field(0, "GD-BASE", Some(1));
     r.game.enter_main_phase();
     use_monarch_and_attack(&mut r, 0, atk);
+    let arts = r.game.pending_selection.as_ref().expect("the Arts offer");
+    assert!(
+        arts.prompt.contains("Arts Digivolve")
+            && arts.valid_action_ids.contains(&encode_attack(0, base.index as u16)),
+        "the outer Arts offer follows the declaration: {:?}",
+        arts.prompt
+    );
+    assert!(r.game.pending_attack.is_some());
+    r.execute_action(0, PASS).expect("decline the outer Arts");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer trashed at the declaration");
+    assert!(r.game.pending_option.is_none());
 
     let mut rules = vec![
         ("Use 1 Option card", Pick::First),
@@ -363,13 +379,11 @@ fn inner_option_deletes_the_attacker_then_parks_a_pick() {
     });
     assert!(rules.is_empty(), "{seen:#?}");
     assert_eq!(trash_has(&r, 0, "T-ATK"), 1, "the attacker was deleted: {seen:#?}");
-    // The inner Option is mid-body: the outer one must not have been released.
+    // The inner Option is mid-body; the outer one finished long ago.
     assert!(r.game.pending_option.is_some(), "inner still in flight: {seen:#?}");
-    assert_eq!(trash_has(&r, 0, MONARCH), 0, "outer not finished before the inner one");
-    assert_eq!(r.game.held_options.len(), 1, "outer still held while the inner one runs");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer already in the trash");
 
     let (seen, _) = drive(&mut r, &mut Vec::new(), |_| false);
-    let _ = base;
     assert_eq!(trash_has(&r, 0, "T-DELOPT"), 1, "inner trashed: {seen:#?}");
     assert_eq!(r.security_count(1), 4, "no security check: {seen:#?}");
     assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer trashed once: {seen:#?}");
@@ -378,7 +392,7 @@ fn inner_option_deletes_the_attacker_then_parks_a_pick() {
 }
 
 /// The inner Option returns the attacker to hand: the attack ends with no
-/// check, both Options end in the trash.
+/// check, both Options end in the trash (the outer one at the declaration).
 #[test]
 fn inner_option_bounces_the_attacker() {
     let mut r = builder()
@@ -389,6 +403,8 @@ fn inner_option_bounces_the_attacker() {
     let atk = r.place_on_field(0, "T-ATK", Some(0));
     r.game.enter_main_phase();
     use_monarch_and_attack(&mut r, 0, atk);
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer trashed at the declaration");
+    assert!(r.game.pending_option.is_none());
     let mut rules = vec![
         ("Use 1 Option card", Pick::First),
         ("Return 1 of your Digimon", Pick::Id(encode_attack(0, atk.index as u16))),
@@ -414,6 +430,8 @@ fn two_when_attacking_effects_each_use_an_option() {
     r.game.enter_main_phase();
     let hand_before = r.game.player(0).hand.len();
     use_monarch_and_attack(&mut r, 0, atk);
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer trashed at the declaration");
+    assert!(r.game.pending_option.is_none());
     let mut rules = vec![("Use A", Pick::First), ("Use B", Pick::First)];
     // Accept both optional activations, whatever their prompts.
     let (seen, _) = drive_accepting(&mut r, &mut rules);
@@ -467,11 +485,13 @@ fn drive_accepting(
 }
 
 /// The defending player blocks; its "when attack targets change" uses an
-/// Option from ITS hand during the held attack. The defender's Option
-/// resolves for the defender, the battle happens, and the outer Option is
-/// trashed afterwards.
+/// Option from ITS hand during the attack. The attacker (GD-BASE, a green
+/// Lv.4 [Glowing Dawn] Digimon) is the outer Option's only <Arts Digivolve>
+/// host; that offer comes at the declaration and is declined, so the outer
+/// Option is already in the trash when the defender uses its Option, which
+/// resolves for the defender, and the battle happens.
 #[test]
-fn defender_uses_an_option_when_the_target_changes_during_the_held_attack() {
+fn defender_uses_an_option_when_the_target_changes_during_the_attack() {
     let mut r = builder()
         .security(1, &["SEC", "SEC", "SEC", "SEC"])
         .hand(0, &[MONARCH])
@@ -483,6 +503,11 @@ fn defender_uses_an_option_when_the_target_changes_during_the_held_attack() {
     r.game.enter_main_phase();
     let opp_hand = r.game.player(1).hand.len();
     use_monarch_and_attack(&mut r, 0, atk);
+    let arts = r.game.pending_selection.as_ref().expect("the Arts offer");
+    assert!(arts.prompt.contains("Arts Digivolve"), "{:?}", arts.prompt);
+    assert!(r.game.pending_attack.is_some());
+    r.execute_action(0, PASS).expect("decline the Arts Digivolve");
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer trashed at the declaration");
     let mut rules = vec![
         ("Declare a blocker", Pick::First),
         ("Defender uses 1 Option card", Pick::First),
@@ -493,20 +518,15 @@ fn defender_uses_an_option_when_the_target_changes_during_the_held_attack() {
     assert_eq!(r.game.player(1).hand.len(), opp_hand - 1 + 1, "defender drew 1");
     assert_eq!(trash_has(&r, 1, "T-DEFUSER"), 1, "the blocker lost the battle");
     assert_eq!(r.security_count(1), 4, "blocked: no check");
-    assert_eq!(
-        trash_has(&r, 0, MONARCH) + field_has(&r, 0, MONARCH),
-        1,
-        "trash {} field {}: {seen:#?}",
-        trash_has(&r, 0, MONARCH),
-        field_has(&r, 0, MONARCH)
-    );
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "{seen:#?}");
+    assert_eq!(field_has(&r, 0, MONARCH), 0, "{seen:#?}");
     settled(&r);
 }
 
 /// The outer Option is used from the TRASH by another card's [On Play] (an
 /// effect-driven use, so its body runs inside that effect's resolution);
 /// its attack uses a further Option from hand. The outer Option goes back to
-/// the trash once, after the attack.
+/// the trash once, at the declaration, before the [When Attacking] use.
 #[test]
 fn outer_option_used_from_trash_by_an_effect() {
     let mut r = builder()
@@ -602,11 +622,11 @@ fn drive_accepting_until_target(
     (seen, taken)
 }
 
-/// The game ends during the held attack (the defender has no security
-/// left): no panic, and the held card is still accounted for exactly once
-/// (trash, field or in flight).
+/// The game ends during the attack (the defender has no security left): no
+/// panic, and the outer card is accounted for exactly once -- in the trash,
+/// where it went at the declaration.
 #[test]
-fn game_ends_during_the_held_attack() {
+fn game_ends_during_the_attack() {
     let mut r = builder()
         .hand(0, &[MONARCH, "T-PLAINOPT"])
         .memory(8)
@@ -614,17 +634,14 @@ fn game_ends_during_the_held_attack() {
     let atk = r.place_on_field(0, "T-ATK", Some(0));
     r.game.enter_main_phase();
     use_monarch_and_attack(&mut r, 0, atk);
+    assert_eq!(trash_has(&r, 0, MONARCH), 1, "outer trashed at the declaration");
     let mut rules = vec![("Use 1 Option card", Pick::First)];
     let (seen, _) = drive(&mut r, &mut rules, |_| false);
     assert!(r.game_over(), "direct attack on 0 security wins: {seen:#?}");
     assert_eq!(r.winner(), Some(0));
-    let in_flight = r
-        .game
-        .in_flight_option_cards()
-        .filter(|c| c.card_id(&r.game.card_data) == MONARCH)
-        .count();
+    assert!(r.game.pending_option.is_none());
     assert_eq!(
-        trash_has(&r, 0, MONARCH) + field_has(&r, 0, MONARCH) + in_flight,
+        trash_has(&r, 0, MONARCH) + field_has(&r, 0, MONARCH),
         1,
         "the outer card is somewhere exactly once"
     );
@@ -649,9 +666,10 @@ fn clone_at_every_decision_matches_the_original() {
     let atk2 = r.place_on_field(0, "T-ATK", Some(2));
     r.game.enter_main_phase();
 
-    // Script: use the outer Option from hand, buff `atk`, attack; the
-    // [When Attacking] uses T-DELOPT, which deletes `atk2` (not the
-    // attacker) and buffs `base`; accept the outer Arts onto `base`.
+    // Script: use the outer Option from hand, buff `atk`, attack; accept the
+    // outer Arts onto `base` (offered at the declaration, before the
+    // [When Attacking]); the [When Attacking] uses T-DELOPT, which deletes
+    // `atk2` (not the attacker) and buffs `base`.
     let mut snapshots: Vec<digimon_engine::game::Game> = Vec::new();
     let mut actions: Vec<(PlayerId, u16)> = Vec::new();
     assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
@@ -673,7 +691,7 @@ fn clone_at_every_decision_matches_the_original() {
             encode_attack(atk.index as u16, SECURITY_TARGET)
         } else if sel.kind == SelectionKind::OwnField
             && sel.is_optional
-            && r.game.pending_attack.is_none()
+            && prompt.contains("Arts Digivolve")
             && ids.contains(&encode_attack(0, base.index as u16))
             && r.game.pending_option.as_ref().is_some_and(|p| {
                 p.card.card_id(&r.game.card_data) == MONARCH
@@ -686,6 +704,11 @@ fn clone_at_every_decision_matches_the_original() {
                 Pick::First => ids.iter().copied().find(|&a| a != PASS).unwrap_or(PASS),
                 Pick::Pass => PASS,
             }
+        } else if sel.kind == SelectionKind::TriggerOrder {
+            // Order the simultaneous triggers (the Arts Digivolve's [When
+            // Digivolving] with the attacker's [When Attacking]); PASS here
+            // would decline every optional one of them.
+            ids.iter().copied().find(|&a| a != PASS).unwrap_or(PASS)
         } else if sel.is_optional {
             PASS
         } else {
@@ -712,7 +735,7 @@ fn clone_at_every_decision_matches_the_original() {
         }
         assert!(c.game.pending_selection.is_none(), "clone {k} settled");
         assert_eq!(c.game.verification_digest(), end, "clone taken at decision {k}");
-        assert!(c.game.held_options.is_empty() && c.game.pending_option.is_none());
+        assert!(c.game.pending_option.is_none());
     }
 }
 

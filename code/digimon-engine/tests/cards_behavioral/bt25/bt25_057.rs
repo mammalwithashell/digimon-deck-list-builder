@@ -329,21 +329,34 @@ fn bt25_057_arts_accept_stacks_dual_onto_base_without_cost() {
 // ─── Option [Main] "Then, it may attack." — inside the effect ────────────────
 //
 // Printed (card image + official bundle): "[Main] 1 of your Digimon gains
-// <Rush>, <Security A. +1> and +5000 DP for the turn. Then, it may attack."
-// The attack is a process of the [Main] effect: CR 4.3 15-1-2 (an effect's
-// processing is carried out in the order of its text), 9-1-5 (the used Option
-// is trashed as pending processing only once its effect has resolved) and
-// 4-20-1/4-20-2 (Arts Digivolve overwrites that trash). DCGO BT25_057.cs runs
-// `SelectAttackEffect.Activate()` right after the buffs inside the OptionSkill
-// coroutine (no `SetCanNotSelectNotAttack`: declinable), and the Arts
-// Digivolve is a separate later effect. Official Q&A for BT25-057: the
-// Digimon that attacked through [Main] and then Arts digivolved into this card
-// cannot activate this card's [When Attacking] -- the attack comes first.
+// <Rush>, <Security A. +1> and +5000 DP until your opponent's turn ends.
+// Then, it may attack." The attack is declared inside the [Main] effect (CR
+// 4.3 15-1-2: an effect's processing is carried out in the order of its
+// text). DCGO BT25_057.cs:286-294 runs `SelectAttackEffect.Activate()` right
+// after the buffs inside the OptionSkill coroutine (no
+// `SetCanNotSelectNotAttack`: declinable), and the Arts Digivolve is a
+// separate effect (:304-307).
+//
+// The Option FINISHES (its <Arts Digivolve> offer, or the trash) as soon as
+// the attack has been DECLARED -- before the attack's [When Attacking]
+// effects, the counter timing, the block timing and any security check. That
+// is DCGO's order: `AttackProcess.Attack()` returns at the declaration
+// (AttackProcess.cs:242 `State = AttackState.Counter`), SelectAttackEffect.cs
+// :547 awaits only that, `CardController.UseOption` then resolves the card's
+// own Arts Digivolve or trashes it (CardController.cs:2026-2129), and only
+// then does the phase loop resolve [When Attacking] and run counter / block /
+// battle (TurnStateMachine.cs:1277-1286). Official Q&A agrees (Q4962: "you
+// gain 1 memory after the attack declaration"; Q4346), and Q6344 (the Digimon
+// that attacked and then Arts digivolved into this card cannot activate its
+// [When Attacking]) is consistent with it. The project owner's standing
+// default is "Generally let's look to match dcgo"; applying it to this card is
+// the orchestrator's decision (G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD, resolved
+// by reversal: the branch had held the Option until the attack ended).
 //
 // The spec used `may_attack_now { windowed: true }`, which only granted a
-// MayAttack until end of turn: no attack prompt inside the effect, the Arts
-// Digivolve armed first, and the attack (if any) happened in the end-of-turn
-// window, possibly by a different Digimon (scan finding F02).
+// MayAttack until end of turn: no attack prompt inside the effect, and the
+// attack (if any) happened in the end-of-turn window, possibly by a
+// different Digimon (scan finding F02).
 
 fn security_runner() -> DebugRunner {
     builder()
@@ -395,36 +408,69 @@ fn bt25_057_option_attack_is_offered_inside_the_effect_before_arts_digivolve() {
         "the chosen Digimon attacked (suspended by the declaration)"
     );
 
-    // Answer the attack's own timings (counter / block windows) until the
-    // Arts Digivolve prompt arms. When it arms, the attack has already
-    // resolved: both security checks (<Security A. +1>) are done.
-    drive_to_arts(&mut r, base);
+    // The very next decision is the Option's own <Arts Digivolve> offer: the
+    // Option finishes at the declaration, before the counter / block timings
+    // and before any security check.
+    let arts = r
+        .pending_selection_view()
+        .expect("the Arts Digivolve offer follows the declaration");
+    assert_eq!(arts.kind, SelectionKind::OwnField, "the Arts offer");
+    assert!(arts.is_optional, "Arts is declinable");
+    assert!(
+        arts.valid_action_ids
+            .contains(&encode_attack(0, base.index as u16)),
+        "the attacker itself is a legal Arts host: {:?}",
+        arts.valid_action_ids
+    );
+    assert!(r.game.pending_attack.is_some(), "the attack is open");
+    assert!(r.game.pending_option.is_some(), "the Option is finishing");
     assert_eq!(
         r.security_count(1),
-        sec_before - 2,
-        "the attack resolved with <Security A. +1> (2 checks) before Arts armed"
+        sec_before,
+        "no security check before the Option finished"
     );
     r.execute_action(0, encode_attack(0, base.index as u16))
-        .expect("accept Arts digivolve");
+        .expect("accept Arts digivolve onto the attacker");
     assert_eq!(
         r.game.player(0).battle_area[base.index as usize]
             .top_card()
             .card_id(&r.game.card_data),
         CARD_ID,
-        "Arts Digivolve happened after the attack"
+        "Arts Digivolve happened at the declaration"
     );
+    assert!(r.game.pending_option.is_none(), "the Option finished");
+
+    // The attack then runs its timings and checks security twice
+    // (<Security A. +1>), as the digivolved attacker. (Nothing here asks a
+    // question -- no blocker, no opponent Digimon for the [When Digivolving]
+    // battle -- so it may already have run to its end inside the Arts
+    // action.)
+    for _ in 0..20 {
+        let Some(sel) = r.game.pending_selection.as_ref() else {
+            break;
+        };
+        let actor = sel.selecting_player;
+        let action = if sel.is_optional {
+            PASS
+        } else {
+            sel.valid_action_ids[0]
+        };
+        r.execute_action(actor, action).expect("drive the attack");
+    }
+    assert!(r.game.pending_attack.is_none(), "the attack ended");
     assert_eq!(
         r.security_count(1),
         sec_before - 2,
-        "no second (end-of-turn) attack"
+        "two checks after the Arts Digivolve, and no second attack"
     );
 }
 
 /// With the memory past 0 on the opponent's side after paying Use 4, the
-/// attack is still part of the effect: the turn does not end until the effect
-/// (and its attack) has resolved (CR 4.3 15-1-4; official Q&A Q602's "you
-/// don't switch turns until the attack is finished"). Scan finding F02 saw the
-/// player sent back to Main / the turn passed with no attack offered.
+/// attack is still part of the effect: the turn does not end before the
+/// effect has offered (and, if accepted, declared) its attack (CR 4.3 15-1-4;
+/// official Q&A Q602's "you don't switch turns until the attack is
+/// finished"). Scan finding F02 saw the player sent back to Main / the turn
+/// passed with no attack offered.
 #[test]
 fn bt25_057_option_attack_is_offered_even_when_memory_goes_past_zero() {
     use digimon_engine::action::space::SECURITY_TARGET;
@@ -453,6 +499,18 @@ fn bt25_057_option_attack_is_offered_even_when_memory_goes_past_zero() {
         .valid_action_ids
         .contains(&encode_attack(base.index as u16, SECURITY_TARGET)));
     assert_eq!(r.game.turn_player(), turn_player, "the turn has not passed");
+
+    // Declared: the Option finishes at once (its Arts offer), still on this
+    // turn, before any security check.
+    r.execute_action(0, encode_attack(base.index as u16, SECURITY_TARGET))
+        .expect("attack the player");
+    let arts = r
+        .pending_selection_view()
+        .expect("the Arts offer follows the declaration");
+    assert_eq!(arts.kind, SelectionKind::OwnField);
+    assert!(r.game.pending_attack.is_some());
+    assert_eq!(r.security_count(1), 4);
+    assert_eq!(r.game.turn_player(), turn_player, "the turn has not passed");
 }
 
 #[test]
@@ -480,6 +538,15 @@ fn bt25_057_declining_the_option_attack_leaves_no_deferred_attack() {
         "declining leaves no MayAttack grant behind"
     );
     assert!(!r.game.player(0).battle_area[base.index as usize].is_suspended);
+    assert_eq!(r.security_count(1), sec_before);
+    assert!(r.game.pending_attack.is_none(), "no attack opened");
+    assert!(r.game.pending_option.is_none(), "the Option finished");
+    assert!(r.pending_selection().is_none(), "nothing left to answer");
+
+    // Nothing is waiting for the end of the turn either: ending it offers no
+    // attack and checks no security card.
+    r.end_turn();
+    assert!(r.game.pending_attack.is_none(), "no end-of-turn attack");
     assert_eq!(r.security_count(1), sec_before);
 }
 
