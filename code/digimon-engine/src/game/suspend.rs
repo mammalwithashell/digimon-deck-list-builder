@@ -32,8 +32,9 @@ impl Game {
     /// (attack/blocker declaration, costs paid outside an effect context)
     /// use the plain `suspend` (`false`). Feeds `event_is_effect_initiated`
     /// ("when an EFFECT suspends…", G-SUSPEND-EFFECT-INITIATED).
-    pub fn suspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) {
-        if let Some(card) = self.suspend_state_only(handle) {
+    pub fn suspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) -> bool {
+        let suspended = self.suspend_state_only(handle);
+        if let Some(card) = suspended {
             self.enqueue_on_suspend(handle, card, effect_initiated);
         }
         // `maybe_` -- inside a deferred-drain scope (e.g. the <Alliance>
@@ -41,6 +42,7 @@ impl Game {
         // enclosing effect finishes (official trigger timing; judge Q24).
         self.maybe_drain_effect_queue();
         self.reevaluate_until_condition_modifiers_if_dirty();
+        suspended.is_some()
     }
 
     /// Enqueue the `OnSuspend` event for `handle` (whose top card is `card`)

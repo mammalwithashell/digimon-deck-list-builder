@@ -2223,6 +2223,13 @@ impl Walk for digimon_dsl::step::DeleteForCostReductionArgs {
         self.fixed_amount.walk(c, &format!("{}.fixed_amount", path), "UNCLASSIFIED_STRING");
     }
 }
+impl Walk for digimon_dsl::step::SuspendArgs {
+    fn walk(&self, c: &mut Collector, path: &str, role: &str) {
+        c.node(path, "digimon_dsl::step::SuspendArgs", "COMPOSITE", serde_json::Value::Null);
+        self.target.walk(c, &format!("{}.target", path), "EXISTING_INSTANCE_BINDING");
+        self.cost.walk(c, &format!("{}.cost", path), "UNCLASSIFIED_STRING");
+    }
+}
 impl Walk for digimon_dsl::step::TrashBottomSourcesArgs {
     fn walk(&self, c: &mut Collector, path: &str, role: &str) {
         c.node(
@@ -5681,6 +5688,7 @@ digimon_dsl::compiled::CompiledStep::TrashFieldOption{target} => { c.node(path,"
 digimon_dsl::compiled::CompiledStep::ReturnToHand{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnToHand"));target.walk(c, &format!("{}.target", &format!("{}@ReturnToHand",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::ReturnToDeck{target,position,include_sources} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnToDeck"));target.walk(c, &format!("{}.target", &format!("{}@ReturnToDeck",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@ReturnToDeck",path)), "UNCLASSIFIED_STRING");include_sources.walk(c, &format!("{}.include_sources", &format!("{}@ReturnToDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::Suspend{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("Suspend"));target.walk(c, &format!("{}.target", &format!("{}@Suspend",path)), "EXISTING_INSTANCE_BINDING");},
+digimon_dsl::compiled::CompiledStep::SuspendAsCost{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("SuspendAsCost"));target.walk(c, &format!("{}.target", &format!("{}@SuspendAsCost",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::Unsuspend{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("Unsuspend"));target.walk(c, &format!("{}.target", &format!("{}@Unsuspend",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::DeDigivolve{target,amount,amount_fn,stop_at_level,declared} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeDigivolve"));target.walk(c, &format!("{}.target", &format!("{}@DeDigivolve",path)), "EXISTING_INSTANCE_BINDING");amount.walk(c, &format!("{}.amount", &format!("{}@DeDigivolve",path)), "UNCLASSIFIED_STRING");amount_fn.walk(c, &format!("{}.amount_fn", &format!("{}@DeDigivolve",path)), "UNCLASSIFIED_STRING");stop_at_level.walk(c, &format!("{}.stop_at_level", &format!("{}@DeDigivolve",path)), "UNCLASSIFIED_STRING");declared.walk(c, &format!("{}.declared", &format!("{}@DeDigivolve",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::PlaceOnSecurity{of,source,position,face_up} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PlaceOnSecurity"));of.walk(c, &format!("{}.of", &format!("{}@PlaceOnSecurity",path)), "UNCLASSIFIED_STRING");source.walk(c, &format!("{}.source", &format!("{}@PlaceOnSecurity",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@PlaceOnSecurity",path)), "UNCLASSIFIED_STRING");face_up.walk(c, &format!("{}.face_up", &format!("{}@PlaceOnSecurity",path)), "UNCLASSIFIED_STRING");},

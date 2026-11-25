@@ -1107,9 +1107,8 @@ pub enum CostGuard {
     /// "By suspending this Digimon / Tamer": the source permanent can be
     /// suspended (`ActivationCostKind::SuspendSelf`'s probe).
     SuspendSource,
-    /// "By suspending 1 of your Digimon": one of your permanents matching
-    /// `filter` can be suspended.
-    SuspendChosen { filter: CompiledPredicate },
+    /// "By suspending 1 Digimon": a permanent matching `filter` can be suspended.
+    SuspendChosen { of: CompiledPlayerRef, filter: CompiledPredicate },
     /// "By trashing N cards in your hand" / "by returning 1 [A] and 1 [B]
     /// from your trash": one DISTINCT card in `zone` per pick filter.
     ZonePicks {
@@ -1169,7 +1168,7 @@ pub enum CostPickZone {
 /// - `trash_top_security { of: you }` (literal count) ⇒ that many security.
 /// - `lose_memory: N` ⇒ the memory can be paid.
 /// - `suspend { target: source }` ⇒ the source can be suspended;
-///   `select_own_permanent` (mandatory) then `suspend` of that pick ⇒ a
+///   a field pick followed by a suspend payment of that pick ⇒ a
 ///   matching permanent can be suspended.
 /// - A run of own-hand picks each consumed by `trash_from_hand_by_index` or
 ///   `place_selected_card_under_tamer` (the run's first pick `cost: true` or
@@ -1190,8 +1189,7 @@ pub enum CostPickZone {
 /// recognised part only — composing them is the DSL `by:` block's job
 /// (`G-DSL-OPTIONAL-PROCESSING-CONDITION-BLOCK`).
 ///
-/// A declinable pick WITHOUT `cost: true` is not a condition (declining it
-/// continues the clause), so it yields no guard. Self-targeted costs
+/// A declinable pick not recognized as a cost yields no guard. Self-targeted costs
 /// ("return / delete this Digimon") are payable whenever the source is live,
 /// which the queue's source-liveness gate already checks.
 pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
@@ -1220,21 +1218,36 @@ pub(crate) fn leading_cost_guard(steps: &[CompiledStep]) -> Option<CostGuard> {
         CompiledStep::Suspend {
             target: CompiledBindingRef::Source,
         }
+        | CompiledStep::SuspendAsCost {
+            target: CompiledBindingRef::Source,
+        }
         | CompiledStep::SuspendAndCancelAllMatchingLeaves {
             target: CompiledBindingRef::Source, ..
         } => Some(CostGuard::SuspendSource),
         CompiledStep::SelectOwnPermanent {
             filter,
             bind_as: Some(bound),
-            optional: false,
+            then,
             ..
-        } => matches!(
-            steps.get(1),
-            Some(CompiledStep::Suspend { target }) if binding_ref_names(target, bound)
-        )
-        .then(|| CostGuard::SuspendChosen {
-            filter: filter.clone(),
-        }),
+        }
+        | CompiledStep::SelectOpponentPermanent {
+            filter, bind_as: Some(bound), then, ..
+        }
+        | CompiledStep::SelectAnyPermanent {
+            filter, bind_as: Some(bound), then, ..
+        } => {
+            if !crate::dsl_cards::step::permanent_mutations::selection_pays_suspend(
+                Some(bound), then, &steps[1..],
+            ) {
+                return None;
+            }
+            let of = match first {
+                CompiledStep::SelectOwnPermanent { .. } => CompiledPlayerRef::You,
+                CompiledStep::SelectOpponentPermanent { .. } => CompiledPlayerRef::Opponent,
+                _ => CompiledPlayerRef::Any,
+            };
+            Some(CostGuard::SuspendChosen { of, filter: filter.clone() })
+        }
         CompiledStep::SelectHand {
             of: CompiledPlayerRef::You,
             optional,
@@ -1389,7 +1402,7 @@ fn leading_pick_run(steps: &[CompiledStep], zone: CostPickZone) -> Vec<CompiledP
 }
 
 /// True when `r` refers to the binding named `name`.
-fn binding_ref_names(r: &CompiledBindingRef, name: &str) -> bool {
+pub(crate) fn binding_ref_names(r: &CompiledBindingRef, name: &str) -> bool {
     matches!(
         r,
         CompiledBindingRef::Named(n) | CompiledBindingRef::Binding(n) | CompiledBindingRef::Permanent(n)
@@ -1406,17 +1419,23 @@ impl CostGuard {
             CostGuard::Security { n } => game.player(rctx.player).security.len() >= *n,
             CostGuard::Memory { n } => game.can_pay_memory_for(rctx.player, *n),
             CostGuard::SuspendSource => {
-                ActivationCostKind::SuspendSelf.is_payable(game, rctx.source_permanent)
+                rctx.source_permanent.is_some_and(|payer| {
+                    crate::dsl_cards::step::permanent_mutations::can_pay_suspend(rctx, payer)
+                })
             }
-            CostGuard::SuspendChosen { filter } => {
-                let player = rctx.player;
-                (0..game.player(player).battle_area.len()).any(|i| {
-                    let handle = crate::permanent::PermanentHandle {
-                        player,
-                        index: i as u8,
-                    };
-                    ActivationCostKind::SuspendSelf.is_payable(game, Some(handle))
-                        && eval_predicate(filter, rctx, PredicateSubject::Permanent(handle))
+            CostGuard::SuspendChosen { of, filter } => {
+                game.players.iter().enumerate().any(|(player, state)| {
+                    let player = player as u8;
+                    if (*of == CompiledPlayerRef::You && player != rctx.player)
+                        || (*of == CompiledPlayerRef::Opponent && player != game.next_clockwise(rctx.player))
+                    {
+                        return false;
+                    }
+                    (0..state.battle_area.len()).any(|i| {
+                        let handle = crate::permanent::PermanentHandle { player, index: i as u8 };
+                        crate::dsl_cards::step::permanent_mutations::can_pay_suspend(rctx, handle)
+                            && eval_predicate(filter, rctx, PredicateSubject::Permanent(handle))
+                    })
                 })
             }
             CostGuard::ZonePicks { zone, filters } => {

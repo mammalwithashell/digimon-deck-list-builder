@@ -48,7 +48,7 @@ effects:
               - is_unsuspended: true
               - can_change_orientation: true
           prompt: "Suspend 1 of your other Digimon"
-      - suspend: { target: payment }
+      - suspend: { target: payment, cost: true }
       - if:
           condition:
             all_of:

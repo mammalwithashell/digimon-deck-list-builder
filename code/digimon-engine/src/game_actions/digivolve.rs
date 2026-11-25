@@ -861,16 +861,17 @@ impl Game {
         };
         let index = (action_id.saturating_sub(ATTACK_START) % TARGETS_PER_ATTACKER) as usize;
         if self
-            .suspendable_own_digimon(state.acting_player)
+            .suspendable_own_digimon(state.acting_player, current.source_card())
             .contains(&index)
         {
             // §16-10-3: once the Digimon is suspended, the reduction is
             // mandatory (likewise for the player-scoped suspend reducers).
-            self.suspend(PermanentHandle {
+            if self.suspend_with_cause(PermanentHandle {
                 player: state.acting_player,
                 index: index as u8,
-            });
-            state.reduction += amount;
+            }, false) {
+                state.reduction += amount;
+            }
         }
         if let DigivolveReducerChoice::Player {
             index: reducer_index,
@@ -1670,7 +1671,6 @@ impl Game {
                 state.acting_player,
                 ModifierType::OpponentCannotReduceDigivolveCost,
             );
-        let payable = !self.suspendable_own_digimon(state.acting_player).is_empty();
         let live_fields = self.collect_before_pay_cost_reducers(
             state.acting_player,
             Some(state.target),
@@ -1681,7 +1681,10 @@ impl Game {
         for choice in remaining {
             match choice {
                 DigivolveReducerChoice::Player { index, reducer } => {
-                    if prohibited || (reducer.suspend_cost && !payable) {
+                    if prohibited
+                        || (reducer.suspend_cost
+                            && self.suspendable_own_digimon(state.acting_player, reducer.source_card).is_empty())
+                    {
                         self.consume_player_digivolve_reducer(index, &reducer, reducer.single_fire);
                     } else if !reducer.suspend_cost {
                         state.reduction += reducer.amount;
@@ -1694,8 +1697,10 @@ impl Game {
                 }
                 // §16-10-1/-3: offered only while a Digimon can be suspended
                 // to pay its condition; a prohibited reduction offers nothing.
-                DigivolveReducerChoice::Digisorption { .. } => {
-                    if !prohibited && payable {
+                DigivolveReducerChoice::Digisorption { source_card, .. } => {
+                    if !prohibited
+                        && !self.suspendable_own_digimon(state.acting_player, source_card).is_empty()
+                    {
                         state.remaining.push(choice);
                     }
                 }
@@ -2228,7 +2233,8 @@ impl Game {
         // Player-scoped suspend reducers and `<Digisorption>` (§16-10-1):
         // choose 1 of your unsuspended Digimon to suspend; the Digimon that
         // will become a digivolution card is a candidate (§16-10-5).
-        let suspendable = self.suspendable_own_digimon(state.acting_player);
+        let source_card = current.source_card();
+        let suspendable = self.suspendable_own_digimon(state.acting_player, source_card);
         if suspendable.is_empty() {
             if let DigivolveReducerChoice::Player { index, reducer } = &current {
                 self.consume_player_digivolve_reducer(*index, reducer, reducer.single_fire);
@@ -2236,7 +2242,6 @@ impl Game {
             self.resume_player_digivolve_reducers(state);
             return;
         }
-        let source_card = current.source_card();
         let source_kind = self.effect_source_kind_for_handle(source_card);
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;

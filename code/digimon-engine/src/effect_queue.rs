@@ -6959,7 +6959,9 @@ impl Game {
         }
         crate::game_actions::effect_dna::order_nested_dna_payment_hooks(&mut indexed);
         for (index, mut hook) in indexed {
-            if recovery_abort && index < payment_hooks_before {
+            if index < payment_hooks_before
+                && (recovery_abort || (payment_aborted && payment_owner.is_none()))
+            {
                 self.fail_owned_choice_payment_hook(&mut hook);
             }
             // Passing an immediate replacement declines that replacement,
@@ -7156,8 +7158,10 @@ impl Game {
                 self.dsl_clause_aborted = prev_aborted;
             }
         } else {
+            let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
             (sel.callback)(self, action_id);
             raw_aborted = self.dsl_clause_aborted;
+            self.dsl_clause_aborted = prev_aborted;
         }
         if raw_continuations {
             self.dispatch_selection_continuations(raw_hooks_before, None, raw_scope_order,

@@ -3455,6 +3455,7 @@ pub enum CompiledStep {
     },
     PayBreedingDeletion { target: CompiledBindingRef },
     TrashFieldOption { target: CompiledBindingRef },
+    SuspendAsCost { target: CompiledBindingRef },
 }
 
 /// Compiled per-zone filter overrides for `select_union_zone`. Each `Some`

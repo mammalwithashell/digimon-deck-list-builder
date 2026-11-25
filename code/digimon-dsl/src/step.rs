@@ -195,7 +195,7 @@ pub enum StepSpec {
     ReturnAllToDeck(ReturnAllToDeckArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
-    Suspend(TargetArg),
+    Suspend(SuspendArgs),
     /// Pay one actual suspension, then prevent all matching members of this event.
     SuspendAndCancelAllMatchingLeaves(SuspendAllPreventionArgs),
     Unsuspend(TargetArg),
@@ -1912,6 +1912,15 @@ pub struct DeleteForCostReductionArgs {
     /// Fixed reduction, credited only after deletion. Omit to use the target's play cost.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fixed_amount: Option<u16>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SuspendArgs {
+    pub target: BindingRef,
+    /// Require an actual suspension before continuing the effect.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub cost: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

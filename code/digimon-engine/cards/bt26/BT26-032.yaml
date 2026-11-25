@@ -134,7 +134,7 @@ effects:
       - if:
           condition: { binding_present: susp }
           then:
-            - suspend: { target: susp }
+            - suspend: { target: susp, cost: true }
             - if:
                 condition: { your_turn: true }
                 then:

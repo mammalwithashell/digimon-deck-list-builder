@@ -6,11 +6,48 @@
 //! convention as the 2b zone-move handlers). BindPermanentProperty also
 //! accepts a bound physical card and captures its printed metadata.
 
-use digimon_dsl::compiled::{CompiledPermanentProperty, CompiledStep};
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledPermanentProperty, CompiledStep};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::effect_context::EffectContext;
+use crate::permanent::PermanentHandle;
+
+pub(crate) fn can_pay_suspend(
+    ctx: &crate::effect_context::EffectReadContext<'_>,
+    payer: PermanentHandle,
+) -> bool {
+    crate::effect::ActivationCostKind::SuspendSelf.is_payable(ctx.game, Some(payer))
+        && ctx.game.effect_can_affect_from(payer, ctx.player, ctx.source_kind, ctx.source_identity)
+}
+
+pub(crate) fn suspend_payment_target(steps: &[CompiledStep]) -> Option<&CompiledBindingRef> {
+    match steps {
+        [CompiledStep::SuspendAsCost { target }, ..]
+        | [CompiledStep::SuspendAndCancelAllMatchingLeaves { target, .. }, ..] => Some(target),
+        [CompiledStep::If { condition, then, .. }, ..] => {
+            let binding = condition
+                .binding_present
+                .as_deref()
+                .or(condition.binding_exists.as_deref())?;
+            let target = suspend_payment_target(then)?;
+            crate::dsl_cards::lower_triggered::binding_ref_names(target, binding).then_some(target)
+        }
+        _ => None,
+    }
+}
+
+pub(crate) fn selection_pays_suspend(
+    bind_as: Option<&str>,
+    then: &[CompiledStep],
+    tail: &[CompiledStep],
+) -> bool {
+    bind_as
+        .zip(suspend_payment_target(if then.is_empty() { tail } else { then }))
+        .is_some_and(|(name, target)| {
+            crate::dsl_cards::lower_triggered::binding_ref_names(target, name)
+        })
+}
 
 /// A formula-valued `de_digivolve` amount is printed "<De-Digivolve 1> for
 /// each …" / "for every 2 …" (BT19-073, BT21-060, BT24-041, BT25-075,
@@ -219,27 +256,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::Suspend { target } => {
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
-            {
-                let was_unsuspended = ctx
-                    .game
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-                    .is_some_and(|p| !p.is_suspended);
-                ctx.suspend(h);
-                // "Suspended by this effect" (Q845): the permanent changed state.
-                // An already-suspended target, or one under CannotSuspend, was not.
-                let now_suspended = ctx
-                    .game
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-                    .is_some_and(|p| p.is_suspended);
-                if was_unsuspended && now_suspended {
+        CompiledStep::Suspend { target } | CompiledStep::SuspendAsCost { target } => {
+            let paid = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) if ctx.try_suspend(h) => {
                     bindings.record_suspended(h);
+                    true
                 }
+                _ => false,
+            };
+            if !paid && matches!(step, CompiledStep::SuspendAsCost { .. }) {
+                ctx.cost_unpayable = true;
             }
             true
         }

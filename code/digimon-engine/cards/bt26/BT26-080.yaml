@@ -130,7 +130,7 @@ effects:
       - if:
           condition: { binding_present: susp }
           then:
-            - suspend: { target: susp }
+            - suspend: { target: susp, cost: true }
             - may_attack_now:
                 attacker: source
                 targets: any

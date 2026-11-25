@@ -48,8 +48,10 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, CostDelta, EffectTiming, ModifierType, PlaySource};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
+use digimon_engine::Expiry;
 
 // ─── Fixture helpers ─────────────────────────────────────────────────────────
 
@@ -516,6 +518,29 @@ fn bt16_028_when_digivolving_declining_suspend_does_not_unsuspend_own() {
         runner.pending_selection().is_none(),
         "declining the optional suspend cost should leave no own-unsuspend selection"
     );
+}
+
+#[test]
+fn bt16_028_when_digivolving_a_locked_opponent_cannot_pay_to_unsuspend_own() {
+    let mut runner = dragon_mode_builder().hand(0, &["BT16-028"]).memory(9).start();
+    let base = runner.place_on_field(0, "BT16-028", None);
+    let own = runner.place_on_field(0, "BT16-028", None);
+    let opponent = runner.place_on_field(1, "BT16-028", None);
+    runner.game.players[0].battle_area[own.index as usize].is_suspended = true;
+    runner.game.modifiers.add(opponent, ModifierEntry::simple(
+        ModifierType::CannotSuspend, 1, Expiry::EndOfTurn, 1,
+    ));
+
+    assert!(runner.game.effect_initiated_digivolve_ignore_requirements(
+        0, 0, base, CostDelta::Free, PlaySource::ByEffect,
+    ));
+    let lock = runner.pending_selection_view().expect("first lock still resolves");
+    runner.execute_action(lock.selecting_player, lock.valid_action_ids[0]).unwrap();
+
+    assert!(runner.game.modifiers.has(opponent, ModifierType::CannotUnsuspend));
+    assert!(!runner.game.players[1].battle_area[opponent.index as usize].is_suspended);
+    assert!(runner.game.players[0].battle_area[own.index as usize].is_suspended);
+    assert!(runner.pending_selection_view().is_none(), "no unpaid unsuspend reward");
 }
 
 /// [All Turns] When effect plays opp Digimon + own Tamer → may free-digivolve self

@@ -3330,6 +3330,9 @@ fn compile_step(
             position: compile_stack_position(a.position),
             include_sources: a.include_sources,
         },
+        S::Suspend(a) if a.cost => CompiledStep::SuspendAsCost {
+            target: compile_binding_ref(&a.target),
+        },
         S::Suspend(a) => CompiledStep::Suspend {
             target: compile_binding_ref(&a.target),
         },

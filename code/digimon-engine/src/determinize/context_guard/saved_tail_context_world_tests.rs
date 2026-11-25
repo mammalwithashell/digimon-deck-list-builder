@@ -88,7 +88,7 @@ fn matrix(kind:u8)->usize {
     let b=ctx.game.dsl_resolved_tail_bindings.as_ref().unwrap();assert_eq!(b.get_literal("keep"),Some(17));assert_eq!(b.get_literal("old"),None);
    } else if kind==1 {
     assert_eq!(calls.load(Ordering::SeqCst),1);assert_eq!(bindings.get_literal("observed"),Some(41));observations+=1;
-    assert_eq!(ctx.game.memory,if fail_cost==1 {4}else{6});assert_eq!(ctx.game.dsl_outer_tail.is_some(),fail_cost==1);
+    assert_eq!(ctx.game.memory,if fail_cost==1 {4}else{6});assert!(ctx.game.dsl_outer_tail.is_none());assert_eq!(ctx.game.dsl_clause_aborted,fail_cost==1);
     let b=ctx.game.dsl_resolved_tail_bindings.as_ref().unwrap();
     assert_eq!(b.get_literal("old"),if fail_cost==1 {Some(99)}else{None});
     assert_eq!(b.get_literal("observed"),if fail_cost==1 {None}else{Some(41)});

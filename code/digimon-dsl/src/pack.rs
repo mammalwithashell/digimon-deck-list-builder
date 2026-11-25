@@ -73,7 +73,9 @@ use std::collections::BTreeSet;
 // 0.41.0 is the merge of that branch: the union of the 0.39.0 layout above
 // and both of its changes, a layout neither 0.39.0 nor 0.40.0 describes.
 // Rebuild packs; bincode layouts differ.
-// 0.42.0 adds optional fixed credit to deletion cost reducers. Rebuild packs.
+// 0.42.0 adds optional fixed credit to deletion cost reducers, `PlaceDeckTopUnder`,
+// `PayBreedingDeletion`, `TrashFieldOption`, and `SuspendAsCost`. Rebuild packs;
+// bincode layouts differ.
 pub const PACK_FORMAT_VERSION: &str = "0.42.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
