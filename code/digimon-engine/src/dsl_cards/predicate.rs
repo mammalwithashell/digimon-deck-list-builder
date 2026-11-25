@@ -2601,7 +2601,11 @@ fn eval_event_fields(
         let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
             return false;
         };
-        if trigger.effect_initiated != want {
+        // "if played or digivolved by an effect": the OnPlay context's
+        // `effect_initiated`, or the self [When Digivolving] context of an
+        // effect-performed digivolution.
+        let by_effect = trigger.effect_initiated || trigger.self_digivolve_effect_initiated;
+        if by_effect != want {
             return false;
         }
     }

@@ -680,3 +680,106 @@ fn bt25_084_leave_prevention_paid_spends_opt_and_second_pick_is_mandatory() {
     let _ = runner.auto_resolve();
     assert!(titamon_handle(&runner).is_none());
 }
+
+// ─── "if digivolved by an effect": the self [When Digivolving] context ──────
+
+/// Test-only [On Play]: digivolve 1 of your level 5 Digimon into a [Titamon]
+/// card in your hand, by an effect.
+const EVO_ENABLER_YAML: &str = r#"
+card: T-EVO-ENABLER
+name: EvoEnabler
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: []
+effects:
+  - when: on_play
+    summary: "[On Play] Digivolve 1 of your level 5 Digimon into a Titamon in hand"
+    process:
+      - select_own_permanent:
+          bind_as: base
+          filter: { level_eq: 5 }
+          prompt: "Choose the Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter: { name_contains: "Titamon" }
+          prompt: "Digivolve into"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+"#;
+
+fn resolve_picking_first(runner: &mut DebugRunner) {
+    for _ in 0..16 {
+        let Some(v) = runner.pending_selection_view() else { return };
+        let id = *v
+            .valid_action_ids
+            .iter()
+            .find(|&&a| a != digimon_engine::action::space::PASS)
+            .expect("a non-PASS choice");
+        runner.execute_action(v.selecting_player, id).unwrap();
+    }
+    panic!("selections did not finish");
+}
+
+/// "After, if played or digivolved by an effect, trash their top security
+/// card": DCGO EnteredByEffect = (CanTriggerOnPlay || CanTriggerWhenDigivolving)
+/// && IsByEffect. Titamon digivolved by an effect, discard paid: the
+/// opponent's top security card is trashed.
+#[test]
+fn bt25_084_wd_digivolved_by_effect_trashes_opponent_top_security() {
+    let mut runner = evo_base()
+        .from_dsl_yaml(EVO_ENABLER_YAML)
+        .expect("enabler")
+        .hand(0, &[CARD_ID, "PAD"])
+        .security(1, &["PAD"; 3])
+        .memory(3)
+        .start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(0, "RED5", Some(0));
+    let enabler = runner.place_on_field(0, "T-EVO-ENABLER", Some(0));
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(enabler));
+    runner.game.drain_effect_queue();
+    resolve_picking_first(&mut runner);
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "Titamon digivolved by the effect"
+    );
+    // (The digivolve itself draws a card, so the hand size proves nothing.)
+    assert_eq!(runner.battle_area_size(1), 0, "the discard was paid: OPP-BIG deleted");
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "digivolved by an effect: the opponent's top security card is trashed"
+    );
+}
+
+/// Control: a normal (player-action) digivolve into Titamon pays the discard
+/// and deletes, but does not trash the opponent's security.
+#[test]
+fn bt25_084_wd_normal_digivolve_does_not_trash_security() {
+    let mut runner = evo_base()
+        .hand(0, &[CARD_ID, "PAD"])
+        .security(1, &["PAD"; 3])
+        .memory(10)
+        .start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    let base_perm = runner.place_on_field(0, "RED5", Some(0));
+    let action = encode_digivolve(0, base_perm.index as u16);
+    assert_eq!(build_action_mask(&runner.game, 0)[action as usize], 1.0);
+    runner.game.decode_action(action, 0);
+    resolve_picking_first(&mut runner);
+    // (The digivolve itself draws a card, so the hand size proves nothing.)
+    assert_eq!(runner.battle_area_size(1), 0, "the discard was paid: OPP-BIG deleted");
+    assert_eq!(runner.security_count(1), 3, "a normal digivolve trashes no security");
+}

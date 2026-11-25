@@ -347,6 +347,7 @@ impl Game {
             play_enters_suspended: false,
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
+            pending_digivolve_effect_initiated: false,
             pending_hand_discard: None,
             pending_deck_discards: Vec::new(),
             pending_deck_add: None,

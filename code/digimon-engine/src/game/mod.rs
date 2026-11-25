@@ -1619,6 +1619,15 @@ pub struct Game {
     /// hand plays and digivolutions. Mirrors DCGO `CardEffectCommons.IsByEffect`.
     pub(crate) pending_play_effect_initiated: bool,
 
+    /// Transient: `true` while the self `[When Digivolving]` triggers of a
+    /// digivolution performed BY AN EFFECT are being enqueued
+    /// (`fire_digivolve_event_triggers` with `effect_initiated`), so their
+    /// trigger context records it and `event_is_effect_initiated` reads true
+    /// there ("if played or digivolved by an effect": Titamon (BT25-084),
+    /// DCGO `CanTriggerWhenDigivolving && IsByEffect`). Cleared right after
+    /// the enqueue. `played_by_effect` is unaffected (On Play only).
+    pub(crate) pending_digivolve_effect_initiated: bool,
+
     /// Open coalescing window for the `OnDiscardHand` batch trigger
     /// (G-ENGINE-ON-DISCARD-HAND). While `Some`, effect-caused hand→trash calls
     /// append the trashing player; the window is flushed (fires
