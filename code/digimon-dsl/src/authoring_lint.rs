@@ -244,14 +244,20 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "Imperialdramon: Fighter Mode prints \"you may suspend 1 of your opponent's Digimon and ",
             "unsuspend this Digimon. Then, if played or digivolved by effects, you may return ...\": ",
             "W13. Its outer_prompt is DCGO's unprinted skippable Yes/No (AD1_024.cs SetIsSkippable). ",
-            "The refund needs every pick absent, so no half executed, and an opponent Digimon or this ",
-            "Digimon being suspended, so something was possible: with neither, DCGO still offers the ",
-            "effect and accepting it spends the use (row d)."
+            "The refund needs no suspend pick, no Yes to the standalone \"Will you unsuspend this card?\" and no ",
+            "return pick, so no half executed (DCGO `if (!executed) RemoveUse()`, AD1_024.cs L265). With no ",
+            "opponent Digimon DCGO always asks that Yes/No, even when this Digimon is already unsuspended: ",
+            "Yes spends the use (a no-op unsuspend still sets `executed`), No keeps it. That keeps the use on ",
+            "the nothing-possible board, by the owner ruling of 2026-11-24 (\"Generally let's look to match ",
+            "dcgo\"); a pick or a Yes spends it (row c)."
         ),
         tests: &[
             "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accept_then_decline_everything_keeps_opt",
             "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_is_once_per_turn",
-            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accepted_with_nothing_possible_spends_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_nothing_possible_standalone_no_keeps_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_nothing_possible_standalone_yes_spends_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_self_suspended_standalone_no_keeps_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_standalone_unsuspend_when_no_opp_digimon",
         ],
     },
     ReviewedRefund {
