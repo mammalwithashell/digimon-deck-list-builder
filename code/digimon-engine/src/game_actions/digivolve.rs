@@ -1232,7 +1232,9 @@ impl Game {
         // with `player_reducer_resolved = true`.
         if !player_reducer_resolved {
             if let Some(result) =
-                self.try_prompt_player_digivolve_cost_reducer(player_id, handle, hand_index, source)
+                self.try_prompt_player_digivolve_cost_reducer(
+                    player_id, handle, hand_index, source, route.as_tamer,
+                )
             {
                 return result;
             }
@@ -1893,7 +1895,8 @@ impl Game {
         as_tamer: bool,
     ) -> bool {
         if as_tamer {
-            return self.digivolve_base_is_tamer(target);
+            return self.digivolve_base_is_tamer(target)
+                && !self.modifiers.has(target, ModifierType::CannotDigivolveAsTamer);
         }
         !self.modifiers.has(target, ModifierType::CannotDigivolve)
             && !(source == PlaySource::ByEffect
@@ -1946,6 +1949,7 @@ impl Game {
             target,
             declaration.source,
             Some(declaration.clone()),
+            route.as_tamer,
             true,
         );
         let mut frontier = vec![initial];
@@ -2503,11 +2507,7 @@ impl Game {
 
         let _ = self.draw_one_for_player(resume.player);
 
-        if resume.as_tamer {
-            self.maybe_drain_effect_queue();
-        } else {
-            self.fire_digivolve_event_triggers(resume.permanent, event_card, false, false);
-        }
+        self.fire_digivolve_event_triggers(resume.permanent, event_card, false, false);
 
         // Reward-shaping counter — bumped here at the user-action choke
         // point that both `digivolve_from_hand_inner` and the
@@ -3410,6 +3410,7 @@ impl Game {
                 cost_target_ctx,
                 source,
                 Some(declaration),
+                matching_memory_cost.as_tamer,
             ) {
                 return result;
             }
@@ -3541,18 +3542,10 @@ impl Game {
                 player_id,
                 cause,
                 card,
-                if as_tamer {
-                    crate::selection::SecurityRemovalDestination::DigivolveAsTamer {
-                        player: player_id,
-                        target,
-                        turn: self.turn_count,
-                    }
-                } else {
-                    crate::selection::SecurityRemovalDestination::Digivolve {
-                        player: player_id,
-                        target,
-                        turn: self.turn_count,
-                    }
+                crate::selection::SecurityRemovalDestination::Digivolve {
+                    player: player_id,
+                    target,
+                    turn: self.turn_count,
                 },
             );
             return true;
@@ -3636,11 +3629,7 @@ impl Game {
         self.emit_eval_digivolve(target, effective_cost as i16, false, false);
 
         // 5. Fire WhenDigivolving triggers.
-        if as_tamer {
-            self.maybe_drain_effect_queue();
-        } else {
-            self.fire_digivolve_event_triggers(target, event_card, true, false);
-        }
+        self.fire_digivolve_event_triggers(target, event_card, true, false);
 
         true
     }

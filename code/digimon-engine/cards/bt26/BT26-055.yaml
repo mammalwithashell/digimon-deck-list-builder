@@ -67,6 +67,14 @@ effects:
   # ─── [On Play][When Digivolving][Counter][OPT] may place 1 hand card face
   #     down as bottom source; then may delete 1 own [Ver.3] Digimon + all
   #     opponent's lowest-play-cost Digimon ─────────────────────────────────
+  # One clause for the one printed effect: the three timings share its single
+  # [Once Per Turn] (official Q1550) and its refund. "You may place ... Then,
+  # you may delete ..." is the owner-decided W13 shape
+  # (qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21): with both halves
+  # declined nothing executed and the use is kept, at [Counter] as at
+  # [On Play] / [When Digivolving] (DCGO BT26_055.cs runs one shared effect).
+  # The second half is always possible while this [Ver.3] Digimon is on the
+  # field, so "nothing possible" does not arise.
   - text: "[On Play] [When Digivolving] [Counter] [Once Per Turn] You may place 1 card in your hand face down as this Digimon's bottom digivolution card. Then, you may delete 1 of your Digimon with the [Ver.3] trait and all of your opponent's Digimon with the lowest play cost."
     when: [on_play, when_digivolving, counter]
     once_per_turn: true

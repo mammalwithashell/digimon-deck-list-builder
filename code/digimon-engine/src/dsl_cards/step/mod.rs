@@ -989,6 +989,8 @@ fn run_leaf_step(
     runtime: &StepRuntime,
 ) -> Option<RunOutcome> {
     let step = &steps[i];
+    // A pick whose filter reads play legality sees the continuous state of NOW, not of the last tick.
+    selections::settle_continuous_state_for_play_pick(step, ctx);
     // `link_cards` (Gap 2) captures the remaining slice itself and drives a
     // pick loop of chained selections. It always either parks on a pending
     // selection or runs the captured tail synchronously — in both cases the
@@ -1428,7 +1430,7 @@ mod typed_control_tail_orphan_tests {
  #[test]
  fn resume_without_pending_selection_preserves_enclosing_tail() {
   let mut r=DebugRunner::builder().add_card(make_test_card("SRC","SRC")).add_card(make_test_card("TGT","TGT")).hand(0,&["SRC"]).start();r.place_on_field(1,"TGT",None);let c=r.game.players[0].hand[0].handle();
-  let select=CompiledStep::SelectOpponentPermanent {then:vec![],filter:Default::default(),bind_as:Some("picked".into()),selector:None,prompt:"pick".into(),prompt_key:None,optional:false,continue_on_decline:false};
+  let select=CompiledStep::SelectOpponentPermanent {then:vec![],filter:Default::default(),bind_as:Some("picked".into()),selector:None,prompt:"pick".into(),prompt_key:None,optional:false,continue_on_decline:false,offer_unpayable_deletion_payers:false};
   let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&[select],&mut ctx,&mut Bindings::new());assert!(ctx.game.pending_selection_resume.is_some());ctx.game.pending_selection=None;
   park_outer_tail(&mut ctx,&Bindings::new(),&[CompiledStep::GainMemory(0),CompiledStep::GainMemory(2)],0,&StepRuntime::default());
   assert!(ctx.game.dsl_outer_tail.is_some(),"an orphan resume must not silently discard a continuation");
@@ -1445,7 +1447,7 @@ mod review22_typed_binding_tests {
  #[test]
  fn two_typed_outer_continuations_both_receive_inner_binding_and_clone() {
   let mut r=setup();r.place_on_field(1,"TGT",None);let c=r.game.players[0].hand[0].handle();let initial=r.game.players[0].hand.len();
-  let pick=CompiledStep::SelectOpponentPermanent{then:vec![],filter:Default::default(),bind_as:Some("picked".into()),selector:None,prompt:"pick".into(),prompt_key:None,optional:false,continue_on_decline:false};
+  let pick=CompiledStep::SelectOpponentPermanent{then:vec![],filter:Default::default(),bind_as:Some("picked".into()),selector:None,prompt:"pick".into(),prompt_key:None,optional:false,continue_on_decline:false,offer_unpayable_deletion_payers:false};
   {let mut ctx=EffectContext::new(&mut r.game,c,None,0);run_steps(&[pick],&mut ctx,&mut Bindings::new());}
   for n in [1,2] {wrap_pending_selection_with_tail(&mut r.game,c,None,0,vec![gated(n)],Bindings::new(),StepRuntime::default(),None);}
   assert!(r.game.dsl_outer_tail.is_none());
@@ -1475,7 +1477,7 @@ mod review26_typed_repark_tests {
  fn setup()->DebugRunner {DebugRunner::builder().add_card(make_test_card("SRC","SRC")).add_card(make_test_card("TGT","TGT")).hand(0,&["SRC"]).security(0,&["TGT"]).deck(0,&["SRC";20]).deck(1,&["SRC";10]).memory(5).start()}
  fn gated(n:u8)->CompiledStep {CompiledStep::If{condition:digimon_dsl::compiled::CompiledPredicate{binding_exists:Some("picked".into()),..Default::default()},then:vec![CompiledStep::Draw{of:digimon_dsl::compiled::CompiledPlayerRef::You,count:n}],else_branch:vec![]}}
 
- fn pick(name:&str)->CompiledStep {CompiledStep::SelectOpponentPermanent{then:vec![],filter:Default::default(),bind_as:Some(name.into()),selector:None,prompt:format!("pick {name}"),prompt_key:None,optional:false,continue_on_decline:false}}
+ fn pick(name:&str)->CompiledStep {CompiledStep::SelectOpponentPermanent{then:vec![],filter:Default::default(),bind_as:Some(name.into()),selector:None,prompt:format!("pick {name}"),prompt_key:None,optional:false,continue_on_decline:false,offer_unpayable_deletion_payers:false}}
  fn has(name:&str,then:Vec<CompiledStep>)->CompiledStep {CompiledStep::If{condition:digimon_dsl::compiled::CompiledPredicate{binding_exists:Some(name.into()),..Default::default()},then,else_branch:vec![]}}
  fn choose(r:&mut DebugRunner) {let v=r.pending_selection_view().expect("actual selection");let a=v.valid_action_ids.iter().copied().find(|a|*a!=PASS).unwrap();assert_eq!(build_action_mask(&r.game,v.selecting_player)[a as usize],1.0);r.execute_action(v.selecting_player,a).unwrap();}
  #[test]

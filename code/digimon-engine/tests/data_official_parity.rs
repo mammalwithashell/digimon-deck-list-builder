@@ -15,18 +15,24 @@
 //! `data/cards.json`. If a future re-ingest drops circles again, this fails
 //! with the exact card list.
 //!
-//! The inverse direction (cards.json circles absent from the official DB) is
-//! NOT asserted — 19 such cards are parked in
-//! `qa/qa-reports/evo_costs_extra_circles_review.json` pending manual review
-//! (they may be official-parse misses or genuine cards.json errors; extra
-//! circles in cards.json are also non-destructive for gameplay until judged).
+//! The inverse direction is asserted too, since 2026-11-22
+//! (`cards_json_circles_are_printed`): an extra circle is NOT harmless. It is a
+//! live digivolution the card does not print, and beside a printed circle of
+//! the same colour and level it opens a "which cost do you pay?" choice
+//! (Garurumon (BT21-067), Mastemon (EX6-029)). The 19 cards once parked in
+//! `qa/qa-reports/evo_costs_extra_circles_review.json` were judged from the
+//! card face then; the cards whose mirror rows are themselves wrong are in
+//! `FACE_READ_CIRCLES` (`support/printed_circles.rs`), which outranks the
+//! mirror for them in both directions.
 
 use std::collections::HashSet;
 use std::path::PathBuf;
 
 #[path = "support/printed_circles.rs"]
 mod printed_circles;
-use printed_circles::{RAINBOW_CIRCLES, SPLIT_CIRCLES_OUTSIDE_THE_MIRROR};
+use printed_circles::{
+    face_read_rows, FACE_READ_CIRCLES, RAINBOW_CIRCLES, SPLIT_CIRCLES_OUTSIDE_THE_MIRROR,
+};
 
 /// Official-mirror circles the card face does NOT print (the mirror keeps
 /// every printing's rows / has DB errors; CLAUDE.md "Printed card data").
@@ -115,6 +121,11 @@ fn official_db_digivolve_circles_present_in_cards_json() {
             continue;
         };
         if circles.is_empty() {
+            continue;
+        }
+        // The card face, read off the image, outranks the mirror for these
+        // (`face_read_circles_are_exact_in_every_data_file` pins them).
+        if face_read_rows(id).is_some() {
             continue;
         }
         let Some(have) = ours.get(id) else {
@@ -548,5 +559,119 @@ fn three_colour_ex12_cards_keep_all_three_colours() {
         failures.len(),
         failures.join("
 ")
+    );
+}
+
+/// The per-card JSON beside a card's YAML, if the card has one.
+fn per_card_json(id: &str) -> Option<serde_json::Value> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("cards")
+        .join(id.split('-').next().unwrap().to_lowercase())
+        .join(format!("{id}.json"));
+    path.exists().then(|| read_json(&path))
+}
+
+/// The cards whose circles were read off the card face on 2026-11-22
+/// (`FACE_READ_CIRCLES`) carry exactly the printed circles in every data file:
+/// `data/cards.json` (what real games read), `data/card_overrides.json` (what
+/// the next ingest re-applies) and the per-card JSON. A row the face does not
+/// print is a live digivolution the card does not have (CR 4.3 2-3-5-1); a
+/// missing one refuses a digivolution it has.
+#[test]
+fn face_read_circles_are_exact_in_every_data_file() {
+    let cards_path = repo_data("cards.json");
+    let overrides_path = repo_data("card_overrides.json");
+    if !cards_path.exists() || !overrides_path.exists() {
+        eprintln!("Skipping: data/*.json missing — full repo checkout required");
+        return;
+    }
+    let cards = read_json(&cards_path);
+    let overrides = read_json(&overrides_path);
+    let mut failures: Vec<String> = Vec::new();
+    for (id, _) in FACE_READ_CIRCLES {
+        let want: HashSet<(i64, i64, i64)> = face_read_rows(id)
+            .unwrap()
+            .into_iter()
+            .map(|(c, l, k)| (i64::from(c), i64::from(l), k))
+            .collect();
+        let mut sources: Vec<(&str, Option<HashSet<(i64, i64, i64)>>)> =
+            vec![("data/cards.json", circle_rows(cards[*id].get("evo_costs")))];
+        if let Some(rows) = overrides.get(*id).and_then(|o| o.get("evo_costs")) {
+            sources.push((
+                "data/card_overrides.json (re-applied by every ingest)",
+                circle_rows(Some(rows)),
+            ));
+        }
+        if let Some(doc) = per_card_json(id) {
+            sources.push((
+                "the per-card JSON under code/digimon-engine/cards/",
+                circle_rows(doc.get("evo_costs")),
+            ));
+        }
+        for (source, got) in sources {
+            if got.as_ref() != Some(&want) {
+                let mut found: Vec<_> = got.unwrap_or_default().into_iter().collect();
+                found.sort_unstable();
+                let mut printed: Vec<_> = want.iter().copied().collect();
+                printed.sort_unstable();
+                failures.push(format!(
+                    "{id}: the card prints {printed:?} (colour, level, cost); {source} carries {found:?}"
+                ));
+            }
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} data file(s) disagree with the card face:\n{}",
+        failures.len(),
+        failures.join("\n")
+    );
+}
+
+/// Every circle `data/cards.json` holds is one the card prints: it is in the
+/// official mirror, or the card's circles were read off its face
+/// (`FACE_READ_CIRCLES`). Cards the mirror does not carry (or carries only as a
+/// failed-lookup skeleton with no `colors`) are out of scope; their rows come
+/// from the ingest alone and other guards pin the known ones.
+#[test]
+fn cards_json_circles_are_printed() {
+    let cards_path = repo_data("cards.json");
+    let official_path = repo_data("card_official.json");
+    if !cards_path.exists() || !official_path.exists() {
+        eprintln!("Skipping: data/*.json missing — full repo checkout required");
+        return;
+    }
+    let cards = read_json(&cards_path);
+    let official = read_json(&official_path);
+    let official = official["cards"].as_object().expect("official cards map");
+    let mut failures: Vec<String> = Vec::new();
+    for (id, card) in cards.as_object().expect("cards.json is an object") {
+        if face_read_rows(id).is_some() {
+            continue;
+        }
+        let Some(page) = official.get(id).filter(|p| p.get("colors").is_some()) else {
+            continue;
+        };
+        let printed = circle_rows(page.get("digivolve_costs")).unwrap_or_default();
+        let mut extra: Vec<_> = circle_rows(card.get("evo_costs"))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|row| !printed.contains(row))
+            .collect();
+        extra.sort_unstable();
+        if !extra.is_empty() {
+            failures.push(format!(
+                "{id}: cards.json carries {extra:?} (colour, level, cost), which the official \
+                 mirror does not list. Read the card image: remove the row from cards.json and \
+                 card_overrides.json if the face does not print it, or add the card to \
+                 FACE_READ_CIRCLES (tests/support/printed_circles.rs) if the mirror is wrong."
+            ));
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "{} card(s) hold a digivolve circle the card does not print:\n{}",
+        failures.len(),
+        failures.join("\n")
     );
 }

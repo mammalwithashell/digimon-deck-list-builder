@@ -183,7 +183,7 @@ fn select_own_permanent_parks_selection() {
             prompt: "Choose your Digimon".to_string(),
             prompt_key: None,
             optional: false,
-            continue_on_decline: false,
+            continue_on_decline: false, offer_unpayable_deletion_payers: false,
         }];
         run_steps(&steps, &mut ctx, &mut bindings);
     }
@@ -229,7 +229,7 @@ fn select_opponent_permanent_parks_selection() {
             prompt: "Choose opponent Digimon".to_string(),
             prompt_key: None,
             optional: false,
-            continue_on_decline: false,
+            continue_on_decline: false, offer_unpayable_deletion_payers: false,
         }];
         run_steps(&steps, &mut ctx, &mut bindings);
     }

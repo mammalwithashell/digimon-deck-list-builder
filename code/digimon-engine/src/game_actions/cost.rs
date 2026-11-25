@@ -22,6 +22,21 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
+    pub(crate) fn resolve_effect_play_cost(
+        &self,
+        payer: PlayerId,
+        printed_cost: u16,
+        delta: CostDelta,
+    ) -> u16 {
+        let blocked = self.modifiers.player_has(payer, ModifierType::CannotReduceCost)
+            || self.modifiers.any_player_has(ModifierType::CannotReducePlayCost);
+        if blocked && matches!(delta, CostDelta::Reduce(n) if n > 0) {
+            printed_cost
+        } else {
+            delta.resolve(printed_cost)
+        }
+    }
+
     /// Resumed declarations no longer have the origin caller on the stack to
     /// roll back a failed play. Restore the captured physical card exactly once.
     #[allow(clippy::too_many_arguments)]
@@ -433,6 +448,7 @@ impl Game {
         target: PermanentHandle,
         hand_index: usize,
         source: PlaySource,
+        as_tamer: bool,
     ) -> Option<bool> {
         let card = self.player(acting_player).hand.get(hand_index)?.handle();
         self.try_prompt_digivolve_reducer_chain(
@@ -446,6 +462,7 @@ impl Game {
             },
             source,
             None,
+            as_tamer,
         )
     }
 
@@ -456,6 +473,7 @@ impl Game {
         cost_target: CostTargetContext,
         source: PlaySource,
         effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
+        as_tamer: bool,
     ) -> Option<bool> {
         self.try_prompt_digivolve_reducer_chain_mode(
             acting_player,
@@ -463,6 +481,7 @@ impl Game {
             cost_target,
             source,
             effect,
+            as_tamer,
             false,
         )
     }
@@ -474,10 +493,11 @@ impl Game {
         cost_target: CostTargetContext,
         source: PlaySource,
         effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
+        as_tamer: bool,
         affordability_probe: bool,
     ) -> Option<bool> {
         self.try_prompt_digivolve_reducer_operation(acting_player, target, cost_target,
-            source, effect, None, affordability_probe)
+            source, effect, None, as_tamer, affordability_probe)
     }
 
     pub(crate) fn try_prompt_dna_digivolve_reducer_chain(
@@ -488,7 +508,7 @@ impl Game {
         affordability_probe: bool,
     ) -> Option<bool> {
         self.try_prompt_digivolve_reducer_operation(declaration.player, target, cost_target,
-            PlaySource::ByEffect, None, Some(declaration), affordability_probe)
+            PlaySource::ByEffect, None, Some(declaration), false, affordability_probe)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -500,6 +520,7 @@ impl Game {
         source: PlaySource,
         effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
         dna_effect: Option<super::effect_dna::EffectDnaHandDeclaration>,
+        as_tamer: bool,
         affordability_probe: bool,
     ) -> Option<bool> {
         // CR 3-4-7-6: HPD, Digisorption and ordinary would-evolve payment
@@ -508,19 +529,21 @@ impl Game {
         if target.index == crate::action::space::BREEDING_TARGET as u8 {
             return None;
         }
+        // "one of your green Digimon" asks about the Digimon's colors as
+        // currently modified (CR 4.3 4-22-2 wording; DCGO BT3_103.cs reads
+        // `TopCard.CardColors`, which folds color-change effects), not the
+        // printed top card. Scan finding F04 class.
         let top_colors = self
             .player(target.player)
             .battle_area
             .get(target.index as usize)?
-            .top_card()
-            .digimon_colors(&self.card_data)
-            .to_vec();
+            .colors_for_rules(&self.card_data, &self.modifiers, target);
         use super::digivolve::{DigivolveReducerChoice, DigivolveReducerState};
         let mut remaining: Vec<_> = self
             .player_digivolve_cost_reducers
             .iter()
             .enumerate()
-            .filter(|(_, reducer)| reducer.qualifies(acting_player, target, &top_colors))
+            .filter(|(_, reducer)| !as_tamer && reducer.qualifies(acting_player, target, &top_colors))
             .map(|(index, reducer)| DigivolveReducerChoice::Player {
                 index,
                 reducer: reducer.clone(),
@@ -1403,7 +1426,12 @@ impl Game {
         let Some(card) = self.card_source_for_handle(target.card) else {
             return false;
         };
-        let base = i32::from(cost_delta.resolve(card.play_cost(&self.card_data)));
+        let payer = self.effect_source_player.unwrap_or(player_id);
+        let base = i32::from(self.resolve_effect_play_cost(
+            payer,
+            card.play_cost(&self.card_data),
+            cost_delta,
+        ));
         let base = self
             .pending_digixros_transaction
             .as_ref()
@@ -1418,7 +1446,6 @@ impl Game {
             .map(|c| c.amount)
             .sum();
         let cost = i32::from(accumulated.final_cost(base, 0)) - others;
-        let payer = self.effect_source_player.unwrap_or(player_id);
         if self.payer_can_pay(payer, cost.max(0)) {
             return false;
         }

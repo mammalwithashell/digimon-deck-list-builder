@@ -326,6 +326,13 @@ fn fuzz_one_game(
     let mut game = runner.game;
     let mut policy = Lcg(seed ^ 0x9E37_79B9_7F4A_7C15);
     let mut steps = 0;
+    // Within one turn no full verification digest may repeat along the walk:
+    // a return to an earlier state with the same actions offered is a cycle
+    // a policy can loop on forever (a 2-cycle such as a kept [Main] use
+    // declared and passed, or a longer one the per-step progress check
+    // cannot see). See `game::main_declare_guard`.
+    let mut turn_digests: (u16, HashMap<u64, u32>) = (game.turn_count, HashMap::new());
+    turn_digests.1.insert(game.verification_digest(), 0);
 
     while !game.game_over && steps < config.max_steps {
         assert_game_bounds(&game, seed, steps);
@@ -387,6 +394,18 @@ fn fuzz_one_game(
             "seed {seed} step {steps}: legal action {action} for player {player} made no digest progress\n{}",
             repro_hint(seed, steps)
         );
+        if game.turn_count != turn_digests.0 {
+            turn_digests = (game.turn_count, HashMap::new());
+        }
+        if !game.game_over {
+            if let Some(first) = turn_digests.1.insert(original_digest, steps + 1) {
+                panic!(
+                    "seed {seed} step {steps}: player {player} action {action} returned to the state reached after {first} actions, within turn {} (a cycle)\n{}",
+                    game.turn_count,
+                    repro_hint(seed, steps)
+                );
+            }
+        }
 
         assert_game_bounds(&game, seed, steps);
         assert_pending_resolvable(&game, seed, steps);

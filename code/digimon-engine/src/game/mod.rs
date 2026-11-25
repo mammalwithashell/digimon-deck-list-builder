@@ -849,6 +849,10 @@ pub struct Game {
     /// Steps since the loop watch last started over; signatures are taken
     /// only from `game::infinite_loop::LOOP_WATCH_START` steps on.
     pub(crate) loop_watch_steps: u16,
+    /// Loop guard for a kept `[Main]` use (owner ruling 2026-11-24). Plain
+    /// data: cloned, hashed into the verification digest when non-empty,
+    /// re-stamped by determinization. See `game::main_declare_guard`.
+    pub(crate) main_declare_guard: main_declare_guard::MainDeclareGuard,
     /// Marks the pending prompt as an optional decision when it is not
     /// `is_optional` (DSL choose-one, `<Ascension>` Yes/No); consumed when the
     /// next decision resolves. See `game::infinite_loop::OptionalDecisionMark`.
@@ -1603,6 +1607,15 @@ pub struct Game {
     /// hand plays and digivolutions. Mirrors DCGO `CardEffectCommons.IsByEffect`.
     pub(crate) pending_play_effect_initiated: bool,
 
+    /// Transient: `true` while the self `[When Digivolving]` triggers of a
+    /// digivolution performed BY AN EFFECT are being enqueued
+    /// (`fire_digivolve_event_triggers` with `effect_initiated`), so their
+    /// trigger context records it and `event_is_effect_initiated` reads true
+    /// there ("if played or digivolved by an effect": Titamon (BT25-084),
+    /// DCGO `CanTriggerWhenDigivolving && IsByEffect`). Cleared right after
+    /// the enqueue. `played_by_effect` is unaffected (On Play only).
+    pub(crate) pending_digivolve_effect_initiated: bool,
+
     /// Open coalescing window for the `OnDiscardHand` batch trigger
     /// (G-ENGINE-ON-DISCARD-HAND). While `Some`, effect-caused hand→trash calls
     /// append the trashing player; the window is flushed (fires
@@ -1683,6 +1696,7 @@ pub struct Game {
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
 mod handles;
 pub mod infinite_loop;
+pub mod main_declare_guard;
 pub mod optional_activation;
 mod lifecycle;
 mod memory;
@@ -1983,7 +1997,11 @@ impl Game {
         {
             return Err(SelectionError::GameOver);
         }
-        self.resolve_generic_selection(player, action_id)
+        let result = self.resolve_generic_selection(player, action_id);
+        // Main-declaration guard: settles only once nothing of the
+        // declaration is left (outermost frame; idempotent).
+        self.settle_main_declaration();
+        result
     }
 
     /// Mark the currently parked pay-cost effect as declined. Selection
@@ -4142,7 +4160,16 @@ impl Game {
         handle: crate::card_source::CardHandle,
     ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
         crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card");
-        let under_top = self.card_handle_is_under_top(handle);
+        let (under_top, face_down_source) = self.card_handle_stack_position(handle);
+        // CR 4.3 4-7-9: a face-down card under another card has no card
+        // information, so none of its effects exist -- not its inherited
+        // statics, keywords, triggers, replacements nor `[Main]` effects.
+        // Every scan that gathers a permanent's effects from its sources goes
+        // through here. DCGO: `CEntity_EffectController` skips every
+        // `cardSource.IsFlipped` source.
+        if face_down_source {
+            return None;
+        }
         // Key on the canonical data_index (Copy, no per-call String alloc) rather
         // than the &str card_id. A handle maps 1:1 to a card instance, so this is
         // also unique; data_index canonicalizes any duplicate card_id rows.
@@ -4226,7 +4253,11 @@ impl Game {
         handle: crate::card_source::CardHandle,
     ) -> Option<Vec<crate::effect::Effect>> {
         crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card_owned");
-        let under_top = self.card_handle_is_under_top(handle);
+        let (under_top, face_down_source) = self.card_handle_stack_position(handle);
+        // CR 4.3 4-7-9: see `effects_for_card`.
+        if face_down_source {
+            return None;
+        }
         self.build_effects_for_card(card_id, handle, under_top)
     }
 
@@ -4436,25 +4467,30 @@ impl Game {
     }
 
     fn card_handle_is_under_top(&self, handle: crate::card_source::CardHandle) -> bool {
+        self.card_handle_stack_position(handle).0
+    }
+
+    /// `(under_top, face_down_source)` for `handle`: whether it is a card
+    /// under the top card of a battle-area or breeding-area permanent, and
+    /// whether it is such a card lying FACE DOWN (CR 4.3 4-7-9: a card
+    /// without card information). Face-down security cards are not under a
+    /// card and read `(false, false)`.
+    pub(crate) fn card_handle_stack_position(
+        &self,
+        handle: crate::card_source::CardHandle,
+    ) -> (bool, bool) {
         for player in &self.players {
-            for permanent in &player.battle_area {
+            for permanent in player.battle_area.iter().chain(player.breeding_area.iter()) {
                 let stack_len = permanent.card_sources.len();
                 for (source_index, source) in permanent.card_sources.iter().enumerate() {
                     if source.handle() == handle {
-                        return source_index + 1 < stack_len;
-                    }
-                }
-            }
-            if let Some(permanent) = &player.breeding_area {
-                let stack_len = permanent.card_sources.len();
-                for (source_index, source) in permanent.card_sources.iter().enumerate() {
-                    if source.handle() == handle {
-                        return source_index + 1 < stack_len;
+                        let under_top = source_index + 1 < stack_len;
+                        return (under_top, under_top && source.face_down);
                     }
                 }
             }
         }
-        false
+        (false, false)
     }
 
     /// Resolve a `CardHandle` (card_index) to its `CardKind` by scanning all

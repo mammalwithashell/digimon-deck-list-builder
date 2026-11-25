@@ -1,0 +1,42 @@
+card: BT27-010
+name: Meramon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+form: Champion
+attribute: Data
+traits: [Flame]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  - text: "[Main] [Once Per Turn] By paying 1 cost, you may activate 1 of this Digimon's [On Deletion] effects."
+    when: main_on_field
+    once_per_turn: true
+    process:
+      - lose_memory: 1
+      - refire_effect: { source: source, timing: on_deletion, optional: true, target_attribution: true }
+  - text: "[On Deletion] Delete 1 of your opponent's Digimon with 6000 DP or less."
+    when: on_deletion
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter: { kind: digimon, dp_lte: 6000 }
+          prompt: "Delete an opponent's Digimon with 6000 DP or less"
+      - delete_permanent: { target: victim }
+  - text: "[On Deletion] Delete 1 of your opponent's Digimon with 6000 DP or less."
+    scope: inherited
+    when: on_deletion
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter: { kind: digimon, dp_lte: 6000 }
+          prompt: "Delete an opponent's Digimon with 6000 DP or less"
+      - delete_permanent: { target: victim }

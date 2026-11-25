@@ -1,5 +1,15 @@
-//! Frozen 13-archetype pool: declaration spends Main OPT even when its body
-//! is declined. Search clones must preserve the same counter and legal choices.
+//! Frozen 13-archetype pool: a declared [Main] whose pick is passed.
+//! Search clones must preserve the same counter and legal choices.
+//!
+//! Hakubamon (EX12-043), BetelGammamon (EX12-013), Manekimon (BT26-012) and
+//! Gekomon (BT26-021) give the use back on a passed pick (owner ruling
+//! 2026-11-24 "Match dcgo on the main use"; DCGO `if (!isUsed)
+//! activateClass.RemoveUse();`), and the main-declaration loop guard keeps
+//! the identical declaration from reopening on the unchanged state. A clone
+//! taken mid-prompt must agree with the original on all of it.
+//! NightChiropmon (BT26-070) still spends: DCGO BT26_070.cs:235 RemoveUse()s
+//! only when its face-down cost pick is cancelled, which ours does not
+//! surface; once the cost is paid a passed Option pick spends in both.
 use digimon_engine::{
     action::{
         build_action_mask,
@@ -14,7 +24,7 @@ fn main_action(index: u16) -> u16 {
     FIELD_EFFECT_START + index * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_MAIN
 }
 
-fn assert_decline_spends_use(card: &str, from_trash: bool) {
+fn assert_pass_keeps_use_and_guard_withholds_reopen(card: &str, from_trash: bool) {
     let mut target = make_test_card("TARGET", "Eligible Tamer");
     target.card_kind = CardKind::Tamer;
     target.level = None;
@@ -57,11 +67,20 @@ fn assert_decline_spends_use(card: &str, from_trash: bool) {
         assert_eq!(game.players[0].hand.len(), before.players[0].hand.len());
         assert_eq!(game.players[0].trash.len(), before.players[0].trash.len());
         assert_eq!(game.players[0].battle_area.len(), 2);
+        assert!(
+            game.players[0].battle_area[0].effect_activations.is_empty(),
+            "{card}: DCGO RemoveUse -- the passed pick keeps the use"
+        );
+        assert_eq!(
+            game.guard_free_verification_digest(),
+            before.guard_free_verification_digest(),
+            "{card}: declare-then-pass is a gameplay no-op"
+        );
         let mask = build_action_mask(game, 0);
         assert_eq!(
             mask[main_action(0) as usize],
             0.0,
-            "{card}: spent activation must not reopen"
+            "{card}: the loop guard withholds the identical declaration"
         );
         assert_eq!(
             mask[main_action(1) as usize],
@@ -71,28 +90,29 @@ fn assert_decline_spends_use(card: &str, from_trash: bool) {
         assert_eq!(mask[PASS as usize], 1.0);
     }
     assert_eq!(to_ui_json(&r.game), to_ui_json(&cloned));
+    assert_eq!(r.game.verification_digest(), cloned.verification_digest());
     // Resolving the cloned selection must not spend a use in the pre-activation clone.
     assert_eq!(build_action_mask(&before, 0)[main_action(0) as usize], 1.0);
 }
 
 #[test]
-fn hakubamon_decline_cannot_reopen_main_in_search_clone() {
-    assert_decline_spends_use("EX12-043", false);
+fn hakubamon_pass_keeps_use_and_cannot_reopen_main_in_search_clone() {
+    assert_pass_keeps_use_and_guard_withholds_reopen("EX12-043", false);
 }
 
 #[test]
-fn betelgammamon_decline_cannot_reopen_main_in_search_clone() {
-    assert_decline_spends_use("EX12-013", false);
+fn betelgammamon_pass_keeps_use_and_cannot_reopen_main_in_search_clone() {
+    assert_pass_keeps_use_and_guard_withholds_reopen("EX12-013", false);
 }
 
 #[test]
-fn manekimon_decline_cannot_reopen_main_in_search_clone() {
-    assert_decline_spends_use("BT26-012", false);
+fn manekimon_pass_keeps_use_and_cannot_reopen_main_in_search_clone() {
+    assert_pass_keeps_use_and_guard_withholds_reopen("BT26-012", false);
 }
 
 #[test]
-fn gekomon_decline_cannot_reopen_main_in_search_clone() {
-    assert_decline_spends_use("BT26-021", true);
+fn gekomon_pass_keeps_use_and_cannot_reopen_main_in_search_clone() {
+    assert_pass_keeps_use_and_guard_withholds_reopen("BT26-021", true);
 }
 
 #[test]
@@ -152,4 +172,5 @@ fn nightchiropmon_decline_spends_use_with_another_cost_still_available() {
         );
     }
     assert_eq!(to_ui_json(&r.game), to_ui_json(&cloned));
+    assert_eq!(r.game.verification_digest(), cloned.verification_digest());
 }

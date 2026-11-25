@@ -430,20 +430,20 @@
         "510a19d8603ba01b24029b7b9992ef756e89cb903dd89a6eeb9427980c6135e6"
       ],
       "field_path": "evo_costs",
-      "reason": "Runtime-hold review for BT11-009 evo_costs resolved the printed value to [{\"card_color\": 0, \"level\": 2, \"memory_cost\": 0}, {\"card_color\": 2, \"level\": 2, \"memory_cost\": 1}]. The base English card image contradicts the candidate value and prints the resolved value recorded here.",
-      "reviewed_at": "2026-07-13",
-      "reviewer": "codex-runtime-hold-semantic-review",
+      "reason": "Card face read 2026-11-22 (FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs): the retained value carried a digivolve circle the card does not print; the value is the printed circles only, which the DCGO card asset also lists.",
+      "reviewed_at": "2026-11-22",
+      "reviewer": "claude-card-face-review",
       "schema_version": 1,
       "value": [
-        {
-          "card_color": 0,
-          "level": 2,
-          "memory_cost": 0
-        },
         {
           "card_color": 2,
           "level": 2,
           "memory_cost": 1
+        },
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 0
         }
       ]
     },
@@ -783,20 +783,15 @@
         "e11e60f826d01651b8b285fc4160b5504cef2d0760f83dc89e68db6e0a7fd6f1"
       ],
       "field_path": "evo_costs",
-      "reason": "Legacy override migration; the committed official-mirror bootstrap supports the retained compatibility value.",
-      "reviewed_at": "2026-07-12",
-      "reviewer": "canonical-card-data-pipeline-bootstrap-review",
+      "reason": "Card face read 2026-11-22 (FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs): the retained value carried a digivolve circle the card does not print; the value is the printed circles only, which the DCGO card asset also lists.",
+      "reviewed_at": "2026-11-22",
+      "reviewer": "claude-card-face-review",
       "schema_version": 1,
       "value": [
         {
           "card_color": 6,
           "level": 5,
           "memory_cost": 3
-        },
-        {
-          "card_color": 6,
-          "level": 2,
-          "memory_cost": 0
         }
       ]
     },
@@ -5605,9 +5600,9 @@
         "7709dc1ff475531de871fe96ed03468a780d3e0ff408d2d40824f001d4f5b25d"
       ],
       "field_path": "evo_costs",
-      "reason": "Legacy override migration; the committed official-mirror bootstrap supports the retained compatibility value.",
-      "reviewed_at": "2026-07-12",
-      "reviewer": "canonical-card-data-pipeline-bootstrap-review",
+      "reason": "Card face read 2026-11-22 (FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs): the retained value carried a digivolve circle the card does not print; the value is the printed circles only, which the DCGO card asset also lists.",
+      "reviewed_at": "2026-11-22",
+      "reviewer": "claude-card-face-review",
       "schema_version": 1,
       "value": [
         {
@@ -5619,16 +5614,6 @@
           "card_color": 6,
           "level": 5,
           "memory_cost": 4
-        },
-        {
-          "card_color": 2,
-          "level": 5,
-          "memory_cost": 5
-        },
-        {
-          "card_color": 6,
-          "level": 5,
-          "memory_cost": 5
         }
       ]
     },
@@ -5639,18 +5624,13 @@
         "beac74e2fae8da7e167f30bc10c0872016221c10291b126debe1eb365326be99"
       ],
       "field_path": "evo_costs",
-      "reason": "Legacy override migration; the committed official-mirror bootstrap supports the retained compatibility value.",
-      "reviewed_at": "2026-07-12",
-      "reviewer": "canonical-card-data-pipeline-bootstrap-review",
+      "reason": "Card face read 2026-11-22 (FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs): the retained value carried a digivolve circle the card does not print; the value is the printed circles only, which the DCGO card asset also lists.",
+      "reviewed_at": "2026-11-22",
+      "reviewer": "claude-card-face-review",
       "schema_version": 1,
       "value": [
         {
           "card_color": 2,
-          "level": 5,
-          "memory_cost": 4
-        },
-        {
-          "card_color": 5,
           "level": 5,
           "memory_cost": 4
         }
@@ -5759,9 +5739,9 @@
         "79a01fdfa2605d7c4fe41ee034e8913c47dc831182d2f438ec6ad85bc8787ae2"
       ],
       "field_path": "evo_costs",
-      "reason": "Legacy override migration; the committed official-mirror bootstrap supports the retained compatibility value.",
-      "reviewed_at": "2026-07-12",
-      "reviewer": "canonical-card-data-pipeline-bootstrap-review",
+      "reason": "Card face read 2026-11-22 (FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs): the retained value carried a digivolve circle the card does not print; the value is the printed circles only, which the DCGO card asset also lists.",
+      "reviewed_at": "2026-11-22",
+      "reviewer": "claude-card-face-review",
       "schema_version": 1,
       "value": [
         {
@@ -5771,11 +5751,6 @@
         },
         {
           "card_color": 2,
-          "level": 5,
-          "memory_cost": 4
-        },
-        {
-          "card_color": 6,
           "level": 5,
           "memory_cost": 4
         }
@@ -5788,18 +5763,13 @@
         "c47fa12b3638e3348d8a743c2a5a94648a54d7d8da314c29f45827cc66568da7"
       ],
       "field_path": "evo_costs",
-      "reason": "Legacy override migration; the committed official-mirror bootstrap supports the retained compatibility value.",
-      "reviewed_at": "2026-07-12",
-      "reviewer": "canonical-card-data-pipeline-bootstrap-review",
+      "reason": "Card face read 2026-11-22 (FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs): the retained value carried a digivolve circle the card does not print; the value is the printed circles only, which the DCGO card asset also lists.",
+      "reviewed_at": "2026-11-22",
+      "reviewer": "claude-card-face-review",
       "schema_version": 1,
       "value": [
         {
           "card_color": 5,
-          "level": 5,
-          "memory_cost": 4
-        },
-        {
-          "card_color": 0,
           "level": 5,
           "memory_cost": 4
         }

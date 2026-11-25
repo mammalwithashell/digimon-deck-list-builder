@@ -28,8 +28,13 @@
   "security_effect_description_eng": "",
   "evo_costs": [
     {
-      "card_color": 0,
+      "card_color": 2,
       "level": 2,
+      "memory_cost": 1
+    },
+    {
+      "card_color": 0,
+      "level": 3,
       "memory_cost": 0
     }
   ],

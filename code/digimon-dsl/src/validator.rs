@@ -950,7 +950,7 @@ fn validate_predicate(
             errors.push(ValidationError {
                 card_id: card_id.to_string(),
                 path: format!("{prefix}.has_digivolve_candidate.zone"),
-                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal`"
+                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal` / `material`"
                     .to_string(),
             });
         }
@@ -960,12 +960,13 @@ fn validate_predicate(
                 crate::predicate::Zone::Hand
                     | crate::predicate::Zone::Trash
                     | crate::predicate::Zone::Reveal
+                    | crate::predicate::Zone::Material
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.has_digivolve_candidate.zone"),
                     message: format!(
-                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` (got {z:?})"
+                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` / `material` (got {z:?})"
                     ),
                 });
             }
@@ -1029,6 +1030,15 @@ pub(crate) fn validate_scoped_step_modes(
                     card_id: card_id.into(),
                     path: format!("{prefix}.continue_on_decline"),
                     message: "continue_on_decline requires optional non-cost select_security".into(),
+                });
+            }
+        }
+        StepSpec::TrashBottomFaceDownSourceUnderTamer(args) => {
+            if args.continue_on_decline && !args.optional {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.continue_on_decline"),
+                    message: "continue_on_decline requires optional: true (a mandatory Tamer pick has no decline)".into(),
                 });
             }
         }
@@ -1119,7 +1129,11 @@ fn validate_step(
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
             if !matches!(
                 args.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "option_main"
+                "on_play"
+                    | "when_digivolving"
+                    | "on_play_or_when_digivolving"
+                    | "on_deletion"
+                    | "option_main"
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
@@ -2061,6 +2075,9 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::TrashBottomFaceDownSourceUnderTamer(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectOwnSources(args) | StepSpec::SelectUnderTamerSources(args) => {
@@ -3391,6 +3408,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "DontBattleSecurityDigimon",
     // Digivolution / color / level
     "CannotDigivolve",
+    "CannotDigivolveAsTamer",
     "CanOnlyDigivolveInto",
     "ChangeColor",
     "AddColor",
@@ -3964,6 +3982,20 @@ effects:
 "#
         );
         serde_yml::from_str(&yaml).unwrap()
+    }
+
+    #[test]
+    fn tamer_digivolution_prohibition_validates() {
+        let spec = payload_card(
+            r#"      - add_modifier:
+          target: { of: opponent, is_suspended: true, kind: tamer }
+          modifier: CannotDigivolveAsTamer
+          value: 1
+          expiry: end_of_opponents_turn
+          continuous: true"#,
+        );
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
     }
 
     /// G-DSL-ADD-MODIFIER-NAME-COLOR-PAYLOAD: the EX13-031 shape validates.

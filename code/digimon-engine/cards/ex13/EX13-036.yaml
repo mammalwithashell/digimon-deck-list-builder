@@ -14,8 +14,8 @@
 #   Digivolve: Yellow Lv.5 / cost 3; Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: 3.
 #   Official Q&A: "instead" replaces the standard processing.
 #
-# DCGO C# reference: none at the submodule (no EX13_036.cs). Printed text and
-# general_rule.pdf govern.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_036.cs
+# (the [When Digivolving] [End of Attack] [Counter] placement is L245-345).
 #
 # DSL notes:
 #   - [Security][On Play]: one clause over `[on_security, on_play]`; the
@@ -31,9 +31,21 @@
 #     `refire_effect` only re-runs [On Play]/[When Digivolving] effects, so the
 #     activation re-runs that single [Security] body inline after the paid
 #     cost (the choice to trash IS the "you may").
-#   - [WD][EoA][Counter][OPT]: clause-level optional; both picks mandatory once
-#     accepted ("1 of each player's Digimon"), each placed face down on TOP of
-#     its owner's security stack.
+#   - [WD][EoA][Counter][OPT]: clause-level optional; each chosen Digimon is
+#     placed face down on TOP of its owner's security stack. Offered only while
+#     either side has a Digimon AND Kentaurosmon's controller can add security
+#     cards (DCGO AdditionalActivateCondition L264-266, incl.
+#     `card.Owner.CanAddSecurity(activateClass)`): not offered, nothing spent.
+#     What DCGO does after the accept: the own pick is declinable (L290
+#     canNoSelect: true), the opponent pick is forced whenever the owner has a
+#     Digimon (L304 -- always, since Kentaurosmon itself qualifies), and
+#     `if (!isUsed) RemoveUse()` (L343) gives the use back when nothing was
+#     selected. Owner ruling 2026-11-24 on this card: "DCGO does get that
+#     wrong". So we keep "1 of each player's Digimon": BOTH picks are
+#     mandatory once accepted and there is no refund (a recorded departure
+#     from DCGO; CR 4.3 1-3-2 for a side with no Digimon). DCGO places both in
+#     one IPutMultipleSecurityPermanent call; ours places them one after the
+#     other (batched placement is a recorded DSL gap).
 
 card: EX13-036
 name: Kentaurosmon
@@ -196,10 +208,16 @@ effects:
     # Digimon)`; CR 4.3 1-3-2 "do as much as possible"): each pick below
     # auto-skips an empty side and `place_on_security` of an unbound permanent is a
     # no-op, so whichever side has a Digimon is placed.
+    #
+    # `controller_can_add_security` mirrors DCGO's `CanAddSecurity` half of
+    # the same condition (it checks only the controller, as DCGO does); it is
+    # evaluated before the use is recorded.
     condition:
-      any_of:
-        - any_permanent: { of: you, zone: [battle_area], kind: digimon }
-        - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+      all_of:
+        - any_of:
+            - any_permanent: { of: you, zone: [battle_area], kind: digimon }
+            - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+        - controller_can_add_security: true
     summary: "[When Digivolving][End of Attack][Counter][OPT] You may place 1 of each player's Digimon as the top security cards"
     process:
       - select_own_permanent:

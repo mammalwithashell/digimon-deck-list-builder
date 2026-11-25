@@ -897,11 +897,6 @@ pub enum SecurityRemovalDestination {
         target: PermanentHandle,
         turn: u16,
     },
-    DigivolveAsTamer {
-        player: PlayerId,
-        target: PermanentHandle,
-        turn: u16,
-    },
     Security {
         player: PlayerId,
         position: crate::enums::StackPosition,
@@ -1045,7 +1040,10 @@ pub enum SecurityPhase {
     /// The comparison is captured once; a paused effect must not rerun it.
     EndOfSecurityBattleDrain {
         attacker: PermanentHandle,
-        attacker_top: Option<CardHandle>,
+        /// The attacker's stack identity (`Permanent::battle_identity`) at
+        /// the comparison: survival is judged by it, not by the top card, so
+        /// a saved attacker that digivolves keeps checking (CR 4.3 13-1-5).
+        attacker_identity: Option<u64>,
         winner: Option<PermanentHandle>,
     },
     /// The end of the battle timing (§14-2-5) once the battle's triggered

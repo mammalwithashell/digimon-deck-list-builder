@@ -1,0 +1,78 @@
+card: BT27-040
+name: Etemon
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 8
+dp: 8000
+form: Ultimate
+attribute: Virus
+traits: [Puppet]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, any_color: true, name_contains: Sukamon }
+    cost: 3
+  - kind: assembly
+    cost: 3
+    materials:
+      - filter: { kind: digimon, level_eq: 4, name_contains: Sukamon }
+        zones: [trash]
+        stack_under: true
+
+effects:
+  - text: "＜Overclock ([Chuumon]/[Sukamon] in name)＞"
+    kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - any_of: [{ name_contains: Chuumon }, { name_contains: Sukamon }]
+  - text: "[Security] [On Play] [When Digivolving] To 1 of your opponent's Digimon, give -3000 DP for the turn for each of your Digimon with [Chuumon], [Sukamon] or [Etemon] in their names."
+    when: [on_security, on_play, when_digivolving]
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter: { kind: digimon }
+          prompt: "Choose an opponent's Digimon to lose DP"
+      - add_dp_modifier:
+          target: victim
+          value:
+            base: 0
+            per:
+              card_count_in_zone:
+                of: you
+                zone: battle_area
+                filter:
+                  kind: digimon
+                  any_of: [{ name_contains: Chuumon }, { name_contains: Sukamon }, { name_contains: Etemon }]
+            delta: -3000
+          expiry: end_of_turn
+  - text: "[All Turns] [Once Per Turn] When any of your other Digimon with [Chuumon], [Sukamon] or [Etemon] in their names are played, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    trigger_if:
+      event_target_owner: you
+      event_target_kind: digimon
+      event_permanent_is_source: false
+      any_of:
+        - event_target_name_contains: Chuumon
+        - event_target_name_contains: Sukamon
+        - event_target_name_contains: Etemon
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter: { kind: digimon }
+          prompt: "Choose an opponent's Digimon to De-Digivolve"
+      - de_digivolve: { target: victim, amount: 1, stop_at_level: 3 }

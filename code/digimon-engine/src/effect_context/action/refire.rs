@@ -43,10 +43,17 @@ impl Game {
         else {
             return false;
         };
-        perm.activation_count(effect.source_card, effect.effect_id) < effect_body.max_per_turn
+        let opt_key = self.opt_key_for_source(
+            effect.source,
+            effect.source_card,
+            effect_body.inherited,
+            effect_body.linked,
+            effect_body.shared_opt_group.unwrap_or(effect.effect_id),
+        );
+        perm.activation_count(effect.source_card, opt_key) < effect_body.max_per_turn
     }
 
-    /// Whether `target`'s top card holds at least one effect a refire with
+    /// Whether `target` has at least one effect a refire with
     /// `filter` could activate right now: a refireable effect of one of the
     /// filter's timings whose once-per-turn slot is still open. This is the
     /// engine's reading of DCGO's `EffectList(OnEnterFieldAnyone).Any(

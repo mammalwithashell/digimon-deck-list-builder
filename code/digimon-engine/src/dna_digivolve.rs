@@ -478,11 +478,18 @@ impl Game {
         base_handle: PermanentHandle,
     ) -> Vec<DigivolveRouteMatch> {
         let mut routes = self.all_digivolve_routes_for_card(card, base_handle);
-        if base_handle.index != crate::action::space::BREEDING_TARGET as u8
-            && self.modifiers.has(base_handle, ModifierType::CannotDigivolve)
-        {
-            routes.retain(|route| route.as_tamer);
-            return routes;
+        if base_handle.index != crate::action::space::BREEDING_TARGET as u8 {
+            routes.retain(|route| {
+                self.digivolve_route_passes_prohibitions(
+                    base_handle,
+                    base_handle.player,
+                    crate::enums::PlaySource::ByHand,
+                    route.as_tamer,
+                )
+            });
+            if self.modifiers.has(base_handle, ModifierType::CannotDigivolve) {
+                return routes;
+            }
         }
         let burst = self.burst_digivolve_routes_for_card(card, base_handle);
         if burst.is_empty() {
