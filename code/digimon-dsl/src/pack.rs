@@ -64,7 +64,9 @@ use std::collections::BTreeSet;
 // 0.39.0 adds `offer_unpayable_deletion_payers` to the compiled
 // `select_own_permanent` / `select_opponent_permanent` / `select_any_permanent`
 // steps. Rebuild packs; bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.39.0";
+// 0.40.0 adds the `link_requirement_met_by_self` compiled predicate leaf.
+// Rebuild packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.40.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

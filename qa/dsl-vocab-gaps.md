@@ -1,3 +1,26 @@
+## G-DSL-LINK-REQUIREMENT-MET-BY-SELF — resolved 2026-11-24
+
+Logimon (BT25-052)'s [Main] [Once Per Turn] link was offered on every board.
+DCGO (BT25_052.cs:63-80 `CanUseCondition`) offers it only when a
+[Social]/[Tool]/[Game] Digimon card in the hand or among this Digimon's
+digivolution cards can link to this Digimon with the cost ignored
+(`CanLinkToTargetPermanent(permanent, payCost: false)`). Owner ruling
+2026-11-24: "Generally let's look to match dcgo". The clause `condition:`
+had no way to ask whether a card's [Link] requirement is met by this
+permanent.
+
+Closed by a card-subject predicate leaf `link_requirement_met_by_self: bool`:
+true when the subject card's [Link] requirement is met by the effect's own
+permanent (`Game::link_card_qualifies_for`, the same test as the link rule
+check, Q4533), link cost ignored. False with no source permanent; a
+face-down card never meets it (printed information, CR 4.3 4-7-9). Used in a
+`count_gte` over the hand and a `self_source_count` over the digivolution
+cards. The compiled predicate grew a field: `PACK_FORMAT_VERSION` 0.40.0.
+
+Proof: `tests/dsl/constructs/link_requirement_met_by_self.rs`; behavioural
+`tests/cards_behavioral/bt25/bt25_052.rs::bt25_052_main_not_offered_*` and
+`bt25_052_main_offered_*`.
+
 ## G-DSL-OFFER-UNPAYABLE-DELETION-PAYERS — resolved 2026-11-24
 
 A "by deleting 1 ... Digimon, it doesn't leave" clause (a payer pick, then

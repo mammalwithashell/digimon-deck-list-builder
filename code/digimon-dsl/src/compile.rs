@@ -1104,6 +1104,7 @@ fn compile_predicate(
             }),
         }),
         can_play_from_effect_without_cost: p.can_play_from_effect_without_cost,
+        link_requirement_met_by_self: p.link_requirement_met_by_self,
         can_play_or_use_from_effect: p.can_play_or_use_from_effect,
         can_play_to_breeding_from_hand: p.can_play_to_breeding_from_hand,
         can_play_to_breeding_from_trash: p.can_play_to_breeding_from_trash,

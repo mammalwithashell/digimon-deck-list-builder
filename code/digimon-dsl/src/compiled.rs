@@ -457,6 +457,9 @@ pub struct CompiledPredicate {
     pub dna_field_pair: Option<CompiledDnaFieldPair>,
     #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
+    /// See `PredicateSpec::link_requirement_met_by_self` (BT25-052).
+    #[serde(default)]
+    pub link_requirement_met_by_self: Option<bool>,
     /// See `PredicateSpec::can_play_or_use_from_effect`.
     /// G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY.
     #[serde(default)]

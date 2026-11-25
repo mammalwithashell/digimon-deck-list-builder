@@ -1784,6 +1784,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.has_refireable_effect.is_none()
         && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
+        && pred.link_requirement_met_by_self.is_none()
         && pred.can_play_or_use_from_effect.is_none()
         && pred.affordable_with_cost.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
@@ -3645,6 +3646,7 @@ printed_card_information_constraints!(
     has_inherited, has_on_deletion_effect, play_cost_lte, play_cost_gte,
     play_cost_eq, play_cost_eq_binding, play_or_use_cost_lte, affordable_with_cost_reduce, affordable_with_cost,
     dp_eq, dp_lte, dp_gte, self_color_count_gte, self_color_count_lte,
+    link_requirement_met_by_self,
 );
 
 fn eval_card_fields(
@@ -3799,6 +3801,16 @@ fn eval_card_fields(
                 }
                 crate::enums::CardKind::DigiEgg | crate::enums::CardKind::Token => false,
             });
+        if can != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.link_requirement_met_by_self {
+        // DCGO `CanLinkToTargetPermanent(host, payCost: false)`: the card's
+        // [Link] requirement against this effect's permanent, cost ignored.
+        let can = rctx
+            .source_permanent
+            .is_some_and(|host| rctx.game.link_card_qualifies_for(host, card));
         if can != want {
             return false;
         }
