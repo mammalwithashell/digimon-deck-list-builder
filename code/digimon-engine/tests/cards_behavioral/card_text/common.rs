@@ -95,6 +95,10 @@ pub fn ids(r: &DebugRunner, cards: &[digimon_engine::card_source::CardSource]) -
         .collect()
 }
 
+pub fn next_turn(r: &mut DebugRunner) {
+    advance_turn(r);
+}
+
 pub fn advance_turn(r: &mut DebugRunner) {
     let player = r.game.turn_player();
     action(r, player, PASS);
