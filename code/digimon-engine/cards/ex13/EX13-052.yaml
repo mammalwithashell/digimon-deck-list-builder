@@ -69,11 +69,25 @@ effects:
     # (`CanActivateCondition`); after the accept, a pick with canNoSelect true.
     # None chosen -> `RemoveUse()`: the use is kept and the carrier leaves. One
     # chosen -> spent; it doesn't leave only if that Digimon was deleted.
+    # Unpayable payers (owner ruling 2026-11-24, DCGO parity; quoted: "You
+    # can pick a target that is immune from the removal, and it will fizzle.
+    # Nothing is deleted, right? That is a valid choice."): DCGO's
+    # `CanActivateCondition` is `HasMatchConditionPermanent` over the printed
+    # predicate only, and the pick has no can-be-deleted filter, so a Digimon
+    # that can't be deleted is offered and listed; `offer_unpayable_deletion_payers`
+    # turns off the CR 4.3 15-7-4 payer filter for this clause only. Choosing
+    # one: nothing is deleted, the removal is not cancelled (the paid-deletion
+    # receipt stays empty), the carrier leaves, and the use stays SPENT (the
+    # binding is present, so no refund). Loop check: the spent use cannot be
+    # re-offered this turn; a pass gives the use back but the carrier then
+    # leaves, which ends that would-leave event, so a re-offer needs a new
+    # removal of a new carrier state.
     process:
       - select_own_permanent:
           bind_as: prevent_cost
           optional: true
           continue_on_decline: true
+          offer_unpayable_deletion_payers: true
           filter:
             all_of:
               - other: true

@@ -314,6 +314,17 @@ pub struct PredicateSpec {
     /// trash can happen. G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_from_effect_without_cost: Option<bool>,
+    /// Card-subject leaf: the subject card has a [Link] requirement that
+    /// this effect's own permanent meets, so the card could link to it
+    /// (Q4533; CR 4.3 17-1-3-2-7, the same test as the link rule check,
+    /// `Game::link_card_qualifies_for`). The link COST is ignored: DCGO
+    /// `CanLinkToTargetPermanent(permanent, payCost: false)`, the offer gate
+    /// of a [Main] such as Logimon (BT25-052)'s, whose body then checks the
+    /// payment. False with no source permanent. Printed information: a
+    /// face-down card never meets it (CR 4.3 4-7-9).
+    /// G-DSL-LINK-REQUIREMENT-MET-BY-SELF.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_requirement_met_by_self: Option<bool>,
     /// Card-subject leaf for "play or use 1 ... card from your hand" picks
     /// (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY, ST24-06 RizeGreymon). True when
     /// the effect controller could actually play or use the physical card by

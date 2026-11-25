@@ -70,11 +70,17 @@
 //!   path reaches a `refund_opt`, so the named tests carry the proof.
 //!   Erlangmon (EX12-034) once refunded on its nothing-playable path (row d)
 //!   and was used twice in one turn in logged games.
-//!   A declared [Main] is not an unprinted accept: the declaration is the
-//!   activation and spends the use even when its "you may" pick is passed
-//!   (CR 4.3 15-8-4-1/-2, 15-14-1-1, 15-14-1-4; the 2026-10-25 record in
-//!   docs/RUST_ENGINE_GAPS.md, Manekimon (BT26-012) and Thundermon
-//!   (EX12-041)), so no [Main] clause belongs in the table.
+//!   A declared [Main] is not an unprinted accept. Its use accounting follows
+//!   the card's DCGO script, by the owner ruling of 2026-11-24 ("Match dcgo
+//!   on the main use"; that this covers every per-turn [Main] path by path is
+//!   the orchestrator's interpretation): where DCGO `RemoveUse()`s a declared
+//!   [Main] that did nothing, the use is kept; everywhere else it is spent.
+//!   The owner chose DCGO parity over the CR 4.3 15-8-4-1/-2, 15-14-1-4
+//!   reading, reversing the 2026-10-25 record (docs/RUST_ENGINE_GAPS.md). A
+//!   [Main] refund is a reviewed entry on [`RefundRow::MainPassedByOwnerRuling`]
+//!   and only for the closed list [`MAIN_REFUND_BY_OWNER_RULING`]; the
+//!   engine's main-declaration loop guard keeps the kept use from being a
+//!   free repeatable no-op (docs/RUST_ENGINE_API.md "Main-declaration guard").
 
 use serde_yml::Value;
 
@@ -147,6 +153,12 @@ pub enum RefundRow {
     /// more); on every other card a declined "by X" cost spends the use
     /// today, and none may be listed on this row without its own ruling.
     CostDeclinedByOwnerRuling,
+    /// A declared [Main] [Once Per Turn] whose pick was passed (or had no
+    /// candidate), on a clause whose DCGO script `RemoveUse()`s that path:
+    /// KEPT by the owner ruling of 2026-11-24 ("Match dcgo on the main use").
+    /// Only the clauses in [`MAIN_REFUND_BY_OWNER_RULING`]; a [Main] whose
+    /// DCGO script has no `RemoveUse()` on the path keeps spending.
+    MainPassedByOwnerRuling,
 }
 
 /// The closed list of `(card, clause)` the owner has ruled onto row f: a
@@ -172,6 +184,26 @@ pub const COST_DECLINED_BY_OWNER_RULING: &[(&str, &str)] = &[
     ("EX13-052", "effects[2]"),
     ("EX13-059", "effects[1]"),
     ("EX13-059", "effects[2]"),
+];
+
+/// The closed list of declared [Main] refunds: owner ruling 2026-11-24,
+/// "Match dcgo on the main use" (DCGO parity; that it covers every per-turn
+/// [Main] path by path is the orchestrator's interpretation). Each clause's
+/// DCGO script `RemoveUse()`s the declared [Main] when it did nothing
+/// (`if (!isUsed)` / `if (!digivolved)`), and the clause refunds on exactly
+/// that path. A [Main] whose DCGO script has no `RemoveUse()` there (Logimon
+/// (BT25-052), Logamon (BT25-070), Greymon (BT23-008), ...) keeps spending
+/// and must not be listed; NightChiropmon (BT26-070) and Richard Sampson
+/// (EX13-071) refund in DCGO only on a cancelled cost pick that ours does not
+/// surface (declaring and cancelling is the same as not declaring), so they
+/// are not listed.
+pub const MAIN_REFUND_BY_OWNER_RULING: &[(&str, &str)] = &[
+    ("BT26-012", "effects[0]"),
+    ("BT26-021", "effects[1]"),
+    ("EX12-013", "effects[0]"),
+    ("EX12-041", "effects[0]"),
+    ("EX12-043", "effects[0]"),
+    ("EX13-074", "effects[2]"),
 ];
 
 /// One reviewed `refund_opt` behind an explicit accept.
@@ -212,14 +244,20 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "Imperialdramon: Fighter Mode prints \"you may suspend 1 of your opponent's Digimon and ",
             "unsuspend this Digimon. Then, if played or digivolved by effects, you may return ...\": ",
             "W13. Its outer_prompt is DCGO's unprinted skippable Yes/No (AD1_024.cs SetIsSkippable). ",
-            "The refund needs every pick absent, so no half executed, and an opponent Digimon or this ",
-            "Digimon being suspended, so something was possible: with neither, DCGO still offers the ",
-            "effect and accepting it spends the use (row d)."
+            "The refund needs no suspend pick, no Yes to the standalone \"Will you unsuspend this card?\" and no ",
+            "return pick, so no half executed (DCGO `if (!executed) RemoveUse()`, AD1_024.cs L265). With no ",
+            "opponent Digimon DCGO always asks that Yes/No, even when this Digimon is already unsuspended: ",
+            "Yes spends the use (a no-op unsuspend still sets `executed`), No keeps it. That keeps the use on ",
+            "the nothing-possible board, by the owner ruling of 2026-11-24 (\"Generally let's look to match ",
+            "dcgo\"); a pick or a Yes spends it (row c)."
         ),
         tests: &[
             "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accept_then_decline_everything_keeps_opt",
             "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_is_once_per_turn",
-            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_accepted_with_nothing_possible_spends_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_nothing_possible_standalone_no_keeps_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_nothing_possible_standalone_yes_spends_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_self_suspended_standalone_no_keeps_opt",
+            "cards_behavioral/ad1/ad1_024.rs::ad1_024_all_turns_standalone_unsuspend_when_no_opp_digimon",
         ],
     },
     ReviewedRefund {
@@ -392,11 +430,14 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         reason: concat!(
             "Chuumon's inherited \"by deleting 1 other Digimon with [Sukamon] in its name, it doesn't leave\": owner ",
             "ruling 2026-11-23, parity with DCGO (EX13_027.cs: canNoSelect pick over either battle area, Q7287; ",
-            "RemoveUse unless a Digimon was chosen). Offered only while such a Digimon exists (leading-pick ",
-            "preflight), so the refund runs only on a declined pick; a chosen Digimon spends the use.",
+            "RemoveUse unless a Digimon was chosen). Offered while a printed match exists, deletable or not ",
+            "(owner ruling 2026-11-24, `offer_unpayable_deletion_payers`), so the refund runs only on a declined pick; ",
+            "a chosen Digimon, even one that can't be deleted, spends the use.",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_undeletable_only_pass_keeps_opt",
+            "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing",
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_once_per_turn_and_resets",
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_not_offered_without_other_sukamon",
         ],
@@ -407,11 +448,14 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         row: RefundRow::CostDeclinedByOwnerRuling,
         reason: concat!(
             "Sukamon's inherited copy of Chuumon's clause: owner ruling 2026-11-23, parity with DCGO (EX13_028.cs, ",
-            "same body as EX13_027.cs; Q7288). Offered only while another [Sukamon]-named Digimon exists, so the ",
-            "refund runs only on a declined pick; a chosen Digimon spends the use.",
+            "same body as EX13_027.cs; Q7288). Offered while another [Sukamon]-named Digimon exists, deletable or ",
+            "not (owner ruling 2026-11-24, `offer_unpayable_deletion_payers`), so the refund runs only on a declined ",
+            "pick; a chosen Digimon, even one that can't be deleted, spends the use.",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_undeletable_only_pass_keeps_opt",
+            "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing",
             "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_once_per_turn",
             "cards_behavioral/ex13/ex13_028.rs::ex13_028_inherited_not_offered_without_other_sukamon",
         ],
@@ -441,11 +485,14 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         reason: concat!(
             "Kotemon's inherited \"by deleting 1 of your other Digimon with [Knightmon] in its text, it doesn't ",
             "leave\": owner ruling 2026-11-23, parity with DCGO (EX13_048.cs: canNoSelect pick, RemoveUse unless a ",
-            "Digimon was chosen). Offered only while such a Digimon exists, so the refund runs only on a declined ",
-            "pick; a chosen Digimon spends the use.",
+            "Digimon was chosen). Offered while such a Digimon exists, deletable or not (owner ruling 2026-11-24, ",
+            "`offer_unpayable_deletion_payers`), so the refund runs only on a declined pick; a chosen Digimon, even ",
+            "one that can't be deleted, spends the use.",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_undeletable_only_pass_keeps_opt",
+            "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing",
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_once_per_turn",
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_not_offered_without_other_knightmon_text_digimon",
         ],
@@ -456,11 +503,14 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         row: RefundRow::CostDeclinedByOwnerRuling,
         reason: concat!(
             "Gladimon's inherited copy of Kotemon's clause: owner ruling 2026-11-23, parity with DCGO (EX13_052.cs: ",
-            "canNoSelect pick, RemoveUse when none chosen). Offered only while another of your [Knightmon]-text ",
-            "Digimon exists, so the refund runs only on a declined pick; a chosen Digimon spends the use.",
+            "canNoSelect pick, RemoveUse when none chosen). Offered while another of your [Knightmon]-text Digimon ",
+            "exists, deletable or not (owner ruling 2026-11-24, `offer_unpayable_deletion_payers`), so the refund runs ",
+            "only on a declined pick; a chosen Digimon, even one that can't be deleted, spends the use.",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_undeletable_only_pass_keeps_opt",
+            "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing",
             "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_once_per_turn",
             "cards_behavioral/ex13/ex13_052.rs::ex13_052_inherited_not_offered_without_other_knightmon",
         ],
@@ -495,6 +545,130 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "cards_behavioral/ex13/ex13_059.rs::ex13_059_inherited_eot_paid_spends_opt",
             "cards_behavioral/ex13/ex13_059.rs::ex13_059_inherited_eot_prevented_payment_spends_opt_without_reward",
             "cards_behavioral/ex13/ex13_059.rs::ex13_059_inherited_eot_not_offered_without_a_mamemon",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT26-012",
+        clause: "effects[0]",
+        row: RefundRow::MainPassedByOwnerRuling,
+        reason: concat!(
+            "Manekimon [Main] [Once Per Turn] \"You may play or use 1 [TB] trait card from your hand with the cost reduced ",
+            "by 2\": DCGO BT26_012.cs:138 `if (!isUsed) activateClass.RemoveUse();`, isUsed set at :81 once a card is ",
+            "picked, before the play. The refund is the `else` of `binding_present: pick`, so it runs only when no card was ",
+            "picked; a picked card spends the use whatever the play does. Not offered without a playable [TB] card (DCGO ",
+            "CanUseCondition, same filter as the pick).",
+        ),
+        tests: &[
+            "cards_behavioral/bt26/bt26_012.rs::bt26_012_main_declared_then_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/bt26/bt26_012.rs::bt26_012_main_plays_tb_digimon_with_cost_reduced_by_2",
+            "cards_behavioral/bt26/bt26_012.rs::bt26_012_main_pass_then_state_change_redeclares_and_spends",
+            "cards_behavioral/bt26/bt26_012.rs::bt26_012_main_unavailable_without_tb_card",
+        ],
+    },
+    ReviewedRefund {
+        card: "BT26-021",
+        clause: "effects[1]",
+        row: RefundRow::MainPassedByOwnerRuling,
+        reason: concat!(
+            "Gekomon [Main] [Once Per Turn] \"You may play 1 [TS] trait Tamer card from your trash with the cost reduced by ",
+            "2\": DCGO BT26_021.cs:184 `if (!isUsed) activateClass.RemoveUse();`, isUsed set at :138 once a card is chosen, ",
+            "before the play. The refund is the `then` of `binding_absent: tamer_pick`. Not offered without a [TS] Tamer in ",
+            "trash.",
+        ),
+        tests: &[
+            "cards_behavioral/bt26/bt26_021.rs::bt26_021_main_pass_refunds_once_per_turn",
+            "cards_behavioral/bt26/bt26_021.rs::bt26_021_main_plays_ts_tamer_from_trash_reduced_once_per_turn",
+            "cards_behavioral/bt26/bt26_021.rs::bt26_021_main_pass_then_state_change_redeclares_and_spends",
+            "cards_behavioral/bt26/bt26_021.rs::bt26_021_main_needs_ts_tamer_in_trash",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-013",
+        clause: "effects[0]",
+        row: RefundRow::MainPassedByOwnerRuling,
+        reason: concat!(
+            "BetelGammamon [Main] [Once Per Turn] \"You may play or use 1 card with [Gammamon] in its text or the [VB] ",
+            "trait from your hand with the cost reduced by 2\": DCGO EX12_013.cs:181 `if (!isUsed) ",
+            "activateClass.RemoveUse();`, isUsed set at :97 once a card is picked. The refund is the `else` of ",
+            "`binding_present: vb_pick`. Not offered without a playable candidate (CanUseCondition).",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/ex12_013.rs::ex12_013_main_declared_then_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_013.rs::ex12_013_main_pass_then_state_change_redeclares_and_spends",
+            "cards_behavioral/ex12/ex12_013.rs::ex12_013_main_not_activatable_with_only_unplayable_candidates",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-041",
+        clause: "effects[0]",
+        row: RefundRow::MainPassedByOwnerRuling,
+        reason: concat!(
+            "Thundermon [Main] [Once Per Turn] \"You may play or use 1 card with the [Mutant] or [ME] trait from your hand ",
+            "with the cost reduced by 2\": DCGO EX12_041.cs:180 `if (!isUsed) activateClass.RemoveUse();`, isUsed set at ",
+            ":96 once a card is picked. The refund is the `else` of `binding_present: pick`. Not offered without a playable ",
+            "candidate (CanUseCondition).",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_pick_chosen_spends_the_once_per_turn",
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_pass_then_state_change_redeclares_and_spends",
+            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX12-043",
+        clause: "effects[0]",
+        row: RefundRow::MainPassedByOwnerRuling,
+        reason: concat!(
+            "Hakubamon [Main] [Once Per Turn] \"You may play or use 1 card with the [SW] trait from your hand with the cost ",
+            "reduced by 2\": DCGO EX12_043.cs:179 `if (!isUsed) activateClass.RemoveUse();`, isUsed set at :95 once a card ",
+            "is picked. The refund is the `else` of `binding_present: sw_pick`. Not offered without a playable candidate ",
+            "(CanUseCondition).",
+        ),
+        tests: &[
+            "cards_behavioral/ex12/ex12_043.rs::ex12_043_main_declared_then_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_043.rs::ex12_043_main_pass_then_state_change_redeclares_and_spends",
+            "cards_behavioral/ex12/ex12_043.rs::ex12_043_main_not_activatable_with_only_unplayable_candidates",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-016",
+        clause: "effects[3]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Omnimon [On Play] [When Digivolving] [Counter] [Once Per Turn] \"You may delete 1 of your opponent's Digimon ",
+            "with as many digivolution cards as this Digimon or fewer\": DCGO EX13_016.cs L129-183, a canNoSelect pick and ",
+            "`if (!isUsed) activateClass.RemoveUse()`; owner ruling 2026-11-24 (\"Generally let's look to match dcgo\"). ",
+            "Listed because of the [Counter] timing. The refund is the `else` of `binding_present: delete_target`, reached ",
+            "only on a passed pick: the clause's `condition` (a qualifying opponent Digimon exists) means a target was ",
+            "possible (row b, Q1818), and the effect is not offered without one. A chosen target spends it (row c). At ",
+            "[Counter] the refunded use is not offered again in the same attack (one Counter window per attack). DCGO's ",
+            "RemoveUse when qualifying Digimon exist but none can be chosen is not reachable here (\"can't be chosen\" is ",
+            "not enforced by the engine) and is not claimed.",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_delete_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_delete_chosen_spends_the_once_per_turn",
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_counter_passed_pick_refunds_for_a_later_attack_only",
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_delete_not_offered_without_an_eligible_target",
+        ],
+    },
+    ReviewedRefund {
+        card: "EX13-074",
+        clause: "effects[2]",
+        row: RefundRow::MainPassedByOwnerRuling,
+        reason: concat!(
+            "Rie Kishibe [Main] [Once Per Turn] \"... it may digivolve into [LordKnightmon] in the hand or trash ...\": ",
+            "DCGO EX13_074.cs RemoveUse()s on \"Don't digivolve\" (:218-222) and `if (!digivolved)` (:245). The refund is ",
+            "the `else` of `binding_present: lordknightmon`. Neither engine offers the [Main] without a [LordKnightmon] in ",
+            "hand or trash (EX13_074.cs:185-190; our clause `condition:`), so the refund is reached on a declined pick, or ",
+            "on an empty one when Rie can't digivolve (the pick's candidate leaf checks that, as DCGO's filtered pick does).",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_may_decline",
+            "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_is_once_per_turn",
+            "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_decline_then_state_change_redeclares_and_spends",
+            "cards_behavioral/ex13/ex13_074.rs::ex13_074_main_when_rie_cannot_digivolve_no_card_is_offered_and_the_use_is_kept",
         ],
     },
 ];
@@ -542,6 +716,34 @@ pub fn refund_review_is_live(raw: &str, entry: &ReviewedRefund) -> bool {
     check_authoring_yaml_unexempted(raw)
         .iter()
         .any(|f| reviewed_by(entry.card, f, entry))
+}
+
+/// The clauses (`effects[i]`) of the spec text `raw` that put a `refund_opt`
+/// in a [Main] clause (any `main*` timing), reviewed or not.
+pub fn main_refund_clauses(raw: &str) -> Vec<String> {
+    check_authoring_yaml_unexempted(raw)
+        .into_iter()
+        .filter(|f| f.rule == "refund-after-explicit-accept" && f.message.contains("a `main"))
+        .map(|f| f.path.strip_suffix(".process").unwrap_or(&f.path).to_string())
+        .collect()
+}
+
+/// Every `(card, clause)` in the production pool with a [Main] refund, sorted.
+pub fn pool_main_refunds(cards_root: &std::path::Path) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for file in pool_card_files(cards_root) {
+        let Ok(raw) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        let Some(card) = serde_yml::from_str::<Value>(&raw).ok().and_then(|v| card_id(&v).map(str::to_string)) else {
+            continue;
+        };
+        for clause in main_refund_clauses(&raw) {
+            out.push((card.clone(), clause));
+        }
+    }
+    out.sort();
+    out
 }
 
 /// Entries of `reviewed` whose card spec under `cards_root` no longer has a
@@ -686,11 +888,106 @@ fn walk(value: &Value, path: &str, out: &mut Vec<AuthoringFinding>) {
         }
         Value::Sequence(items) => {
             for (index, child) in items.iter().enumerate() {
+                if let Some(bind) = unpayable_payer_pick(child) {
+                    if !pays_deletion_next(&items[index + 1..], bind) {
+                        out.push(AuthoringFinding {
+                            rule: "unpayable-payers-without-paid-deletion",
+                            path: format!("{path}[{index}]"),
+                            message: "`offer_unpayable_deletion_payers: true` is only meaningful on the payer pick of a \"by deleting 1 ... Digimon, it doesn't leave\" clause: the pick must have a `bind_as`, and the next two steps must be `delete_permanent: { target: <that binding> }` and `cancel_replacement`".into(),
+                        });
+                    }
+                }
                 walk(child, &format!("{path}[{index}]"), out);
             }
         }
         _ => {}
     }
+}
+
+const PERMANENT_PICKS: &[&str] = &["select_own_permanent", "select_opponent_permanent", "select_any_permanent"];
+
+/// The step `item`, if it is a permanent pick with
+/// `offer_unpayable_deletion_payers: true`: its `bind_as` ("" when absent).
+fn unpayable_payer_pick(item: &Value) -> Option<&str> {
+    let map = item.as_mapping()?;
+    PERMANENT_PICKS.iter().find_map(|verb| {
+        let args = map.get(*verb)?.as_mapping()?;
+        (args.get("offer_unpayable_deletion_payers").and_then(Value::as_bool) == Some(true))
+            .then(|| args.get("bind_as").and_then(Value::as_str).unwrap_or(""))
+    })
+}
+
+/// Whether `rest` starts with `delete_permanent { target: bind }` then
+/// `cancel_replacement` (the engine's paid-deletion pair).
+fn pays_deletion_next(rest: &[Value], bind: &str) -> bool {
+    let step = |i: usize, verb: &str| rest.get(i).and_then(Value::as_mapping).and_then(|m| m.get(verb));
+    !bind.is_empty()
+        && step(0, "delete_permanent")
+            .and_then(Value::as_mapping)
+            .and_then(|m| m.get("target"))
+            .and_then(Value::as_str)
+            == Some(bind)
+        && step(1, "cancel_replacement").is_some()
+}
+
+/// The closed list of paid-deletion clauses whose payer pick keeps payers that
+/// can't be deleted (`offer_unpayable_deletion_payers: true`). Owner ruling
+/// 2026-11-24 on these four "by deleting 1 other ... Digimon, it doesn't
+/// leave" clauses: follow DCGO and offer a Digimon that cannot be deleted as
+/// the payment ("You can pick a target that is immune from the removal, and it
+/// will fizzle. Nothing is deleted, right? That is a valid choice."). Every
+/// other paid-deletion clause keeps the CR 4.3 15-7-4 filter.
+pub const UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING: &[(&str, &str)] = &[
+    ("EX13-027", "effects[1]"),
+    ("EX13-028", "effects[2]"),
+    ("EX13-048", "effects[1]"),
+    ("EX13-052", "effects[2]"),
+];
+
+/// The clauses (`effects[i]`) of the spec text `raw` with a pick that sets
+/// `offer_unpayable_deletion_payers: true`, at any depth.
+pub fn unpayable_deletion_payer_clauses(raw: &str) -> Vec<String> {
+    let Ok(value) = serde_yml::from_str::<Value>(raw) else {
+        return Vec::new();
+    };
+    let Some(effects) = value.as_mapping().and_then(|m| m.get("effects")).and_then(Value::as_sequence) else {
+        return Vec::new();
+    };
+    fn has_flag(v: &Value) -> bool {
+        match v {
+            Value::Mapping(m) => m.iter().any(|(k, child)| {
+                (k.as_str() == Some("offer_unpayable_deletion_payers") && child.as_bool() == Some(true))
+                    || has_flag(child)
+            }),
+            Value::Sequence(items) => items.iter().any(has_flag),
+            _ => false,
+        }
+    }
+    effects
+        .iter()
+        .enumerate()
+        .filter(|(_, clause)| has_flag(clause))
+        .map(|(i, _)| format!("effects[{i}]"))
+        .collect()
+}
+
+/// Every `(card, clause)` in the production pool that offers unpayable
+/// deletion payers, sorted.
+pub fn pool_unpayable_deletion_payer_offers(cards_root: &std::path::Path) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for file in pool_card_files(cards_root) {
+        let Ok(raw) = std::fs::read_to_string(&file) else {
+            continue;
+        };
+        let Some(card) = serde_yml::from_str::<Value>(&raw).ok().and_then(|v| card_id(&v).map(str::to_string)) else {
+            continue;
+        };
+        for clause in unpayable_deletion_payer_clauses(&raw) {
+            out.push((card.clone(), clause));
+        }
+    }
+    out.sort();
+    out
 }
 
 #[cfg(test)]
@@ -869,6 +1166,35 @@ mod tests {
         }
     }
 
+    /// The [Main] row is a closed list: exactly the clauses of the 2026-11-24
+    /// ruling, each reviewed on that row, and none of the clauses DCGO spends.
+    #[test]
+    fn main_refund_row_is_the_closed_list() {
+        let on_row: Vec<(&str, &str)> = REFUND_AFTER_ACCEPT_REVIEWED
+            .iter()
+            .filter(|a| a.row == RefundRow::MainPassedByOwnerRuling)
+            .map(|a| (a.card, a.clause))
+            .collect();
+        for ruled in MAIN_REFUND_BY_OWNER_RULING {
+            assert!(on_row.contains(ruled), "{ruled:?} is on the [Main] list but not reviewed there");
+        }
+        assert_eq!(on_row.len(), MAIN_REFUND_BY_OWNER_RULING.len());
+        for spends in ["BT25-052", "BT25-070", "BT23-008", "BT26-070", "EX13-071"] {
+            assert!(
+                !MAIN_REFUND_BY_OWNER_RULING.iter().any(|(c, _)| *c == spends),
+                "{spends}: DCGO keeps the declared [Main]'s use spent on every path ours reaches"
+            );
+        }
+    }
+
+    #[test]
+    fn main_refund_clauses_finds_main_timings_only() {
+        let main = format!("card: TEST-1\neffects:\n  - when: main_on_field\n    once_per_turn: true\n{REFUND_TAIL}");
+        assert_eq!(main_refund_clauses(&main), vec!["effects[0]".to_string()]);
+        let counter = format!("card: TEST-1\neffects:\n  - when: counter\n    once_per_turn: true\n{REFUND_TAIL}");
+        assert!(main_refund_clauses(&counter).is_empty());
+    }
+
     /// The production table: one entry per clause, each with a reason and
     /// the tests that prove it.
     #[test]
@@ -877,6 +1203,15 @@ mod tests {
             assert!(!a.reason.trim().is_empty(), "{} {}", a.card, a.clause);
             assert!(a.clause.starts_with("effects["), "{} {}", a.card, a.clause);
             assert!(!a.tests.is_empty(), "{} {}: name the tests that prove the row", a.card, a.clause);
+            if a.row == RefundRow::MainPassedByOwnerRuling {
+                assert!(
+                    MAIN_REFUND_BY_OWNER_RULING.contains(&(a.card, a.clause)),
+                    "a [Main] refund needs DCGO RemoveUse on that path and the 2026-11-24 ruling's list \
+                     ({} {}): add it to MAIN_REFUND_BY_OWNER_RULING only with a DCGO-script read",
+                    a.card,
+                    a.clause
+                );
+            }
             if a.row == RefundRow::CostDeclinedByOwnerRuling {
                 assert!(
                     COST_DECLINED_BY_OWNER_RULING.contains(&(a.card, a.clause)),
@@ -910,5 +1245,47 @@ mod tests {
     fn nested_granted_effect_is_walked() {
         let raw = "effects:\n  - when: on_play\n    process:\n      - grant_triggered_effect:\n          effect:\n            when: [on_deletion, on_any_deletion]\n            process: []\n";
         assert_eq!(rules(raw), vec!["self-and-observer-timing"]);
+    }
+
+    const PAYER_CLAUSE: &str = "card: TEST-1
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    process:
+      - select_own_permanent:
+          bind_as: cost
+          optional: true
+          continue_on_decline: true
+          offer_unpayable_deletion_payers: true
+          filter: { kind: digimon }
+          prompt: p
+      - delete_permanent: { target: cost }
+      - cancel_replacement: {}
+";
+
+    #[test]
+    fn unpayable_payers_flag_is_accepted_on_a_paid_deletion_pick() {
+        assert!(!rules(PAYER_CLAUSE).contains(&"unpayable-payers-without-paid-deletion"));
+        assert_eq!(unpayable_deletion_payer_clauses(PAYER_CLAUSE), vec!["effects[0]".to_string()]);
+    }
+
+    #[test]
+    fn unpayable_payers_flag_needs_the_paid_deletion_pair() {
+        let no_cancel = PAYER_CLAUSE.replace("      - cancel_replacement: {}
+", "");
+        assert!(rules(&no_cancel).contains(&"unpayable-payers-without-paid-deletion"));
+        let other_target = PAYER_CLAUSE.replace("target: cost", "target: source");
+        assert!(rules(&other_target).contains(&"unpayable-payers-without-paid-deletion"));
+        let unbound = PAYER_CLAUSE.replace("          bind_as: cost
+", "");
+        assert!(rules(&unbound).contains(&"unpayable-payers-without-paid-deletion"));
+    }
+
+    #[test]
+    fn unpayable_payers_closed_list_is_the_four_ruled_clauses() {
+        assert_eq!(UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING.len(), 4);
+        for (card, clause) in UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING {
+            assert!(COST_DECLINED_BY_OWNER_RULING.contains(&(*card, *clause)), "{card} {clause} is a row-(f) clause");
+        }
     }
 }

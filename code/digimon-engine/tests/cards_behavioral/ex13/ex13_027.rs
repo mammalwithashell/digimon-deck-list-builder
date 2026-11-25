@@ -615,3 +615,141 @@ fn ex13_027_inherited_opponent_sukamon_is_a_legal_cost() {
     assert!(field_ids(&r).contains(&"CARRIER".to_string()), "the carrier stays");
     assert!(r.game.players[1].battle_area.is_empty(), "the opponent's Sukamon was deleted");
 }
+
+// ─── Inherited: an undeletable payer is still offered (owner ruling 2026-11-24) ─
+//
+// DCGO EX13_027.cs offers the clause whenever a printed match exists
+// (`CanActivateCondition` = `HasMatchConditionPermanent(CanSelectPermanentCondition)`,
+// no deletability check) and its pick lists every printed match. Picking one
+// that can't be deleted sets `isUsed` (spent), `DestroyPermanentsClass` deletes
+// nothing, so `SuccessProcess` never runs and the carrier leaves. Owner,
+// 2026-11-24: "You can pick a target that is immune from the removal, and it
+// will fizzle. Nothing is deleted, right? That is a valid choice."
+//
+// The payer here is the OPPONENT's [Sukamon]-named Digimon under "can't be
+// deleted by your opponent's effects" (to its owner, Chuumon's effect is an
+// opponent's effect), e.g. the grant of Gladimon (BT18-062).
+
+fn protect_from_opponent_effects(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.modifiers.add(
+        h,
+        digimon_engine::modifiers::ModifierEntry::passive_replacement(
+            digimon_engine::enums::ModifierType::CannotBeDestroyedByEffect,
+            digimon_engine::enums::Expiry::Permanent,
+            h.player,
+        )
+        .opponent_only(),
+    );
+}
+
+fn opp_sukamon_protected(r: &mut DebugRunner) -> PermanentHandle {
+    let h = r.place_on_field(1, "OTHER-SUKA", Some(0));
+    protect_from_opponent_effects(r, h);
+    h
+}
+
+fn any_field_id(h: PermanentHandle) -> u16 {
+    digimon_engine::action::space::encode_attack(h.player as u16, h.index as u16)
+}
+
+#[test]
+fn ex13_027_inherited_offered_when_the_only_match_is_undeletable() {
+    let (mut r, carrier) = inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO offers the clause while a printed match exists, deletable or not"
+    );
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(
+        cost.valid_action_ids.contains(&any_field_id(opp)),
+        "the undeletable [Sukamon] is listed: {cost:?}"
+    );
+}
+
+#[test]
+fn ex13_027_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing() {
+    let (mut r, carrier) = inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    r.execute_action(0, any_field_id(opp)).expect("pick the undeletable Sukamon");
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "nothing was deleted");
+    accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        r.pending_selection().is_none(),
+        "DCGO isUsed: a Digimon was chosen, so the [Once Per Turn] is spent"
+    );
+    assert!(!field_ids(&r).contains(&"CARRIER".to_string()));
+}
+
+#[test]
+fn ex13_027_inherited_picking_an_undeletable_payer_lets_the_carrier_leave() {
+    let (mut r, carrier) = inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    r.execute_action(0, any_field_id(opp)).expect("pick the undeletable Sukamon");
+    let _ = r.auto_resolve();
+    assert!(!field_ids(&r).contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "the Sukamon was not deleted");
+}
+
+#[test]
+fn ex13_027_inherited_undeletable_only_pass_keeps_opt() {
+    let (mut r, carrier) = inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    assert!(pass_legal(&r), "canNoSelect");
+    r.execute_action(0, PASS).expect("select nothing");
+    assert_eq!(r.game.players[1].battle_area.len(), 1);
+    let _ = opp;
+    accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: nothing chosen keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex13_027_inherited_deletable_payer_still_protects_beside_an_undeletable_one() {
+    let (mut r, carrier) = inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    let own = r.place_on_field(0, "OTHER-SUKA", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(cost.valid_action_ids.contains(&any_field_id(opp)), "{cost:?}");
+    assert!(cost.valid_action_ids.contains(&any_field_id(own)), "{cost:?}");
+    r.execute_action(0, any_field_id(own)).expect("pay with the deletable Sukamon");
+    let _ = r.auto_resolve();
+    let field = field_ids(&r);
+    assert!(field.contains(&"CARRIER".to_string()), "paid: the carrier doesn't leave");
+    assert!(!field.contains(&"OTHER-SUKA".to_string()), "the payer was deleted");
+    assert_eq!(r.game.players[1].battle_area.len(), 1);
+}

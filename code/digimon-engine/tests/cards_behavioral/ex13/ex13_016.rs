@@ -18,7 +18,7 @@
 //! ```
 //!
 //! # DCGO C# reference
-//! None — no `EX13_016.cs` at `b9a0638cd`.
+//! DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_016.cs (delete clause L129-183).
 //!
 //! # Verdict — IMPLEMENTED
 //! The would-leave save uses `select_materials { min: 2, max: 2, same_by:
@@ -35,10 +35,10 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 use super::orphan_support::{assert_replacement_prompt, delete_with};
 
@@ -246,12 +246,14 @@ fn ex13_016_on_play_may_delete_opponent_digimon_with_no_more_sources() {
     {
         pick(&mut r, 0);
     }
-    // Optional delete offer.
-    assert!(r.pending_is_optional(), "'You may delete' is offered");
-    r.accept_optional_trigger().unwrap();
+    // "You may delete": DCGO EX13_016.cs has no Yes/No at [On Play] (optional:
+    // false); the canNoSelect delete pick itself is the decline.
     let v = r.pending_selection_view().expect("delete target pick");
-    assert_eq!(v.valid_action_ids.len(), 1, "only the ≤2-source Digimon is eligible");
-    pick(&mut r, 0);
+    assert_ne!(v.kind, SelectionKind::Replacement, "no outer accept prompt");
+    assert!(v.is_optional, "'You may delete' is a declinable pick");
+    let targets = non_pass(&v.valid_action_ids);
+    assert_eq!(targets.len(), 1, "only the ≤2-source Digimon is eligible");
+    r.execute_action(v.selecting_player, targets[0]).expect("delete it");
     let _ = r.auto_resolve();
     let ids: Vec<String> = r.game.players[1]
         .battle_area
@@ -260,6 +262,143 @@ fn ex13_016_on_play_may_delete_opponent_digimon_with_no_more_sources() {
         .collect();
     assert_eq!(ids, vec!["4"], "the 3-source Digimon stays; the 2-source one was deleted");
     let _ = (big, small);
+}
+
+fn non_pass(ids: &[u16]) -> Vec<u16> {
+    ids.iter().copied().filter(|&a| a != PASS).collect()
+}
+
+/// Fire `timing` for Omnimon and resolve the lock clause (if it is offered)
+/// until the delete pick is pending; returns whether it is.
+fn reach_delete_pick(r: &mut DebugRunner, omni: PermanentHandle, timing: EffectTiming) -> bool {
+    r.game.enqueue_triggered(timing, TriggerSource::Permanent(omni));
+    r.game.drain_effect_queue();
+    for _ in 0..8 {
+        order_first(r);
+        let Some(v) = r.pending_selection_view() else { return false };
+        if v.is_optional {
+            return true;
+        }
+        pick(r, 0); // the mandatory lock pick
+    }
+    false
+}
+
+/// Accepting is choosing a target: passing the delete pick while a target
+/// was possible keeps the [Once Per Turn] (DCGO EX13_016.cs: canNoSelect
+/// pick, `if (!isUsed) activateClass.RemoveUse()`; owner ruling 2026-11-24,
+/// "Generally let's look to match dcgo"; W14 row (b), Q1818). The next
+/// [When Digivolving] the same turn offers the delete again.
+#[test]
+fn ex13_016_delete_pick_passed_keeps_the_once_per_turn() {
+    let mut r = runner();
+    let target = r.place_stack(1, &["FILL", "OPP"]);
+    let omni = r.place_stack(0, &["L5", "L6", CARD_ID]);
+    assert!(reach_delete_pick(&mut r, omni, EffectTiming::OnPlay), "[On Play] delete pick");
+    assert_ne!(r.pending_kind(), Some(SelectionKind::Replacement), "no outer accept prompt");
+    r.decline_optional_trigger().expect("pass the delete pick");
+    let _ = r.auto_resolve();
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "nothing deleted");
+
+    assert!(
+        reach_delete_pick(&mut r, omni, EffectTiming::WhenDigivolving),
+        "the passed pick kept the use: [When Digivolving] offers the delete again"
+    );
+    let v = r.pending_selection_view().unwrap();
+    r.execute_action(v.selecting_player, non_pass(&v.valid_action_ids)[0]).unwrap();
+    let _ = r.auto_resolve();
+    assert!(r.game.players[1].battle_area.is_empty(), "deleted at [When Digivolving]");
+    let _ = target;
+}
+
+/// Choosing a target spends the [Once Per Turn] (row c): a later [When
+/// Digivolving] the same turn offers no delete.
+#[test]
+fn ex13_016_delete_chosen_spends_the_once_per_turn() {
+    let mut r = runner();
+    r.place_stack(1, &["FILL", "OPP"]);
+    r.place_stack(1, &["FILL", "OPP"]);
+    let omni = r.place_stack(0, &["L5", "L6", CARD_ID]);
+    assert!(reach_delete_pick(&mut r, omni, EffectTiming::OnPlay));
+    assert_ne!(r.pending_kind(), Some(SelectionKind::Replacement), "no outer accept prompt");
+    let v = r.pending_selection_view().unwrap();
+    r.execute_action(v.selecting_player, non_pass(&v.valid_action_ids)[0]).unwrap();
+    let _ = r.auto_resolve();
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "one deleted");
+    assert!(
+        !reach_delete_pick(&mut r, omni, EffectTiming::WhenDigivolving),
+        "the chosen delete spent the use"
+    );
+}
+
+/// [Counter] in real combat. A refunded use is not offered again inside the
+/// same attack (one Counter window per attack: `try_enter_counter`'s
+/// `counter_depth` guard; DCGO runs CounterTiming once per attack and keeps
+/// the accepted effect in SkillInfos_used, Q7253), but it is offered at the
+/// next attack the same turn; choosing a target there spends it, so a third
+/// attack offers nothing.
+#[test]
+fn ex13_016_counter_passed_pick_refunds_for_a_later_attack_only() {
+    use digimon_engine::action::space::{encode_attack, ATTACK_START};
+    use digimon_engine::enums::GamePhase;
+
+    let mut r = runner();
+    let atk1 = r.place_on_field(0, "OPP", Some(0));
+    let atk2 = r.place_on_field(0, "OPP", Some(0));
+    let _third = r.place_on_field(0, "OPP", Some(0));
+    let omni = r.place_stack(1, &["L6", CARD_ID]);
+    // Suspended: no <Blocker> prompt in these attacks.
+    r.game.players[1].battle_area[omni.index as usize].is_suspended = true;
+    let counter_action = encode_attack(0, omni.index as u16);
+
+    // Resolve every remaining prompt of the attack, failing if Omnimon's
+    // [Counter] is offered again.
+    let finish_attack = |r: &mut DebugRunner| {
+        for _ in 0..32 {
+            let Some(v) = r.pending_selection_view() else { return };
+            assert!(
+                !(r.current_phase() == GamePhase::CounterTiming
+                    && v.valid_action_ids.contains(&counter_action)),
+                "Omnimon's [Counter] is not offered twice in one attack"
+            );
+            let id = if v.is_optional { PASS } else { v.valid_action_ids[0] };
+            r.execute_action(v.selecting_player, id).unwrap();
+        }
+        panic!("attack did not finish");
+    };
+
+    // Attack 1: use the [Counter], then pass the delete pick.
+    r.attack_player(atk1, 1, false);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    let v = r.pending_selection_view().expect("counter window");
+    assert!(v.valid_action_ids.contains(&counter_action), "Omnimon's [Counter] is offered");
+    r.execute_action(1, counter_action).unwrap();
+    let v = r.pending_selection_view().expect("delete pick");
+    assert_ne!(v.kind, SelectionKind::Replacement, "the window pick is the accept");
+    assert!(v.is_optional, "the delete pick is declinable (PASS): {v:?}");
+    r.execute_action(1, PASS).unwrap();
+    finish_attack(&mut r);
+    assert_eq!(r.game.players[0].battle_area.len(), 3, "nothing deleted");
+
+    // Attack 2: the refunded use is back; delete the attacker.
+    r.attack_player(atk2, 1, false);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    let v = r.pending_selection_view().expect("counter window");
+    assert!(
+        v.valid_action_ids.contains(&counter_action),
+        "the passed pick kept the use for a later attack this turn"
+    );
+    r.execute_action(1, counter_action).unwrap();
+    r.execute_action(1, ATTACK_START + atk2.index as u16).expect("delete the attacker");
+    finish_attack(&mut r);
+    assert_eq!(r.game.players[0].battle_area.len(), 2, "attacker 2 deleted");
+
+    // Attack 3: the use is spent.
+    let atk3 = PermanentHandle { player: 0, index: r.game.players[0].battle_area.len() as u8 - 1 };
+    r.attack_player(atk3, 1, false);
+    let offered = r.current_phase() == GamePhase::CounterTiming
+        && r.pending_selection_view().is_some_and(|v| v.valid_action_ids.contains(&counter_action));
+    assert!(!offered, "the chosen delete spent the [Once Per Turn]");
 }
 
 #[test]

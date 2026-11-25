@@ -9745,6 +9745,19 @@ impl ReplayDriver {
                 self.paused = true;
                 return self.no_progress_result(game);
             }
+            // DCGO's human UI lets a player declare a `[Main]`, pass its pick
+            // and declare it again with nothing changed in between. The
+            // engine withholds that repeat (main-declaration guard, owner
+            // ruling 2026-11-24, `game::main_declare_guard`). When a DCGO
+            // row's declaration is off ONLY because of a park, lift the park
+            // and note it (`dcgo_main_redeclare_after_pass`).
+            if !self.source.answers_engine_only_prompts() {
+                if let Some(note) =
+                    dcgo_main_redeclare_after_pass(game, actor, action_id, self.cursor)
+                {
+                    self.notes.push(note);
+                }
+            }
             let mask = crate::action::build_action_mask(game, actor);
             let legal = action_id == crate::action::space::CONCEDE_GAME
                 || mask.get(action_id as usize).copied().unwrap_or(0.0) > 0.5;
@@ -10626,6 +10639,44 @@ fn describe_board(game: &Game) -> String {
 }
 
 /// Up to `max` action IDs the engine WOULD accept here (`mask` value > 0.5).
+/// A recorded Main-phase field `[Main]` declaration (FIELD_EFFECT +2) that the
+/// engine withholds only because the main-declaration guard parked it: lift
+/// the parks on that permanent and return the replay note. `None` (and the
+/// game untouched) in every other case, so a real mask miss still surfaces.
+pub(crate) fn dcgo_main_redeclare_after_pass(
+    game: &mut Game,
+    actor: PlayerId,
+    action_id: u16,
+    row: u32,
+) -> Option<String> {
+    use crate::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    };
+    if game.pending_selection.is_some()
+        || game.main_declare_guard().parked().is_empty()
+        || !(FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id)
+        || (action_id - FIELD_EFFECT_START) % EFFECTS_PER_PERMANENT != FIELD_EFFECT_SLOT_FOR_MAIN
+    {
+        return None;
+    }
+    if crate::action::build_action_mask(game, actor)[action_id as usize] > 0.5 {
+        return None;
+    }
+    let permanent = ((action_id - FIELD_EFFECT_START) / EFFECTS_PER_PERMANENT) as usize;
+    let mut probe = game.clone();
+    if !probe.unpark_main_declarations_for_replay(actor, permanent)
+        || crate::action::build_action_mask(&probe, actor)[action_id as usize] <= 0.5
+    {
+        return None;
+    }
+    game.unpark_main_declarations_for_replay(actor, permanent);
+    Some(format!(
+        "row {row}: dcgo_main_redeclare_after_pass: player {actor} re-declared the [Main] on \
+         field slot {permanent} after passing it with nothing changed; the main-declaration \
+         guard's park was lifted for this DCGO row"
+    ))
+}
+
 /// Surfaced in `MaskMiss` divergences to help triage "wrong target index"
 /// vs "engine refuses a legal action".
 fn sample_legal_ids(mask: &[f32], max: usize) -> Vec<u16> {

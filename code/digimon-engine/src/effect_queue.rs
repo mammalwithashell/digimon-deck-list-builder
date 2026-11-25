@@ -2300,10 +2300,16 @@ impl Game {
         // A non-DNA evolution caused by a DNA effect still has non-DNA
         // self triggers; do not inherit its caller's origin while collecting.
         self.current_dna_origin = Some(dna_origin);
+        // The self [When Digivolving] context records whether an effect did
+        // the digivolving (DCGO `IsByEffect` on the WhenDigivolving
+        // hashtable), as the OnPlay context does for an effect play.
+        let previous_wd_effect = self.pending_digivolve_effect_initiated;
+        self.pending_digivolve_effect_initiated = effect_initiated;
         self.enqueue_triggered(
             EffectTiming::WhenDigivolving,
             TriggerSource::Permanent(permanent),
         );
+        self.pending_digivolve_effect_initiated = previous_wd_effect;
         if dna_origin {
             self.enqueue_triggered(
                 EffectTiming::OnDnaDigivolve,
@@ -2365,6 +2371,13 @@ impl Game {
                 // enqueue; it is `false` for every other timing/source.
                 effect_initiated: timing == EffectTiming::OnPlay
                     && self.pending_play_effect_initiated,
+                // The [When Digivolving] firing of a digivolution an effect
+                // performed. Kept apart from `effect_initiated` so the On
+                // Play-only `played_by_effect` (BT24-023 "IsByEffect &&
+                // CanTriggerOnPlay") is unchanged; `event_is_effect_initiated`
+                // reads both.
+                self_digivolve_effect_initiated: timing == EffectTiming::WhenDigivolving
+                    && self.pending_digivolve_effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {

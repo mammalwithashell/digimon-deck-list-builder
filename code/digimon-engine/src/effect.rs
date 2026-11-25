@@ -359,6 +359,12 @@ pub struct Effect {
     /// Python's `effect._is_blast_digivolve` flag.
     pub blast_digivolve: bool,
 
+    /// A `[Main]` (`MainOnField`) whose body can give its use back
+    /// (`refund_opt`, DCGO `RemoveUse()`; owner ruling 2026-11-24). Its
+    /// declarations are tracked by the main-declaration loop guard
+    /// (`game::main_declare_guard`).
+    pub main_refund_capable: bool,
+
     /// 0 = unlimited, 1 = once per turn, etc.
     pub max_per_turn: u8,
 
@@ -1037,6 +1043,7 @@ impl EffectBuilder {
                 resource_flow: false,
                 development_hand: Default::default(),
                 blast_digivolve: false,
+                main_refund_capable: false,
                 max_per_turn: 0,
                 shared_opt_group: None,
                 clause_group: None,
@@ -1198,6 +1205,13 @@ impl EffectBuilder {
 
     pub fn observation_metadata(mut self, metadata: EffectObservationMetadata) -> Self {
         self.inner.observation_metadata = metadata;
+        self
+    }
+
+    /// Mark a `[Main]` whose body may refund its use (see
+    /// `Effect::main_refund_capable`).
+    pub fn main_refund_capable(mut self) -> Self {
+        self.inner.main_refund_capable = true;
         self
     }
 

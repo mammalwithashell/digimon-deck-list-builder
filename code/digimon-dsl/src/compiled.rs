@@ -457,6 +457,9 @@ pub struct CompiledPredicate {
     pub dna_field_pair: Option<CompiledDnaFieldPair>,
     #[serde(default)]
     pub can_play_from_effect_without_cost: Option<bool>,
+    /// See `PredicateSpec::link_requirement_met_by_self` (BT25-052).
+    #[serde(default)]
+    pub link_requirement_met_by_self: Option<bool>,
     /// See `PredicateSpec::can_play_or_use_from_effect`.
     /// G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY.
     #[serde(default)]
@@ -2701,6 +2704,12 @@ pub enum CompiledStep {
         /// dropping it. G-OPT-REFUND-ON-DECLINE.
         #[serde(default)]
         continue_on_decline: bool,
+        /// Paid-deletion pick: keep payers whose deletion is impossible in
+        /// the pick and the replacement offer (DCGO parity, owner ruling
+        /// 2026-11-24). See `SelectFieldArgs::offer_unpayable_deletion_payers`.
+        /// `#[serde(default)]` for bincode-pack back-compat.
+        #[serde(default)]
+        offer_unpayable_deletion_payers: bool,
         /// collapse §1 explicit scoped action-tail — run on accept with the
         /// selection binding in scope, prepended to the implicit dispatcher
         /// tail. `#[serde(default)]` for bincode-pack back-compat.
@@ -2718,6 +2727,12 @@ pub enum CompiledStep {
         /// dropping it. G-OPT-REFUND-ON-DECLINE.
         #[serde(default)]
         continue_on_decline: bool,
+        /// Paid-deletion pick: keep payers whose deletion is impossible in
+        /// the pick and the replacement offer (DCGO parity, owner ruling
+        /// 2026-11-24). See `SelectFieldArgs::offer_unpayable_deletion_payers`.
+        /// `#[serde(default)]` for bincode-pack back-compat.
+        #[serde(default)]
+        offer_unpayable_deletion_payers: bool,
         /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
         #[serde(default)]
         then: Vec<CompiledStep>,
@@ -2738,6 +2753,12 @@ pub enum CompiledStep {
         /// "You may suspend 1 Digimon. Then, …"). Appended at the tail.
         #[serde(default)]
         continue_on_decline: bool,
+        /// Paid-deletion pick: keep payers whose deletion is impossible in
+        /// the pick and the replacement offer (DCGO parity, owner ruling
+        /// 2026-11-24). See `SelectFieldArgs::offer_unpayable_deletion_payers`.
+        /// `#[serde(default)]` for bincode-pack back-compat.
+        #[serde(default)]
+        offer_unpayable_deletion_payers: bool,
     },
     SelectDnaPair {
         left_filter: CompiledPredicate,

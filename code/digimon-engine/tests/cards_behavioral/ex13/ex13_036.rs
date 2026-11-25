@@ -15,7 +15,9 @@
 //! Digivolve: Yellow Lv.5 / cost 3; Lv.5 w/[Holy Beast]/[DATA SQUAD] trait: 3.
 //!
 //! # DCGO C# reference
-//! None at the submodule (no EX13_036.cs); printed text governs.
+//! DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_036.cs (placement L245-345).
+//! DCGO lets the own pick be declined after the accept; owner ruling
+//! 2026-11-24, "DCGO does get that wrong": both picks stay mandatory here.
 //!
 //! # Patterns this test covers
 //! - "instead" branch replacement gated on total security count.
@@ -472,4 +474,71 @@ fn ex13_036_when_digivolving_places_own_digimon_when_opponent_has_none() {
     assert!(placed, "the own-Digimon pick was parked although the opponent has no Digimon");
     assert_eq!(runner.security_count(0), 4);
     assert_eq!(runner.security_count(1), 3);
+}
+
+// ─── Section 7 — DCGO offer gate and the mandatory own pick ──────────────────
+
+/// DCGO EX13_036.cs AdditionalActivateCondition also requires
+/// `card.Owner.CanAddSecurity(activateClass)`: while Kentaurosmon's controller
+/// can't add cards to their security stack the clause is not offered, and the
+/// [Once Per Turn] is not spent (the condition is checked before the use is
+/// recorded). Owner ruling 2026-11-24: "Generally let's look to match dcgo".
+#[test]
+fn ex13_036_place_not_offered_when_controller_cannot_add_security() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    let mut runner = builder()
+        .security(0, &["PAD"; 2])
+        .security(1, &["PAD"; 2])
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "ALLY", Some(0));
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotAddSecurityByEffect,
+            1,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+    fire(&mut runner, EffectTiming::CounterEffect, me);
+    assert!(
+        runner.pending_selection().is_none(),
+        "controller can't add security: the placement is not offered"
+    );
+    assert_eq!(runner.battle_area_size(0), 2);
+    assert_eq!(runner.battle_area_size(1), 1);
+    assert!(
+        runner.game.players[0].battle_area[me.index as usize]
+            .effect_activations
+            .is_empty(),
+        "not offered, so the [Once Per Turn] is not spent"
+    );
+}
+
+/// Owner ruling 2026-11-24 on this card ("DCGO does get that wrong"): DCGO
+/// lets the player decline their own pick after accepting while the
+/// opponent's is forced; we keep "1 of each player's Digimon" with both picks
+/// mandatory once accepted. No PASS is offered on the own pick.
+#[test]
+fn ex13_036_own_pick_is_mandatory_after_accepting() {
+    let mut runner = builder()
+        .security(0, &["PAD"; 2])
+        .security(1, &["PAD"; 2])
+        .start();
+    let me = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "ALLY", Some(0));
+    runner.place_on_field(1, "OPP-A", Some(0));
+    fire(&mut runner, EffectTiming::CounterEffect, me);
+    assert!(runner.pending_is_optional(), "'you may place' accept prompt");
+    runner.accept_optional_trigger().expect("accept");
+    let v = runner.pending_selection_view().expect("own pick");
+    assert_eq!(v.kind, SelectionKind::OwnField);
+    assert!(!v.is_optional, "the own pick is mandatory once accepted");
+    assert!(!v.valid_action_ids.contains(&PASS), "no PASS on the own pick");
+    assert_eq!(v.valid_action_ids.len(), 2, "Kentaurosmon and the ally");
 }

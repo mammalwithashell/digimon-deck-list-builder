@@ -1208,6 +1208,7 @@ pub(crate) fn run_resume(
                         (*inner_tail).clone(),
                         b,
                         runtime,
+                        false,
                     );
                 }
                 ResumeSelectKind::UnionZone {
@@ -4360,6 +4361,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            offer_unpayable_deletion_payers,
             then,
             ..
         } => {
@@ -4374,6 +4376,7 @@ pub fn try_install(
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
+                *offer_unpayable_deletion_payers,
             );
             selection_result(ctx)
         }
@@ -4547,6 +4550,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            offer_unpayable_deletion_payers,
             then,
             ..
         } => {
@@ -4561,6 +4565,7 @@ pub fn try_install(
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
+                *offer_unpayable_deletion_payers,
             );
             selection_result(ctx)
         }
@@ -4571,6 +4576,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            offer_unpayable_deletion_payers,
             then,
             ..
         } => {
@@ -4596,6 +4602,7 @@ pub fn try_install(
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
+                *offer_unpayable_deletion_payers,
             );
             if let Some((d_tail, d_bindings, d_runtime, d_trigger)) = decline_tail {
                 attach_any_permanent_continue_on_decline(
@@ -6496,6 +6503,7 @@ fn install_select_own_permanent(
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    offer_unpayable_payers: bool,
 ) {
     // Pre-filter candidates using the compiled predicate so that an empty
     // result (e.g. "kind: token" with no tokens on field) short-circuits
@@ -6503,7 +6511,8 @@ fn install_select_own_permanent(
     let target_player = ctx.player;
     let candidates = collect_matching_permanents(ctx, target_player, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
-    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
+    let deletion_payment = super::deletion_payment::filters_unpayable_payers(
+        bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
     if candidates.is_empty() {
         return;
     }
@@ -7546,6 +7555,7 @@ fn install_select_opponent_permanent(
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    offer_unpayable_payers: bool,
 ) {
     // Pre-filter candidates using the compiled predicate so that an empty
     // result short-circuits without installing a PendingSelection.
@@ -7554,7 +7564,8 @@ fn install_select_opponent_permanent(
     // candidate; it is chosen and not affected.
     let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
-    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
+    let deletion_payment = super::deletion_payment::filters_unpayable_payers(
+        bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
     if candidates.is_empty() {
         return;
     }
@@ -7720,12 +7731,14 @@ fn install_select_any_permanent(
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    offer_unpayable_payers: bool,
 ) {
     use crate::action::space::encode_attack;
 
     let handles = collect_matching_any_permanents(ctx, excluded, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &handles, selector);
-    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
+    let deletion_payment = super::deletion_payment::filters_unpayable_payers(
+        bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
     let candidates: Vec<(u16, PermanentHandle)> = handles
         .into_iter()
         .filter(|handle| matches_selected_field(ctx.game, *handle, selector, selected_field))
@@ -7991,6 +8004,7 @@ fn install_select_dna_pair(
                 tail,
                 b,
                 runtime,
+                false,
             );
         }),
         on_decline: None,

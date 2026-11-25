@@ -845,6 +845,10 @@ pub struct Game {
     /// Steps since the loop watch last started over; signatures are taken
     /// only from `game::infinite_loop::LOOP_WATCH_START` steps on.
     pub(crate) loop_watch_steps: u16,
+    /// Loop guard for a kept `[Main]` use (owner ruling 2026-11-24). Plain
+    /// data: cloned, hashed into the verification digest when non-empty,
+    /// re-stamped by determinization. See `game::main_declare_guard`.
+    pub(crate) main_declare_guard: main_declare_guard::MainDeclareGuard,
     /// Marks the pending prompt as an optional decision when it is not
     /// `is_optional` (DSL choose-one, `<Ascension>` Yes/No); consumed when the
     /// next decision resolves. See `game::infinite_loop::OptionalDecisionMark`.
@@ -1599,6 +1603,15 @@ pub struct Game {
     /// hand plays and digivolutions. Mirrors DCGO `CardEffectCommons.IsByEffect`.
     pub(crate) pending_play_effect_initiated: bool,
 
+    /// Transient: `true` while the self `[When Digivolving]` triggers of a
+    /// digivolution performed BY AN EFFECT are being enqueued
+    /// (`fire_digivolve_event_triggers` with `effect_initiated`), so their
+    /// trigger context records it and `event_is_effect_initiated` reads true
+    /// there ("if played or digivolved by an effect": Titamon (BT25-084),
+    /// DCGO `CanTriggerWhenDigivolving && IsByEffect`). Cleared right after
+    /// the enqueue. `played_by_effect` is unaffected (On Play only).
+    pub(crate) pending_digivolve_effect_initiated: bool,
+
     /// Open coalescing window for the `OnDiscardHand` batch trigger
     /// (G-ENGINE-ON-DISCARD-HAND). While `Some`, effect-caused hand→trash calls
     /// append the trashing player; the window is flushed (fires
@@ -1679,6 +1692,7 @@ pub struct Game {
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
 mod handles;
 pub mod infinite_loop;
+pub mod main_declare_guard;
 pub mod optional_activation;
 mod lifecycle;
 mod memory;
@@ -1979,7 +1993,11 @@ impl Game {
         {
             return Err(SelectionError::GameOver);
         }
-        self.resolve_generic_selection(player, action_id)
+        let result = self.resolve_generic_selection(player, action_id);
+        // Main-declaration guard: settles only once nothing of the
+        // declaration is left (outermost frame; idempotent).
+        self.settle_main_declaration();
+        result
     }
 
     /// Mark the currently parked pay-cost effect as declined. Selection

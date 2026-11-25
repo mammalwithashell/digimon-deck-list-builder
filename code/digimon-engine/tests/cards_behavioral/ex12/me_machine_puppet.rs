@@ -510,39 +510,44 @@ fn thundermon_main_action(field_index: u8) -> usize {
         as usize
 }
 
+/// Once-per-turn uses the Thundermon at `field_index` has recorded this turn
+/// (a refunded use leaves no entry).
+fn thundermon_uses(r: &DebugRunner, field_index: u8) -> u32 {
+    r.game.players[0].battle_area[field_index as usize]
+        .effect_activations
+        .values()
+        .map(|&n| n as u32)
+        .sum()
+}
+
 /// Thundermon (EX12-041) "[Main] [Once Per Turn] You may play or use 1 card
-/// ...": a [Main] is activation-type (CR 4.3 15-8-4-1/-2); the player
-/// activates it by declaring it in the main phase, each activation counts as
-/// one use (CR 4.3 15-14-1-1), and a chosen activation counts "even if the
-/// effect's processing can't be executed" (CR 4.3 15-14-1-4). Passing the
-/// card pick after declaring it therefore still uses it, and the [Main] is
-/// not offered again that turn. Same rule as Manekimon (BT26-012)
-/// (`bt26_012_declining_after_activation_spends_once_per_turn`;
-/// docs/RUST_ENGINE_GAPS.md "Explicit Main-declaration correction
-/// (2026-10-25)"). DCGO EX12_041.cs `if (!isUsed) activateClass.RemoveUse()`
-/// refunds it; the rules text decides. A second Thundermon has its own use
-/// (CR 4.3 15-14-1-3).
+/// ...": declared, then the pick passed while a [Mutant] card was selectable.
+/// Owner ruling 2026-11-24 "Match dcgo on the main use": DCGO EX12_041.cs:180
+/// `if (!isUsed) activateClass.RemoveUse();` (isUsed is set only when a card
+/// is picked, :96) gives the use back. This reverses the 2026-10-25 record
+/// and commit 4606e6b4d, which spent it under CR 4.3 15-14-1-4 /
+/// 15-8-4-1/-2; the owner chose DCGO parity over that reading. Nothing else
+/// changed, so the main-declaration loop guard withholds the identical
+/// declaration. A second Thundermon has its own use (CR 4.3 15-14-1-3).
 #[test]
-fn ex12_041_main_declared_then_pick_passed_spends_the_once_per_turn() {
+fn ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn() {
     let mut r = thundermon_runner(&["MUTANT-3"]);
     let t = r.place_on_field(0, "EX12-041", Some(0));
     let other = r.place_on_field(0, "EX12-041", Some(0));
     let memory_before = r.memory();
     assert_eq!(build_action_mask(&r.game, 0)[thundermon_main_action(t.index)], 1.0);
     assert!(r.game.activate_field_main(0, t.index as usize));
+    assert_eq!(thundermon_uses(&r, t.index), 1, "the declaration records the use");
     r.execute_action(0, PASS).expect("pass the pick");
     let _ = r.auto_resolve();
     assert!(r.game.pending_selection.is_none(), "the effect ended");
     assert_eq!(hand_ids(&r, 0), vec!["MUTANT-3"], "nothing was played");
     assert_eq!(r.memory(), memory_before, "no cost was paid");
+    assert_eq!(thundermon_uses(&r, t.index), 0, "DCGO RemoveUse: the passed pick keeps the use");
     assert_eq!(
         build_action_mask(&r.game, 0)[thundermon_main_action(t.index)],
         0.0,
-        "CR 4.3 15-14-1-4: the declared [Main] used the [Once Per Turn]; it is not offered again"
-    );
-    assert!(
-        !r.game.activate_field_main(0, t.index as usize),
-        "the declared [Main] used the [Once Per Turn]"
+        "loop guard: the identical declaration is withheld while nothing changed"
     );
     assert_eq!(
         build_action_mask(&r.game, 0)[thundermon_main_action(other.index)],
@@ -551,8 +556,33 @@ fn ex12_041_main_declared_then_pick_passed_spends_the_once_per_turn() {
     );
 }
 
+/// The kept use is real: after a state change the [Main] is offered again,
+/// a card is played at cost -2, and that spends the use for the turn.
+#[test]
+fn ex12_041_main_pass_then_state_change_redeclares_and_spends() {
+    let mut r = thundermon_runner(&["MUTANT-3"]);
+    let t = r.place_on_field(0, "EX12-041", Some(0));
+    let bit = thundermon_main_action(t.index);
+    assert!(r.game.activate_field_main(0, t.index as usize));
+    r.execute_action(0, PASS).expect("pass the pick");
+    let _ = r.auto_resolve();
+    assert_eq!(build_action_mask(&r.game, 0)[bit], 0.0);
+    r.game.memory -= 1;
+    assert_eq!(build_action_mask(&r.game, 0)[bit], 1.0, "the state changed: offered again");
+    let memory_before = r.memory();
+    r.game.decode_action(bit as u16, 0);
+    select_hand_card(&mut r, 0, "MUTANT-3");
+    let _ = r.auto_resolve();
+    assert!(!hand_contains(&r, 0, "MUTANT-3"), "the picked card was played");
+    assert_eq!(memory_before - r.memory(), 1, "play cost 3 reduced by 2");
+    assert_eq!(thundermon_uses(&r, t.index), 1);
+    r.game.memory -= 1;
+    assert_eq!(build_action_mask(&r.game, 0)[bit], 0.0, "spent for the turn");
+}
+
 /// Thundermon (EX12-041): declaring the [Main] and playing a card spends the
-/// [Once Per Turn] (CR 4.3 15-14-1-1/-4).
+/// [Once Per Turn] (DCGO EX12_041.cs:96 sets isUsed before the play; CR 4.3
+/// 15-14-1-1/-4).
 #[test]
 fn ex12_041_main_pick_chosen_spends_the_once_per_turn() {
     let mut r = thundermon_runner(&["MUTANT-3", "ME-4"]);
@@ -561,6 +591,7 @@ fn ex12_041_main_pick_chosen_spends_the_once_per_turn() {
     select_hand_card(&mut r, 0, "MUTANT-3");
     r.auto_resolve().expect("resolve Thundermon Main");
     assert!(!hand_contains(&r, 0, "MUTANT-3"), "the picked card was played");
+    assert_eq!(thundermon_uses(&r, t.index), 1);
     assert_eq!(
         build_action_mask(&r.game, 0)[thundermon_main_action(t.index)],
         0.0,

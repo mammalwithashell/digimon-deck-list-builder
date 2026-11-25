@@ -88,12 +88,21 @@ fn bt25_084_has_op_wd_wa_cost_delete_clause() {
         .expect("OP/WD/WA clause present");
     assert!(clause.once_per_turn, "[Once Per Turn]");
     assert!(clause.optional, "printed 'By trashing' -> optional");
+    // DCGO BT25_084.cs: one DestroyPermanentsClass over the IsMaxDP list (one
+    // batch), inside "if discarded", else RemoveUse.
+    let gated = clause.process.iter().find_map(|s| match s {
+        CompiledStep::If { then, else_branch, .. } => Some((then, else_branch)),
+        _ => None,
+    });
+    let (then, else_) = gated.expect("the paid tail is gated on the discard");
     assert!(
-        clause
-            .process
-            .iter()
-            .any(|s| matches!(s, CompiledStep::ForEach { .. })),
-        "delete-all-highest is a for_each over highest-DP opp Digimon"
+        then.iter()
+            .any(|s| matches!(s, CompiledStep::DeleteAllPermanents { .. })),
+        "delete-all-highest is ONE batch (delete_all_permanents)"
+    );
+    assert!(
+        else_.iter().any(|s| matches!(s, CompiledStep::RefundOpt)),
+        "a declined discard gives the use back (DCGO RemoveUse)"
     );
 }
 
@@ -164,17 +173,29 @@ fn bt25_084_op_wd_declining_cost_does_nothing() {
     let titamon = runner.place_on_field(0, CARD_ID, Some(0));
     runner.fire_on_play(0, titamon.index as usize);
 
-    // Decline the optional cost (cost:true aborts the delete).
-    if runner.pending_is_optional() {
-        runner
-            .execute_action(0, digimon_engine::action::space::PASS)
-            .ok();
-        runner.auto_resolve().ok();
-    }
+    // The single hand pick is the decline (DCGO optional: false, SelectHand
+    // canNoSelect: true): choosing nothing deletes nothing.
+    assert!(runner.pending_is_optional(), "the hand pick is declinable");
+    runner
+        .execute_action(0, digimon_engine::action::space::PASS)
+        .expect("choose no card");
+    runner.auto_resolve().expect("resolve");
     assert_eq!(
         runner.battle_area_size(1),
         opp_before,
         "declining the hand-trash cost aborts the delete"
+    );
+    assert_eq!(runner.hand_size(0), 1, "nothing trashed");
+    // DCGO BT25_084.cs: `if (!discarded) activateClass.RemoveUse()` -- the use
+    // is given back (owner ruling 2026-11-24, "Generally let's look to match
+    // dcgo"), so the next [When Digivolving] this turn offers it again.
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(titamon));
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_is_optional(),
+        "the declined discard kept the [Once Per Turn]"
     );
 }
 
@@ -679,4 +700,210 @@ fn bt25_084_leave_prevention_paid_spends_opt_and_second_pick_is_mandatory() {
     );
     assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(titamon_handle(&runner).is_none());
+}
+
+// ─── [OP][WD][WA][OPT] use accounting, batch deletion, by-effect tail ───────
+//
+// DCGO BT25_084.cs L106-123: one SelectHandEffect (canNoSelect); if a card was
+// discarded, ONE DestroyPermanentsClass over every opponent IsMaxDP Digimon,
+// then, if EnteredByEffect, trash the opponent's top security card; else
+// RemoveUse(). AdditionalActivateCondition HandCards.Count > 0.
+
+/// Paying the discard spends the [Once Per Turn]: a later [When Digivolving]
+/// the same turn is not offered.
+#[test]
+fn bt25_084_op_wd_paying_spends_opt() {
+    let mut runner = base().hand(0, &["PAD", "PAD"]).memory(13).start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    let titamon = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.fire_on_play(0, titamon.index as usize);
+    let v = runner.pending_selection_view().expect("hand pick");
+    let card = *v
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != digimon_engine::action::space::PASS)
+        .unwrap();
+    runner.execute_action(0, card).unwrap();
+    runner.auto_resolve().unwrap();
+    assert_eq!(runner.battle_area_size(1), 0, "OPP-BIG deleted");
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(titamon));
+    runner.game.drain_effect_queue();
+    assert!(runner.pending_selection().is_none(), "the paid use is spent");
+}
+
+/// With an empty hand the clause is not offered (DCGO CanActivate: hand > 0),
+/// and nothing is spent: with a card in hand later the same turn it is.
+#[test]
+fn bt25_084_op_wd_not_offered_with_empty_hand_and_not_spent() {
+    let mut runner = base().memory(13).start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    let titamon = runner.place_on_field(0, CARD_ID, Some(0));
+    assert_eq!(runner.hand_size(0), 0);
+    runner.fire_on_play(0, titamon.index as usize);
+    assert!(runner.pending_selection().is_none(), "empty hand: not offered");
+    runner.add_to_hand(0, "PAD");
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(titamon));
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_is_optional(),
+        "the unoffered [On Play] spent nothing"
+    );
+}
+
+/// Test-only observer: "when any Digimon is deleted, gain 1 memory". A
+/// deletion observer triggers ONCE per deletion event (§15-5-2; the engine
+/// collapses a batch's observer entries), so it counts deletion events.
+const DELETION_COUNTER_YAML: &str = r#"
+card: T-DEL-COUNTER
+name: DeletionCounter
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: []
+effects:
+  - when: on_any_deletion
+    condition:
+      event_target_kind: digimon
+    process:
+      - gain_memory: 1
+"#;
+
+/// The tied highest-DP Digimon leave as ONE deletion (DCGO one
+/// DestroyPermanentsClass over the whole IsMaxDP list), not one deletion per
+/// Digimon: a deletion observer fires once.
+#[test]
+fn bt25_084_tied_highest_dp_deleted_as_one_batch() {
+    let mut runner = base()
+        .from_dsl_yaml(DELETION_COUNTER_YAML)
+        .expect("observer")
+        .hand(0, &["PAD"])
+        .memory(3)
+        .start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(1, "OPP-BIG2", Some(0));
+    runner.place_on_field(0, "T-DEL-COUNTER", Some(0));
+    let titamon = runner.place_on_field(0, CARD_ID, Some(0));
+    let memory_before = runner.game.memory;
+    runner.fire_on_play(0, titamon.index as usize);
+    let v = runner.pending_selection_view().expect("hand pick");
+    let card = *v
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != digimon_engine::action::space::PASS)
+        .unwrap();
+    runner.execute_action(0, card).unwrap();
+    runner.auto_resolve().unwrap();
+    assert_eq!(runner.battle_area_size(1), 0, "both tied Digimon deleted");
+    assert_eq!(
+        runner.game.memory - memory_before,
+        1,
+        "one deletion event, not two sequential ones"
+    );
+}
+
+/// Test-only [On Play]: digivolve 1 of your level 5 Digimon into a [Titamon]
+/// card in your hand, by an effect.
+const EVO_ENABLER_YAML: &str = r#"
+card: T-EVO-ENABLER
+name: EvoEnabler
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: []
+effects:
+  - when: on_play
+    summary: "[On Play] Digivolve 1 of your level 5 Digimon into a Titamon in hand"
+    process:
+      - select_own_permanent:
+          bind_as: base
+          filter: { level_eq: 5 }
+          prompt: "Choose the Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter: { name_contains: "Titamon" }
+          prompt: "Digivolve into"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+"#;
+
+fn resolve_picking_first(runner: &mut DebugRunner) {
+    for _ in 0..16 {
+        let Some(v) = runner.pending_selection_view() else { return };
+        let id = *v
+            .valid_action_ids
+            .iter()
+            .find(|&&a| a != digimon_engine::action::space::PASS)
+            .expect("a non-PASS choice");
+        runner.execute_action(v.selecting_player, id).unwrap();
+    }
+    panic!("selections did not finish");
+}
+
+/// "After, if played or digivolved by an effect, trash their top security
+/// card": DCGO EnteredByEffect = (CanTriggerOnPlay || CanTriggerWhenDigivolving)
+/// && IsByEffect. Titamon digivolved by an effect, discard paid: the
+/// opponent's top security card is trashed.
+#[test]
+fn bt25_084_wd_digivolved_by_effect_trashes_opponent_top_security() {
+    let mut runner = evo_base()
+        .from_dsl_yaml(EVO_ENABLER_YAML)
+        .expect("enabler")
+        .hand(0, &[CARD_ID, "PAD"])
+        .security(1, &["PAD"; 3])
+        .memory(3)
+        .start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    runner.place_on_field(0, "RED5", Some(0));
+    let enabler = runner.place_on_field(0, "T-EVO-ENABLER", Some(0));
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(enabler));
+    runner.game.drain_effect_queue();
+    resolve_picking_first(&mut runner);
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "Titamon digivolved by the effect"
+    );
+    // (The digivolve itself draws a card, so the hand size proves nothing.)
+    assert_eq!(runner.battle_area_size(1), 0, "the discard was paid: OPP-BIG deleted");
+    assert_eq!(
+        runner.security_count(1),
+        2,
+        "digivolved by an effect: the opponent's top security card is trashed"
+    );
+}
+
+/// Control: a normal (player-action) digivolve into Titamon pays the discard
+/// and deletes, but does not trash the opponent's security.
+#[test]
+fn bt25_084_wd_normal_digivolve_does_not_trash_security() {
+    let mut runner = evo_base()
+        .hand(0, &[CARD_ID, "PAD"])
+        .security(1, &["PAD"; 3])
+        .memory(10)
+        .start();
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+    let base_perm = runner.place_on_field(0, "RED5", Some(0));
+    let action = encode_digivolve(0, base_perm.index as u16);
+    assert_eq!(build_action_mask(&runner.game, 0)[action as usize], 1.0);
+    runner.game.decode_action(action, 0);
+    resolve_picking_first(&mut runner);
+    // (The digivolve itself draws a card, so the hand size proves nothing.)
+    assert_eq!(runner.battle_area_size(1), 0, "the discard was paid: OPP-BIG deleted");
+    assert_eq!(runner.security_count(1), 3, "a normal digivolve trashes no security");
 }

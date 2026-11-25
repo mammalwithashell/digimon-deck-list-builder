@@ -1,3 +1,64 @@
+## G-DSL-LINK-REQUIREMENT-MET-BY-SELF — resolved 2026-11-24
+
+Logimon (BT25-052)'s [Main] [Once Per Turn] link was offered on every board.
+DCGO (BT25_052.cs:63-80 `CanUseCondition`) offers it only when a
+[Social]/[Tool]/[Game] Digimon card in the hand or among this Digimon's
+digivolution cards can link to this Digimon with the cost ignored
+(`CanLinkToTargetPermanent(permanent, payCost: false)`). Owner ruling
+2026-11-24: "Generally let's look to match dcgo". The clause `condition:`
+had no way to ask whether a card's [Link] requirement is met by this
+permanent.
+
+Closed by a card-subject predicate leaf `link_requirement_met_by_self: bool`:
+true when the subject card's [Link] requirement is met by the effect's own
+permanent (`Game::link_card_qualifies_for`, the same test as the link rule
+check, Q4533), link cost ignored. False with no source permanent; a
+face-down card never meets it (printed information, CR 4.3 4-7-9). Used in a
+`count_gte` over the hand and a `self_source_count` over the digivolution
+cards. The compiled predicate grew a field: `PACK_FORMAT_VERSION` 0.40.0.
+
+Proof: `tests/dsl/constructs/link_requirement_met_by_self.rs`; behavioural
+`tests/cards_behavioral/bt25/bt25_052.rs::bt25_052_main_not_offered_*` and
+`bt25_052_main_offered_*`.
+
+## G-DSL-OFFER-UNPAYABLE-DELETION-PAYERS — resolved 2026-11-24
+
+A "by deleting 1 ... Digimon, it doesn't leave" clause (a payer pick, then
+`delete_permanent` of that binding and `cancel_replacement`) hid payers whose
+deletion is impossible, in the pick and in the replacement's offer
+(`deletion_payment::can_pay`, CR 4.3 15-7-4). DCGO does not: on Chuumon
+(EX13-027), Sukamon (EX13-028), Kotemon (EX13-048) and Gladimon (EX13-052) its
+`CanActivateCondition` is `HasMatchConditionPermanent` over the printed
+predicate and the pick has no can-be-deleted filter, so a Digimon that can't be
+deleted is offered; picking it spends the use, deletes nothing, and the carrier
+leaves. Owner ruling 2026-11-24: "You can pick a target that is immune from the
+removal, and it will fizzle. Nothing is deleted, right? That is a valid choice."
+
+Closed by an opt-in field on `select_own_permanent` / `select_opponent_permanent`
+/ `select_any_permanent`: `offer_unpayable_deletion_payers: true` turns the
+`can_pay` filter off for that pick and for the replacement offer preflight
+(`deletion_payment::filters_unpayable_payers`). The paid-deletion receipt is
+unchanged: an unpayable payer is skipped by `deletion_payment::expand`, so the
+removal is not cancelled. The existing-vocabulary alternative (a plain
+`delete_permanent` then an `if` on a recorded deletion before
+`cancel_replacement`, the EX13-015 shape) was not used: it loses the
+identity-matched receipt (`PaidDeletionPreventionFinalize` checks that this
+payer's top card and host were the ones deleted) and the payment's effect
+attribution reset in `start_deletion_payment`. Default off; the authoring lint
+`unpayable-payers-without-paid-deletion` rejects the flag anywhere but a
+paid-deletion payer pick, and the pool guard
+`pool_guard_unpayable_deletion_payers_are_exactly_the_owner_ruling_list` holds
+it to `authoring_lint::UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING` (the four
+clauses). The compiled layout grew one field: `PACK_FORMAT_VERSION` 0.39.0.
+
+Not covered (engine-wide gap, not this field): DCGO also drops an
+opponent-owned candidate under "can't be chosen by your opponent's effects"
+(`CanSelectBySkill`); no DSL selection enforces `CannotBeSelectedByEffect`.
+
+Proof: `tests/dsl/constructs/unpayable_deletion_payers.rs`; behavioural tests
+`*_inherited_*undeletable*` in `tests/cards_behavioral/ex13/ex13_027.rs`,
+`ex13_028.rs`, `ex13_048.rs`, `ex13_052.rs`.
+
 ## G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-DECLINE-TAIL — resolved 2026-11-23
 
 `trash_bottom_face_down_source_under_tamer` with `optional: true` dropped the

@@ -291,6 +291,11 @@ pub fn lower_for_kind_with_clause_index(
         if steps_provide_resource_flow(&process) {
             builder = builder.resource_flow();
         }
+        // Owner ruling 2026-11-24: a [Main] that can give its use back is
+        // tracked by the main-declaration loop guard.
+        if matches!(engine_timing, EffectTiming::MainOnField) && has_refund_opt {
+            builder = builder.main_refund_capable();
+        }
         builder = builder.development_hand(crate::policies::development::HandBenefit::from_steps(&clause.process));
         // G-ENGINE-DELAY-OPTION-CONDITIONAL-PLACEMENT: an Option [Main] body
         // that authors its own `place_self_as_delay_option` owns the
@@ -573,8 +578,13 @@ pub fn folded_may_refund_binding(clause: &CompiledTriggeredClause) -> Option<Str
     }
     // An activation-type effect ([Main], [Counter]) is activated by the
     // player's own declaration (§15-14-1-4 "when a player chooses to activate
-    // ... even if the effect's processing can't be executed"): a pick passed
-    // inside it is not a decision not to activate.
+    // ... even if the effect's processing can't be executed"), so this
+    // rewrite never refunds one. Where a [Main] does give its use back on a
+    // passed pick, that is a per-card fact of its DCGO script (owner ruling
+    // 2026-11-24, "Match dcgo on the main use"): the card authors its own
+    // `refund_opt`, reviewed in `authoring_lint::MAIN_REFUND_BY_OWNER_RULING`,
+    // and a [Main] whose DCGO script spends keeps spending. Refunds stay
+    // explicit per card, never synthesized here.
     if clause.when.iter().any(|t| {
         matches!(
             t,

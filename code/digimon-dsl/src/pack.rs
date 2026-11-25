@@ -65,7 +65,15 @@ use std::collections::BTreeSet;
 // (`TrashBottomSources.bind_trashed_as`, the `LowestMaterialCountRedirection`
 // field selector) with 0.37.0 and 0.38.0 above. Rebuild packs; bincode
 // layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.39.0";
+// A parallel branch (claude/mf3-opt) numbered its own two changes 0.39.0
+// and 0.40.0 from 0.38.0: `offer_unpayable_deletion_payers` on the compiled
+// `select_own_permanent` / `select_opponent_permanent` /
+// `select_any_permanent` steps, and the `link_requirement_met_by_self`
+// compiled predicate leaf.
+// 0.41.0 is the merge of that branch: the union of the 0.39.0 layout above
+// and both of its changes, a layout neither 0.39.0 nor 0.40.0 describes.
+// Rebuild packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.41.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

@@ -16,7 +16,8 @@
 #   same-level cards from its digivolution cards, it doesn't leave.
 #   Official Q&A: only 1 [Counter] effect can be activated per attack.
 #
-# DCGO: no EX13_016.cs at b9a0638cd. Idioms: Assembly names are exact names
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Red/EX13_016.cs
+# (the delete clause is L129-183). Idioms: Assembly names are exact names
 # (EX13_020.cs `EqualsCardName("Veemon")`); lock = BT23-047 / ST24-10
 # (`select_count_capped_multi` + per-pick `CannotSuspend`
 # end_of_opponents_turn); delete = EX12-035 (`materials_count_lte:
@@ -106,6 +107,20 @@ effects:
                 expiry: end_of_opponents_turn
 
   # ─── [OP][WD][Counter][OPT] may delete 1 opp Digimon w/ ≤ sources ──────────
+  # DCGO EX13_016.cs L129-183: one shared effect (OP/WD optional: false, so
+  # no Yes/No; [Counter] is chosen in the Counter window), one delete pick
+  # with canNoSelect: true, `isUsed` set only when a Digimon is chosen, and
+  # `if (!isUsed) activateClass.RemoveUse()`. So the pick is optional and
+  # IS the decline (no outer prompt: the first step is declinable); a chosen
+  # target spends the use even if its deletion is then prevented; passing the
+  # pick gives the use back (owner ruling 2026-11-24, "Generally let's look
+  # to match dcgo"; W14 row (b), Q1818). At [Counter] the refunded use is not
+  # offered again in the same attack (one Counter window per attack, Q7253)
+  # but is at a later attack or a new [On Play]/[When Digivolving] -- each a
+  # new game event, so there is no free repeat. DCGO also RemoveUse()s when
+  # qualifying Digimon exist but none can be chosen (CanSelectBySkill); that
+  # path is unreachable here until the engine enforces "can't be chosen"
+  # (engine gap, recorded in stage 3).
   - when: [on_play, when_digivolving, counter]
     once_per_turn: true
     optional: true
@@ -122,6 +137,8 @@ effects:
       - select_opponent_permanent:
           optional: false
           bind_as: delete_target
+          optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
@@ -129,7 +146,12 @@ effects:
                   formula:
                     source_material_count: {}
           prompt: "Delete 1 of your opponent's Digimon with as many digivolution cards as this Digimon or fewer"
-      - delete_permanent: { target: delete_target }
+      - if:
+          condition: { binding_present: delete_target }
+          then:
+            - delete_permanent: { target: delete_target }
+          else:
+            - refund_opt: {}
 
   # ─── [All Turns] would-leave save: trash 2 same-level digivolution cards ───
   - kind: replacement
