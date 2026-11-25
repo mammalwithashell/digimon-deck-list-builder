@@ -485,11 +485,14 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         reason: concat!(
             "Kotemon's inherited \"by deleting 1 of your other Digimon with [Knightmon] in its text, it doesn't ",
             "leave\": owner ruling 2026-11-23, parity with DCGO (EX13_048.cs: canNoSelect pick, RemoveUse unless a ",
-            "Digimon was chosen). Offered only while such a Digimon exists, so the refund runs only on a declined ",
-            "pick; a chosen Digimon spends the use.",
+            "Digimon was chosen). Offered while such a Digimon exists, deletable or not (owner ruling 2026-11-24, ",
+            "`offer_unpayable_deletion_payers`), so the refund runs only on a declined pick; a chosen Digimon, even ",
+            "one that can't be deleted, spends the use.",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_undeletable_only_pass_keeps_opt",
+            "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing",
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_once_per_turn",
             "cards_behavioral/ex13/ex13_048.rs::ex13_048_inherited_not_offered_without_other_knightmon_text_digimon",
         ],
