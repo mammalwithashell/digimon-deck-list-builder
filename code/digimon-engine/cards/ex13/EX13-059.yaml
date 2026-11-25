@@ -14,8 +14,16 @@
 #   Digivolve: Black Lv.4 / 3.
 #   Official Q&A: the play-cost cap applies to both alternatives.
 #
-# DCGO C# reference: none (no EX13_059.cs). Printed text + general_rule.pdf
-# §15-7 govern.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_059.cs
+# (absent when this card was authored, present in the current submodule).
+# Both [End of Your Turn] clauses follow it exactly by owner ruling 2026-11-23
+# ("parity with DCGO", qa/rules/mechanics-gaps-2026-10.md W14 row (f)): after
+# the accept, a [Mamemon] pick with canNoSelect true; none -> `RemoveUse()`
+# (the use is kept); a Digimon chosen -> spent, and the opponent's Digimon are
+# deleted only if the chosen one was deleted (the success process of
+# `DeletePeremanentAndProcessAccordingToResult`; §15-7: an unmet "by"
+# condition stops the rest). The face-up and inherited clauses have separate uses
+# (`EX13_059_EOT` / `EX13_059_ESS_EOT`).
 #
 # DSL notes:
 #   - Reveal clause: EX8-050 idiom (`reveal_top_deck` + optional single
@@ -25,7 +33,8 @@
 #   - "By deleting 1 of your Digimon with [Mamemon] in its name, ..." is an
 #     optional processing condition (§15-7-1/-4): `optional: true` +
 #     `outer_prompt: true` (BT23-064 idiom) so the player may decline; the
-#     inner own pick is then mandatory. The clause is gated only on the cost
+#     inner own pick may be declined too (DCGO canNoSelect; owner ruling
+#     2026-11-23), which keeps the use. The clause is gated only on the cost
 #     being payable (an own [Mamemon]-named Digimon exists) — §15-7-4 lets the
 #     player pay it even when the opponent has no Digimon. BigMamemon itself
 #     has [Mamemon] in its name and may be the one deleted. Declining at the
@@ -94,22 +103,33 @@ effects:
         kind: digimon
         name_contains: Mamemon
     process:
+      # DCGO EX13_059.cs: canNoSelect pick; none -> `RemoveUse()`; the reward
+      # runs only when the chosen Digimon was deleted (success process).
       - select_own_permanent:
-          optional: false
           bind_as: sacrifice
+          optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
               - name_contains: Mamemon
           prompt: "Delete 1 of your Digimon with [Mamemon] in its name"
-      - delete_permanent: { target: sacrifice }
-      - select_opponent_permanent:
-          optional: false
-          bind_as: victim
-          filter: { kind: digimon }
-          selector: lowest_play_cost
-          prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
-      - delete_permanent: { target: victim }
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - delete_permanent: { target: sacrifice }
+            - if:
+                condition: { effect_deleted_any_own_digimon: true }
+                then:
+                  - select_opponent_permanent:
+                      optional: false
+                      bind_as: victim
+                      filter: { kind: digimon }
+                      selector: lowest_play_cost
+                      prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+                  - delete_permanent: { target: victim }
+          else:
+            - refund_opt: {}
 
   - text: "[End of Your Turn] [Once Per Turn] By deleting 1 of your Digimon with [Mamemon] in its name, delete all of your opponent's Digimon with the lowest play cost."
     scope: inherited
@@ -125,24 +145,35 @@ effects:
         kind: digimon
         name_contains: Mamemon
     process:
+      # DCGO EX13_059.cs (ESS): canNoSelect pick; none -> `RemoveUse()`; the
+      # sweep runs only when the chosen Digimon was deleted.
       - select_own_permanent:
-          optional: false
           bind_as: sacrifice
+          optional: true
+          continue_on_decline: true
           filter:
             all_of:
               - kind: digimon
               - name_contains: Mamemon
           prompt: "Delete 1 of your Digimon with [Mamemon] in its name"
-      - delete_permanent: { target: sacrifice }
-      - for_each:
-          over:
-            of: opponent
-            zone: [battle_area]
-            kind: digimon
-            play_cost_lte:
-              aggregate:
-                selector: lowest_play_cost
-                scope: opponent
-          bind_as: victim
-          body:
-            - delete_permanent: { target: victim }
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - delete_permanent: { target: sacrifice }
+            - if:
+                condition: { effect_deleted_any_own_digimon: true }
+                then:
+                  - for_each:
+                      over:
+                        of: opponent
+                        zone: [battle_area]
+                        kind: digimon
+                        play_cost_lte:
+                          aggregate:
+                            selector: lowest_play_cost
+                            scope: opponent
+                      bind_as: victim
+                      body:
+                        - delete_permanent: { target: victim }
+          else:
+            - refund_opt: {}

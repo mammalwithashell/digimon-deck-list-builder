@@ -36,8 +36,9 @@ use digimon_engine::Game;
 /// regenerated entry stop replaying; refine the stamp per entry afterwards if they differ. History:
 /// 2026-11-11 the CR 11-1-2 / DUAL / play-gate fixes; 2026-11-12 this branch's DCGO-playback fixes
 /// (0de06211d, c6eda5678; per-entry reasons are in each regenerated `source`); 2026-11-15 the select_hand
-/// playability filters; 2026-11-21 d76249e94 (no DigiXros stop prompt once no candidate remains).
-const REGEN_NOTE: &str = "regenerated 2026-11-21 after d76249e94: a DigiXros whose candidates are exhausted no longer asks a trailing \"Select DigiXros material\" stop prompt (DCGO SelectDigiXrosClass), so the recorded PASS that closed a one-element recipe (Cho-Hakkaimon EX12-056, Sagomon EX12-029) answered the next prompt instead";
+/// playability filters; 2026-11-21 d76249e94 (no DigiXros stop prompt once no candidate remains);
+/// 2026-11-23 f3224fb0d (Erlangmon (EX12-034): an accepted leave replacement spends its [Once Per Turn]).
+const REGEN_NOTE: &str = "regenerated 2026-11-23 after f3224fb0d: Erlangmon (EX12-034)'s accepted would-leave replacement now spends its [Once Per Turn] even when nothing is played (CR 4.3 15-14-1-4; it used to refund), so a later would-leave that turn no longer offers the replacement and the recorded PASS that declined it met no prompt";
 
 /// The same for `chronomon-security-history.json`.
 const CHRONOMON_REGEN_NOTE: &str = "regenerated 2026-11-21 after the {Trash} liveness gate (CR 4.3 15-4-4-3, bug scan 2026-11): recorded decisions 58 and 159 accepted a Cherubimon BT26-078 trigger whose card had already been returned to the deck; decision 58 is dropped, the 158 decisions before the second one are the original trace, the rest is a seeded continuation";

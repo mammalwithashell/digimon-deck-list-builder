@@ -225,10 +225,12 @@ fn compiled_field_predicates_preserve_legal_choices_and_opaque_filters_stay_clos
         assert_eq!(calls.load(Ordering::SeqCst), 0); assert!(game.pending_selection.is_none());
         let selection = if own { CompiledStep::SelectOwnPermanent {
             filter: Default::default(), bind_as: Some("picked".into()), selector: None,
-            prompt: "Pick".into(), prompt_key: None, optional: true, continue_on_decline: true, then: vec![],
+            prompt: "Pick".into(), prompt_key: None, optional: true, continue_on_decline: true,
+            offer_unpayable_deletion_payers: false, then: vec![],
         } } else { CompiledStep::SelectOpponentPermanent {
             filter: Default::default(), bind_as: Some("picked".into()), selector: None,
-            prompt: "Pick".into(), prompt_key: None, optional: true, continue_on_decline: true, then: vec![],
+            prompt: "Pick".into(), prompt_key: None, optional: true, continue_on_decline: true,
+            offer_unpayable_deletion_payers: false, then: vec![],
         } };
         run_steps(&[selection, CompiledStep::GainMemory(2)],
             &mut EffectContext::new(&mut game, card, None, seat), &mut Bindings::new());

@@ -803,3 +803,144 @@ fn declined_raid_switch_leaves_the_removed_target_and_the_attack_fails() {
     assert!(r.game.pending_attack.is_none(), "the attack ended");
     assert_eq!(r.battle_area_size(1), 1, "DEF was not battled");
 }
+
+// ─── Two <Raid> instances on one attacker (§16-23-1 / §16-23-4) ─────────
+
+/// Two `<Raid>` trigger bodies on one card: the shape of Medusamon (BT24-017)
+/// printed `<Raid>` plus the inherited `<Raid>` of Cyclonemon (BT24-011) in
+/// its digivolution cards. Each is a separate trigger-type effect (§16-23-2),
+/// so both trigger on the attack.
+struct TwoRaids;
+impl CardEffect for TwoRaids {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let mut effects =
+            digimon_engine::cards::keyword_effects::keyword_to_auto_effect(Keyword::Raid, c);
+        effects.extend(digimon_engine::cards::keyword_effects::keyword_to_auto_effect(
+            Keyword::Raid,
+            c,
+        ));
+        effects
+    }
+}
+
+/// Resolve any `TriggerOrder` prompt by taking its first branch, until a
+/// non-order prompt (or nothing) is pending.
+fn take_trigger_orders(r: &mut DebugRunner) {
+    while let Some(sel) = r.game.pending_selection.as_ref() {
+        if sel.kind != SelectionKind::TriggerOrder {
+            return;
+        }
+        let action = sel
+            .effect_choices
+            .as_ref()
+            .and_then(|c| c.first())
+            .map(|c| c.action_id)
+            .unwrap_or(sel.valid_action_ids[0]);
+        r.game.resolve_selection(0, action).expect("order triggers");
+    }
+}
+
+/// Medusamon (BT24-017) with Cyclonemon (BT24-011)'s inherited `<Raid>`: the
+/// first `<Raid>` switches the attack to the opponent's highest-DP unsuspended
+/// Digimon. The second `<Raid>` must not then offer a LOWER-DP Digimon:
+/// §16-23-1 only switches to the unsuspended Digimon with the highest DP, and
+/// the current target already is that Digimon, so there is nothing to switch
+/// to. (DCGO `RaidProcess` takes `IsMaxDP` over every unsuspended Digimon,
+/// the defender included.) The battle stays against HIGH.
+#[test]
+fn second_raid_does_not_offer_a_lower_dp_digimon_after_first_switch() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("LOW"))
+        .add_card(card("HIGH"))
+        .add_card(card("SEC"))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let low = r.place_on_field(1, "LOW", Some(0));
+    let high = r.place_on_field(1, "HIGH", Some(0));
+    r.register_effect("ATK", Arc::new(TwoRaids));
+    r.game.modifiers.add(
+        high,
+        ModifierEntry::simple(ModifierType::ChangeDp, 3000, Expiry::Permanent, 1),
+    );
+    let security_before = r.game.players[1].security.len();
+
+    assert_eq!(r.attack_player(atk, 1, false), AttackResult::InProgress);
+    take_trigger_orders(&mut r);
+    let first = r.game.pending_selection.as_ref().expect("the first <Raid> switch");
+    assert_eq!(first.kind, SelectionKind::OppField);
+    assert_eq!(first.valid_action_ids, vec![encode_attack(0, high.index as u16)]);
+    r.game
+        .resolve_selection(0, encode_attack(0, high.index as u16))
+        .expect("switch to HIGH");
+    take_trigger_orders(&mut r);
+
+    let low_action = encode_attack(0, low.index as u16);
+    assert!(
+        r.game
+            .pending_selection
+            .as_ref()
+            .is_none_or(|sel| !sel.valid_action_ids.contains(&low_action)),
+        "§16-23-1: the second <Raid> cannot switch to the lower-DP LOW: {:?}",
+        r.game.pending_selection
+    );
+    assert!(r.game.pending_selection.is_none(), "{:?}", r.game.pending_selection);
+    assert!(r.game.pending_attack.is_none(), "the attack resolved");
+    assert_eq!(
+        r.game.players[1].security.len(),
+        security_before,
+        "the attack was switched to a Digimon, not checked"
+    );
+    assert_eq!(r.battle_area_size(0), 0, "ATK lost the battle against HIGH");
+    assert_eq!(r.battle_area_size(1), 2, "HIGH and LOW both remain");
+}
+
+/// §16-23-4: when the opponent has several unsuspended Digimon tied for the
+/// highest DP, the activating player chooses among them. After the first
+/// `<Raid>` switched to HIGH_A, the second `<Raid>` offers exactly the other
+/// highest Digimon (HIGH_B), never the lower LOW.
+#[test]
+fn second_raid_offers_only_the_other_tied_highest_digimon() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("LOW"))
+        .add_card(card("HIGH_A"))
+        .add_card(card("HIGH_B"))
+        .add_card(card("SEC"))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _low = r.place_on_field(1, "LOW", Some(0));
+    let high_a = r.place_on_field(1, "HIGH_A", Some(0));
+    let high_b = r.place_on_field(1, "HIGH_B", Some(0));
+    r.register_effect("ATK", Arc::new(TwoRaids));
+    for h in [high_a, high_b] {
+        r.game.modifiers.add(
+            h,
+            ModifierEntry::simple(ModifierType::ChangeDp, 3000, Expiry::Permanent, 1),
+        );
+    }
+    let to_a = encode_attack(0, high_a.index as u16);
+    let to_b = encode_attack(0, high_b.index as u16);
+
+    assert_eq!(r.attack_player(atk, 1, false), AttackResult::InProgress);
+    take_trigger_orders(&mut r);
+    let first = r.game.pending_selection.as_ref().expect("the first <Raid> switch");
+    let mut offered = first.valid_action_ids.clone();
+    offered.sort_unstable();
+    assert_eq!(offered, vec![to_a, to_b], "§16-23-4: both tied Digimon offered");
+    r.game.resolve_selection(0, to_a).expect("switch to HIGH_A");
+    take_trigger_orders(&mut r);
+
+    let second = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the second <Raid> can switch to the other tied Digimon");
+    assert_eq!(second.kind, SelectionKind::OppField);
+    assert!(second.is_optional);
+    assert_eq!(second.valid_action_ids, vec![to_b]);
+}

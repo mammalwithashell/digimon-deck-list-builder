@@ -937,3 +937,154 @@ fn bt25_052_no_route_from_offcolor_traitless_lv3() {
     );
     assert_eq!(delta, 0, "refused digivolve must not spend memory");
 }
+
+// ── Section 5: [Main] declarability gate (DCGO CanUseCondition) ─────────────
+//
+// DCGO BT25_052.cs:63-80 offers this [Main] only when some [Social]/[Tool]/
+// [Game] Digimon card in the hand or in this Digimon's digivolution cards can
+// link to this Digimon with the link cost IGNORED (`CanLinkToTargetPermanent
+// (permanent, payCost: false)`: the card's [Link] requirement must be met by
+// Logimon). Owner ruling 2026-11-24: "Generally let's look to match dcgo".
+// The use accounting does not change: the declaration spends the use on every
+// declared path (no `RemoveUse` in the [Main]; TurnStateMachine records it).
+
+/// A [Social] Digimon card whose [Link] requirement asks for a [Beast] host,
+/// which Logimon (Sup./Appmon/Social/Login) is not.
+const SOCIAL_NEEDS_BEAST: &str = r#"
+card: TEST-SOCIAL-BEAST-LINK
+name: Beast Linker
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Social]
+effects:
+  - kind: link_condition
+    cost: 0
+    filter: { trait_has: Beast }
+"#;
+
+fn gate_base() -> DebugRunnerBuilder {
+    base()
+        .link_requirement("TOOL-PRICEY", 5)
+        .add_card(make_digimon("TOOL-NO-LINK", 3, 2000, 3, &["Tool"]))
+        .add_card(make_digimon("TOOL-PRICEY", 3, 2000, 3, &["Tool"]))
+        .from_dsl_yaml(SOCIAL_NEEDS_BEAST)
+        .expect("fixture compiles")
+        .deck(0, &["DECK-PAD"; 12])
+}
+
+fn main_bit(perm: PermanentHandle) -> usize {
+    (FIELD_EFFECT_START
+        + perm.index as u16 * EFFECTS_PER_PERMANENT
+        + digimon_engine::action::space::FIELD_EFFECT_SLOT_FOR_MAIN) as usize
+}
+
+fn main_offered(r: &DebugRunner, perm: PermanentHandle) -> bool {
+    digimon_engine::action::build_action_mask(&r.game, 0)[main_bit(perm)] == 1.0
+}
+
+fn uses(r: &DebugRunner, perm: PermanentHandle) -> u32 {
+    r.game.players[0].battle_area[perm.index as usize]
+        .effect_activations
+        .values()
+        .map(|&n| n as u32)
+        .sum()
+}
+
+fn linked_count(r: &DebugRunner, perm: PermanentHandle) -> usize {
+    r.game.player(0).battle_area[perm.index as usize].linked_cards.len()
+}
+
+#[test]
+fn bt25_052_main_not_offered_with_nothing_to_link() {
+    let mut r = gate_base().memory(10).start();
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    advance_to_main(&mut r);
+    assert!(!main_offered(&r, logi), "DCGO CanUseCondition: no card can link");
+    assert!(!r.game.activate_field_main(0, logi.index as usize));
+    assert_eq!(uses(&r, logi), 0, "nothing declared, nothing spent");
+}
+
+#[test]
+fn bt25_052_main_not_offered_for_a_card_without_link() {
+    let mut r = gate_base().hand(0, &["TOOL-NO-LINK"]).memory(10).start();
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    advance_to_main(&mut r);
+    assert!(
+        !main_offered(&r, logi),
+        "a [Tool] Digimon card with no [Link] can't link (Q4533; CanLinkToTargetPermanent)"
+    );
+}
+
+#[test]
+fn bt25_052_main_not_offered_when_the_link_requirement_is_not_met() {
+    let mut r = gate_base().hand(0, &["TEST-SOCIAL-BEAST-LINK"]).memory(10).start();
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    advance_to_main(&mut r);
+    assert!(
+        !main_offered(&r, logi),
+        "the [Social] card's [Link] needs a [Beast] host; Logimon is not one"
+    );
+}
+
+#[test]
+fn bt25_052_main_offered_and_links_from_hand_on_the_minimal_board() {
+    let mut r = gate_base().hand(0, &["TOOL-IN-HAND"]).memory(10).start();
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    advance_to_main(&mut r);
+    assert!(main_offered(&r, logi));
+    r.game.decode_action(main_bit(logi) as u16, 0);
+    assert_eq!(uses(&r, logi), 1, "the declaration spends the use");
+    let pick = *r
+        .pending_selection_view()
+        .expect("link pick")
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != PASS)
+        .expect("the Tool card");
+    r.execute_action(0, pick).expect("link it");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert_eq!(linked_count(&r, logi), 1);
+    assert!(!main_offered(&r, logi), "[Once Per Turn]");
+}
+
+#[test]
+fn bt25_052_main_offered_for_a_linkable_digivolution_card() {
+    let mut r = gate_base().memory(10).start();
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    r.push_source(logi, "TOOL-IN-HAND");
+    advance_to_main(&mut r);
+    assert!(main_offered(&r, logi), "this Digimon's digivolution cards count");
+    r.game.decode_action(main_bit(logi) as u16, 0);
+    let pick = *r
+        .pending_selection_view()
+        .expect("link pick")
+        .valid_action_ids
+        .iter()
+        .find(|&&a| a != PASS)
+        .expect("the Tool source");
+    r.execute_action(0, pick).expect("link it");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert_eq!(linked_count(&r, logi), 1);
+}
+
+/// DCGO checks the offer with `payCost: false`: a card whose (reduced) link
+/// cost can't be paid still makes the [Main] declarable. The body then
+/// checks the payment (`payCost: true`), links nothing, and the declared use
+/// stays spent (no `RemoveUse` in BT25_052.cs's [Main]).
+#[test]
+fn bt25_052_main_offer_ignores_the_link_cost_and_the_declared_use_stays_spent() {
+    let mut r = gate_base().hand(0, &["TOOL-PRICEY"]).memory(10).start();
+    let logi = r.place_on_field(0, CARD_ID, Some(0));
+    advance_to_main(&mut r);
+    r.game.set_memory(-8);
+    assert!(
+        r.game.activate_field_main(0, logi.index as usize),
+        "declarable: the link cost is ignored for the offer"
+    );
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert_eq!(linked_count(&r, logi), 0, "4 can't be paid from -8: nothing linked");
+    assert_eq!(uses(&r, logi), 1, "the declared use stays spent");
+}

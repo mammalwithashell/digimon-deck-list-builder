@@ -52,10 +52,21 @@ effects:
               - can_play_or_use_from_effect: true
               - affordable_with_cost: { reduce: 2 }
           prompt: "Play or use 1 [SW] card from your hand with the cost reduced by 2"
-      - play_or_use_from_hand:
-          of: you
-          hand_index: sw_pick
-          cost_delta: { reduce: 2 }
+      # [Once Per Turn]: a passed pick KEEPS the use, a picked card spends it
+      # (DCGO EX12_043.cs:179 `if (!isUsed) activateClass.RemoveUse();`, isUsed
+      # set at :95 before the play). Owner ruling 2026-11-24 "Match dcgo
+      # on the main use"; the owner chose DCGO parity over the CR 4.3
+      # 15-14-1-4 / 15-8-4-1/-2 reading. The main-declaration loop guard
+      # withholds the identical declaration until the state changes.
+      - if:
+          condition: { binding_present: sw_pick }
+          then:
+            - play_or_use_from_hand:
+                of: you
+                hand_index: sw_pick
+                cost_delta: { reduce: 2 }
+          else:
+            - refund_opt: {}
 
   - scope: inherited
     kind: grant_keyword

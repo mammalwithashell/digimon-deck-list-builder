@@ -335,13 +335,10 @@ fn bt13_075_would_leave_returns_source_to_deck_bottom_and_prevents() {
         "the cost is a digivolution-source pick, got {:?}",
         cost_view.kind
     );
-    assert_eq!(
-        cost_view.valid_action_ids.len(),
-        1,
-        "only the Royal Knight source is a legal cost"
-    );
+    let picks = non_pass(&cost_view.valid_action_ids);
+    assert_eq!(picks.len(), 1, "only the Royal Knight source is a legal cost");
     runner
-        .execute_action(0, cost_view.valid_action_ids[0])
+        .execute_action(0, picks[0])
         .expect("return the Royal Knight source");
     runner.auto_resolve().expect("finish replacement");
 
@@ -488,8 +485,89 @@ fn bt13_075_would_leave_only_protects_this_digimon_audit() {
         .pending_selection_view()
         .expect("source-return cost selection installs");
     runner
-        .execute_action(0, cost_view.valid_action_ids[0])
+        .execute_action(0, non_pass(&cost_view.valid_action_ids)[0])
         .expect("return the Royal Knight source");
     runner.auto_resolve().expect("finish replacement");
     assert!(permanent_exists(&runner, 0, "BT13-075"), "Alphamon stays");
+}
+
+/// The source picks of a selection, without PASS.
+fn non_pass(ids: &[u16]) -> Vec<u16> {
+    ids.iter().copied().filter(|&a| a != PASS).collect()
+}
+
+/// Accept the replacement, then decline the source pick. DCGO BT13_075.cs: the
+/// accept (SetUpActivateClass isOptional) runs OnProcessCallbuck, which
+/// registers the [Once Per Turn] use before the body; the source picker has
+/// canNoSelect: () => true ("No Selection"), and choosing nothing leaves
+/// `returnedToLibrary` false, so the removal goes through. The script has no
+/// `RemoveUse()`, so the use stays spent (owner ruling 2026-11-24, "Generally
+/// let's look to match dcgo"). Alphamon leaves with its source, and the use
+/// recorded at the accept is not given back: it is visible on the carrier
+/// while the pick is pending, and the clause has no `refund_opt`.
+#[test]
+fn bt13_075_would_leave_accept_then_decline_source_lets_it_leave_and_spends_opt() {
+    use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledStep};
+
+    let mut runner = alpha_runner()
+        .add_card(make_digimon("RK-SRC", 3000, 4, &["Royal Knight"]))
+        .start();
+    let alpha = runner.place_stack(0, &["RK-SRC", "BT13-075"]);
+    let deck_before = runner.game.players[0].deck.len();
+
+    runner
+        .game
+        .delete_permanent_with_cause(alpha, ReplacementCause::OpponentEffect);
+    let view = runner
+        .pending_selection_view()
+        .expect("would-leave replacement offers an accept prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept the leave-prevention replacement");
+
+    let cost_view = runner
+        .pending_selection_view()
+        .expect("source-return pick installs");
+    assert!(
+        matches!(cost_view.kind, SelectionKind::SourceMulti { .. }),
+        "got {:?}",
+        cost_view.kind
+    );
+    assert!(
+        cost_view.is_optional && cost_view.valid_action_ids.contains(&PASS),
+        "the source pick is declinable after accepting (DCGO canNoSelect: true)"
+    );
+    let uses: u32 = runner.game.players[0].battle_area[alpha.index as usize]
+        .effect_activations
+        .values()
+        .map(|&n| u32::from(n))
+        .sum();
+    assert_eq!(uses, 1, "the [Once Per Turn] is recorded at the accept");
+
+    runner.execute_action(0, PASS).expect("No Selection");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+
+    assert!(
+        !permanent_exists(&runner, 0, "BT13-075"),
+        "no source returned: the removal goes through"
+    );
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        deck_before,
+        "nothing returned to the deck"
+    );
+
+    let compiled = runner.compiled_card("BT13-075").expect("compiled card");
+    let replacement_refunds = compiled.effects.iter().any(|c| match c {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { process, .. }) => {
+            format!("{process:?}").contains("RefundOpt")
+        }
+        _ => false,
+    });
+    assert!(
+        !replacement_refunds,
+        "DCGO has no RemoveUse on this clause: the declined pick keeps the use spent"
+    );
+    let _ = CompiledStep::RefundOpt;
 }

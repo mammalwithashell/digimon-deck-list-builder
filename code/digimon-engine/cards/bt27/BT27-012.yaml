@@ -1,0 +1,45 @@
+card: BT27-012
+name: SkullMeramon
+kind: digimon
+level: 5
+color: [red, purple]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Data
+traits: [Flame]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, any_color: true, trait_has: Flame }
+    cost: 3
+
+effects:
+  - text: "[Main] [Once Per Turn] By paying 1 cost, you may activate 1 of this Digimon's [On Deletion] effects."
+    when: main_on_field
+    once_per_turn: true
+    process:
+      - lose_memory: 1
+      - refire_effect: { source: source, timing: on_deletion, optional: true, target_attribution: true }
+  - text: "[On Deletion] Delete 1 of your opponent's Digimon with the lowest level."
+    when: on_deletion
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter:
+            kind: digimon
+            level_matches_aggregate: { selector: lowest_level, of: opponent }
+          prompt: "Delete an opponent's Digimon with the lowest level"
+      - delete_permanent: { target: victim }
+  - text: "[On Deletion] Trash your opponent's top security card."
+    scope: inherited
+    when: on_deletion
+    process:
+      - trash_top_security: { of: opponent }

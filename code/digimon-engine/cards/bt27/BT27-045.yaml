@@ -1,0 +1,50 @@
+card: BT27-045
+name: Liollmon
+kind: digimon
+level: 3
+color: [green, yellow]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Vaccine
+traits: [Holy Beast, ACCEL]
+also_treated_as: ["Liollmon Leomon"]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 1
+  - kind: digivolve
+    from: { any_color: true, any_of: [{ name_is: Frimon }, { name_is: Kyaromon }, { level_eq: 2, trait_has: ACCEL }] }
+    cost: 0
+
+effects:
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Leomon] in its name and 1 [Unique], [Boss] or [ACCEL] trait card among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - optional: false
+              filter: { name_contains: Leomon }
+              to: hand
+              max: 1
+              prompt: "Add a card with Leomon in its name"
+            - optional: false
+              filter: { any_of: [{ trait_has: Unique }, { trait_has: Boss }, { trait_has: ACCEL }] }
+              to: hand
+              max: 1
+              prompt: "Add a Unique, Boss, or ACCEL trait card"
+          remainder: bottom
+  - text: "[Your Turn] [Once Per Turn] When this Digimon wins a battle, gain 1 memory."
+    scope: inherited
+    when: on_ally_won_battle
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if: { event_winner_is_source: true }
+    process:
+      - gain_memory: 1

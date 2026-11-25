@@ -131,7 +131,12 @@ effects:
   # DCGO EX12_017.cs (Counter region): the hand pick lists only cards that can
   # DNA right now (`CanPlayJogress(true)`), the pair is the card's DNA
   # requirement, and the redirect is offered whether or not a DNA happened.
-  # If neither the DNA nor the redirect happened, `RemoveUse` refunds the OPT.
+  # If neither the DNA nor the redirect happened, `RemoveUse` refunds the OPT:
+  # "may DNA digivolve ... Then, you may change the attack target" is the
+  # owner-decided W13 shape (qa/rules/mechanics-gaps-2026-10.md W13), where
+  # both halves declined keeps the use; the outer accept is DCGO's
+  # (isOptional: true), not printed. Passing the redirect pick continues the
+  # clause (`continue_on_decline`, DCGO canNoSelect) so the refund is reached.
   # Audit 2026-11-10 (user-confirmed): the redirect used to sit inside the DNA
   # branch, and the picks offered cards and pairs that could not DNA.
   - when: counter
@@ -182,12 +187,16 @@ effects:
       - select_own_permanent:
           bind_as: redirect_target
           optional: true
+          continue_on_decline: true
           filter: { kind: digimon }
           prompt: "Change the attack target to 1 of your Digimon"
-      - redirect_attack_target:
-          new_target: redirect_target
-          optional: true
-          prompt: "Change the attack target to 1 of your Digimon"
+      - if:
+          condition: { binding_present: redirect_target }
+          then:
+            - redirect_attack_target:
+                new_target: redirect_target
+                optional: true
+                prompt: "Change the attack target to 1 of your Digimon"
       # DCGO `if (!isUsed) activateClass.RemoveUse()`: nothing happened.
       - if:
           condition:

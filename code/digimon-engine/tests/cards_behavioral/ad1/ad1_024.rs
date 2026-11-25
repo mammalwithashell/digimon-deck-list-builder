@@ -102,7 +102,7 @@ fn fighter_mode_runner(extra: &[CardData]) -> DebugRunner {
 }
 
 /// Resolve the currently pending selection by its first non-PASS action.
-fn pick_first(runner: &mut DebugRunner) {
+fn ad1_024_pick_first(runner: &mut DebugRunner) {
     let (player, action) = {
         let p = runner
             .game
@@ -310,7 +310,7 @@ fn ad1_024_wd_bounces_lowest_dp_opp_to_deck_bottom() {
         "the bounce is mandatory (DCGO canNoSelect: false) — PASS must not be legal"
     );
 
-    pick_first(&mut runner);
+    ad1_024_pick_first(&mut runner);
 
     assert_eq!(
         runner.battle_area_size(1),
@@ -418,7 +418,7 @@ fn ad1_024_shared_opt_blocks_wa_after_wd_same_turn() {
         "digivolve must succeed"
     );
     runner.game.drain_effect_queue();
-    pick_first(&mut runner); // resolve the WD bounce — shared OPT consumed
+    ad1_024_pick_first(&mut runner); // resolve the WD bounce — shared OPT consumed
 
     // The digivolve ALSO fires AD1-024's own [All Turns] observer (its own
     // digivolve is a "Digimon digivolved" event — DCGO OnEnterFieldAnyone +
@@ -570,11 +570,34 @@ fn ad1_024_all_turns_by_effect_play_bottom_decks_a_suspended_opp() {
     let _ = opp;
 }
 
-/// With NO opponent Digimon at all, accepting the optional sub-block still
-/// unsuspends AD1-024 (DCGO's standalone unsuspend offer branch).
+/// Assert the pending selection is DCGO's standalone "Will you unsuspend this
+/// card?" Yes/No (AD1_024.cs else-branch) and answer it: `yes` picks branch 0.
+fn answer_standalone_unsuspend(runner: &mut DebugRunner, yes: bool) {
+    let p = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("the standalone \"Will you unsuspend this card?\" Yes/No must install");
+    let choices = p
+        .effect_choices
+        .as_ref()
+        .expect("the standalone unsuspend offer is a Yes/No effect choice, not a field pick");
+    assert_eq!(choices.len(), 2, "Yes and No");
+    runner
+        .execute_branch(if yes { 0 } else { 1 })
+        .expect("Yes/No resolves");
+    runner.game.drain_effect_queue();
+}
+
+/// With NO opponent Digimon at all, DCGO asks "Will you unsuspend this
+/// card?" (AD1_024.cs else-branch). Yes unsuspends AD1-024 and spends the
+/// [Once Per Turn] (`executed = true`).
 #[test]
 fn ad1_024_all_turns_standalone_unsuspend_when_no_opp_digimon() {
-    let mut runner = fighter_mode_runner(&[friendly_filler("AD1-024-FILLER")]);
+    let mut runner = fighter_mode_runner(&[
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
 
     let fighter = runner.place_on_field(0, "AD1-024", Some(0));
     {
@@ -585,13 +608,51 @@ fn ad1_024_all_turns_standalone_unsuspend_when_no_opp_digimon() {
     let filler = runner.place_on_field(0, "AD1-024-FILLER", None);
     runner.fire_play_event_triggers(0, filler.index as usize, false, false);
 
-    let _ = runner.auto_resolve();
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
+    answer_standalone_unsuspend(&mut runner, true);
 
     let fighter_perm = &runner.game.players[0].battle_area[fighter.index as usize];
     assert!(
         !fighter_perm.is_suspended,
-        "with no opponent Digimon, accepting the block must still unsuspend AD1-024 \
+        "with no opponent Digimon, Yes must unsuspend AD1-024 \
          (DCGO standalone unsuspend branch)"
+    );
+
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "Yes executed the unsuspend: the [Once Per Turn] is used"
+    );
+}
+
+/// Self suspended, no opponent Digimon: answering No to DCGO's "Will you
+/// unsuspend this card?" leaves AD1-024 suspended and, with nothing executed,
+/// DCGO `RemoveUse()`s -- the observer fires again on the next play.
+#[test]
+fn ad1_024_all_turns_self_suspended_standalone_no_keeps_opt() {
+    let mut runner = fighter_mode_runner(&[
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
+
+    let fighter = runner.place_on_field(0, "AD1-024", Some(0));
+    runner.game.players[0].battle_area[fighter.index as usize].is_suspended = true;
+
+    let first = runner.place_on_field(0, "AD1-024-FILLER", None);
+    runner.fire_play_event_triggers(0, first.index as usize, false, false);
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
+    answer_standalone_unsuspend(&mut runner, false);
+
+    assert!(
+        runner.game.players[0].battle_area[fighter.index as usize].is_suspended,
+        "No: AD1-024 stays suspended"
+    );
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "No executed nothing: DCGO RemoveUse keeps the [Once Per Turn]"
     );
 }
 
@@ -624,7 +685,7 @@ fn ad1_024_all_turns_is_once_per_turn() {
     );
 }
 
-// ─── SECTION 4 — [All Turns] decline + OPT refund (DCGO RemoveUse) ──────────
+// ─── SECTION 4 — [All Turns] nothing executed keeps the OPT (W13) ──────────
 
 /// Decline the selection currently pending (PASS on an optional selection).
 fn decline_pending(runner: &mut DebugRunner) {
@@ -683,10 +744,18 @@ fn ad1_024_all_turns_decline_outer_confirm_refunds_opt() {
     );
 }
 
-/// Accepting the outer confirm but then declining every sub-pick also refunds
-/// the OPT (DCGO's executed-flag: nothing ran → RemoveUse).
+/// The printed effect is "you may suspend ... Then, ... you may return ..." --
+/// the owner-decided W13 shape (qa/rules/mechanics-gaps-2026-10.md W13,
+/// 2026-10-21: "DCGO has the Dianamon/GraceNovamon effect correct"): when
+/// BOTH "you may" halves are declined nothing executed, the effect was not
+/// activated, and the [Once Per Turn] is not used (CR 4.3 15-14-1-4 is silent
+/// on declined optional parts; Q1818). The outer Yes/No is not printed -- it
+/// is DCGO's always-shown skippable prompt -- so accepting it and then
+/// declining both halves is still "both halves declined": DCGO's
+/// executed-flag RemoveUse refunds the use, and so must we. A second
+/// qualifying play this turn offers the observer again.
 #[test]
-fn ad1_024_all_turns_accept_then_decline_everything_refunds_opt() {
+fn ad1_024_all_turns_accept_then_decline_everything_keeps_opt() {
     let mut runner = fighter_mode_runner(&[
         opp_digimon("AD1-024-OPP-A", "OppA", 5000),
         friendly_filler("AD1-024-FILLER"),
@@ -699,7 +768,7 @@ fn ad1_024_all_turns_accept_then_decline_everything_refunds_opt() {
     let first = runner.place_on_field(0, "AD1-024-FILLER", None);
     runner.fire_play_event_triggers(0, first.index as usize, false, false);
 
-    pick_first(&mut runner); // accept the outer confirm
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
                              // The suspend pick is DECLINABLE (DCGO canNoSelect: true) — decline it.
     assert!(
         runner.game.pending_selection.is_some(),
@@ -716,14 +785,73 @@ fn ad1_024_all_turns_accept_then_decline_everything_refunds_opt() {
     let opp_perm = &runner.game.players[1].battle_area[opp.index as usize];
     assert!(!opp_perm.is_suspended, "nothing may have been suspended");
 
-    // OPT refunded: a second qualifying play prompts again.
+    // Both halves declined (W13): the OPT is not used, so a second
+    // qualifying play this turn offers the observer again.
     let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
     runner.fire_play_event_triggers(0, second.index as usize, false, false);
     assert!(
         runner.game.pending_selection.is_some(),
-        "accept-then-decline-everything must refund the OPT (DCGO executed-flag RemoveUse)"
+        "both \"you may\" halves declined must keep the [Once Per Turn] (W13): the observer must fire again on the next qualifying play this turn"
     );
     let _ = fighter;
+}
+
+/// Nothing possible: no opponent Digimon to suspend, this Digimon already
+/// unsuspended, and not played by an effect. DCGO (AD1_024.cs else-branch)
+/// still asks "Will you unsuspend this card?" whatever this Digimon's state.
+/// Answering No executes nothing and DCGO `RemoveUse()`s: the use is kept
+/// (owner ruling 2026-11-24, "Generally let's look to match dcgo"), so a
+/// second qualifying play this turn offers the observer again.
+#[test]
+fn ad1_024_all_turns_nothing_possible_standalone_no_keeps_opt() {
+    let mut runner = fighter_mode_runner(&[
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
+
+    let fighter = runner.place_on_field(0, "AD1-024", Some(0));
+    assert!(!runner.game.players[0].battle_area[fighter.index as usize].is_suspended);
+
+    let first = runner.place_on_field(0, "AD1-024-FILLER", None);
+    runner.fire_play_event_triggers(0, first.index as usize, false, false);
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
+    answer_standalone_unsuspend(&mut runner, false);
+    assert!(runner.game.pending_selection.is_none());
+
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "No on the nothing-possible board: DCGO RemoveUse keeps the [Once Per Turn]"
+    );
+}
+
+/// Same nothing-possible board, but answering Yes: DCGO's unsuspend of an
+/// already-unsuspended Digimon does nothing, yet `executed = true`, so the use
+/// is spent (CR 4.3 15-14-1-4 agrees: the effect was activated). A second
+/// qualifying play this turn offers nothing.
+#[test]
+fn ad1_024_all_turns_nothing_possible_standalone_yes_spends_opt() {
+    let mut runner = fighter_mode_runner(&[
+        friendly_filler("AD1-024-FILLER"),
+        friendly_filler("AD1-024-FILLER-2"),
+    ]);
+
+    let fighter = runner.place_on_field(0, "AD1-024", Some(0));
+    assert!(!runner.game.players[0].battle_area[fighter.index as usize].is_suspended);
+
+    let first = runner.place_on_field(0, "AD1-024-FILLER", None);
+    runner.fire_play_event_triggers(0, first.index as usize, false, false);
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
+    answer_standalone_unsuspend(&mut runner, true);
+    assert!(!runner.game.players[0].battle_area[fighter.index as usize].is_suspended);
+
+    let second = runner.place_on_field(0, "AD1-024-FILLER-2", None);
+    runner.fire_play_event_triggers(0, second.index as usize, false, false);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "Yes on the nothing-possible board spends the [Once Per Turn]"
+    );
 }
 
 /// Declining the suspend pick does NOT skip the by-effect bounce leg — in DCGO
@@ -755,7 +883,7 @@ fn ad1_024_all_turns_declined_pick_still_offers_byeffect_bounce() {
     let first = runner.place_on_field(0, "AD1-024-FILLER", None);
     runner.fire_play_event_triggers(0, first.index as usize, true, false);
 
-    pick_first(&mut runner); // accept the outer confirm
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
     decline_pending(&mut runner); // decline the suspend pick
 
     // The by-effect bounce leg must still offer the suspended OppB.
@@ -776,7 +904,7 @@ fn ad1_024_all_turns_declined_pick_still_offers_byeffect_bounce() {
         "only the pre-suspended OppB qualifies for the by-effect bounce; got {}",
         non_pass.len()
     );
-    pick_first(&mut runner);
+    ad1_024_pick_first(&mut runner);
 
     assert_eq!(
         runner.battle_area_size(1),

@@ -830,8 +830,16 @@ fn play_security_card_cancelled_commit_emits_no_removal() {
 }
 #[test]
 fn play_security_card_rejected_commit_emits_no_removal() {
+    // The play verb's own refusal is what this measures, so the pick authors a
+    // leaf that admits every Tamer: the DSL lowering
+    // (`digimon_dsl::play_candidates`) would otherwise drop the locked Tamer
+    // from the menu before the commit.
+    let play = PLAY.replace(
+        "filter: { kind: tamer }",
+        "filter: { kind: tamer, any_of: [{can_play_from_effect_without_cost: true}, {not: {can_play_from_effect_without_cost: true}}] }",
+    );
     for (witness, player) in [(LOSE, 0), (OWN_REMOVAL, 0), (OPP_REMOVAL, 1)] {
-        let mut r = runner(PLAY, &[witness], &["TAM", "DIG"], &[]);
+        let mut r = runner(&play, &[witness], &["TAM", "DIG"], &[]);
         r.game.memory = 5;
         r.place_on_field(player, "OBS", Some(0));
         r.game.modifiers.add_player_modifier(

@@ -242,6 +242,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_target_level,
             extra,
             can_play_from_effect_without_cost,
+            link_requirement_met_by_self,
             can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
             can_play_to_breeding_from_trash,
@@ -1121,6 +1122,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         );
         extra.walk(c, &format!("{}.extra", path), "UNCLASSIFIED_STRING");
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+        link_requirement_met_by_self.walk(c, &format!("{}.link_requirement_met_by_self", path), "UNCLASSIFIED_STRING");
         can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_trash.walk(c, &format!("{}.can_play_to_breeding_from_trash", path), "UNCLASSIFIED_STRING");
@@ -2017,6 +2019,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             source_is_cost_target_permanent,
             cost_target_from_hand,
             can_play_from_effect_without_cost,
+            link_requirement_met_by_self,
             can_play_or_use_from_effect,
             can_play_to_breeding_from_hand,
             can_play_to_breeding_from_trash,
@@ -2902,6 +2905,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             "UNCLASSIFIED_STRING",
         );
             can_play_from_effect_without_cost.walk(c, &format!("{}.can_play_from_effect_without_cost", path), "UNCLASSIFIED_STRING");
+        link_requirement_met_by_self.walk(c, &format!("{}.link_requirement_met_by_self", path), "UNCLASSIFIED_STRING");
         can_play_or_use_from_effect.walk(c, &format!("{}.can_play_or_use_from_effect", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_hand.walk(c, &format!("{}.can_play_to_breeding_from_hand", path), "UNCLASSIFIED_STRING");
         can_play_to_breeding_from_trash.walk(c, &format!("{}.can_play_to_breeding_from_trash", path), "UNCLASSIFIED_STRING");
