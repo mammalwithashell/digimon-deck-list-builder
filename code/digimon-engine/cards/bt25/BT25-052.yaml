@@ -31,10 +31,15 @@
 #      Digimon card from your hand or this Digimon's digivolution cards to
 #      this Digimon with the cost reduced by 1."
 #      → main_on_field once_per_turn + link_cards from [hand, self_sources],
-#      cost: { reduce: 1 } (printed "-1"; the cards this step links carry a
-#      base link cost of 0 in this context, so it pays 0 today — the reduce
-#      form is threaded faithfully for a future non-zero base, see step.rs
-#      LinkCardsCost and BT25-089 precedent).
+#      cost: { reduce: 1 } (printed "-1": the linked card's own link cost
+#      minus 1, DCGO GrantedReduceLinkCostClass(1); see step.rs LinkCardsCost
+#      and the BT25-089 precedent).
+#      Offer gate: DCGO BT25_052.cs:63-80 CanUseCondition offers the [Main]
+#      only when a [Social]/[Tool]/[Game] Digimon card in the hand or under
+#      this Digimon can link to it with the cost ignored
+#      (`CanLinkToTargetPermanent(permanent, payCost: false)`) → `condition:`
+#      with `link_requirement_met_by_self`. The use is spent on every declared
+#      path (no RemoveUse in this [Main]); no refund_opt.
 #   7. [Your Turn][Once Per Turn] "When this Digimon gets linked, if you have
 #      1 or fewer Tamers, you may play 1 [Kazuki & Itsuki] from your hand
 #      without paying the cost."
@@ -106,6 +111,39 @@ effects:
   - when: main_on_field
     once_per_turn: true
     summary: "[Main][OPT] You may link 1 [Social]/[Tool]/[Game] Digimon card from hand or digivolution cards to this Digimon (-1)"
+    # DCGO BT25_052.cs:63-80 `CanUseCondition`: not offered unless a
+    # [Social]/[Tool]/[Game] Digimon card in the hand or among this Digimon's
+    # digivolution cards can link to this Digimon, link cost ignored
+    # (`CanLinkToTargetPermanent(permanent, payCost: false)`; the card's [Link]
+    # requirement must be met, Q4533). Owner ruling 2026-11-24: "Generally
+    # let's look to match dcgo". The body keeps the payment check (DCGO
+    # `payCost: true`), so a declared [Main] whose card can't be paid links
+    # nothing and keeps the use spent, as DCGO does (no RemoveUse here).
+    condition:
+      any_of:
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              all_of:
+                - kind: digimon
+                - any_of:
+                    - trait_has: Social
+                    - trait_has: Tool
+                    - trait_has: Game
+                - link_requirement_met_by_self: true
+            n: 1
+        - self_source_count:
+            filter:
+              all_of:
+                - kind: digimon
+                - any_of:
+                    - trait_has: Social
+                    - trait_has: Tool
+                    - trait_has: Game
+                - link_requirement_met_by_self: true
+            op: gte
+            value: 1
     process:
       - link_cards:
           from: [hand, self_sources]
