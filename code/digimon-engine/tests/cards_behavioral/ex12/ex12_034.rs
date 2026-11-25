@@ -172,7 +172,7 @@ fn ex12_034_leave_accepted_and_card_played_spends_once_per_turn() {
     let sel = runner.pending_selection().expect("hand pick pending");
     let (player, pick) = (sel.selecting_player, sel.valid_action_ids[0]);
     runner.execute_action(player, pick).expect("play SW-5");
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(field_contains(&runner, 0, "SW-5"), "SW-5 was played");
 
     delete_own(&mut runner, "VICTIM-B");
@@ -191,7 +191,7 @@ fn ex12_034_leave_declined_keeps_once_per_turn() {
     let (mut runner, _) = leave_setup(&["SW-5"]);
     delete_own(&mut runner, "VICTIM-A");
     runner.decline_optional_trigger().expect("decline the replacement");
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(!field_contains(&runner, 0, "VICTIM-A"), "the first Digimon left");
 
     delete_own(&mut runner, "VICTIM-B");
@@ -386,7 +386,7 @@ fn ex12_034_leave_dont_play_with_only_unplayable_candidates_spends_once_per_turn
     delete_own(&mut runner, "VICTIM-A");
     runner.accept_optional_trigger().expect("accept the replacement");
     assert!(!choice_labels(&runner).contains(&"Hand".to_string()));
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(!field_contains(&runner, 0, "VICTIM-A"), "VICTIM-A left");
     assert!(super::support::hand_contains(&runner, 0, "SW-5"));
 

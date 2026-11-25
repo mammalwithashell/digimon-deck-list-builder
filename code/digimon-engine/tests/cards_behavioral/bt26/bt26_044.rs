@@ -325,7 +325,7 @@ fn pass_legal(r: &DebugRunner) -> bool {
         == 1.0
 }
 
-fn accept_evade(r: &mut DebugRunner) {
+fn bt26_044_accept_evade(r: &mut DebugRunner) {
     pick_replacement(r, true);
     r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
         .expect("accept <Evade>");
@@ -352,7 +352,7 @@ fn bt26_044_inherited_outer_decline_keeps_opt() {
     delete_and_pick_the_save(&mut r, carrier);
     r.execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline the save");
-    accept_evade(&mut r);
+    bt26_044_accept_evade(&mut r);
     assert_eq!(sources(&r, t), 2, "nothing trashed");
     let carrier = carrier_handle(&r);
     assert!(
@@ -378,14 +378,14 @@ fn bt26_044_inherited_accept_then_decline_cost_keeps_opt() {
     r.execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline the cost");
     assert_eq!(sources(&r, t), 2, "nothing trashed");
-    accept_evade(&mut r);
+    bt26_044_accept_evade(&mut r);
     let carrier = carrier_handle(&r);
     assert!(
         delete_and_expect_replacement(&mut r, carrier),
         "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
     );
     accept_and_pay_with(&mut r, t);
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(field_ids(&r, 0).contains(&"DS6".to_string()), "saved this time");
     assert_eq!(sources(&r, t), 1, "one face-down card paid");
 }
@@ -402,7 +402,7 @@ fn bt26_044_inherited_declined_cost_lets_carrier_leave() {
     assert!(pass_legal(&r), "the Tamer pick may be declined after the accept");
     r.execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline the cost");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!field_ids(&r, 0).contains(&"DS6".to_string()), "not paid: the carrier leaves");
     // The carrier left, so the Tamer moved down a slot.
     let _ = t;
@@ -421,14 +421,14 @@ fn bt26_044_inherited_paid_spends_opt() {
     let t = tamer_with_face_down(&mut r, 0, "TAMER", 2);
     assert!(delete_and_expect_replacement(&mut r, carrier));
     accept_and_pay_with(&mut r, t);
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(sources(&r, t), 1);
     let carrier = carrier_handle(&r);
     assert!(
         !delete_and_expect_replacement(&mut r, carrier),
         "spent: not offered again this turn though a face-down card remains"
     );
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!field_ids(&r, 0).contains(&"DS6".to_string()));
 }
 
@@ -441,7 +441,7 @@ fn bt26_044_inherited_not_offered_without_a_face_down_tamer_card() {
         !delete_and_expect_replacement(&mut r, carrier),
         "no face-down card under a Tamer: not offered (DCGO CanActivateCondition)"
     );
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!field_ids(&r, 0).contains(&"DS6".to_string()));
 }
 

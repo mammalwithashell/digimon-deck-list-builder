@@ -121,7 +121,7 @@ fn bt26_055_counter_doing_nothing_keeps_once_per_turn() {
     fire(&mut r, EffectTiming::CounterEffect, giro);
     pass(&mut r, 0); // place nothing
     r.execute_branch(1).expect("No");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(field_ids(&r, 1), vec!["OPPA".to_string()]);
     assert_eq!(r.hand_size(0), 1, "nothing was placed");
     fire(&mut r, EffectTiming::CounterEffect, giro);
@@ -131,7 +131,7 @@ fn bt26_055_counter_doing_nothing_keeps_once_per_turn() {
     );
     pass(&mut r, 0);
     r.execute_branch(1).expect("No");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     fire(&mut r, EffectTiming::OnPlay, giro);
     assert!(
         r.pending_selection_view().is_some_and(|v| v.is_optional),
@@ -151,7 +151,7 @@ fn bt26_055_counter_placing_spends_once_per_turn_for_every_timing() {
     fire(&mut r, EffectTiming::CounterEffect, giro);
     pick_hand(&mut r, 0, "FILLER");
     r.execute_branch(1).expect("No");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(sources(&r, giro), 1, "a card was placed");
     fire(&mut r, EffectTiming::CounterEffect, giro);
     assert!(r.pending_selection_view().is_none(), "[Counter] spent");
@@ -173,7 +173,7 @@ fn bt26_055_on_play_placing_spends_the_counter_timing() {
     fire(&mut r, EffectTiming::OnPlay, giro);
     pick_hand(&mut r, 0, "FILLER");
     r.execute_branch(1).expect("No");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     fire(&mut r, EffectTiming::CounterEffect, giro);
     assert!(
         r.pending_selection_view().is_none(),
@@ -195,15 +195,17 @@ fn bt26_055_empty_hand_still_offers_the_delete_half() {
     let v = r.pending_selection_view().expect("the delete half is offered");
     assert!(v.prompt.contains("Delete"), "{:?}", v.prompt);
     r.execute_branch(1).expect("No");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     fire(&mut r, EffectTiming::CounterEffect, giro);
     assert!(
         r.pending_selection_view().is_some(),
         "declining the possible half kept the [Once Per Turn]"
     );
     r.execute_branch(0).expect("Yes");
-    pick_first(&mut r, 0);
-    let _ = r.auto_resolve();
+    let v = r.pending_selection_view().expect("the [Ver.3] pick: Giromon is the only one");
+    assert_eq!(v.valid_action_ids.len(), 1, "{v:?}");
+    r.execute_action(0, v.valid_action_ids[0]).unwrap();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(field_ids(&r, 0).is_empty(), "Giromon deleted itself");
 }
 
@@ -243,7 +245,7 @@ fn bt26_055_counter_timing_fires() {
 /// Answer every remaining decision of the current attack (PASS where
 /// optional, else the first legal action) and report whether Giromon's
 /// [Counter] (`declare`) was offered again in the counter timing.
-fn finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
+fn bt26_055_finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
     use digimon_engine::action::space::PASS;
     use digimon_engine::enums::GamePhase;
     let mut reoffered = false;
@@ -257,7 +259,7 @@ fn finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
         let action = if v.valid_action_ids.contains(&PASS) { PASS } else { v.valid_action_ids[0] };
         r.execute_action(v.selecting_player, action).unwrap();
     }
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     reoffered
 }
 
@@ -289,7 +291,7 @@ fn bt26_055_real_counter_declare_and_pass_closes_the_window_and_keeps_the_use() 
     pass(&mut r, 1); // place nothing
     r.execute_branch(1).expect("Don't delete");
     assert!(
-        !finish_attack(&mut r, declare),
+        !bt26_055_finish_attack(&mut r, declare),
         "CR 4.3 11-3-2: one [Counter] per attack, so the declaration is not offered again"
     );
     assert!(r.game.pending_attack.is_none(), "the first attack finished");
@@ -302,13 +304,13 @@ fn bt26_055_real_counter_declare_and_pass_closes_the_window_and_keeps_the_use() 
     r.execute_action(1, declare).unwrap();
     pick_hand(&mut r, 1, "FILLER");
     r.execute_branch(1).expect("Don't delete");
-    finish_attack(&mut r, declare);
+    bt26_055_finish_attack(&mut r, declare);
     assert_eq!(sources(&r, giro), 1, "a card was placed");
 
     r.game.players[0].battle_area[first.index as usize].is_suspended = false;
     let security_before = r.security_count(1);
     assert_ne!(r.attack_player(first, 1, false), digimon_engine::combat::AttackResult::Invalid);
-    finish_attack(&mut r, declare);
+    bt26_055_finish_attack(&mut r, declare);
     assert_eq!(r.security_count(1), security_before - 1, "the third attack happened");
     assert!(
         !(r.current_phase() == GamePhase::CounterTiming
@@ -330,7 +332,7 @@ fn bt26_055_two_copies_have_separate_uses_and_the_use_resets_at_turn_change() {
     fire(&mut r, EffectTiming::CounterEffect, a);
     pick_hand(&mut r, 0, "FILLER");
     r.execute_branch(1).expect("Don't delete");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(sources(&r, a), 1, "copy A placed a card");
     fire(&mut r, EffectTiming::CounterEffect, a);
     assert!(r.pending_selection_view().is_none(), "copy A's use is spent");
@@ -341,9 +343,9 @@ fn bt26_055_two_copies_have_separate_uses_and_the_use_resets_at_turn_change() {
     );
     pass(&mut r, 0);
     r.execute_branch(1).expect("Don't delete");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     r.end_turn();
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     fire(&mut r, EffectTiming::CounterEffect, a);
     assert!(
         r.pending_selection_view().is_some(),

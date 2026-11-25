@@ -501,7 +501,7 @@ fn ex11_071_security_plays_itself_without_paying_cost() {
     let a = r.place_on_field(0, "ATTACKER", Some(0));
     let mem = r.memory();
     r.attack_player(a, 1, false);
-    r.auto_resolve().expect("resolve security play");
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(r.game.players[1]
         .battle_area
         .iter()

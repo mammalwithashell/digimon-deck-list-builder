@@ -616,7 +616,7 @@ fn st22_11_play(link: bool) -> (DebugRunner, digimon_engine::permanent::Permanen
     runner
         .execute_action(view2.selecting_player, view2.valid_action_ids[0])
         .expect("buff target");
-    runner.auto_resolve().expect("drain");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     runner.game.tick_declarative_effects();
     (runner, digi, dp0)
 }

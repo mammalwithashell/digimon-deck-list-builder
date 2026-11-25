@@ -600,7 +600,7 @@ fn bt22_096_main_opens_no_pick_when_nothing_is_playable_and_still_places() {
         union_offered(&r, 0).is_empty(),
         "no pick for a card the play would refuse"
     );
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(hand_ids(&r, 0).contains(&"SANGO".to_string()), "kept");
     assert!(is_parked_on_suspend(&r, 0), "\"Then, place this card\" still resolves");
 }

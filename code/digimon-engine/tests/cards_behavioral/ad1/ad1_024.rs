@@ -102,7 +102,7 @@ fn fighter_mode_runner(extra: &[CardData]) -> DebugRunner {
 }
 
 /// Resolve the currently pending selection by its first non-PASS action.
-fn pick_first(runner: &mut DebugRunner) {
+fn ad1_024_pick_first(runner: &mut DebugRunner) {
     let (player, action) = {
         let p = runner
             .game
@@ -310,7 +310,7 @@ fn ad1_024_wd_bounces_lowest_dp_opp_to_deck_bottom() {
         "the bounce is mandatory (DCGO canNoSelect: false) — PASS must not be legal"
     );
 
-    pick_first(&mut runner);
+    ad1_024_pick_first(&mut runner);
 
     assert_eq!(
         runner.battle_area_size(1),
@@ -418,7 +418,7 @@ fn ad1_024_shared_opt_blocks_wa_after_wd_same_turn() {
         "digivolve must succeed"
     );
     runner.game.drain_effect_queue();
-    pick_first(&mut runner); // resolve the WD bounce — shared OPT consumed
+    ad1_024_pick_first(&mut runner); // resolve the WD bounce — shared OPT consumed
 
     // The digivolve ALSO fires AD1-024's own [All Turns] observer (its own
     // digivolve is a "Digimon digivolved" event — DCGO OnEnterFieldAnyone +
@@ -707,7 +707,7 @@ fn ad1_024_all_turns_accept_then_decline_everything_keeps_opt() {
     let first = runner.place_on_field(0, "AD1-024-FILLER", None);
     runner.fire_play_event_triggers(0, first.index as usize, false, false);
 
-    pick_first(&mut runner); // accept the outer confirm
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
                              // The suspend pick is DECLINABLE (DCGO canNoSelect: true) — decline it.
     assert!(
         runner.game.pending_selection.is_some(),
@@ -754,7 +754,7 @@ fn ad1_024_all_turns_accepted_with_nothing_possible_spends_opt() {
 
     let first = runner.place_on_field(0, "AD1-024-FILLER", None);
     runner.fire_play_event_triggers(0, first.index as usize, false, false);
-    pick_first(&mut runner); // accept the outer confirm
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
     assert!(
         runner.game.pending_selection.is_none(),
         "nothing to suspend, unsuspend or return: no pick is offered"
@@ -797,7 +797,7 @@ fn ad1_024_all_turns_declined_pick_still_offers_byeffect_bounce() {
     let first = runner.place_on_field(0, "AD1-024-FILLER", None);
     runner.fire_play_event_triggers(0, first.index as usize, true, false);
 
-    pick_first(&mut runner); // accept the outer confirm
+    ad1_024_pick_first(&mut runner); // accept the outer confirm
     decline_pending(&mut runner); // decline the suspend pick
 
     // The by-effect bounce leg must still offer the suspended OppB.
@@ -818,7 +818,7 @@ fn ad1_024_all_turns_declined_pick_still_offers_byeffect_bounce() {
         "only the pre-suspended OppB qualifies for the by-effect bounce; got {}",
         non_pass.len()
     );
-    pick_first(&mut runner);
+    ad1_024_pick_first(&mut runner);
 
     assert_eq!(
         runner.battle_area_size(1),

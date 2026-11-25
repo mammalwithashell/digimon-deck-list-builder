@@ -1550,7 +1550,7 @@ fn st22_08_linked_end_of_turn_host_may_attack() {
         view.valid_action_ids
     );
     runner.execute_action(0, attack_id).expect("attack");
-    let _ = runner.auto_resolve_declining_end_of_turn_attacks();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert_eq!(runner.game.players[1].security.len(), sec_before - 1);
 }
 
@@ -1567,7 +1567,7 @@ fn st22_08_linked_end_of_turn_attack_can_be_declined() {
     runner
         .execute_action(view.selecting_player, PASS)
         .expect("decline");
-    let _ = runner.auto_resolve_declining_end_of_turn_attacks();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert_eq!(runner.game.players[1].security.len(), sec_before);
 }
 

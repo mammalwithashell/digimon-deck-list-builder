@@ -527,7 +527,7 @@ mod counter_runtime {
     /// Answer every remaining decision of the current attack (PASS where
     /// optional, else the first legal action); true if WarGreymon's [Counter]
     /// was offered again in the counter timing.
-    fn finish_attack(runner: &mut DebugRunner) -> bool {
+    fn ex12_017_finish_attack(runner: &mut DebugRunner) -> bool {
         let mut reoffered = false;
         for _ in 0..16 {
             let Some(view) = runner.pending_selection_view() else {
@@ -541,7 +541,7 @@ mod counter_runtime {
             let action = if view.valid_action_ids.contains(&PASS) { PASS } else { view.valid_action_ids[0] };
             runner.execute_action(view.selecting_player, action).unwrap();
         }
-        let _ = runner.auto_resolve();
+        assert!(runner.pending_selection().is_none(), "no decision is left");
         reoffered
     }
 
@@ -581,7 +581,7 @@ mod counter_runtime {
         assert!(redirect.prompt.contains("attack target"), "{:?}", redirect.prompt);
         runner.execute_action(1, PASS).expect("decline the redirect");
         assert!(
-            !finish_attack(&mut runner),
+            !ex12_017_finish_attack(&mut runner),
             "CR 4.3 11-3-2: one [Counter] per attack, so the declaration is not offered again"
         );
         assert!(runner.game.pending_attack.is_none(), "the first attack finished");
@@ -620,7 +620,7 @@ mod counter_runtime {
             let action = if view.valid_action_ids.contains(&PASS) { PASS } else { view.valid_action_ids[0] };
             runner.execute_action(view.selecting_player, action).unwrap();
         }
-        finish_attack(&mut runner);
+        ex12_017_finish_attack(&mut runner);
         assert!(
             runner.game.players[1]
                 .battle_area
@@ -634,7 +634,7 @@ mod counter_runtime {
         let security_before = runner.security_count(1);
         assert_ne!(runner.attack_player(second, 1, false), digimon_engine::combat::AttackResult::Invalid);
         assert!(!counter_offered(&runner), "the DNA spent the [Once Per Turn]");
-        finish_attack(&mut runner);
+        ex12_017_finish_attack(&mut runner);
         assert_eq!(runner.security_count(1), security_before - 1, "the second attack happened");
     }
 }

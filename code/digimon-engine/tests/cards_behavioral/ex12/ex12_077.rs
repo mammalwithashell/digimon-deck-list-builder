@@ -219,7 +219,11 @@ fn offered_source_picks(sources: &[&str]) -> usize {
     stack.push("HOST");
     runner.place_stack(0, &stack);
     let prox = runner.place_on_field(0, CARD_ID, Some(0));
-    fire_when_digivolving(&mut runner, prox);
+    runner.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(prox),
+    );
+    runner.game.drain_effect_queue();
     drain_trigger_order(&mut runner);
     if !matches!(runner.pending_kind(), Some(SelectionKind::SourceMulti { .. })) {
         return 0;

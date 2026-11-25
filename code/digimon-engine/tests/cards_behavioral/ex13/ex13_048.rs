@@ -299,7 +299,7 @@ fn ex13_048_no_match_returns_all_three_to_bottom() {
 // Section 3/5 — Inherited [All Turns][OPT] leave prevention
 // ════════════════════════════════════════════════════════════════════════════
 
-fn inherited_setup() -> (DebugRunner, PermanentHandle) {
+fn ex13_048_inherited_setup() -> (DebugRunner, PermanentHandle) {
     let mut r = builder().deck(0, &["FILL"; 6]).deck(1, &["FILL"; 6]).start();
     r.skip_mulligan();
     let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
@@ -323,7 +323,7 @@ fn accept_and_pay(r: &mut DebugRunner) {
 
 #[test]
 fn ex13_048_inherited_deletes_other_knightmon_text_digimon_and_carrier_stays() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.place_on_field(0, "ALLY-PLAIN", Some(0));
     r.game
@@ -354,7 +354,7 @@ fn ex13_048_inherited_deletes_other_knightmon_text_digimon_and_carrier_stays() {
 
 #[test]
 fn ex13_048_inherited_knightmon_named_digimon_also_qualifies() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "DARK", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -366,7 +366,7 @@ fn ex13_048_inherited_knightmon_named_digimon_also_qualifies() {
 
 #[test]
 fn ex13_048_inherited_not_offered_without_other_knightmon_text_digimon() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-PLAIN", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -379,7 +379,7 @@ fn ex13_048_inherited_not_offered_without_other_knightmon_text_digimon() {
 
 #[test]
 fn ex13_048_inherited_opponent_knightmon_is_not_a_legal_cost() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(1, "OPP-KNIGHT", Some(1));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -404,7 +404,7 @@ fn ex13_048_inherited_carrier_itself_with_knightmon_text_is_not_other() {
 
 #[test]
 fn ex13_048_inherited_not_offered_for_own_effect_removal() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OwnEffect);
@@ -417,7 +417,7 @@ fn ex13_048_inherited_not_offered_for_own_effect_removal() {
 
 #[test]
 fn ex13_048_inherited_offered_for_battle_deletion_cause() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::Battle);
@@ -429,7 +429,7 @@ fn ex13_048_inherited_offered_for_battle_deletion_cause() {
 
 #[test]
 fn ex13_048_inherited_decline_lets_carrier_leave() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -444,7 +444,7 @@ fn ex13_048_inherited_decline_lets_carrier_leave() {
 
 #[test]
 fn ex13_048_inherited_protects_only_this_digimon() {
-    let (mut r, _carrier) = inherited_setup();
+    let (mut r, _carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     let plain = r.place_on_field(0, "ALLY-PLAIN", Some(0));
     r.game
@@ -455,7 +455,7 @@ fn ex13_048_inherited_protects_only_this_digimon() {
 
 #[test]
 fn ex13_048_inherited_once_per_turn() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.place_on_field(0, "DARK", Some(0));
     r.game
@@ -475,7 +475,7 @@ fn ex13_048_inherited_once_per_turn() {
 
 #[test]
 fn ex13_048_inherited_lockout_clears_next_turn() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.place_on_field(0, "DARK", Some(0));
     r.game
@@ -536,7 +536,7 @@ fn pass_legal(r: &DebugRunner) -> bool {
     digimon_engine::action::build_action_mask(&r.game, p)[PASS as usize] == 1.0
 }
 
-fn accept_evade(r: &mut DebugRunner) {
+fn ex13_048_accept_evade(r: &mut DebugRunner) {
     pick_replacement(r, true);
     r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
         .expect("accept <Evade>");
@@ -548,14 +548,14 @@ fn accept_evade(r: &mut DebugRunner) {
 
 #[test]
 fn ex13_048_inherited_outer_decline_keeps_opt() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     grant_evade(&mut r, carrier);
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
     pick_replacement(&mut r, false);
     r.execute_action(0, PASS).expect("decline the replacement");
-    accept_evade(&mut r);
+    ex13_048_accept_evade(&mut r);
     let carrier = handle_of(&r, "CARRIER");
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -568,7 +568,7 @@ fn ex13_048_inherited_outer_decline_keeps_opt() {
 
 #[test]
 fn ex13_048_inherited_accept_then_decline_cost_keeps_opt() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     grant_evade(&mut r, carrier);
     r.game
@@ -583,7 +583,7 @@ fn ex13_048_inherited_accept_then_decline_cost_keeps_opt() {
     );
     r.execute_action(0, PASS).expect("decline the cost");
     assert!(field_ids(&r, 0).contains(&"ALLY-TEXT".to_string()), "nothing deleted");
-    accept_evade(&mut r);
+    ex13_048_accept_evade(&mut r);
     let carrier = handle_of(&r, "CARRIER");
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -596,7 +596,7 @@ fn ex13_048_inherited_accept_then_decline_cost_keeps_opt() {
 
 #[test]
 fn ex13_048_inherited_declined_cost_lets_carrier_leave() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -606,7 +606,7 @@ fn ex13_048_inherited_declined_cost_lets_carrier_leave() {
     let cost = r.pending_selection_view().expect("cost pick");
     assert!(pass_legal(&r), "the cost may be declined");
     r.execute_action(0, PASS).expect("decline the cost");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     let field = field_ids(&r, 0);
     assert!(!field.contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
     assert!(field.contains(&"ALLY-TEXT".to_string()));

@@ -282,7 +282,7 @@ fn bt22_009_linking_onto_an_appmon_host_gives_3000_dp_and_deletes_a_4000_dp_digi
     );
     r.execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("delete");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!opp_has(&r, "OPP-4000"), "the 4000 DP Digimon was deleted");
     assert!(opp_has(&r, "OPP-5000"), "the 5000 DP Digimon stays");
     let hi = host_index(&r);
@@ -305,7 +305,7 @@ fn bt22_009_linking_onto_an_appmon_host_gives_3000_dp_and_deletes_a_4000_dp_digi
 fn bt22_009_cannot_link_onto_a_host_without_the_appmon_trait() {
     let (mut r, _host, effecmon) = link_runner(&["Beast"]);
     r.game.decode_action(link_bit(effecmon), 0);
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(
         r.game.players[0].battle_area.iter().all(|p| p.linked_cards.is_empty()),
         "no [Appmon] host: nothing links"

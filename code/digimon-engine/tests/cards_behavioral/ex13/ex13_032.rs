@@ -125,14 +125,14 @@ fn suspended(r: &DebugRunner, h: PermanentHandle) -> bool {
 
 /// Chirinmon on field, opponent Digimon present; attack the player so the
 /// [When Attacking] fires (attacking suspends Chirinmon).
-fn attack(r: &mut DebugRunner) -> (PermanentHandle, PermanentHandle) {
+fn ex13_032_attack(r: &mut DebugRunner) -> (PermanentHandle, PermanentHandle) {
     let chirin = r.place_stack(0, &["BASE-L4", CARD_ID]);
     let opp = r.place_on_field(1, "OPP", Some(0));
     r.attack_player(chirin, 1, false);
     (chirin, opp)
 }
 
-fn drain(r: &mut DebugRunner) {
+fn ex13_032_drain(r: &mut DebugRunner) {
     for _ in 0..12 {
         let Some(view) = r.pending_selection_view() else {
             return;
@@ -194,7 +194,7 @@ fn ex13_032_clause1_is_optional_opt_wd_wa() {
 #[test]
 fn ex13_032_no_payable_cost_does_not_offer_the_clause() {
     let mut r = runner(0);
-    let (chirin, _opp) = attack(&mut r);
+    let (chirin, _opp) = ex13_032_attack(&mut r);
     assert!(
         r.pending_selection().is_none(),
         "no security and no face-down Tamer card → nothing offered"
@@ -205,7 +205,7 @@ fn ex13_032_no_payable_cost_does_not_offer_the_clause() {
 #[test]
 fn ex13_032_security_only_offers_the_clause() {
     let mut r = runner(2);
-    attack(&mut r);
+    ex13_032_attack(&mut r);
     assert!(r.pending_is_optional(), "outer accept/decline installs");
 }
 
@@ -213,7 +213,7 @@ fn ex13_032_security_only_offers_the_clause() {
 fn ex13_032_face_down_only_offers_the_clause() {
     let mut r = runner(0);
     tamer_with_face_down(&mut r);
-    attack(&mut r);
+    ex13_032_attack(&mut r);
     assert!(r.pending_is_optional(), "outer accept/decline installs");
 }
 
@@ -232,7 +232,7 @@ fn choice_labels(r: &DebugRunner) -> Vec<String> {
 }
 
 /// Pick the effect-choice row whose label contains `needle`.
-fn choose(r: &mut DebugRunner, needle: &str) {
+fn ex13_032_choose(r: &mut DebugRunner, needle: &str) {
     let view = r.pending_selection_view().expect("effect choice");
     let row = view
         .effect_choices
@@ -249,7 +249,7 @@ fn choose(r: &mut DebugRunner, needle: &str) {
 fn ex13_032_both_costs_available_offers_both_costs_and_dont_pay() {
     let mut r = runner(2);
     tamer_with_face_down(&mut r);
-    attack(&mut r);
+    ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
     assert_eq!(r.pending_kind(), Some(SelectionKind::EffectChoice));
     let labels = choice_labels(&r);
@@ -263,11 +263,11 @@ fn ex13_032_both_costs_available_offers_both_costs_and_dont_pay() {
 fn ex13_032_security_branch_unsuspends_and_locks_opponent_digimon() {
     let mut r = runner(2);
     let t = tamer_with_face_down(&mut r);
-    let (chirin, opp) = attack(&mut r);
+    let (chirin, opp) = ex13_032_attack(&mut r);
     assert!(suspended(&r, chirin));
     r.accept_optional_trigger().expect("accept");
     r.execute_branch(0).expect("trash top security");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert_eq!(r.security_count(0), 1, "1 security card trashed");
     assert_eq!(face_down_count(&r, t), 1, "Tamer stash untouched");
     assert!(!suspended(&r, chirin), "this Digimon unsuspends");
@@ -282,10 +282,10 @@ fn ex13_032_security_branch_unsuspends_and_locks_opponent_digimon() {
 fn ex13_032_face_down_branch_unsuspends_and_locks_opponent_digimon() {
     let mut r = runner(2);
     let t = tamer_with_face_down(&mut r);
-    let (chirin, opp) = attack(&mut r);
+    let (chirin, opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
     r.execute_branch(1).expect("trash face-down card");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert_eq!(r.security_count(0), 2, "security untouched");
     assert_eq!(face_down_count(&r, t), 0, "bottom face-down card trashed");
     assert!(!suspended(&r, chirin));
@@ -300,15 +300,15 @@ fn ex13_032_face_down_branch_unsuspends_and_locks_opponent_digimon() {
 fn ex13_032_face_down_only_offers_that_cost_and_dont_pay() {
     let mut r = runner(0);
     let t = tamer_with_face_down(&mut r);
-    let (chirin, opp) = attack(&mut r);
+    let (chirin, opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
     assert_eq!(r.pending_kind(), Some(SelectionKind::EffectChoice));
     let labels = choice_labels(&r);
     assert_eq!(labels.len(), 2, "{labels:?}");
     assert!(labels[0].contains("Tamers"), "{labels:?}");
     assert!(labels[1].contains("Don't pay"), "{labels:?}");
-    choose(&mut r, "Tamers");
-    drain(&mut r);
+    ex13_032_choose(&mut r, "Tamers");
+    ex13_032_drain(&mut r);
     assert_eq!(face_down_count(&r, t), 0);
     assert!(!suspended(&r, chirin));
     assert!(r
@@ -319,9 +319,9 @@ fn ex13_032_face_down_only_offers_that_cost_and_dont_pay() {
 #[test]
 fn ex13_032_declining_pays_nothing_and_does_nothing() {
     let mut r = runner(2);
-    let (chirin, opp) = attack(&mut r);
+    let (chirin, opp) = ex13_032_attack(&mut r);
     r.decline_optional_trigger().expect("decline");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert_eq!(r.security_count(0), 2);
     assert!(suspended(&r, chirin), "stays suspended");
     assert!(!r
@@ -332,16 +332,16 @@ fn ex13_032_declining_pays_nothing_and_does_nothing() {
 #[test]
 fn ex13_032_lock_expires_when_opponents_turn_ends() {
     let mut r = runner(2);
-    let (_chirin, opp) = attack(&mut r);
+    let (_chirin, opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     r.end_turn();
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(r
         .modifiers()
         .has(opp, ModifierType::CannotActivateWhenDigivolvingEffects));
     r.end_turn();
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(!r
         .modifiers()
         .has(opp, ModifierType::CannotActivateWhenDigivolvingEffects));
@@ -376,9 +376,9 @@ fn ex13_032_when_digivolving_offers_the_clause() {
 #[test]
 fn ex13_032_once_per_turn_blocks_a_second_attack_trigger() {
     let mut r = runner(3);
-    let (chirin, _opp) = attack(&mut r);
+    let (chirin, _opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(!suspended(&r, chirin), "unsuspended by the first use");
     r.attack_player(chirin, 1, false);
     assert!(
@@ -431,7 +431,7 @@ fn second_attack_offers_it(r: &mut DebugRunner, chirin: PermanentHandle) {
 #[test]
 fn ex13_032_outer_decline_keeps_opt() {
     let mut r = runner(2);
-    let (chirin, _opp) = attack(&mut r);
+    let (chirin, _opp) = ex13_032_attack(&mut r);
     r.decline_optional_trigger().expect("decline");
     assert_eq!(r.security_count(0), 2);
     second_attack_offers_it(&mut r, chirin);
@@ -441,9 +441,9 @@ fn ex13_032_outer_decline_keeps_opt() {
 fn ex13_032_dont_pay_keeps_opt_and_does_nothing() {
     let mut r = runner(2);
     let t = tamer_with_face_down(&mut r);
-    let (chirin, opp) = attack(&mut r);
+    let (chirin, opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
-    choose(&mut r, "Don't pay");
+    ex13_032_choose(&mut r, "Don't pay");
     assert!(
         r.pending_selection_view()
             .is_none_or(|v| v.kind != SelectionKind::EffectChoice),
@@ -461,13 +461,13 @@ fn ex13_032_dont_pay_keeps_opt_and_does_nothing() {
 #[test]
 fn ex13_032_security_only_offers_that_cost_and_dont_pay() {
     let mut r = runner(2);
-    let (chirin, _opp) = attack(&mut r);
+    let (chirin, _opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
     let labels = choice_labels(&r);
     assert_eq!(labels.len(), 2, "{labels:?}");
     assert!(labels[0].contains("security"), "{labels:?}");
     assert!(labels[1].contains("Don't pay"), "{labels:?}");
-    choose(&mut r, "Don't pay");
+    ex13_032_choose(&mut r, "Don't pay");
     assert_eq!(r.security_count(0), 2);
     second_attack_offers_it(&mut r, chirin);
 }
@@ -477,9 +477,9 @@ fn ex13_032_security_only_offers_that_cost_and_dont_pay() {
 fn ex13_032_tamer_cost_declined_at_the_tamer_pick_keeps_opt() {
     let mut r = runner(0);
     let t = tamer_with_face_down(&mut r);
-    let (chirin, opp) = attack(&mut r);
+    let (chirin, opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
-    choose(&mut r, "Tamers");
+    ex13_032_choose(&mut r, "Tamers");
     assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField), "Tamer pick");
     assert_eq!(
         digimon_engine::action::build_action_mask(&r.game, 0)[PASS as usize],
@@ -501,10 +501,10 @@ fn ex13_032_tamer_cost_declined_at_the_tamer_pick_keeps_opt() {
 fn ex13_032_paid_cost_spends_opt() {
     let mut r = runner(2);
     tamer_with_face_down(&mut r);
-    let (chirin, _opp) = attack(&mut r);
+    let (chirin, _opp) = ex13_032_attack(&mut r);
     r.accept_optional_trigger().expect("accept");
-    choose(&mut r, "security");
-    drain(&mut r);
+    ex13_032_choose(&mut r, "security");
+    ex13_032_drain(&mut r);
     assert!(!suspended(&r, chirin), "paid: unsuspended");
     r.attack_player(chirin, 1, false);
     assert!(
@@ -544,7 +544,7 @@ fn ex13_032_would_leave_places_top_card_as_top_security_and_stays() {
     delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
     assert_replacement_prompt(&r);
     r.accept_optional_trigger().expect("accept would-leave save");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert_eq!(r.game.players[0].security.len(), sec_before + 1);
     assert_eq!(top_security_id(&r), CARD_ID, "Chirinmon itself → top security");
     let placed = r.game.players[0].security.last().unwrap().card_index;
@@ -568,7 +568,7 @@ fn ex13_032_would_leave_decline_lets_it_leave() {
     delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
     assert_replacement_prompt(&r);
     r.decline_optional_trigger().expect("decline");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(r.game.players[0].battle_area.is_empty(), "declined → deleted");
     assert_eq!(r.game.players[0].security.len(), sec_before);
 }
@@ -580,7 +580,7 @@ fn ex13_032_would_leave_not_offered_without_a_card_under_it() {
     let mut r = runner(1);
     let chirin = r.place_on_field(0, CARD_ID, Some(0));
     delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(r.game.players[0].battle_area.is_empty(), "deleted, no save offered");
     assert_eq!(r.game.players[0].security.len(), 1);
 }
@@ -591,12 +591,12 @@ fn ex13_032_would_leave_save_is_not_once_per_turn() {
     let chirin = r.place_stack(0, &["FILL", "BASE-L4", CARD_ID]);
     delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
     r.accept_optional_trigger().expect("first save");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert_eq!(top_of(&r, chirin), "BASE-L4");
     // Chirinmon is now in security; BASE-L4 (no Chirinmon text) is the top, so
     // a second removal is not saved by Chirinmon's face-up clause.
     delete_with(&mut r, chirin, ReplacementCause::OpponentEffect);
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(r.game.players[0].battle_area.is_empty());
 }
 
@@ -609,7 +609,7 @@ fn ex13_032_inherited_save_only_for_kentaurosmon_named_carrier() {
     delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
     assert_replacement_prompt(&r);
     r.accept_optional_trigger().expect("accept inherited save");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert_eq!(top_security_id(&r), "KENT", "the Kentaurosmon top card → top security");
     assert_eq!(top_of(&r, carrier), CARD_ID, "stays, topped by Chirinmon");
 
@@ -617,7 +617,7 @@ fn ex13_032_inherited_save_only_for_kentaurosmon_named_carrier() {
     let mut r = runner(1);
     let carrier = r.place_stack(0, &["BASE-L4", CARD_ID, "OPP"]);
     delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(r.game.players[0].battle_area.is_empty(), "no save for a non-Kentaurosmon carrier");
 }
 
@@ -627,10 +627,10 @@ fn ex13_032_inherited_save_is_once_per_turn() {
     let carrier = r.place_stack(0, &["FILL", CARD_ID, "KENT", "KENT"]);
     delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
     r.accept_optional_trigger().expect("first inherited save");
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert_eq!(top_of(&r, carrier), "KENT", "still a Kentaurosmon over Chirinmon");
     delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
-    drain(&mut r);
+    ex13_032_drain(&mut r);
     assert!(
         r.game.players[0].battle_area.is_empty(),
         "[Once Per Turn]: the second removal is not saved"

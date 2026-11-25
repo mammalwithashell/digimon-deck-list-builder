@@ -560,7 +560,7 @@ fn pick_replacement(runner: &mut DebugRunner, evade: bool) {
 
 /// Accept <Evade> for the same deletion. It asks for nothing more, so the
 /// declined clause was not offered again for this event.
-fn accept_evade(runner: &mut DebugRunner) {
+fn bt25_084_accept_evade(runner: &mut DebugRunner) {
     pick_replacement(runner, true);
     runner.execute_action(0, REPLACEMENT_ACCEPT).expect("accept <Evade>");
     assert!(
@@ -595,7 +595,7 @@ fn bt25_084_leave_prevention_outer_decline_keeps_opt() {
     runner
         .execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline the replacement");
-    accept_evade(&mut runner);
+    bt25_084_accept_evade(&mut runner);
     assert_eq!(runner.game.players[0].hand.len(), 4, "nothing trashed");
     let titamon = titamon_handle(&runner).expect("<Evade> kept Titamon");
     remove_by_opponent(&mut runner, titamon);
@@ -622,7 +622,7 @@ fn bt25_084_leave_prevention_accept_then_decline_cost_keeps_opt() {
         .execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline the cost");
     assert_eq!(runner.game.players[0].hand.len(), 4, "nothing trashed");
-    accept_evade(&mut runner);
+    bt25_084_accept_evade(&mut runner);
     let titamon = titamon_handle(&runner).expect("<Evade> kept Titamon");
     remove_by_opponent(&mut runner, titamon);
     assert_eq!(
@@ -644,7 +644,7 @@ fn bt25_084_leave_prevention_declined_cost_lets_it_leave() {
     runner
         .execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline the cost");
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(titamon_handle(&runner).is_none(), "the cost was not paid: Titamon leaves");
     assert_eq!(runner.game.players[0].hand.len(), 3, "nothing trashed");
 }
@@ -667,7 +667,7 @@ fn bt25_084_leave_prevention_paid_spends_opt_and_second_pick_is_mandatory() {
     );
     let second = hand_pick_ids(&runner)[0];
     runner.execute_action(0, second).expect("second card");
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert_eq!(runner.game.players[0].hand.len(), 2, "2 of 4 trashed");
     let titamon = titamon_handle(&runner).expect("Titamon did not leave");
     remove_by_opponent(&mut runner, titamon);
@@ -677,6 +677,6 @@ fn bt25_084_leave_prevention_paid_spends_opt_and_second_pick_is_mandatory() {
             .is_none_or(|v| v.kind != SelectionKind::Replacement),
         "spent: not offered again this turn"
     );
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(titamon_handle(&runner).is_none());
 }

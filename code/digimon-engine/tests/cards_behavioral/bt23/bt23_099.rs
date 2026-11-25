@@ -200,7 +200,7 @@ fn pick_union(r: &mut DebugRunner, p: u8, card_id: &str, trash: bool) {
     r.execute_action(p, action).unwrap();
 }
 
-fn accept_delay(r: &mut DebugRunner) {
+fn bt23_099_accept_delay(r: &mut DebugRunner) {
     let v = r
         .pending_selection_view()
         .expect("<Delay> activation offered");
@@ -369,7 +369,7 @@ fn bt23_099_delay_plays_a_sistermon_from_hand_or_trash_for_free() {
     let mut r = parked(&["HUCK-EVO", "SIS-HAND", "SIS-TAMER", "NOT-SIS"]);
     push_trash(&mut r, 0, "SIS-TRASH");
     digivolve_base_into(&mut r, "HUCK-EVO");
-    accept_delay(&mut r);
+    bt23_099_accept_delay(&mut r);
     assert!(r.pending_is_optional(), "'You may play'");
     assert_eq!(
         union_offered(&r, 0),
@@ -393,7 +393,7 @@ fn bt23_099_delay_plays_a_sistermon_from_hand_or_trash_for_free() {
 fn bt23_099_delay_fires_for_jesmon_too() {
     let mut r = parked(&["JES-EVO", "SIS-HAND"]);
     digivolve_base_into(&mut r, "JES-EVO");
-    accept_delay(&mut r);
+    bt23_099_accept_delay(&mut r);
     pick_union(&mut r, 0, "SIS-HAND", false);
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"SIS-HAND".to_string()));
@@ -500,7 +500,7 @@ fn bt23_099_delay_pick_skips_digimon_whose_play_by_effect_is_prohibited() {
     push_trash(&mut r, 0, "SIS-TRASH");
     lock_effect_digimon_plays(&mut r, 0);
     digivolve_base_into(&mut r, "HUCK-EVO");
-    accept_delay(&mut r);
+    bt23_099_accept_delay(&mut r);
     assert_eq!(
         union_offered(&r, 0),
         vec![(false, "SIS-TAMER".to_string())],
@@ -513,8 +513,8 @@ fn bt23_099_delay_opens_no_pick_when_only_prohibited_digimon_qualify() {
     let mut r = parked(&["HUCK-EVO", "SIS-HAND"]);
     lock_effect_digimon_plays(&mut r, 0);
     digivolve_base_into(&mut r, "HUCK-EVO");
-    accept_delay(&mut r);
+    bt23_099_accept_delay(&mut r);
     assert!(union_offered(&r, 0).is_empty(), "no pick for a card the play would refuse");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!field_ids(&r, 0).contains(&"SIS-HAND".to_string()));
 }

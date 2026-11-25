@@ -569,12 +569,12 @@ mod would_leave_play {
             .collect()
     }
 
-    fn accept(r: &mut DebugRunner) {
+    fn bt24_037_accept(r: &mut DebugRunner) {
         assert!(r.pending_is_optional(), "the printed 'you may' is a yes/no");
         r.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
     }
 
-    fn pick_nth(r: &mut DebugRunner, n: usize) {
+    fn bt24_037_pick_nth(r: &mut DebugRunner, n: usize) {
         let a = non_pass(r)[n];
         let p = r.pending_selection().unwrap().selecting_player;
         r.execute_action(p, a).expect("pick");
@@ -635,10 +635,10 @@ mod would_leave_play {
             let mem = r.memory();
             r.game
                 .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
-            accept(&mut r);
+            bt24_037_accept(&mut r);
             assert_eq!(non_pass(&r).len(), 4, "Y4, R4, TS4 and Y3 are the picks");
-            pick_nth(&mut r, n);
-            r.auto_resolve().unwrap();
+            bt24_037_pick_nth(&mut r, n);
+            assert!(r.pending_selection().is_none(), "no decision is left");
             let p = played_ids(&r, &ALL);
             assert_eq!(p.len(), 1, "exactly one card is played: {p:?}");
             played.extend(p);
@@ -655,9 +655,9 @@ mod would_leave_play {
             let mut r = runner();
             let h = r.place_stack(0, &["Y4", ID]);
             r.game.delete_permanent_with_cause(h, cause);
-            accept(&mut r);
-            pick_nth(&mut r, 0);
-            r.auto_resolve().unwrap();
+            bt24_037_accept(&mut r);
+            bt24_037_pick_nth(&mut r, 0);
+            assert!(r.pending_selection().is_none(), "no decision is left");
             assert!(on_field(&r, 0, "Y4"), "{cause:?}");
         }
         let mut r = runner();
@@ -677,7 +677,7 @@ mod would_leave_play {
             .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
         assert!(r.pending_is_optional());
         r.execute_action(0, PASS).expect("decline");
-        r.auto_resolve().unwrap();
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(!on_field(&r, 0, "Y4"));
         assert!(!on_field(&r, 0, ID));
     }
@@ -712,10 +712,10 @@ mod would_leave_play {
         lock(&mut r);
         r.game
             .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
-        accept(&mut r);
+        bt24_037_accept(&mut r);
         assert_eq!(non_pass(&r).len(), 1, "only the playable Y4");
-        pick_nth(&mut r, 0);
-        r.auto_resolve().unwrap();
+        bt24_037_pick_nth(&mut r, 0);
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(on_field(&r, 0, "Y4"));
         assert!(!on_field(&r, 0, "WEAK"));
     }
@@ -726,14 +726,14 @@ mod would_leave_play {
         let h = r.place_stack(0, &["R4", "B4", ID, "TOP"]);
         r.game
             .delete_permanent_with_cause(h, ReplacementCause::OpponentEffect);
-        accept(&mut r);
+        bt24_037_accept(&mut r);
         assert_eq!(
             non_pass(&r).len(),
             1,
             "the red Lv.4 (Silphymon itself is Lv.5, the blue Lv.4 has no TS)"
         );
-        pick_nth(&mut r, 0);
-        r.auto_resolve().unwrap();
+        bt24_037_pick_nth(&mut r, 0);
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(on_field(&r, 0, "R4"));
         assert!(!on_field(&r, 0, "TOP"), "the carrier still leaves");
     }
@@ -773,10 +773,10 @@ mod would_leave_play {
                 accepted += 1;
                 r.execute_action(0, REPLACEMENT_ACCEPT).expect("accept");
             } else {
-                pick_nth(&mut r, 0);
+                bt24_037_pick_nth(&mut r, 0);
             }
         }
-        r.auto_resolve().unwrap();
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert_eq!(accepted, 2, "each clause asks its own 'you may'");
         assert!(on_field(&r, 0, "Y4"));
         assert!(on_field(&r, 0, "R4"));
@@ -808,7 +808,7 @@ mod would_leave_play {
             let p = r.pending_selection().unwrap().selecting_player;
             r.execute_action(p, a).expect("pick");
         }
-        r.auto_resolve().unwrap();
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(on_field(&r, 0, "Y4"), "Silphymon's effect played Y4");
         assert!(!on_field(&r, 0, "BODY-A"), "Venusmon paid with BODY-A");
         let top = *stack.last().unwrap();
@@ -823,7 +823,7 @@ mod would_leave_play {
             r.pending_selection().is_none(),
             "both [Once Per Turn] effects are spent"
         );
-        r.auto_resolve().unwrap();
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(!on_field(&r, 0, "R4"), "no second play this turn");
     }
 

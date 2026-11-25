@@ -220,7 +220,7 @@ fn bt24_007_offers_no_pick_while_effects_cannot_play_digimon() {
         "no pick for a card the play would refuse: {:?}",
         r.pending_selection_view()
     );
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(trash_ids(&r, 0).contains(&"TITAN4".to_string()));
     assert!(!field_ids(&r, 0).contains(&"TITAN4".to_string()));
     assert_eq!(r.memory(), 5);
@@ -237,6 +237,6 @@ fn bt24_007_does_not_offer_a_titan_it_cannot_afford() {
     push_hand(&mut r, 0, "TITAN-HUGE");
     trash_from_hand(&mut r, 0, "TITAN-HUGE");
     assert!(non_pass(&r).is_empty(), "unaffordable play is not offered: {:?}", r.pending_selection_view());
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(trash_ids(&r, 0).contains(&"TITAN-HUGE".to_string()));
 }

@@ -399,7 +399,7 @@ mod inherited_memory {
         r.place_on_field(1, "WEAK-B", Some(0));
         let mem = r.memory();
         r.attack_digimon(carrier, a, false);
-        r.auto_resolve().expect("resolve");
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(index_of(&r, 1, "WEAK-A").is_none(), "deleted in battle");
         assert_eq!(r.memory(), mem + 1, "gain 1 memory");
 
@@ -409,7 +409,7 @@ mod inherited_memory {
         let bi = index_of(&r, 1, "WEAK-B").expect("second target");
         let b = digimon_engine::permanent::PermanentHandle { player: 1, index: bi as u8 };
         r.attack_digimon(carrier, b, false);
-        r.auto_resolve().expect("resolve");
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(index_of(&r, 1, "WEAK-B").is_none(), "second deletion in battle");
         assert_eq!(r.memory(), mem + 1, "[Once Per Turn]: no second gain");
     }
@@ -422,7 +422,7 @@ mod inherited_memory {
         let s = r.place_on_field(1, "STRONG", Some(0));
         let mem = r.memory();
         r.attack_digimon(carrier, s, false);
-        r.auto_resolve().expect("resolve");
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(index_of(&r, 0, "CARRIER").is_none());
         assert_eq!(r.memory(), mem);
     }
@@ -436,7 +436,7 @@ mod inherited_memory {
         let a = r.place_on_field(1, "WEAK-A", Some(0));
         let mem = r.memory();
         r.attack_digimon(own, a, false);
-        r.auto_resolve().expect("resolve");
+        assert!(r.pending_selection().is_none(), "no decision is left");
         assert!(index_of(&r, 1, "WEAK-A").is_none());
         assert_eq!(r.memory(), mem);
     }

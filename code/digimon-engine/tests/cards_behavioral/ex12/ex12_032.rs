@@ -426,7 +426,7 @@ fn ex12_032_inherited_decode_offers_nothing_while_effects_cannot_play_digimon() 
         "no Decode window or pick for a source the play would refuse: {:?}",
         runner.pending_selection_view()
     );
-    runner.auto_resolve().expect("finish the leave");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(!field_contains(&runner, 0, "VB-L4"));
     assert!(hand_contains(&runner, 0, "HOST-TOP"));
 }

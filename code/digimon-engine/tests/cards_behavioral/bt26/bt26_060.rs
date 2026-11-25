@@ -262,7 +262,7 @@ fn bt26_060_accepted_and_delete_chosen_spends_the_once_per_turn() {
     r.execute_action(0, accept).unwrap();
     let victim = non_pass(&r)[0];
     r.execute_action(0, victim).unwrap();
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(field_ids(&r, 1).len(), 1, "one opponent Digimon was deleted");
     return_two_stacks(&mut r, me, EffectTiming::WhenDigivolving, ["A3", "A4", "A5", "A6"]);
     assert!(
@@ -325,7 +325,7 @@ fn bt26_060_declined_activation_keeps_the_once_per_turn() {
         "the outer \"you may delete\" prompt"
     );
     r.execute_action(0, PASS).unwrap();
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     return_two_stacks(&mut r, me, EffectTiming::WhenDigivolving, ["A3", "A4", "A5", "A6"]);
     assert!(
         r.pending_selection_view().is_some_and(|v| v.is_optional),

@@ -572,7 +572,7 @@ fn bt25_103_when_attacking_declining_everything_keeps_opt() {
             _ => break,
         }
     }
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(r.game.pending_selection.is_none());
     assert_eq!(opp_source_total(&r), 3, "nothing was trashed");
     // OPT not spent: the shared effect is still available, at either timing.
@@ -633,7 +633,7 @@ fn bt25_103_when_attacking_trashing_spends_opt_for_counter() {
             _ => break,
         }
     }
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(opp_source_total(&r), 2, "one card was trashed");
     fire(&mut r, EffectTiming::CounterEffect, me);
     assert!(
@@ -785,7 +785,7 @@ fn bt25_103_counter_on_attack_on_player_can_end_it() {
 /// Answer every remaining decision of the current attack (PASS where
 /// optional, else the first legal action); true if GraceNovamon's [Counter]
 /// (`declare`) was offered again in the counter timing.
-fn finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
+fn bt25_103_finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
     use digimon_engine::enums::GamePhase;
     let mut reoffered = false;
     for _ in 0..16 {
@@ -798,7 +798,7 @@ fn finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
         let action = if v.valid_action_ids.contains(&PASS) { PASS } else { v.valid_action_ids[0] };
         r.execute_action(v.selecting_player, action).unwrap();
     }
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     reoffered
 }
 
@@ -833,7 +833,7 @@ fn bt25_103_real_counter_declare_and_pass_closes_the_window_and_keeps_the_use() 
     finish_source_picks(&mut r); // trash nothing
     answer_end_attack(&mut r, false);
     assert!(
-        !finish_attack(&mut r, declare),
+        !bt25_103_finish_attack(&mut r, declare),
         "CR 4.3 11-3-2: one [Counter] per attack, so the declaration is not offered again"
     );
     assert!(r.game.pending_attack.is_none(), "the first attack finished");
@@ -845,7 +845,7 @@ fn bt25_103_real_counter_declare_and_pass_closes_the_window_and_keeps_the_use() 
     r.execute_action(0, declare).unwrap();
     finish_source_picks(&mut r);
     answer_end_attack(&mut r, true);
-    finish_attack(&mut r, declare);
+    bt25_103_finish_attack(&mut r, declare);
     assert_eq!(r.security_count(0), 4, "the second attack was ended");
 
     r.game.players[1].battle_area[first.index as usize].is_suspended = false;

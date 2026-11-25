@@ -288,7 +288,7 @@ fn ex13_028_on_play_does_not_reveal() {
 
 // ─── Section 3/5 — Inherited [All Turns][OPT] leave prevention ───────────────
 
-fn inherited_setup() -> (DebugRunner, PermanentHandle) {
+fn ex13_028_inherited_setup() -> (DebugRunner, PermanentHandle) {
     let mut r = builder().deck(0, &["FILL"; 6]).start();
     r.skip_mulligan();
     let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
@@ -297,7 +297,7 @@ fn inherited_setup() -> (DebugRunner, PermanentHandle) {
 
 #[test]
 fn ex13_028_inherited_deletes_other_sukamon_and_carrier_stays() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.place_on_field(0, "OTHER-PLAIN", Some(0));
     r.game
@@ -325,7 +325,7 @@ fn ex13_028_inherited_deletes_other_sukamon_and_carrier_stays() {
 
 #[test]
 fn ex13_028_inherited_not_offered_without_other_sukamon() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     r.place_on_field(0, "OTHER-PLAIN", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -335,7 +335,7 @@ fn ex13_028_inherited_not_offered_without_other_sukamon() {
 
 #[test]
 fn ex13_028_inherited_not_offered_for_own_effect_removal() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OwnEffect);
@@ -345,7 +345,7 @@ fn ex13_028_inherited_not_offered_for_own_effect_removal() {
 
 #[test]
 fn ex13_028_inherited_once_per_turn() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.place_on_field(0, "SUKA-3", Some(0));
     r.game
@@ -410,7 +410,7 @@ fn pass_legal(r: &DebugRunner) -> bool {
     digimon_engine::action::build_action_mask(&r.game, p)[PASS as usize] == 1.0
 }
 
-fn accept_evade(r: &mut DebugRunner) {
+fn ex13_028_accept_evade(r: &mut DebugRunner) {
     pick_replacement(r, true);
     r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
         .expect("accept <Evade>");
@@ -422,14 +422,14 @@ fn accept_evade(r: &mut DebugRunner) {
 
 #[test]
 fn ex13_028_inherited_outer_decline_keeps_opt() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     grant_evade(&mut r, carrier);
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
     pick_replacement(&mut r, false);
     r.execute_action(0, PASS).expect("decline the replacement");
-    accept_evade(&mut r);
+    ex13_028_accept_evade(&mut r);
     let carrier = handle_of(&r, "CARRIER");
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -442,7 +442,7 @@ fn ex13_028_inherited_outer_decline_keeps_opt() {
 
 #[test]
 fn ex13_028_inherited_accept_then_decline_cost_keeps_opt() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     grant_evade(&mut r, carrier);
     r.game
@@ -457,7 +457,7 @@ fn ex13_028_inherited_accept_then_decline_cost_keeps_opt() {
     );
     r.execute_action(0, PASS).expect("decline the cost");
     assert!(field_ids(&r, 0).contains(&"OTHER-SUKA".to_string()), "nothing deleted");
-    accept_evade(&mut r);
+    ex13_028_accept_evade(&mut r);
     let carrier = handle_of(&r, "CARRIER");
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -470,7 +470,7 @@ fn ex13_028_inherited_accept_then_decline_cost_keeps_opt() {
 
 #[test]
 fn ex13_028_inherited_declined_cost_lets_carrier_leave() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -480,7 +480,7 @@ fn ex13_028_inherited_declined_cost_lets_carrier_leave() {
     let cost = r.pending_selection_view().expect("cost pick");
     assert!(pass_legal(&r), "the cost may be declined");
     r.execute_action(0, PASS).expect("decline the cost");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     let field = field_ids(&r, 0);
     assert!(!field.contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
     assert!(field.contains(&"OTHER-SUKA".to_string()));
@@ -489,7 +489,7 @@ fn ex13_028_inherited_declined_cost_lets_carrier_leave() {
 /// Q7288: "1 other Digimon with [Sukamon] in its name" may be the opponent's.
 #[test]
 fn ex13_028_inherited_opponent_sukamon_is_a_legal_cost() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     let opp = r.place_on_field(1, "OTHER-SUKA", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -505,7 +505,7 @@ fn ex13_028_inherited_opponent_sukamon_is_a_legal_cost() {
     let cost = r.pending_selection_view().expect("cost pick");
     assert!(cost.valid_action_ids.contains(&id), "{cost:?}");
     r.execute_action(0, id).expect("delete the opponent's Sukamon");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(field_ids(&r, 0).contains(&"CARRIER".to_string()), "the carrier stays");
     assert!(field_ids(&r, 1).is_empty(), "the opponent's Sukamon was deleted");
 }

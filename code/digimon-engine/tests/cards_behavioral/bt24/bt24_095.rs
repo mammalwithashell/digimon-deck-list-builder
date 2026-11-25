@@ -227,7 +227,7 @@ fn bt24_095_link_to_host(runner: &mut DebugRunner) -> PermanentHandle {
     runner
         .execute_action(v.selecting_player, encode_attack(0, host.index as u16))
         .expect("link Sonic Shot");
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     host
 }
 
@@ -279,7 +279,7 @@ fn bt24_095_linked_host_when_attacking_returns_a_suspended_digimon_once_per_turn
     runner
         .execute_action(0, encode_attack(0, susp.index as u16))
         .expect("return the suspended Digimon");
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(bt24_095_index(&runner, 1, "OPP-SUSP").is_none());
     assert!(runner.game.players[1]
         .hand
@@ -294,6 +294,6 @@ fn bt24_095_linked_host_when_attacking_returns_a_suspended_digimon_once_per_turn
     runner.game.players[0].battle_area[hi].is_suspended = false;
     let host = PermanentHandle { player: 0, index: hi as u8 };
     let _ = runner.attack_player(host, 1, false);
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(bt24_095_index(&runner, 1, "OPP-SUSP-2").is_some());
 }

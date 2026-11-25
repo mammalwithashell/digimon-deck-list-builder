@@ -509,7 +509,7 @@ fn ex13_059_inherited_eot_does_not_apply_face_up() {
 // `ex13_059_eot_is_once_per_turn_and_resets_next_turn`: one trigger fired by
 // hand, then the real one at the end of the turn.
 
-fn fire_eot(runner: &mut DebugRunner, source: PermanentHandle) {
+fn ex13_059_fire_eot(runner: &mut DebugRunner, source: PermanentHandle) {
     runner
         .game
         .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(source));
@@ -535,7 +535,7 @@ fn opt_board(inherited: bool) -> (DebugRunner, PermanentHandle) {
 
 fn outer_decline_keeps_opt(inherited: bool) {
     let (mut runner, host) = opt_board(inherited);
-    fire_eot(&mut runner, host);
+    ex13_059_fire_eot(&mut runner, host);
     runner.decline_optional_trigger().expect("decline");
     assert!(runner.pending_selection().is_none());
     runner.pass_turn();
@@ -548,7 +548,7 @@ fn outer_decline_keeps_opt(inherited: bool) {
 
 fn accept_then_decline_cost_keeps_opt(inherited: bool) {
     let (mut runner, host) = opt_board(inherited);
-    fire_eot(&mut runner, host);
+    ex13_059_fire_eot(&mut runner, host);
     runner.accept_optional_trigger().expect("accept");
     let v = runner.pending_selection_view().expect("own [Mamemon] pick");
     assert_eq!(v.kind, SelectionKind::OwnField);
@@ -587,10 +587,10 @@ fn prevented_payment_spends_opt_without_reward(inherited: bool) {
             0,
         ),
     );
-    fire_eot(&mut runner, host);
+    ex13_059_fire_eot(&mut runner, host);
     runner.accept_optional_trigger().expect("accept");
     pick_id(&mut runner, 0, "OWN-MAME");
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert!(field_ids(&runner, 0).contains(&"OWN-MAME".to_string()), "its deletion was prevented");
     assert_eq!(runner.battle_area_size(1), 2, "the cost was not paid: no reward");
     runner.pass_turn();
@@ -636,11 +636,11 @@ fn ex13_059_inherited_eot_prevented_payment_spends_opt_without_reward() {
 fn ex13_059_inherited_eot_paid_spends_opt() {
     let (mut runner, host) = opt_board(true);
     runner.place_on_field(0, "OWN-MAME", Some(0));
-    fire_eot(&mut runner, host);
+    ex13_059_fire_eot(&mut runner, host);
     runner.accept_optional_trigger().expect("accept");
     let ally = handle_of(&runner, 0, "OWN-MAME");
     pick_field(&mut runner, ally);
-    let _ = runner.auto_resolve();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert_eq!(field_ids(&runner, 1), vec!["OPP-C5".to_string()], "reward ran");
     runner.pass_turn();
     assert!(runner.pending_selection().is_none(), "spent");

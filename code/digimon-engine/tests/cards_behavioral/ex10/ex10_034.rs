@@ -464,8 +464,21 @@ fn ex10_034_clause_b_on_opponents_turn_lasts_until_the_end_of_your_turn() {
     runner
         .accept_optional_trigger()
         .expect("accept outer optional");
-    runner.auto_resolve().expect("pay the 2-source cost");
-    runner.auto_resolve().ok();
+    // Pay the cost: both of Blastmon's digivolution cards (SourceMulti 2 of 2).
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti { min: 2, max: 2, .. })
+    ));
+    for _ in 0..2 {
+        let v = runner.pending_selection_view().expect("the 2-source cost pick");
+        let a = *v
+            .valid_action_ids
+            .iter()
+            .find(|&&a| a != digimon_engine::action::space::PASS)
+            .expect("a digivolution card to trash");
+        runner.execute_action(v.selecting_player, a).expect("pick a source");
+    }
+    assert!(runner.pending_selection().is_none(), "no decision is left");
 
     let sec_attack = |r: &DebugRunner| {
         r.game
