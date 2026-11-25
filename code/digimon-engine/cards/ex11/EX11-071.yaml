@@ -77,7 +77,8 @@ effects:
   # Card face (EX11-071.webp security box) + bundle "### Security Effect";
   # DCGO EX11_071.cs SecuritySkill -> PlaySelfTamerSecurityEffect(card).
   # EX7-063 idiom.
-  - when: on_security
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}

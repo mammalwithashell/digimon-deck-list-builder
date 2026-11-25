@@ -63,7 +63,8 @@ effects:
   # CanTriggerWhenDeleteOpponentDigimonByBattle(winner = the permanent holding
   # this card, loser = an opponent permanent) and the carrier still on the
   # battle area. BT25-054 idiom: on_any_deletion + source_deleted_battle_opponent.
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory."
+    scope: inherited
     when: [on_any_deletion]
     once_per_turn: true
     active_when: { all_turns: true }

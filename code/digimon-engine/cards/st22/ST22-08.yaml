@@ -254,7 +254,8 @@ effects:
   # scope: linked -> `source` is the host permanent (BT21-018 idiom); the
   # `condition` keeps the effect from activating while the host cannot attack
   # (AD1-020 idiom), so no empty prompt is offered.
-  - scope: linked
+  - text: "[End of Your Turn] [Once Per Turn] This Digimon may attack."
+    scope: linked
     when: end_of_your_turn
     once_per_turn: true
     optional: true
@@ -275,7 +276,8 @@ effects:
           prompt: "Attack with this Digimon"
 
   # ─── Link DP +2000 (card-face link box) ─────────────────────────────────
-  - scope: linked
+  - text: "+2000 DP"
+    scope: linked
     kind: aura
     target: {}
     dp_modifier: 2000

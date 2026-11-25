@@ -161,13 +161,15 @@ effects:
 
   # ─── Link Effect: <Blocker> (card-face link box; bundle "### Link Effect") ─
   # BT25-101 idiom for a linked keyword grant.
-  - kind: grant_keyword
+  - text: "＜Blocker＞"
+    kind: grant_keyword
     scope: linked
     keyword: Blocker
     summary: "[Link] <Blocker>"
 
   # ─── Link DP +2000 (card-face link box) ─────────────────────────────────
-  - scope: linked
+  - text: "+2000 DP"
+    scope: linked
     kind: aura
     target: {}
     dp_modifier: 2000

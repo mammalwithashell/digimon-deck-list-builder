@@ -105,7 +105,8 @@ effects:
   #   use with nothing played, the same as declining minus the OPT use).
   # The play does not stop the leave (no "it doesn't leave" clause; the
   # BT18-063 / AD1-003 non-cancelling idiom).
-  - kind: replacement
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost."
+    kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
     once_per_turn: true
@@ -138,7 +139,8 @@ effects:
           cost_delta: free
 
   # ─── Inherited: the same clause on the Digimon that carries Silphymon ───────
-  - scope: inherited
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost."
+    scope: inherited
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true

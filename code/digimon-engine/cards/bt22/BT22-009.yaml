@@ -55,12 +55,14 @@ effects:
   # <Link> [Appmon] trait: Cost 2 -- DCGO BT22_009.cs
   # AddSelfLinkConditionStaticEffect(TopCard.HasAppmonTraits, linkCost: 2)
   # (BT21-018 idiom).
-  - kind: link_condition
+  - text: "＜Link＞ [Appmon] trait: Cost 2"
+    kind: link_condition
     cost: 2
     filter: { trait_has: Appmon }
 
   # Link DP +3000 while linked (scope:linked aura, BT21-018 idiom).
-  - scope: linked
+  - text: "+3000 DP"
+    scope: linked
     kind: aura
     target: {}
     dp_modifier: 3000
@@ -69,7 +71,8 @@ effects:
   # [When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less.
   # DCGO WhenLinked, SetIsLinkedEffect(true), not optional, canNoSelect false;
   # the DP cap is MaxDP_DeleteEffect(4000) (the same cap as [On Play] above).
-  - scope: linked
+  - text: "[When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less."
+    scope: linked
     when: when_linked
     summary: "[When Linking] Delete 1 of your opponent's Digimon with 4000 DP or less"
     process:
