@@ -430,11 +430,14 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         reason: concat!(
             "Chuumon's inherited \"by deleting 1 other Digimon with [Sukamon] in its name, it doesn't leave\": owner ",
             "ruling 2026-11-23, parity with DCGO (EX13_027.cs: canNoSelect pick over either battle area, Q7287; ",
-            "RemoveUse unless a Digimon was chosen). Offered only while such a Digimon exists (leading-pick ",
-            "preflight), so the refund runs only on a declined pick; a chosen Digimon spends the use.",
+            "RemoveUse unless a Digimon was chosen). Offered while a printed match exists, deletable or not ",
+            "(owner ruling 2026-11-24, `offer_unpayable_deletion_payers`), so the refund runs only on a declined pick; ",
+            "a chosen Digimon, even one that can't be deleted, spends the use.",
         ),
         tests: &[
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_accept_then_decline_cost_keeps_opt",
+            "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_undeletable_only_pass_keeps_opt",
+            "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing",
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_once_per_turn_and_resets",
             "cards_behavioral/ex13/ex13_027.rs::ex13_027_inherited_not_offered_without_other_sukamon",
         ],
