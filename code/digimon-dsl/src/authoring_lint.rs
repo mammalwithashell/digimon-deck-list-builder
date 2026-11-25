@@ -620,6 +620,28 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
         ],
     },
     ReviewedRefund {
+        card: "EX13-016",
+        clause: "effects[3]",
+        row: RefundRow::DeclinedWhilePossible,
+        reason: concat!(
+            "Omnimon [On Play] [When Digivolving] [Counter] [Once Per Turn] \"You may delete 1 of your opponent's Digimon ",
+            "with as many digivolution cards as this Digimon or fewer\": DCGO EX13_016.cs L129-183, a canNoSelect pick and ",
+            "`if (!isUsed) activateClass.RemoveUse()`; owner ruling 2026-11-24 (\"Generally let's look to match dcgo\"). ",
+            "Listed because of the [Counter] timing. The refund is the `else` of `binding_present: delete_target`, reached ",
+            "only on a passed pick: the clause's `condition` (a qualifying opponent Digimon exists) means a target was ",
+            "possible (row b, Q1818), and the effect is not offered without one. A chosen target spends it (row c). At ",
+            "[Counter] the refunded use is not offered again in the same attack (one Counter window per attack). DCGO's ",
+            "RemoveUse when qualifying Digimon exist but none can be chosen is not reachable here (\"can't be chosen\" is ",
+            "not enforced by the engine) and is not claimed.",
+        ),
+        tests: &[
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_delete_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_delete_chosen_spends_the_once_per_turn",
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_counter_passed_pick_refunds_for_a_later_attack_only",
+            "cards_behavioral/ex13/ex13_016.rs::ex13_016_delete_not_offered_without_an_eligible_target",
+        ],
+    },
+    ReviewedRefund {
         card: "EX13-074",
         clause: "effects[2]",
         row: RefundRow::MainPassedByOwnerRuling,
