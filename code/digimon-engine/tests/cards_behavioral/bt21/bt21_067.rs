@@ -238,20 +238,19 @@ fn bt21_067_inherited_when_attacking_draws_then_trashes_one() {
     assert_eq!(r.deck_size(0), deck_before - 1, "only once per turn");
 }
 
-// ─── Production evo_costs regression (BLOCKED on data correction) ────────────
+// ─── Production evo_costs regression ─────────────────────────────────────────
 
-/// Using PRODUCTION card data (data/cards.json), digivolving BT21-067 from a
-/// plain Purple Lv.3 base must cost exactly 2 with no cost-choice prompt: the
-/// official DB / card image print a single Purple Lv.3 circle, cost 2.
+/// Using PRODUCTION card data (data/cards.json), digivolving Garurumon
+/// (BT21-067) from a plain Purple Lv.3 base must cost exactly 2 with no
+/// cost-choice prompt: the official DB and the card image print a single
+/// Purple Lv.3 circle, cost 2.
 ///
-/// BLOCKED: data/card_overrides.json (frozen legacy input) adds a second
-/// Purple Lv.3 / cost-3 circle that flows into data/cards.json, so the engine
-/// installs a 2-vs-3 cost-choice prompt. The fix is a data/card_corrections.json
-/// evo_costs entry citing an official observation for BT21-067, which is not
-/// committed under data/card_sources/observations/official/ yet. Un-ignore
-/// once the corrected cards.json lands.
+/// Until 2026-11-22 data/card_overrides.json added a second Purple Lv.3 /
+/// cost-3 circle that flowed into data/cards.json, so the engine installed a
+/// 2-vs-3 cost-choice prompt (scan finding F05). The row was removed from
+/// cards.json, card_overrides.json and the per-card JSON (FACE_READ_CIRCLES in
+/// tests/support/printed_circles.rs).
 #[test]
-#[ignore = "BLOCKED: stale Purple Lv.3 cost-3 circle in data/cards.json (card_overrides.json); needs card_corrections entry + official observation"]
 fn bt21_067_production_purple_lv3_route_costs_exactly_2_with_no_choice() {
     use digimon_engine::enums::{CardColor, PlaySource};
     let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/cards.json");

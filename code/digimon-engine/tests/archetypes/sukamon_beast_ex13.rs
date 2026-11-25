@@ -333,8 +333,10 @@ fn c1_blocker_wall_protected_sukamon_survives_and_sacrifice_refills_board() {
     assert_eq!(view.kind, SelectionKind::Replacement, "{view:?}");
     assert_eq!(view.selecting_player, 0);
     runner.accept_optional_trigger().expect("accept leave-prevention");
+    // "1 other Digimon with [Sukamon] in its name" spans both battle areas
+    // (Q7287, DCGO EX13_027.cs); the opponent has no Sukamon here.
     assert_eq!(
-        offered_field(&runner, SelectionKind::OwnField, 0),
+        offered_field(&runner, SelectionKind::AnyField, 0),
         strs(&[SUKAMON]),
         "cost offers only the OTHER Sukamon"
     );
@@ -465,7 +467,7 @@ fn c3_chuumon_tutors_sukamon_digivolves_and_stack_inherits_protection() {
     assert_eq!(view.kind, SelectionKind::Replacement);
     runner.accept_optional_trigger().expect("accept");
     let ally = PermanentHandle { player: 0, index: 1 };
-    assert_eq!(offered_field(&runner, SelectionKind::OwnField, 0), strs(&[SUKAMON]));
+    assert_eq!(offered_field(&runner, SelectionKind::AnyField, 0), strs(&[SUKAMON]));
     pick_handle(&mut runner, ally);
     // The ally Sukamon's [On Deletion] reveal (no qualifying card left) resolves.
     let _ = runner.auto_resolve();

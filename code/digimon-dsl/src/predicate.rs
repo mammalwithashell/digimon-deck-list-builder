@@ -314,6 +314,17 @@ pub struct PredicateSpec {
     /// trash can happen. G-DSL-PLAY-CANDIDATE-ORIGIN-ZONE.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_play_from_effect_without_cost: Option<bool>,
+    /// Card-subject leaf: the subject card has a [Link] requirement that
+    /// this effect's own permanent meets, so the card could link to it
+    /// (Q4533; CR 4.3 17-1-3-2-7, the same test as the link rule check,
+    /// `Game::link_card_qualifies_for`). The link COST is ignored: DCGO
+    /// `CanLinkToTargetPermanent(permanent, payCost: false)`, the offer gate
+    /// of a [Main] such as Logimon (BT25-052)'s, whose body then checks the
+    /// payment. False with no source permanent. Printed information: a
+    /// face-down card never meets it (CR 4.3 4-7-9).
+    /// G-DSL-LINK-REQUIREMENT-MET-BY-SELF.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub link_requirement_met_by_self: Option<bool>,
     /// Card-subject leaf for "play or use 1 ... card from your hand" picks
     /// (G-DSL-PLAY-OR-USE-CANDIDATE-LEGALITY, ST24-06 RizeGreymon). True when
     /// the effect controller could actually play or use the physical card by
@@ -470,7 +481,8 @@ pub struct PredicateSpec {
     /// effect a refire could activate right now (`refire_effect`, "activate 1
     /// [On Play] or [When Digivolving] effect of 1 of your [X] Digimon"), and
     /// that effect still has a use left this turn. The value is the refire's
-    /// timing: `on_play`, `when_digivolving` or `on_play_or_when_digivolving`.
+    /// timing: `on_play`, `when_digivolving`, `on_play_or_when_digivolving`,
+    /// or `on_deletion` (including active inherited effects).
     /// Mirrors DCGO BT24_102.cs:93-98, where the Digimon pick's
     /// `canTargetCondition` requires `permanent.EffectList(OnEnterFieldAnyone)
     /// .Any(CanBeEffectCandidate)`, so a Digimon with nothing to activate is
@@ -1749,7 +1761,7 @@ pub struct SourceCountPredicate {
 
 /// Payload for the `has_digivolve_candidate` permanent-subject leaf â€” "some
 /// card in `zone` of player `of` matches `filter` and can digivolve onto this
-/// permanent". `hand`, `trash`, and owner-filtered `reveal` are valid zones.
+/// permanent". `material` scans only cards beneath the effect's source permanent.
 /// An omitted `cost` checks routes only; an explicit cost also checks that
 /// the consuming effect's payment is possible with its existing reducers.
 /// An explicit cost is forbidden inside cost_reduction/cost_assignment
@@ -1758,10 +1770,10 @@ pub struct SourceCountPredicate {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DigivolveCandidatePredicate {
-    /// Whose hand / trash / revealed cards to scan. Defaults to `you`.
+    /// Whose hand / trash / revealed cards or carrier materials to scan. Defaults to `you`.
     #[serde(default = "default_level_aggregate_of")]
     pub of: PlayerRef,
-    /// Zones to scan: `hand`, `trash`, or `reveal`.
+    /// Zones to scan: `hand`, `trash`, `reveal`, or `material`.
     pub zone: Vec<Zone>,
     /// Card-shape filter each candidate result card must satisfy (evaluated
     /// as a `Card` subject). Omit to accept any Digimon card with a route.

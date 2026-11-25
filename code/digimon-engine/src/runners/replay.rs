@@ -5916,12 +5916,13 @@ impl ReplayDriver {
     /// (:69-73; a cost nobody can pay is not listed, :71-72). So, with that
     /// gate parked for `actor`:
     /// * the card's "Don't" value (`dcgo_int_menu_decline_value`) declines it;
-    /// * 1 / 2 accept it. When both costs are payable the engine's cost choice
-    ///   follows and the row answers it by the card's own constants
-    ///   (`AcceptThenChoose`); when only the named cost is payable (the other
-    ///   is absent from DCGO's menu, so the number is forced) accepting the gate
-    ///   IS the answer (`AcceptOnly`) - the engine pays that single cost itself
-    ///   or parks that cost's own pick for the next row;
+    /// * 1 / 2 accept it. When the accept parks the engine's cost choice (the
+    ///   card does so whenever any cost is payable, offering "Don't pay the
+    ///   cost" beside it) the row answers that choice by the card's own
+    ///   constants (`AcceptThenChoose`); only when the accept parks no cost
+    ///   choice and the named cost is the only payable one is accepting the
+    ///   gate the whole answer (`AcceptOnly`) - the engine pays that single
+    ///   cost itself or parks that cost's own pick for the next row;
     /// * anything else, and a cost the state says is not payable, is left to
     ///   the ordinary path (no reading is grounded, so it halts).
     ///
@@ -5962,15 +5963,24 @@ impl ReplayDriver {
         if !named_is_payable {
             return None;
         }
-        if !other_is_payable {
-            return Some(OuterGateInt::AcceptOnly);
-        }
+        // What follows the accept is read from the engine, not assumed from the
+        // payable costs: since the W14 row (f) parity change (owner ruling
+        // 2026-11-23, 076608011) the card asks ONE cost choice after the accept
+        // even with a single payable cost, because DCGO's menu always carries
+        // "Don't pay the cost" beside it (EX13_032.cs:69-77). The row answers
+        // that choice by the card's own constants. Only when the accept parks
+        // no cost choice and the named cost is the only payable one is the
+        // accept itself the whole answer.
         let mut probe = game.clone();
         probe.decode_action(crate::action::space::REPLACEMENT_ACCEPT, actor);
-        let chooses = probe.pending_selection.as_ref().is_some_and(|q| {
+        let parks_cost_choice = probe.pending_selection.as_ref().is_some_and(|q| {
             q.selecting_player == actor && matches!(q.kind, SelectionKind::EffectChoice) && q.source_card == p.source_card
-        }) && matches!(super::selection_resolve::resolve_next(&probe, payload, 0), Ok(Some(_)));
-        chooses.then_some(OuterGateInt::AcceptThenChoose)
+        });
+        if parks_cost_choice {
+            return matches!(super::selection_resolve::resolve_next(&probe, payload, 0), Ok(Some(_)))
+                .then_some(OuterGateInt::AcceptThenChoose);
+        }
+        (!other_is_payable).then_some(OuterGateInt::AcceptOnly)
     }
 
     /// Is the parked prompt the one-entry accept/decline gate of a single
@@ -9735,6 +9745,19 @@ impl ReplayDriver {
                 self.paused = true;
                 return self.no_progress_result(game);
             }
+            // DCGO's human UI lets a player declare a `[Main]`, pass its pick
+            // and declare it again with nothing changed in between. The
+            // engine withholds that repeat (main-declaration guard, owner
+            // ruling 2026-11-24, `game::main_declare_guard`). When a DCGO
+            // row's declaration is off ONLY because of a park, lift the park
+            // and note it (`dcgo_main_redeclare_after_pass`).
+            if !self.source.answers_engine_only_prompts() {
+                if let Some(note) =
+                    dcgo_main_redeclare_after_pass(game, actor, action_id, self.cursor)
+                {
+                    self.notes.push(note);
+                }
+            }
             let mask = crate::action::build_action_mask(game, actor);
             let legal = action_id == crate::action::space::CONCEDE_GAME
                 || mask.get(action_id as usize).copied().unwrap_or(0.0) > 0.5;
@@ -10616,6 +10639,44 @@ fn describe_board(game: &Game) -> String {
 }
 
 /// Up to `max` action IDs the engine WOULD accept here (`mask` value > 0.5).
+/// A recorded Main-phase field `[Main]` declaration (FIELD_EFFECT +2) that the
+/// engine withholds only because the main-declaration guard parked it: lift
+/// the parks on that permanent and return the replay note. `None` (and the
+/// game untouched) in every other case, so a real mask miss still surfaces.
+pub(crate) fn dcgo_main_redeclare_after_pass(
+    game: &mut Game,
+    actor: PlayerId,
+    action_id: u16,
+    row: u32,
+) -> Option<String> {
+    use crate::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    };
+    if game.pending_selection.is_some()
+        || game.main_declare_guard().parked().is_empty()
+        || !(FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id)
+        || (action_id - FIELD_EFFECT_START) % EFFECTS_PER_PERMANENT != FIELD_EFFECT_SLOT_FOR_MAIN
+    {
+        return None;
+    }
+    if crate::action::build_action_mask(game, actor)[action_id as usize] > 0.5 {
+        return None;
+    }
+    let permanent = ((action_id - FIELD_EFFECT_START) / EFFECTS_PER_PERMANENT) as usize;
+    let mut probe = game.clone();
+    if !probe.unpark_main_declarations_for_replay(actor, permanent)
+        || crate::action::build_action_mask(&probe, actor)[action_id as usize] <= 0.5
+    {
+        return None;
+    }
+    game.unpark_main_declarations_for_replay(actor, permanent);
+    Some(format!(
+        "row {row}: dcgo_main_redeclare_after_pass: player {actor} re-declared the [Main] on \
+         field slot {permanent} after passing it with nothing changed; the main-declaration \
+         guard's park was lifted for this DCGO row"
+    ))
+}
+
 /// Surfaced in `MaskMiss` divergences to help triage "wrong target index"
 /// vs "engine refuses a legal action".
 fn sample_legal_ids(mask: &[f32], max: usize) -> Vec<u16> {

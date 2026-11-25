@@ -25,6 +25,21 @@ pub(crate) struct MainEffectMatch {
     /// The matched effect's printed name; empty when the effect carries none.
     pub name: String,
     pub development_hand: crate::policies::development::HandBenefit,
+    /// For a field `[Main]` (`field_main_match`): exactly which effect, so
+    /// the decoder (`Game::activate_field_main`) dispatches on the same
+    /// match the mask emitted and `explain_action` labelled. `None` for the
+    /// hand / trash / breeding matches.
+    pub field: Option<FieldMainTarget>,
+}
+
+/// The matched field `[Main]`: its source in the stack, its slot in that
+/// source's effect list, and the OPT key its use is counted under.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct FieldMainTarget {
+    pub source_index: usize,
+    pub source_card: crate::card_source::CardHandle,
+    pub slot: usize,
+    pub opt_key: u8,
 }
 
 impl MainEffectMatch {
@@ -62,6 +77,7 @@ pub(crate) fn hand_main_match(
         return Some(MainEffectMatch {
             name: effect.name.clone(),
             development_hand: effect.development_hand,
+            field: None,
         });
     }
     None
@@ -69,8 +85,10 @@ pub(crate) fn hand_main_match(
 
 /// Field `[Main]` (bits 1000-1149, sub-slot +2): first-match-wins across the
 /// permanent's digivolution stack (bottom to top), honoring the inherited-vs-top
-/// filter, once-per-turn lockout, and condition gate — exactly as the mask's
-/// standard field emitter does. This intentionally does NOT cover the DigiLink
+/// filter, once-per-turn lockout, the main-declaration guard, the condition
+/// gate and the activation gates. The ONE source of truth for the match: the
+/// mask, `explain_action` and the decoder (`Game::activate_field_main`) all
+/// use it, so they cannot pick different effects. This intentionally does NOT cover the DigiLink
 /// Shape-B (sub-slot +3) or delayed-Option activations, which are separate
 /// non-card-effect bits handled by their own emitters.
 pub(crate) fn field_main_match(
@@ -110,6 +128,21 @@ pub(crate) fn field_main_match(
             );
             if effect.max_per_turn > 0
                 && perm.activation_count(source.handle(), opt_key) >= effect.max_per_turn
+            {
+                continue;
+            }
+            // Main-declaration guard (owner ruling 2026-11-24): a kept use
+            // whose declare-then-pass was proven a no-op in exactly this
+            // state is not offered again until something changes; the next
+            // live `[Main]` on the permanent, if any, takes the bit
+            // (`game::main_declare_guard`).
+            if effect.main_refund_capable
+                && game.main_declare_parked(&crate::game::main_declare_guard::MainDeclareKey {
+                    player: player_id,
+                    permanent: perm_index as u8,
+                    source_card: source.handle(),
+                    opt_key,
+                })
             {
                 continue;
             }
@@ -167,6 +200,12 @@ pub(crate) fn field_main_match(
             return Some(MainEffectMatch {
                 name: effect.name.clone(),
                 development_hand: effect.development_hand,
+                field: Some(FieldMainTarget {
+                    source_index,
+                    source_card: source.handle(),
+                    slot,
+                    opt_key,
+                }),
             });
         }
     }
@@ -195,7 +234,7 @@ pub(crate) fn breeding_training_match(game: &Game, player_id: PlayerId) -> Optio
                 .map(|e| e.name.clone())
         })
         .unwrap_or_default();
-    Some(MainEffectMatch { name, development_hand: Default::default() })
+    Some(MainEffectMatch { name, development_hand: Default::default(), field: None })
 }
 
 /// Trash `[Main]` (bits 1150-1194): the first effect on the trash card at
@@ -222,6 +261,7 @@ pub(crate) fn trash_main_match(
         return Some(MainEffectMatch {
             name: effect.name.clone(),
             development_hand: effect.development_hand,
+            field: None,
         });
     }
     None

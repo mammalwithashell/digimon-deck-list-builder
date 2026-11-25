@@ -1,0 +1,172 @@
+# Exam scenario: Monarchlizamon (BT25-057), clause BT25-057#effect#4 --
+# DUAL Option face "[Main] 1 of your Digimon gains <Rush>, <Security A. +1>
+#  and +5000 DP until your opponent's turn ends. Then, it may attack."
+#  (official Bandai DB text, data/card_bundles/BT25-057.md) -- WHEN the used
+# Option finishes relative to the attack its [Main] declared.
+#
+# The same line as BT25-057-effect4.yaml up to the attack declaration
+# (Cougarmon ST23-03 buffed to 9000, attacks the player), but the <Arts
+# Digivolve> offer is ACCEPTED onto the attacking Cougarmon.
+#
+# It discriminates the two orders:
+#   Order A (DCGO; the engine since 2026-11-25): the Option finishes at the
+#     DECLARATION. The very next decision is the Arts SelectPermanentEffect
+#     (step 18, pinned), with p1's security still 5 and nothing in p1's trash
+#     (assert at 18). Accepted, Cougarmon becomes Monarchlizamon (13000 DP,
+#     still suspended as the attacker) before any security check (assert at
+#     19). Its two [When Digivolving] effects then order together with
+#     ST23-01's inherited [When Attacking] (steps 19 and 23), and the attack
+#     checks two security cards (assert at 26).
+#   Order B (the removed "hold until the attack ends"): step 18 would meet
+#     ST23-01's OptionalSkill instead, and the security checks would come
+#     before any Arts offer -- the line aborts at step 18.
+# DCGO basis: AttackProcess.cs:242 (`State = AttackState.Counter`, Attack()
+# returns at the declaration), SelectAttackEffect.cs:547,
+# CardController.cs:2026-2129 (Arts resolution / trash in UseOption),
+# TurnStateMachine.cs:1277-1286 ([When Attacking] and the attack run after);
+# ArtsDigivolve.cs (SelectPermanentEffect, canNoSelect: true, PlayCard with
+# activateETB). Official Q4962 / Q4346; Q6344: Monarchlizamon's own [When
+# Attacking] does NOT activate for this attack -- only its [When
+# Digivolving] pair is offered (the TriggerOrder lists [ST23-01, BT25-057,
+# BT25-057]). Owner default "Generally let's look to match dcgo", applied to
+# this card by the orchestrator (G-ENGINE-OPTION-BODY-ATTACK-NOT-HELD,
+# resolved by reversal).
+#
+# PROVISIONAL: every assert below is OUR engine's result (sim-only), not
+# backfilled from DCGO. It stays unconfirmed until an oracle pass.
+#
+# Prompt notes: step 19 and step 23 pick from OUR TriggerOrder list by card
+# identity (DCGO: MultipleSkills); step 20 is our sim-only you-may gate on
+# the optional De-Digivolve (see BT25-057-effect5.yaml); the De-Digivolve
+# trashes BT26-089's bottom face-down card (step 21) and targets Biyomon
+# (step 22); the optional battle (step 24) and ST23-01's [When Attacking]
+# (step 25) are declined.
+card: BT25-057
+clause: BT25-057#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [BT26-089, BT25-032, ST23-03, BT25-057, BT16-082,
+            BT25-049, ST23-06, BT25-049, ST23-06, BT16-082,
+            ST23-06, BT25-049, ST23-09, BT25-043, ST23-09,
+            BT25-043, ST23-09, BT25-041, BT25-041, BT25-041]
+    rest: gd-bt26-1st
+  p1:
+    stack: [ST1-02, ST1-05, ST1-03, BT1-009, BT3-007,
+            BT1-014, BT4-010, BT3-007, BT1-009, BT4-014,
+            ST1-04, ST1-03, BT1-014, BT4-010, ST1-08, ST1-04]
+    rest: tm-quiet-red
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: BT25-032 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { play: { card: BT26-089, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: ST1-02, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [ST23-06] } }
+  - actor: 0
+    do: { digivolve: { from: field.1, using: ST23-03 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { select: { cards: [BT25-049] } }
+  - actor: 0
+    do: { play: { card: BT25-057, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { targets: [opp.security] } }
+    expect: { prompt: SelectAttackEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { cards: [BT25-057], ordinal: 0 } }
+  - actor: 0
+    do: { select: { yes: true, sim_only: true } }
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect, count: 1 }
+  - actor: 0
+    do: { select: { cards: [BT25-057] } }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 18
+    that:
+      turn: 5
+      p1.security: 5
+      p1.trash: []
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [BT25-049, ST23-06]
+        - card_id: ST23-03
+          dp: 9000
+          suspended: true
+          sources: [BT25-032, ST23-01]
+  - at: 19
+    that:
+      turn: 5
+      p1.security: 5
+      p1.trash: []
+      p0.field:
+        - card_id: BT26-089
+          dp: -1
+          suspended: false
+          sources: [BT25-049, ST23-06]
+        - card_id: BT25-057
+          dp: 13000
+          suspended: true
+          sources: [BT25-032, ST23-01, ST23-03]
+  - at: 26
+    that:
+      turn: 5
+      p1.security: 3
+      p1.trash: [BT1-009, BT4-014]

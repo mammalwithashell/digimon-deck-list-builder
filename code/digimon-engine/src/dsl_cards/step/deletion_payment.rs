@@ -26,6 +26,21 @@ pub(crate) fn selection_pays_deletion(
             | CompiledBindingRef::Permanent(n) | CompiledBindingRef::OfPermanent(n) if n == name))
 }
 
+/// Whether a pick hides payers whose deletion is impossible (`can_pay`): a
+/// paid-deletion pick (`selection_pays_deletion`) that did not opt into
+/// `offer_unpayable_deletion_payers`. With the opt-in (owner ruling
+/// 2026-11-24, DCGO parity on four clauses) every printed match is offered;
+/// an unpayable one, once chosen, reaches `expand` below, which skips the
+/// deletion and the cancel, so nothing is deleted and the carrier leaves.
+pub(crate) fn filters_unpayable_payers(
+    bind_as: Option<&str>,
+    then: &[CompiledStep],
+    tail: &[CompiledStep],
+    offer_unpayable_payers: bool,
+) -> bool {
+    !offer_unpayable_payers && selection_pays_deletion(bind_as, then, tail)
+}
+
 /// CR 15-7-4 excludes intrinsically impossible payments. Effect replacements
 /// (including optional prevention) remain legal attempts; the receipt decides
 /// whether they actually paid. Call after computing printed extrema, so an

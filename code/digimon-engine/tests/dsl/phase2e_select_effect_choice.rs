@@ -132,7 +132,7 @@ fn repeat_effect_choice_repeats_count_and_resumes_after_nested_selection() {
                         prompt_key: None,
                         optional: false,
                         continue_on_decline: false,
-                        then: vec![],
+                        then: vec![], offer_unpayable_deletion_payers: false,
                     },
                     CompiledStep::AddDpModifier {
                         target: CompiledBindingRef::Named("target".to_string()),

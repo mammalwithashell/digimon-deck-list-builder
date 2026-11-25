@@ -107,6 +107,7 @@ impl DebugRunner {
     /// no decision in between calls the `Game` method directly.
     fn player_decision(&mut self) {
         self.game.reset_loop_watch();
+        self.game.note_turn_action();
     }
 
     /// Play a card from a player's hand. Returns the new field index.

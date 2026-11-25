@@ -1,0 +1,62 @@
+card: BT27-054
+name: Lotosmon
+kind: digimon
+level: 6
+color: [green]
+cost: 11
+dp: 11000
+form: Mega
+attribute: Data
+traits: [Fairy, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, any_color: true, trait_has: TS }
+    cost: 3
+
+effects:
+  - text: "When this card would be played, if there are 2 or more suspended Digimon, reduce the cost by 4."
+    kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 4
+    condition:
+      count_gte:
+        filter: { owner: any, zone: [battle_area], kind: digimon, is_suspended: true }
+        n: 2
+  - text: "[On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+    when: [on_play, when_digivolving]
+    process:
+      - select_opponent_permanent:
+          bind_as: suspended
+          optional: true
+          continue_on_decline: true
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          prompt: "Suspend an opponent's Digimon or Tamer?"
+      - suspend: { target: suspended }
+      - select_opponent_permanent:
+          bind_as: locked
+          optional: false
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          prompt: "Choose an opponent's Digimon or Tamer that can't unsuspend"
+      - add_modifier:
+          target: locked
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by deleting 1 other suspended Digimon, it doesn't leave."
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    once_per_turn: true
+    active_when: { is_source: true, replacement_subject_is_mine: true, kind: digimon }
+    process:
+      - select_any_permanent:
+          bind_as: payment
+          optional: true
+          filter: { kind: digimon, other: true, is_suspended: true }
+          prompt: "Delete another suspended Digimon to prevent this Digimon from leaving?"
+      - delete_permanent: { target: payment }
+      - cancel_replacement: {}

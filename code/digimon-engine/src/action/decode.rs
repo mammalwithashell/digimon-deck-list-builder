@@ -21,6 +21,12 @@ use crate::enums::{CardKind, GamePhase, ModifierType, PlaySource, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 
+/// A Main-phase field `[Main]` declaration bit (FIELD_EFFECT sub-slot +2).
+fn is_field_main_declaration(action_id: u16) -> bool {
+    (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id)
+        && (action_id - FIELD_EFFECT_START) % EFFECTS_PER_PERMANENT == FIELD_EFFECT_SLOT_FOR_MAIN
+}
+
 impl Game {
     /// Execute the action identified by `action_id` on behalf of `player_id`.
     ///
@@ -63,11 +69,18 @@ impl Game {
         if self.pending_selection.is_some() {
             let _ = self.resolve_selection(player_id, action_id);
             self.tick_declarative_effects();
+            self.settle_main_declaration();
             return;
         }
         // §18-3: a turn action is the player's decision; whatever repeats
         // from here on is new processing (see `drain_effect_queue`).
         self.reset_loop_watch();
+        // Main-declaration guard: every turn action but a [Main] declaration
+        // (the FIELD_EFFECT +2 sub-slot, which settles its own way) drops the
+        // parks (`game::main_declare_guard`).
+        if !is_field_main_declaration(action_id) {
+            self.note_turn_action();
+        }
         match self.current_phase {
             GamePhase::Mulligan => self.decode_mulligan(action_id, player_id),
             GamePhase::Main => self.decode_main(action_id),
@@ -103,6 +116,7 @@ impl Game {
             | GamePhase::GameOver => { /* no-op */ }
         }
         self.tick_declarative_effects();
+        self.settle_main_declaration();
     }
 
     fn decode_mulligan(&mut self, action_id: u16, player_id: PlayerId) {

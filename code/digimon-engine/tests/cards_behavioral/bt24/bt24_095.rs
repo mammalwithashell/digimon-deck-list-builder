@@ -207,3 +207,93 @@ fn make_tamer(id: &str, traits: &[&str], color: CardColor) -> digimon_engine::Ca
     card.traits = traits.iter().map(|s| s.to_string()).collect();
     card
 }
+
+// ─── Link box: [When Attacking][Once Per Turn] bounce + Link DP +2000 ────────
+//
+// Sonic Shot (BT24-095) card face link box; DCGO BT24_095.cs "Link ESS"
+// (OnAllyAttack, linked, maxCountPerTurn 1, canNoSelect false, suspended
+// opponent Digimon only).
+
+fn bt24_095_link_to_host(runner: &mut DebugRunner) -> PermanentHandle {
+    let host = runner.place_on_field(0, "TS-DIGIMON", Some(0));
+    let target = runner.place_on_field(1, "OPP-TAMER", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(play_sonic_standard(runner), OptionPlayResult::Pending);
+    let v = runner.pending_selection_view().expect("Main target");
+    runner
+        .execute_action(v.selecting_player, encode_attack(0, target.index as u16))
+        .expect("suspend the opponent Tamer");
+    let v = runner.pending_selection_view().expect("link prompt");
+    runner
+        .execute_action(v.selecting_player, encode_attack(0, host.index as u16))
+        .expect("link Sonic Shot");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    host
+}
+
+fn bt24_095_index(r: &DebugRunner, player: usize, id: &str) -> Option<usize> {
+    r.game.players[player]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&r.game.card_data) == id)
+}
+
+#[test]
+fn bt24_095_link_dp_plus_2000_reaches_the_host() {
+    let mut runner = sonic_runner().hand(0, &["BT24-095"]).memory(20).start();
+    let host_probe = runner.place_on_field(0, "TS-DIGIMON", Some(0));
+    let dp0 = runner.effective_dp(host_probe).expect("dp");
+    runner.game.players[0].battle_area.clear();
+    let host = bt24_095_link_to_host(&mut runner);
+    assert_eq!(
+        runner.game.player(0).battle_area[host.index as usize].linked_cards.len(),
+        1
+    );
+    assert_eq!(runner.effective_dp(host).expect("dp"), dp0 + 2000);
+}
+
+#[test]
+fn bt24_095_linked_host_when_attacking_returns_a_suspended_digimon_once_per_turn() {
+    let mut runner = sonic_runner()
+        .add_card(make_digimon("OPP-SUSP", 4))
+        .add_card(make_digimon("OPP-UP", 4))
+        .add_card(make_digimon("OPP-SUSP-2", 4))
+        .hand(0, &["BT24-095"])
+        .memory(20)
+        .start();
+    let host = bt24_095_link_to_host(&mut runner);
+    let susp = runner.place_on_field(1, "OPP-SUSP", Some(0));
+    runner.game.players[1].battle_area[susp.index as usize].is_suspended = true;
+    let up = runner.place_on_field(1, "OPP-UP", Some(0));
+    let _ = runner.attack_player(host, 1, false);
+    let wa = runner
+        .pending_selection_view()
+        .expect("linked [When Attacking] pick");
+    assert_eq!(wa.kind, SelectionKind::OppField);
+    assert!(!wa.is_optional, "printed without a may");
+    assert!(wa.valid_action_ids.contains(&encode_attack(0, susp.index as u16)));
+    assert!(
+        !wa.valid_action_ids.contains(&encode_attack(0, up.index as u16)),
+        "an unsuspended Digimon is not offered"
+    );
+    runner
+        .execute_action(0, encode_attack(0, susp.index as u16))
+        .expect("return the suspended Digimon");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    assert!(bt24_095_index(&runner, 1, "OPP-SUSP").is_none());
+    assert!(runner.game.players[1]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "OPP-SUSP"));
+    assert!(bt24_095_index(&runner, 1, "OPP-UP").is_some());
+
+    // [Once Per Turn]: a second attack this turn returns nothing.
+    let s2 = runner.place_on_field(1, "OPP-SUSP-2", Some(0));
+    runner.game.players[1].battle_area[s2.index as usize].is_suspended = true;
+    let hi = bt24_095_index(&runner, 0, "TS-DIGIMON").expect("host");
+    runner.game.players[0].battle_area[hi].is_suspended = false;
+    let host = PermanentHandle { player: 0, index: hi as u8 };
+    let _ = runner.attack_player(host, 1, false);
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    assert!(bt24_095_index(&runner, 1, "OPP-SUSP-2").is_some());
+}

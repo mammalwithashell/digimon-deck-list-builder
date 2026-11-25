@@ -29,6 +29,11 @@
       "card_color": 0,
       "level": 5,
       "memory_cost": 5
+    },
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 5
     }
   ],
   "xros_req": "[Digivolve] Lv.5 w/[Tyrannomon] in name or Lv.5 w/[Dinosaur] trait: Cost 4",

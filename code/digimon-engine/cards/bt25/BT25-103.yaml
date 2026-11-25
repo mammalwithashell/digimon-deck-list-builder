@@ -96,6 +96,14 @@ effects:
           position: bottom
 
   # ─── [When Attacking][Counter][OPT] trash opp sources; may end attack ───────
+  # One clause for the one printed effect: both timings share its single
+  # [Once Per Turn] (official Q1550) and its refund. "You may trash ... Then,
+  # you may end this attack" is the owner-decided W13 shape
+  # (qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21: "DCGO has the
+  # Dianamon/GraceNovamon effect correct"): with both halves declined nothing
+  # executed and the use is kept, at [When Attacking] and at [Counter] alike
+  # (DCGO BT25_103.cs runs one shared effect for both timings). Either half
+  # executed spends it.
   - text: "[When Attacking] [Counter] [Once Per Turn] For each of this Digimon's digivolution cards, you may trash any 1 digivolution card from your opponent's Digimon. Then, you may end this attack."
     when: [when_attacking, counter]
     once_per_turn: true

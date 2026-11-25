@@ -17,13 +17,14 @@
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/ST22/Red/ST22_08.cs
 //!
-//! Note: DCGO additionally registers an `EndOfTurnLinkedEffect`
-//! ([End of Your Turn] this Digimon may attack). That clause is NOT present
-//! in the printed `effect_description_eng` / `inherited_effect_description_eng`
-//! for ST22-08 in `data/cards.json`. Per the project source-priority rule
-//! (printed text outranks DCGO), it is intentionally NOT implemented.
+//! Link box (card face ST22-08.webp + official bundle "### Link Effect" /
+//! "### Link DP"; `data/cards.json` drops it): "DP +2000" and "[End of Your
+//! Turn] [Once Per Turn] This Digimon may attack." DCGO registers the latter
+//! as `EndOfTurnLinkedEffect` (isOptional true, maxCountPerTurn 1,
+//! SetIsLinkedEffect, CanActivate only while the host can attack). (An
+//! earlier header said the clause was not printed: it is, in the link box.)
 //!
-//! # Clauses (4)
+//! # Clauses (6; 5 and 6 are the link box)
 //!  1. Color bypass — conditional on "you have a Tamer":
 //!     - from-hand play-time bypass via `use_requirement`
 //!       (`any_field_permanent { of: you, predicate: { kind: tamer } }`)
@@ -195,19 +196,22 @@ fn st22_08_has_use_requirement_for_color_bypass() {
     );
 }
 
-/// ST22-08 must compile to exactly 4 clauses:
+/// ST22-08 must compile to exactly 6 clauses:
 ///   0: flood_gate (color bypass, face-up scope)
 ///   1: triggered on_security (delete lowest-DP + add self to hand)
 ///   2: triggered main_from_hand (optional free link + DP-bounded delete)
 ///   3: link_requirement (Link Requirements — the Link play mode)
+///   4: linked [End of Your Turn][Once Per Turn] this Digimon may attack
+///   5: linked aura DP +2000 (Link DP)
+/// Was 4: the printed link box was missing.
 #[test]
-fn st22_08_has_four_clauses() {
+fn st22_08_has_six_clauses() {
     let runner = st22_08_runner();
     let card = runner.compiled_card("ST22-08").expect("ST22-08 compiled");
     assert_eq!(
         card.effects.len(),
-        4,
-        "ST22-08 must have exactly 4 clauses (flood_gate, security, main, link_requirement); got {}",
+        6,
+        "ST22-08 must have exactly 6 clauses (flood_gate, security, main, link_requirement, linked EOT attack, linked DP); got {}",
         card.effects.len()
     );
 }
@@ -1428,4 +1432,167 @@ fn prepare_security_option(
         played: false,
     });
     handle
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// § Link box — DP +2000 and [End of Your Turn] [Once Per Turn] This Digimon
+//   may attack (card face; DCGO ST22_08.cs EndOfTurnLinkedEffect)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// A runner with a red Tamer and an unsuspended, not summoning-sick Lv.4
+/// host; Offensive Plug-In V (ST22-08) is used from hand as a [Main] Option
+/// and, when `link`, is linked to the host by its free link (else that link
+/// is declined). Returns the runner, the host and the host's DP before.
+fn st22_08_link_box_runner(link: bool) -> (DebugRunner, PermanentHandle, i32) {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("YAML parses")
+        .add_card(tamer("RED-TAMER", CardColor::Red))
+        .add_card(red_digimon("HOST", 4, 5000, 4))
+        .add_card(make_test_card("SEC", "SecCard"))
+        .security(1, &["SEC", "SEC", "SEC"])
+        .hand(0, &["ST22-08"])
+        .memory(20)
+        .start();
+    runner.game.turn_count = 3;
+    runner.place_on_field(0, "RED-TAMER", Some(0));
+    let host = runner.place_on_field(0, "HOST", Some(0));
+    let dp0 = runner.effective_dp(host).expect("dp");
+    runner.game.enter_main_phase();
+    let _ = play_st22_08(&mut runner, false);
+    let view = runner.pending_selection_view().expect("free link prompt");
+    let pick = if link {
+        view.valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .expect("the host can be linked")
+    } else {
+        PASS
+    };
+    runner
+        .execute_action(view.selecting_player, pick)
+        .expect("link choice");
+    // The DP comparator pick (mandatory; one own Digimon); no opponent
+    // Digimon, so nothing is deleted.
+    let mut guard = 0;
+    while let Some(v) = runner.pending_selection_view() {
+        guard += 1;
+        assert!(guard < 6, "the [Main] body never finished");
+        let a = v
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap_or(PASS);
+        runner
+            .execute_action(v.selecting_player, a)
+            .expect("finish [Main]");
+    }
+    runner.game.drain_effect_queue();
+    runner.game.tick_declarative_effects();
+    assert_eq!(
+        runner.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        usize::from(link),
+        "ST22-08 linked to the host exactly when the free link was taken"
+    );
+    (runner, host, dp0)
+}
+
+/// Link DP +2000 reaches the host while ST22-08 is linked to it.
+#[test]
+fn st22_08_link_dp_plus_2000_reaches_the_host() {
+    let (runner, host, dp0) = st22_08_link_box_runner(true);
+    assert_eq!(runner.effective_dp(host).expect("dp"), dp0 + 2000);
+}
+
+/// Not linked: no link DP.
+#[test]
+fn st22_08_unlinked_gives_no_link_dp() {
+    let (runner, host, dp0) = st22_08_link_box_runner(false);
+    assert_eq!(runner.effective_dp(host).expect("dp"), dp0);
+}
+
+/// "[End of Your Turn] [Once Per Turn] This Digimon may attack": at the end
+/// of the turn the linked host is offered an optional attack, and accepting
+/// it lets the host attack -- here the player, checking 1 security card.
+#[test]
+fn st22_08_linked_end_of_turn_host_may_attack() {
+    use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
+    let (mut runner, host, _) = st22_08_link_box_runner(true);
+    let sec_before = runner.game.players[1].security.len();
+    runner.game.end_turn();
+    let view = runner
+        .pending_selection_view()
+        .expect("the linked [End of Your Turn] \"may attack\" is offered");
+    assert!(view.is_optional, "\"may attack\" is declinable");
+    let attack_id = encode_attack(host.index as u16, SECURITY_TARGET);
+    if !view.valid_action_ids.contains(&attack_id) {
+        // The outer "may" Yes/No first; accept it.
+        let accept = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .expect("accept");
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("accept");
+    }
+    let view = runner
+        .pending_selection_view()
+        .expect("attack target prompt");
+    assert!(
+        view.valid_action_ids.contains(&attack_id),
+        "the host may attack the player: {:?}",
+        view.valid_action_ids
+    );
+    runner.execute_action(0, attack_id).expect("attack");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    assert_eq!(runner.game.players[1].security.len(), sec_before - 1);
+}
+
+/// Declining the "may attack" attacks nothing.
+#[test]
+fn st22_08_linked_end_of_turn_attack_can_be_declined() {
+    let (mut runner, _host, _) = st22_08_link_box_runner(true);
+    let sec_before = runner.game.players[1].security.len();
+    runner.game.end_turn();
+    let view = runner
+        .pending_selection_view()
+        .expect("the linked [End of Your Turn] \"may attack\" is offered");
+    assert!(view.is_optional);
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    assert_eq!(runner.game.players[1].security.len(), sec_before);
+}
+
+/// DCGO activates it only while the host can attack: a suspended host is
+/// offered nothing at the end of the turn.
+#[test]
+fn st22_08_linked_end_of_turn_offers_nothing_when_the_host_cannot_attack() {
+    let (mut runner, host, _) = st22_08_link_box_runner(true);
+    runner.game.players[0].battle_area[host.index as usize].is_suspended = true;
+    runner.game.end_turn();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "a suspended host has no attack to offer: {:?}",
+        runner.pending_kind()
+    );
+}
+
+/// Not linked: the end of the turn offers nothing.
+#[test]
+fn st22_08_unlinked_end_of_turn_offers_no_attack() {
+    let (mut runner, _host, _) = st22_08_link_box_runner(false);
+    runner.game.end_turn();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "the link box only applies while linked: {:?}",
+        runner.pending_kind()
+    );
 }
