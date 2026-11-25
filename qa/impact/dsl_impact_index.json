@@ -17556,7 +17556,6 @@
       "path": "bt27/BT27-034.yaml",
       "predicates": [
         "any_of",
-        "binding_present",
         "color_is",
         "effect_deleted_any_opponent_digimon",
         "is_unsuspended",
@@ -17564,7 +17563,6 @@
         "level_eq",
         "name_is",
         "none_of",
-        "not",
         "replacement_cause"
       ],
       "timings": [
@@ -17579,7 +17577,6 @@
         "per_selected",
         "play_from_materials",
         "refire_effect",
-        "refund_opt",
         "select_count_capped_multi",
         "select_material",
         "select_opponent_dp_budget",
@@ -37005,7 +37002,6 @@
       "BT27-015",
       "BT27-016",
       "BT27-027",
-      "BT27-034",
       "BT27-043",
       "BT27-070",
       "BT27-104",
@@ -43622,7 +43618,6 @@
       "BT26-095",
       "BT27-029",
       "BT27-033",
-      "BT27-034",
       "BT27-043",
       "BT27-065",
       "BT27-070",
@@ -54106,7 +54101,6 @@
       "BT26-086",
       "BT27-013",
       "BT27-015",
-      "BT27-034",
       "BT27-043",
       "BT27-070",
       "BT27-084",
