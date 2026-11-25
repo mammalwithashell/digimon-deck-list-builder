@@ -22,13 +22,13 @@ mod context_dispatch_tests;
 /// Registry of card_id -> CardEffect implementation.
 ///
 /// Cheaply `Clone`: entries are `Arc<dyn CardEffect>` (stateless, shared), so a
-/// clone duplicates only the `HashMap` of string keys + Arc handles — not the
-/// ~4000-card DSL parse/lowering that `build_registry()` performs. This is what
-/// lets `build_registry_cached()` build the pack once and hand each game a cheap
-/// clone (see that fn).
+/// clone duplicates only an `Arc` handle — not the HashMap or the ~4000-card
+/// DSL parse/lowering that `build_registry()` performs. Mutations copy-on-write
+/// via `Arc::make_mut`. This makes `Game::clone()` O(1) for the registry and
+/// avoids duplicating ~1,300+ String keys per MCTS node.
 #[derive(Default, Clone)]
 pub struct CardEffectRegistry {
-    effects: HashMap<String, RegisteredCardEffect>,
+    effects: Arc<HashMap<String, RegisteredCardEffect>>,
     // Identity only, never authority to execute. Clones share it until insertion.
     generation: Arc<()>,
 }
@@ -37,8 +37,32 @@ pub struct CardEffectRegistry {
 #[derive(Clone)]
 struct RegisteredCardEffect {
     factory: Arc<dyn CardEffect>,
-    compiled_origin: Option<CompiledFactoryOrigin>,
+    compiled_origin: Option<LazyFactoryOrigin>,
     read_fence_constructible: bool,
+}
+
+#[derive(Clone)]
+enum LazyFactoryOrigin {
+    Eager(CompiledFactoryOrigin),
+    Lazy {
+        slot: Arc<digimon_dsl::registry::CardSlot>,
+        raw: Arc<crate::dsl_cards::raw_rust::EngineRawRustRegistry>,
+        cell: Arc<std::sync::OnceLock<CompiledFactoryOrigin>>,
+    },
+}
+
+impl LazyFactoryOrigin {
+    fn get(&self) -> &CompiledFactoryOrigin {
+        match self {
+            LazyFactoryOrigin::Eager(origin) => origin,
+            LazyFactoryOrigin::Lazy { slot, raw, cell } => {
+                cell.get_or_init(|| CompiledFactoryOrigin {
+                    compiled: slot.get_arc(),
+                    raw: raw.clone(),
+                })
+            }
+        }
+    }
 }
 
 /// An immutable registry-only output and the identity of its producing factory.
@@ -127,7 +151,7 @@ impl CardEffectRegistry {
 
     /// Register a card's effect implementation.
     pub fn insert(&mut self, card_id: &str, effect: Arc<dyn CardEffect>) {
-        self.effects.insert(card_id.to_string(), RegisteredCardEffect {
+        Arc::make_mut(&mut self.effects).insert(card_id.to_string(), RegisteredCardEffect {
             factory: Arc::new(GuardedCardEffect(effect, false)),
             compiled_origin: None,
             read_fence_constructible: false,
@@ -150,7 +174,31 @@ impl CardEffectRegistry {
         };
         let read_fence_constructible = origin.direct_raw_factory_requests().is_empty();
         let factory = Arc::new(crate::dsl_cards::DslCardEffect::new_with_raw(compiled, raw));
-        self.effects.insert(card_id.to_string(), RegisteredCardEffect {
+        Arc::make_mut(&mut self.effects).insert(card_id.to_string(), RegisteredCardEffect {
+            factory: Arc::new(GuardedCardEffect(factory, read_fence_constructible)),
+            compiled_origin: Some(LazyFactoryOrigin::Eager(origin)),
+            read_fence_constructible,
+        });
+        self.generation = Arc::new(());
+    }
+
+    /// Register a lazy compiled card slot without forcing deserialization at
+    /// startup; `read_fence_constructible` is read from the precomputed index
+    /// flag and `compiled_origin` materializes on demand.
+    pub(crate) fn insert_compiled_slot(
+        &mut self,
+        card_id: &str,
+        slot: Arc<digimon_dsl::registry::CardSlot>,
+        raw: Arc<crate::dsl_cards::raw_rust::EngineRawRustRegistry>,
+    ) {
+        let read_fence_constructible = !slot.has_raw_declarative();
+        let origin = LazyFactoryOrigin::Lazy {
+            slot: Arc::clone(&slot),
+            raw: Arc::clone(&raw),
+            cell: Arc::new(std::sync::OnceLock::new()),
+        };
+        let factory = Arc::new(crate::dsl_cards::DslCardEffect::new_slot_with_raw(slot, raw));
+        Arc::make_mut(&mut self.effects).insert(card_id.to_string(), RegisteredCardEffect {
             factory: Arc::new(GuardedCardEffect(factory, read_fence_constructible)),
             compiled_origin: Some(origin),
             read_fence_constructible,
@@ -169,7 +217,9 @@ impl CardEffectRegistry {
     /// Current-key construction facts only; do not use this to label a retained
     /// factory. Use the identity-checked query below for an existing factory Arc.
     pub(crate) fn compiled_origin(&self, card_id: &str) -> Option<&CompiledFactoryOrigin> {
-        self.effects.get(card_id).and_then(|entry| entry.compiled_origin.as_ref())
+        self.effects
+            .get(card_id)
+            .and_then(|entry| entry.compiled_origin.as_ref().map(LazyFactoryOrigin::get))
     }
 
     /// Return construction facts only for the exact stored factory Arc.
@@ -186,7 +236,7 @@ impl CardEffectRegistry {
         if !Arc::ptr_eq(&entry.factory, factory) {
             return None;
         }
-        entry.compiled_origin.as_ref()
+        entry.compiled_origin.as_ref().map(LazyFactoryOrigin::get)
     }
 
     /// Construct registry-only effects and bind the exact returned vector.
@@ -277,7 +327,11 @@ pub fn build_registry() -> CardEffectRegistry {
         // EX11-027 Maquinamon, migrated off test-only raw_rust (§4.5.5), so the
         // pack now has zero unregistered refs (see fix-dsl-substrate-rot-and-bugs
         // §1). The matching guard test is `unregistered_raw_rust_ref_fails_load`.
-        let pack = crate::dsl_registry::from_embedded_with_raw_registry(raw.as_ref())
+        let pack = crate::dsl_registry::from_embedded_cached()
+            .and_then(|pack| {
+                pack.validate_raw_registry(raw.as_ref())?;
+                Ok(pack)
+            })
             .unwrap_or_else(|msg| {
                 panic!(
                     "dsl-substrate-integrity: the embedded DSL pack contains unregistered \
@@ -289,7 +343,7 @@ pub fn build_registry() -> CardEffectRegistry {
         if let Err(msg) = raw_rust::raw_rust_budget_status(raw.registered_fn_count(), pack.len()) {
             eprintln!("WARNING: {msg}");
         }
-        crate::dsl_cards::register_dsl_cards_with_raw(&mut registry, &pack, raw);
+        crate::dsl_cards::register_dsl_cards_with_raw(&mut registry, pack, raw);
     }
 
     registry

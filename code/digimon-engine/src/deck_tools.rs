@@ -83,22 +83,23 @@ pub fn card_database() -> &'static HashMap<String, CardSummary> {
     CELL.get_or_init(|| {
         let raw: HashMap<String, CardEntryRaw> = serde_json::from_str(CARDS_JSON)
             .expect("cards.json is malformed (compiled-in resource)");
+        let dsl_registry = crate::dsl_registry::from_embedded_cached()
+            .expect("embedded DSL metadata must load for deck validation");
         raw.into_iter()
             .map(|(k, v)| {
                 let rarity = parse_rarity(v.rarity, &k);
+                let max_count_in_deck = dsl_registry
+                    .max_copies_override(&v.card_id)
+                    .map(u32::from)
+                    .unwrap_or(v.max_count_in_deck);
                 (
                     k,
                     CardSummary {
-                        card_id: v.card_id.clone(),
+                        card_id: v.card_id,
                         card_name_eng: v.card_name_eng,
                         card_kind: v.card_kind,
                         rarity,
-                        max_count_in_deck: crate::dsl_registry::from_embedded_cached()
-                            .expect("embedded DSL metadata must load for deck validation")
-                            .lookup(&v.card_id)
-                            .and_then(|card| card.deck_rule.as_ref())
-                            .map(|rule| u32::from(rule.max_copies))
-                            .unwrap_or(v.max_count_in_deck),
+                        max_count_in_deck,
                     },
                 )
             })

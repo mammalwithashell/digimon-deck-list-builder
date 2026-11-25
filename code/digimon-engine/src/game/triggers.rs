@@ -24,28 +24,84 @@ fn force_full_declarative_rebuild() -> bool {
     *FORCE.get_or_init(|| std::env::var("DIGIMON_FORCE_FULL_DECLARATIVE_REBUILD").is_ok())
 }
 
+#[derive(Default)]
+struct FastDeclHasher(u64);
+
+impl FastDeclHasher {
+    #[inline]
+    fn mix(&mut self, word: u64) {
+        self.0 = (self.0.rotate_left(5) ^ word).wrapping_mul(0x517cc1b727220a95);
+    }
+}
+
+impl std::hash::Hasher for FastDeclHasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    #[inline]
+    fn write(&mut self, mut bytes: &[u8]) {
+        while bytes.len() >= 8 {
+            self.mix(u64::from_ne_bytes(bytes[..8].try_into().unwrap()));
+            bytes = &bytes[8..];
+        }
+        if !bytes.is_empty() {
+            let mut buf = [0u8; 8];
+            buf[..bytes.len()].copy_from_slice(bytes);
+            self.mix(u64::from_ne_bytes(buf));
+        }
+    }
+    #[inline]
+    fn write_u8(&mut self, i: u8) {
+        self.mix(i as u64);
+    }
+    #[inline]
+    fn write_u16(&mut self, i: u16) {
+        self.mix(i as u64);
+    }
+    #[inline]
+    fn write_u32(&mut self, i: u32) {
+        self.mix(i as u64);
+    }
+    #[inline]
+    fn write_u64(&mut self, i: u64) {
+        self.mix(i);
+    }
+    #[inline]
+    fn write_usize(&mut self, i: usize) {
+        self.mix(i as u64);
+    }
+}
+
+struct HashFmtWriter<'a>(&'a mut FastDeclHasher);
+
+impl std::fmt::Write for HashFmtWriter<'_> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        use std::hash::Hasher;
+        self.0.write(s.as_bytes());
+        Ok(())
+    }
+}
+
 /// Fold a `CardSource`'s declarative-relevant identity into the fingerprint:
 /// which card it is (`data_index`), token-ness, face-down-ness, and any
 /// effect-granted name aliases (read by name-matching declarative conditions).
-fn hash_card_source_decl(
-    cs: &crate::card_source::CardSource,
-    h: &mut std::collections::hash_map::DefaultHasher,
-) {
+#[inline]
+fn hash_card_source_decl(cs: &crate::card_source::CardSource, h: &mut FastDeclHasher) {
     use std::hash::Hash;
     cs.data_index.hash(h);
     cs.is_token.hash(h);
     cs.face_down.hash(h);
-    cs.also_treated_as.hash(h);
+    if !cs.also_treated_as.is_empty() {
+        cs.also_treated_as.hash(h);
+    }
 }
 
 /// Fold a `Permanent`'s declarative-relevant dynamic state into the
 /// fingerprint: its full digivolution stack and linked cards, suspend/attack
 /// flags, turn-timing counters, the per-turn activation summary, and option
 /// state — i.e. everything a continuous-effect source-scan or condition can read.
-fn hash_permanent_decl(
-    perm: &crate::permanent::Permanent,
-    h: &mut std::collections::hash_map::DefaultHasher,
-) {
+fn hash_permanent_decl(perm: &crate::permanent::Permanent, h: &mut FastDeclHasher) {
     use std::hash::Hash;
     perm.card_sources.len().hash(h);
     for cs in &perm.card_sources {
@@ -68,7 +124,7 @@ fn hash_permanent_decl(
         .map(|&v| v as u64)
         .fold(0u64, u64::wrapping_add);
     activations.hash(h);
-    format!("{:?}", perm.option_state).hash(h);
+    perm.option_state.hash(h);
 }
 
 impl Game {
@@ -187,41 +243,56 @@ impl Game {
                 let Some(top) = perm.card_sources.last() else {
                     continue;
                 };
-                sources.push((
-                    top.data_index,
-                    top.handle(),
-                    Some(handle),
-                    player_id,
-                    false,
-                    false,
-                ));
+                if let Some(entry) = self.effects_entry_for_source(top, false) {
+                    if entry.flags & super::EFFECT_FLAG_MATERIALIZES_DECL != 0 {
+                        sources.push((
+                            top.data_index,
+                            top.handle(),
+                            Some(handle),
+                            player_id,
+                            false,
+                            false,
+                            entry.effects,
+                        ));
+                    }
+                }
 
                 let stack_size = perm.card_sources.len();
                 for (source_index, source) in perm.card_sources.iter().enumerate() {
                     if source_index + 1 >= stack_size || source.face_down {
                         continue;
                     }
-                    sources.push((
-                        source.data_index,
-                        source.handle(),
-                        Some(handle),
-                        player_id,
-                        true,
-                        false,
-                    ));
+                    if let Some(entry) = self.effects_entry_for_source(source, true) {
+                        if entry.flags & super::EFFECT_FLAG_MATERIALIZES_DECL != 0 {
+                            sources.push((
+                                source.data_index,
+                                source.handle(),
+                                Some(handle),
+                                player_id,
+                                true,
+                                false,
+                                entry.effects,
+                            ));
+                        }
+                    }
                 }
                 // `<Succession>`: an adopted source's top-scope declaratives
                 // also materialize onto the carrier.
                 for source_index in self.succession_source_indices(handle) {
                     let source = &perm.card_sources[source_index];
-                    sources.push((
-                        source.data_index,
-                        source.handle(),
-                        Some(handle),
-                        player_id,
-                        false,
-                        true,
-                    ));
+                    if let Some(entry) = self.effects_entry_for_source(source, true) {
+                        if entry.flags & super::EFFECT_FLAG_MATERIALIZES_DECL != 0 {
+                            sources.push((
+                                source.data_index,
+                                source.handle(),
+                                Some(handle),
+                                player_id,
+                                false,
+                                true,
+                                entry.effects,
+                            ));
+                        }
+                    }
                 }
             }
 
@@ -235,14 +306,19 @@ impl Game {
                     index: crate::action::space::BREEDING_TARGET as u8,
                 };
                 let top = perm.top_card();
-                sources.push((
-                    top.data_index,
-                    top.handle(),
-                    Some(handle),
-                    player_id,
-                    false,
-                    false,
-                ));
+                if let Some(entry) = self.effects_entry_for_source(top, false) {
+                    if entry.flags & super::EFFECT_FLAG_MATERIALIZES_DECL != 0 {
+                        sources.push((
+                            top.data_index,
+                            top.handle(),
+                            Some(handle),
+                            player_id,
+                            false,
+                            false,
+                            entry.effects,
+                        ));
+                    }
+                }
             }
 
             // Track H §5 — security-zone-sourced auras. Face-up security
@@ -257,18 +333,25 @@ impl Game {
             // card leaving security simply stops re-installing on the
             // next tick. Mirrors DCGO `BT21_095.cs:CanUseCondition` →
             // `IsExistInSecurity(card, false)`.
-            for card in &player.security {
-                if !player.face_up_security.contains(&card.card_index) {
-                    continue;
+            if !player.face_up_security.is_empty() {
+                for card in &player.security {
+                    if !player.face_up_security.contains(&card.card_index) {
+                        continue;
+                    }
+                    if let Some(entry) = self.effects_entry_for_source(card, false) {
+                        if entry.flags & super::EFFECT_FLAG_MATERIALIZES_DECL != 0 {
+                            sources.push((
+                                card.data_index,
+                                card.handle(),
+                                None,
+                                player_id,
+                                false,
+                                false,
+                                entry.effects,
+                            ));
+                        }
+                    }
                 }
-                sources.push((
-                    card.data_index,
-                    card.handle(),
-                    None,
-                    player_id,
-                    false,
-                    false,
-                ));
             }
         }
 
@@ -279,13 +362,9 @@ impl Game {
             controller,
             inherited_source,
             adopted_copy,
+            effects,
         ) in sources
         {
-            let Some(effects) =
-                self.effects_for_card(&self.card_data[data_index].card_id, source_card)
-            else {
-                continue;
-            };
             // CR 4.3 §3-4-7-4: a persistent effect of a card in the breeding
             // area can't apply unless it explicitly specifies or references
             // the breeding area (`Effect::breeding_zone`; BT13-007's
@@ -330,15 +409,11 @@ impl Game {
                 // grant still materializes there), but the real game loads them
                 // from `cards.json`, where the double-count would otherwise show.
                 if let Some(kw) = effect.granted_keyword {
-                    let already_printed = self
-                        .card_data_by_id(&self.card_data[data_index].card_id)
-                        .is_some_and(|cd| {
-                            if inherited_source {
-                                inherited_keywords(cd).contains(&kw)
-                            } else {
-                                face_keywords(cd).contains(&kw)
-                            }
-                        });
+                    let already_printed = if inherited_source {
+                        self.card_data.inherited_keywords(data_index).contains(&kw)
+                    } else {
+                        self.card_data.face_keywords(data_index).contains(&kw)
+                    };
                     if already_printed {
                         continue;
                     }
@@ -376,29 +451,36 @@ impl Game {
         // grant through the same modifier registry as inherited ESS — so
         // `Game::has_keyword` (via `modifiers.has_keyword`) and DP math see it.
         let mut linked_sources: Vec<(
-            usize,
             crate::card_source::CardHandle,
             PermanentHandle,
             crate::enums::PlayerId,
+            std::sync::Arc<Vec<crate::effect::Effect>>,
         )> = Vec::new();
         for (pid, player) in self.players.iter().enumerate() {
             let player_id = pid as crate::enums::PlayerId;
             for (index, perm) in player.battle_area.iter().enumerate() {
+                if perm.linked_cards.is_empty() {
+                    continue;
+                }
                 let host = PermanentHandle {
                     player: player_id,
                     index: index as u8,
                 };
                 for linked in &perm.linked_cards {
-                    linked_sources.push((linked.data_index, linked.handle(), host, player_id));
+                    if let Some(entry) = self.effects_entry_for_source(linked, false) {
+                        if entry.flags & super::EFFECT_FLAG_MATERIALIZES_DECL != 0 {
+                            linked_sources.push((
+                                linked.handle(),
+                                host,
+                                player_id,
+                                entry.effects,
+                            ));
+                        }
+                    }
                 }
             }
         }
-        for (data_index, source_card, host, controller) in linked_sources {
-            let Some(effects) =
-                self.effects_for_card(&self.card_data[data_index].card_id, source_card)
-            else {
-                continue;
-            };
+        for (source_card, host, controller, effects) in linked_sources {
             for effect in effects.iter() {
                 // DigiLink Shape-B (G-LINK-INHERITED-ESS): materialize a link
                 // card's ESS declarative grant onto its HOST under BOTH scope
@@ -530,8 +612,9 @@ impl Game {
     /// fingerprint is stable across iteration-order changes; the modifier
     /// registry is folded in via [`ModifierRegistry::nonmaterialized_digest`].
     fn declarative_fingerprint(&self) -> u64 {
+        use std::fmt::Write as _;
         use std::hash::{Hash, Hasher};
-        let mut h = std::collections::hash_map::DefaultHasher::new();
+        let mut h = FastDeclHasher::default();
         self.memory.hash(&mut h);
         self.current_phase.hash(&mut h);
         self.turn_player().hash(&mut h);
@@ -562,17 +645,13 @@ impl Game {
             // `security_effect_activations` mirrors a permanent's
             // `effect_activations` (folded in `hash_permanent_decl`); same
             // order-independent summary over the non-zero counts.
-            let security_counts: Vec<u64> = player
+            let (sec_len, sec_sum) = player
                 .security_effect_activations
                 .values()
                 .filter(|&&v| v > 0)
-                .map(|&v| v as u64)
-                .collect();
-            security_counts.len().hash(&mut h);
-            security_counts
-                .iter()
-                .fold(0u64, |acc, &v| acc.wrapping_add(v))
-                .hash(&mut h);
+                .fold((0usize, 0u64), |(c, s), &v| (c + 1, s.wrapping_add(v as u64)));
+            sec_len.hash(&mut h);
+            sec_sum.hash(&mut h);
             player.battle_area.len().hash(&mut h);
             for perm in &player.battle_area {
                 hash_permanent_decl(perm, &mut h);
@@ -587,7 +666,7 @@ impl Game {
         }
         self.floating_mass_modifiers.len().hash(&mut h);
         for fm in &self.floating_mass_modifiers {
-            format!("{fm:?}").hash(&mut h);
+            let _ = write!(&mut HashFmtWriter(&mut h), "{fm:?}");
         }
         self.modifiers.nonmaterialized_digest().hash(&mut h);
         h.finish()

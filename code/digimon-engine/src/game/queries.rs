@@ -143,54 +143,53 @@ impl Game {
         };
         let top = perm.top_card();
         // `data_index` is a direct Vec index — O(1), no iteration needed.
-        let card_data = &self.card_data[top.data_index];
-        if face_keywords(card_data).iter().any(|k| matches(*k)) {
+        if self
+            .card_data
+            .face_keywords(top.data_index)
+            .iter()
+            .any(|k| matches(*k))
+        {
             return true;
         }
         // Inherited keyword grants from digivolution sources. Only cards
         // under the top card contribute inherited text, and any active_when
         // condition must pass before the keyword is considered live.
         let stack_size = perm.card_sources.len();
-        // CR 4.3 4-7-9: a face-down digivolution card has no card
-        // information -- neither its printed keywords nor its clauses count.
-        let source_ids: Vec<(usize, usize, String, crate::card_source::CardHandle)> = perm
-            .card_sources
-            .iter()
-            .enumerate()
-            .filter(|(i, s)| !(s.face_down && i + 1 < stack_size))
-            .map(|(i, s)| {
-                (
-                    i,
-                    s.data_index,
-                    s.card_id(&self.card_data).to_string(),
-                    s.handle(),
-                )
-            })
-            .collect();
         // `<Succession>` adoption: the adopted card's FACE keywords and its
         // top-scope `grant_keyword` clauses also reach the carrier.
         let adopted = self.succession_source_indices(handle);
-        for (source_index, data_index, src_id, src_handle) in source_ids {
+        for (source_index, src) in perm.card_sources.iter().enumerate() {
             let is_under = source_index + 1 < stack_size;
-            let is_adopted = adopted.contains(&source_index);
+            // CR 4.3 4-7-9: a face-down digivolution card has no card
+            // information -- neither its printed keywords nor its clauses count.
+            if is_under && src.face_down {
+                continue;
+            }
+            let data_index = src.data_index;
+            let src_handle = src.handle();
+            let is_adopted = !adopted.is_empty() && adopted.contains(&source_index);
             if is_under
-                && inherited_keywords(&self.card_data[data_index])
+                && self
+                    .card_data
+                    .inherited_keywords(data_index)
                     .iter()
                     .any(|k| matches(*k))
             {
                 return true;
             }
             if is_adopted
-                && face_keywords(&self.card_data[data_index])
+                && self
+                    .card_data
+                    .face_keywords(data_index)
                     .iter()
                     .any(|k| matches(*k))
             {
                 return true;
             }
-            let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
+            let Some(entry) = self.effects_entry_for_source(src, is_under) else {
                 continue;
             };
-            for effect in effects.iter() {
+            for effect in entry.effects.iter() {
                 if !effect.declarative
                     || !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect)
                 {
@@ -225,23 +224,21 @@ impl Game {
         // reach `modifiers.has_keyword` via `tick_declarative_effects`, checked
         // first at the top of this fn; this pass additionally covers the
         // non-materialized / printed-keyword path for link cards.)
-        let linked_ids: Vec<(usize, crate::card_source::CardHandle)> = perm
-            .linked_cards
-            .iter()
-            .map(|c| (c.data_index, c.handle()))
-            .collect();
-        for (data_index, linked_handle) in linked_ids {
-            if link_keywords(&self.card_data[data_index])
+        for linked in &perm.linked_cards {
+            let data_index = linked.data_index;
+            let linked_handle = linked.handle();
+            if self
+                .card_data
+                .link_keywords(data_index)
                 .iter()
                 .any(|k| matches(*k))
             {
                 return true;
             }
-            let linked_id = self.card_data[data_index].card_id.clone();
-            let Some(effects) = self.effects_for_card(&linked_id, linked_handle) else {
+            let Some(entry) = self.effects_entry_for_source(linked, false) else {
                 continue;
             };
-            for effect in effects.iter() {
+            for effect in entry.effects.iter() {
                 if !effect.declarative || !(effect.inherited || effect.linked) {
                     continue;
                 }
@@ -441,20 +438,25 @@ impl Game {
             if src.face_down && source_index + 1 < stack_size {
                 continue;
             }
-            let card_data = &self.card_data[src.data_index];
-            let mut keywords = if source_index + 1 == stack_size {
-                face_keywords(card_data)
+            let keywords = if source_index + 1 == stack_size {
+                self.card_data.face_keywords(src.data_index)
             } else {
-                inherited_keywords(card_data)
+                self.card_data.inherited_keywords(src.data_index)
             };
-            if source_index + 1 < stack_size && adopted.contains(&source_index) {
-                keywords.extend(face_keywords(card_data));
-            }
-            for kw in &keywords {
+            for kw in keywords.iter() {
                 match kw {
                     Keyword::SecurityAttackPlus(n) => total += *n as i32,
                     Keyword::SecurityAttackMinus(n) => total -= *n as i32,
                     _ => {}
+                }
+            }
+            if source_index + 1 < stack_size && !adopted.is_empty() && adopted.contains(&source_index) {
+                for kw in self.card_data.face_keywords(src.data_index).iter() {
+                    match kw {
+                        Keyword::SecurityAttackPlus(n) => total += *n as i32,
+                        Keyword::SecurityAttackMinus(n) => total -= *n as i32,
+                        _ => {}
+                    }
                 }
             }
         }
@@ -484,12 +486,15 @@ impl Game {
         let adopted = self.succession_source_indices(target);
         let mut total = 0;
         for (source_index, source) in permanent.card_sources.iter().enumerate() {
+            let is_under = source_index + 1 < stack_size;
             let is_adopted = adopted.contains(&source_index);
-            let card_id = source.card_id(&self.card_data).to_string();
-            let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
+            let Some(entry) = self.effects_entry_for_source(source, is_under) else {
                 continue;
             };
-            for effect in effects.iter() {
+            if entry.flags & super::EFFECT_FLAG_STATIC_DP_AURA == 0 {
+                continue;
+            }
+            for effect in entry.effects.iter() {
                 if !effect.declarative
                     || !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect)
                 {
@@ -522,16 +527,15 @@ impl Game {
         // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's `.linked()`
         // static-DP Link-ESS applies to its host. The `card_sources` loop above
         // never scans `linked_cards`; fold them in here with the host as target.
-        let linked: Vec<(String, crate::card_source::CardHandle)> = permanent
-            .linked_cards
-            .iter()
-            .map(|c| (c.card_id(&self.card_data).to_string(), c.handle()))
-            .collect();
-        for (card_id, source_card) in linked {
-            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+        for linked_card in &permanent.linked_cards {
+            let source_card = linked_card.handle();
+            let Some(entry) = self.effects_entry_for_source(linked_card, false) else {
                 continue;
             };
-            for effect in effects.iter() {
+            if entry.flags & super::EFFECT_FLAG_STATIC_DP_AURA == 0 {
+                continue;
+            }
+            for effect in entry.effects.iter() {
                 // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's static
                 // DP ESS reaches its host under BOTH the `.linked()` (BT25-101)
                 // and `.inherited()` conventions. XOR-scoped, so no double-count;

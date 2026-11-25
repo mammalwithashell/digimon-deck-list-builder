@@ -76,7 +76,7 @@ pub(crate) fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> 
     crate::card_data::parse_printed_keywords(&card_data.effect_text, "", "")
 }
 
-fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+pub(crate) fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.inherited_text.is_empty() {
         return Vec::new();
     }
@@ -85,7 +85,7 @@ fn inherited_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
 
 /// Keywords printed in a link card's link effect: a Digimon gains them while the
 /// card is one of its link cards (general_rule.pdf 4-3-5), and only then.
-fn link_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
+pub(crate) fn link_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.link_text.is_empty() {
         return Vec::new();
     }
@@ -492,25 +492,116 @@ impl std::fmt::Debug for PendingWouldDigivolveResume {
 /// values are `Arc` so `Game` stays `Send` (`RustHeadlessGame` is a
 /// non-`unsendable` `#[pyclass]`) and a cache hit is a refcount bump — no vec or
 /// closure clone. See the `cache-effects-for-card` change.
-///
-/// `Clone` shares the generation identity and cached effect Arcs while copying
-/// the maps. A registry mutation in one fork invalidates only that fork's memo.
+/// Fast 64-bit FxHash-style hasher for `(usize, CardHandle)` memo keys.
+#[derive(Default)]
+pub(crate) struct FastCacheHasher(u64);
+
+impl std::hash::Hasher for FastCacheHasher {
+    #[inline]
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    #[inline]
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.0 = (self.0.rotate_left(5) ^ (b as u64)).wrapping_mul(0x517cc1b727220a95);
+        }
+    }
+    #[inline]
+    fn write_u16(&mut self, i: u16) {
+        self.0 = (self.0.rotate_left(5) ^ (i as u64)).wrapping_mul(0x517cc1b727220a95);
+    }
+    #[inline]
+    fn write_usize(&mut self, i: usize) {
+        self.0 = (self.0.rotate_left(5) ^ (i as u64)).wrapping_mul(0x517cc1b727220a95);
+    }
+}
+
+pub(crate) type FastCacheBuildHasher = std::hash::BuildHasherDefault<FastCacheHasher>;
+
+pub(crate) const EFFECT_FLAG_MATERIALIZES_DECL: u16 = 1 << 0;
+pub(crate) const EFFECT_FLAG_DYNAMIC_DP_FORMULA: u16 = 1 << 1;
+pub(crate) const EFFECT_FLAG_DYNAMIC_SA_FORMULA: u16 = 1 << 2;
+pub(crate) const EFFECT_FLAG_STATIC_DP_AURA: u16 = 1 << 3;
+pub(crate) const EFFECT_FLAG_SUCCESSION: u16 = 1 << 4;
+pub(crate) const EFFECT_FLAG_USE_COST_INCREASE: u16 = 1 << 5;
+pub(crate) const EFFECT_FLAG_MAIN_FROM_HAND: u16 = 1 << 6;
+pub(crate) const EFFECT_FLAG_MAIN_ON_FIELD: u16 = 1 << 7;
+pub(crate) const EFFECT_FLAG_MAIN_FROM_TRASH: u16 = 1 << 8;
+
+#[derive(Clone)]
+pub(crate) struct CachedCardEffects {
+    pub(crate) effects: std::sync::Arc<Vec<crate::effect::Effect>>,
+    pub(crate) flags: u16,
+}
+
+impl CachedCardEffects {
+    fn from_vec(effects: Vec<crate::effect::Effect>) -> Self {
+        let mut flags = 0u16;
+        for e in &effects {
+            if e.declarative {
+                if e.materializes_declarative_state && e.process.is_some() {
+                    flags |= EFFECT_FLAG_MATERIALIZES_DECL;
+                }
+                if e.dp_modifier_fn.is_some() {
+                    flags |= EFFECT_FLAG_DYNAMIC_DP_FORMULA;
+                }
+                if e.security_attack_fn.is_some() {
+                    flags |= EFFECT_FLAG_DYNAMIC_SA_FORMULA;
+                }
+                if !e.materializes_declarative_state
+                    && e.dp_modifier != 0
+                    && e.dp_modifier_fn.is_none()
+                    && !e.applies_to_opponent_security_dp
+                {
+                    flags |= EFFECT_FLAG_STATIC_DP_AURA;
+                }
+            }
+            if e.succession_filter.is_some() && !e.inherited && !e.linked {
+                flags |= EFFECT_FLAG_SUCCESSION;
+            }
+            if e.use_cost_increase_fn.is_some() {
+                flags |= EFFECT_FLAG_USE_COST_INCREASE;
+            }
+            match e.timing {
+                crate::enums::EffectTiming::MainFromHand => flags |= EFFECT_FLAG_MAIN_FROM_HAND,
+                crate::enums::EffectTiming::MainOnField => flags |= EFFECT_FLAG_MAIN_ON_FIELD,
+                crate::enums::EffectTiming::MainFromTrash => flags |= EFFECT_FLAG_MAIN_FROM_TRASH,
+                _ => {}
+            }
+        }
+        Self {
+            effects: std::sync::Arc::new(effects),
+            flags,
+        }
+    }
+}
+
+/// `Clone` shares the generation identity and cached effect maps via `Arc`
+/// (copy-on-write on cache miss or generation change). A registry mutation in
+/// one fork invalidates only that fork's memo.
 /// Previously returned Arcs keep their original callbacks; no current-registry
 /// construction fact or permission is attached to those retained outputs.
 #[derive(Default, Clone)]
 pub struct EffectsCache(
     std::cell::RefCell<
-        std::collections::HashMap<
-            (usize, crate::card_source::CardHandle, bool),
-            Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
+        std::sync::Arc<
+            std::collections::HashMap<
+                (usize, crate::card_source::CardHandle),
+                Option<CachedCardEffects>,
+                FastCacheBuildHasher,
+            >,
         >,
     >,
     /// Registry-only memo for [`Game::registry_effects`], under the same
     /// generation identity as the full effect-list memo.
     std::cell::RefCell<
-        std::collections::HashMap<
-            (usize, crate::card_source::CardHandle),
-            Option<crate::cards::RegistryEffects>,
+        std::sync::Arc<
+            std::collections::HashMap<
+                (usize, crate::card_source::CardHandle),
+                Option<crate::cards::RegistryEffects>,
+                FastCacheBuildHasher,
+            >,
         >,
     >,
     std::cell::RefCell<Option<std::sync::Arc<()>>>,
@@ -526,29 +617,33 @@ impl std::fmt::Debug for EffectsCache {
 
 impl EffectsCache {
     fn ensure_registry_generation(&self, generation: &std::sync::Arc<()>) {
-        let mut current = self.2.borrow_mut();
-        if current.as_ref().is_some_and(|old| std::sync::Arc::ptr_eq(old, generation)) {
+        if self
+            .2
+            .borrow()
+            .as_ref()
+            .is_some_and(|old| std::sync::Arc::ptr_eq(old, generation))
+        {
             return;
         }
-        self.0.borrow_mut().clear();
-        self.1.borrow_mut().clear();
+        *self.0.borrow_mut() = std::sync::Arc::new(std::collections::HashMap::default());
+        *self.1.borrow_mut() = std::sync::Arc::new(std::collections::HashMap::default());
         // Retaining the identity prevents pointer reuse while entries are live.
-        *current = Some(generation.clone());
+        *self.2.borrow_mut() = Some(generation.clone());
     }
 
     fn get(
         &self,
-        key: &(usize, crate::card_source::CardHandle, bool),
-    ) -> Option<Option<std::sync::Arc<Vec<crate::effect::Effect>>>> {
+        key: &(usize, crate::card_source::CardHandle),
+    ) -> Option<Option<CachedCardEffects>> {
         self.0.borrow().get(key).cloned()
     }
 
     fn insert(
         &self,
-        key: (usize, crate::card_source::CardHandle, bool),
-        value: Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
+        key: (usize, crate::card_source::CardHandle),
+        value: Option<CachedCardEffects>,
     ) {
-        self.0.borrow_mut().insert(key, value);
+        std::sync::Arc::make_mut(&mut *self.0.borrow_mut()).insert(key, value);
     }
 }
 
@@ -1660,7 +1755,7 @@ pub struct Game {
     /// G-DSL-SECURITY-TOP-AS-SOURCE.
     pub(crate) pending_security_source_face_down: bool,
 
-    until_condition_dirty: bool,
+    pub(crate) until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
     until_condition_total_evaluations: u64,
     until_condition_reevaluation_cycles: u64,
@@ -3926,79 +4021,26 @@ impl Game {
     ) -> (i32, bool) {
         use crate::effect_context::EffectReadContext;
 
-        let mut sources = Vec::new();
-        for (pid, player) in self.players.iter().enumerate() {
-            let player_id = pid as PlayerId;
-            for (index, perm) in player.battle_area.iter().enumerate() {
-                let host = PermanentHandle {
-                    player: player_id,
-                    index: index as u8,
-                };
-                let stack_size = perm.card_sources.len();
-                for (source_index, source) in perm.card_sources.iter().enumerate() {
-                    let inherited_source = source_index + 1 < stack_size;
-                    // §15-2-1: a top card's aura is an effect of its printed
-                    // category; an inherited one is the Digimon's (§15-3-2).
-                    let kind = if inherited_source {
-                        EffectSourceKind::Digimon
-                    } else {
-                        EffectSourceKind::for_card_kind(self.card_data[source.data_index].card_kind)
-                    };
-                    sources.push((
-                        source.card_id(&self.card_data).to_string(),
-                        source.handle(),
-                        Some(host),
-                        player_id,
-                        inherited_source,
-                        false,
-                        kind,
-                    ));
-                }
-                // `<Succession>`: an adopted source's top-scope formula auras.
-                for source_index in self.succession_source_indices(host) {
-                    let source = &perm.card_sources[source_index];
-                    sources.push((
-                        source.card_id(&self.card_data).to_string(),
-                        source.handle(),
-                        Some(host),
-                        player_id,
-                        false,
-                        true,
-                        EffectSourceKind::Digimon,
-                    ));
-                }
-            }
-
-            if let Some(perm) = player.breeding_area.as_ref() {
-                let host = PermanentHandle {
-                    player: player_id,
-                    index: crate::action::space::BREEDING_TARGET as u8,
-                };
-                let top = perm.top_card();
-                sources.push((
-                    top.card_id(&self.card_data).to_string(),
-                    top.handle(),
-                    Some(host),
-                    player_id,
-                    false,
-                    false,
-                    EffectSourceKind::for_card_kind(self.card_data[top.data_index].card_kind),
-                ));
-            }
-        }
-
+        let wanted_flag = if security_attack {
+            EFFECT_FLAG_DYNAMIC_SA_FORMULA
+        } else {
+            EFFECT_FLAG_DYNAMIC_DP_FORMULA
+        };
         let mut total = 0;
         let mut found = false;
-        for (
-            card_id,
-            source_card,
-            source_permanent,
-            controller,
-            inherited_source,
-            adopted_copy,
-            source_kind,
-        ) in sources
-        {
+
+        let mut eval_source = |source: &crate::card_source::CardSource,
+                               is_under_top: bool,
+                               source_permanent: Option<PermanentHandle>,
+                               controller: PlayerId,
+                               inherited_source: bool,
+                               adopted_copy: bool,
+                               source_kind: EffectSourceKind| {
+            // CR 4.3 4-7-9: a face-down digivolution card has no card
+            // information and applies no formula aura.
+            if is_under_top && source.face_down {
+                return;
+            }
             // §15-15-5-1 / §16-39-1: a formula aura is an effect; while
             // `target` is unaffected by this controller's effects of this
             // category (a covering immunity, or the `<Progress>` shield on an
@@ -4009,13 +4051,22 @@ impl Game {
             // shield through keyword reads that can read DP) -- the shield the
             // registry holds IS the read-time truth `Game` keeps refreshed.
             // G-ENGINE-PROGRESS-SHIELD-BYPASSED-BY-TIMING-DISABLE-AND-FORMULA-AURAS.
-            if !self.declarative_formula_can_affect(target, controller, source_kind, source_permanent.and_then(|h| self.permanent_effect_identity(h))) {
-                continue;
+            if !self.declarative_formula_can_affect(
+                target,
+                controller,
+                source_kind,
+                source_permanent.and_then(|h| self.permanent_effect_identity(h)),
+            ) {
+                return;
             }
-            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
-                continue;
+            let source_card = source.handle();
+            let Some(entry) = self.effects_entry_for_source(source, is_under_top) else {
+                return;
             };
-            for effect in effects.iter() {
+            if entry.flags & wanted_flag == 0 {
+                return;
+            }
+            for effect in entry.effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
@@ -4038,7 +4089,8 @@ impl Game {
                 if let Some(value) = formula_fn(&ctx, target) {
                     // DP-minus protection is per contribution, before summing:
                     // positive and own-scoped auras must still apply.
-                    if !security_attack && value < 0 && self.dp_minus_is_blocked(target, controller) {
+                    if !security_attack && value < 0 && self.dp_minus_is_blocked(target, controller)
+                    {
                         continue;
                     }
                     if security_attack {
@@ -4049,18 +4101,8 @@ impl Game {
                     found = true;
                 }
             }
-        }
+        };
 
-        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's `.linked()`
-        // dynamic DP / Security-Attack formula Link-ESS contributes to its host.
-        // The loop above scans `card_sources` / breeding only; fold in every
-        // host's `linked_cards` with the host as `source_permanent`.
-        let mut linked_sources: Vec<(
-            String,
-            crate::card_source::CardHandle,
-            PermanentHandle,
-            PlayerId,
-        )> = Vec::new();
         for (pid, player) in self.players.iter().enumerate() {
             let player_id = pid as PlayerId;
             for (index, perm) in player.battle_area.iter().enumerate() {
@@ -4068,59 +4110,130 @@ impl Game {
                     player: player_id,
                     index: index as u8,
                 };
-                for linked in &perm.linked_cards {
-                    linked_sources.push((
-                        linked.card_id(&self.card_data).to_string(),
-                        linked.handle(),
-                        host,
+                let stack_size = perm.card_sources.len();
+                for (source_index, source) in perm.card_sources.iter().enumerate() {
+                    let inherited_source = source_index + 1 < stack_size;
+                    // §15-2-1: a top card's aura is an effect of its printed
+                    // category; an inherited one is the Digimon's (§15-3-2).
+                    let kind = if inherited_source {
+                        EffectSourceKind::Digimon
+                    } else {
+                        EffectSourceKind::for_card_kind(self.card_data[source.data_index].card_kind)
+                    };
+                    eval_source(
+                        source,
+                        inherited_source,
+                        Some(host),
                         player_id,
-                    ));
+                        inherited_source,
+                        false,
+                        kind,
+                    );
                 }
+                // `<Succession>`: an adopted source's top-scope formula auras.
+                for source_index in self.succession_source_indices(host) {
+                    let source = &perm.card_sources[source_index];
+                    eval_source(
+                        source,
+                        true,
+                        Some(host),
+                        player_id,
+                        false,
+                        true,
+                        EffectSourceKind::Digimon,
+                    );
+                }
+            }
+
+            if let Some(perm) = player.breeding_area.as_ref() {
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                };
+                let top = perm.top_card();
+                eval_source(
+                    top,
+                    false,
+                    Some(host),
+                    player_id,
+                    false,
+                    false,
+                    EffectSourceKind::for_card_kind(self.card_data[top.data_index].card_kind),
+                );
             }
         }
-        for (card_id, source_card, host, controller) in linked_sources {
-            // A link card's ESS is the host Digimon's effect (§4-3-5).
-            if !self.declarative_formula_can_affect(target, controller, EffectSourceKind::Digimon, self.permanent_effect_identity(host)) {
-                continue;
-            }
-            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
-                continue;
-            };
-            for effect in effects.iter() {
-                // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's
-                // continuous DP / Security-Attack formula ESS reaches its HOST
-                // under BOTH the `.linked()` (BT25-101) and `.inherited()`
-                // conventions. A clause is `.linked()` XOR `.inherited()`, so
-                // accepting either cannot double-count; the `card_sources`
-                // walk above never touches `linked_cards`.
-                if !effect.declarative || !(effect.linked || effect.inherited) {
+
+        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's `.linked()`
+        // dynamic DP / Security-Attack formula Link-ESS contributes to its host.
+        // The loop above scans `card_sources` / breeding only; fold in every
+        // host's `linked_cards` with the host as `source_permanent`.
+        for (pid, player) in self.players.iter().enumerate() {
+            let player_id = pid as PlayerId;
+            for (index, perm) in player.battle_area.iter().enumerate() {
+                if perm.linked_cards.is_empty() {
                     continue;
                 }
-                let Some(formula_fn) = (if security_attack {
-                    effect.security_attack_fn.as_ref()
-                } else {
-                    effect.dp_modifier_fn.as_ref()
-                }) else {
-                    continue;
+                let host = PermanentHandle {
+                    player: player_id,
+                    index: index as u8,
                 };
-                let ctx = EffectReadContext::new(self, source_card, Some(host), controller);
-                if let Some(condition) = &effect.condition {
-                    if !condition(&ctx) {
-                        continue;
-                    }
+                // A link card's ESS is the host Digimon's effect (§4-3-5).
+                if !self.declarative_formula_can_affect(
+                    target,
+                    player_id,
+                    EffectSourceKind::Digimon,
+                    self.permanent_effect_identity(host),
+                ) {
+                    continue;
                 }
-                if let Some(value) = formula_fn(&ctx, target) {
-                    // DP-minus protection is per contribution, before summing:
-                    // positive and own-scoped auras must still apply.
-                    if !security_attack && value < 0 && self.dp_minus_is_blocked(target, controller) {
+                for linked in &perm.linked_cards {
+                    let source_card = linked.handle();
+                    let Some(entry) = self.effects_entry_for_source(linked, false) else {
+                        continue;
+                    };
+                    if entry.flags & wanted_flag == 0 {
                         continue;
                     }
-                    if security_attack {
-                        total = if found { total.max(value) } else { value };
-                    } else {
-                        total += value;
+                    for effect in entry.effects.iter() {
+                        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's
+                        // continuous DP / Security-Attack formula ESS reaches its HOST
+                        // under BOTH the `.linked()` (BT25-101) and `.inherited()`
+                        // conventions. A clause is `.linked()` XOR `.inherited()`, so
+                        // accepting either cannot double-count; the `card_sources`
+                        // walk above never touches `linked_cards`.
+                        if !effect.declarative || !(effect.linked || effect.inherited) {
+                            continue;
+                        }
+                        let Some(formula_fn) = (if security_attack {
+                            effect.security_attack_fn.as_ref()
+                        } else {
+                            effect.dp_modifier_fn.as_ref()
+                        }) else {
+                            continue;
+                        };
+                        let ctx = EffectReadContext::new(self, source_card, Some(host), player_id);
+                        if let Some(condition) = &effect.condition {
+                            if !condition(&ctx) {
+                                continue;
+                            }
+                        }
+                        if let Some(value) = formula_fn(&ctx, target) {
+                            // DP-minus protection is per contribution, before summing:
+                            // positive and own-scoped auras must still apply.
+                            if !security_attack
+                                && value < 0
+                                && self.dp_minus_is_blocked(target, player_id)
+                            {
+                                continue;
+                            }
+                            if security_attack {
+                                total = if found { total.max(value) } else { value };
+                            } else {
+                                total += value;
+                            }
+                            found = true;
+                        }
                     }
-                    found = true;
                 }
             }
         }
@@ -4145,7 +4258,7 @@ impl Game {
     /// trait shape. The helper does not add an extra empty-case allocation.
     /// Memoized per-card effect derivation — the engine's hottest call
     /// (56–72% of bare-engine runtime; ~742–1715 calls/step). The registry
-    /// effect list is memoized by `(card_id, handle, under_top)` within the
+    /// effect list is memoized by `(data_index, handle)` within the
     /// current registry generation (see `EffectsCache`) and a
     /// repeat query is a refcount bump rather than a fresh `impl_.effects(handle)`
     /// closure re-box. Returns a shared `Arc<Vec<Effect>>`; callers that must
@@ -4156,14 +4269,13 @@ impl Game {
         handle: crate::card_source::CardHandle,
     ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
         crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card");
-        let (under_top, face_down_source) = self.card_handle_stack_position(handle);
         // CR 4.3 4-7-9: a face-down card under another card has no card
         // information, so none of its effects exist -- not its inherited
         // statics, keywords, triggers, replacements nor `[Main]` effects.
         // Every scan that gathers a permanent's effects from its sources goes
-        // through here. DCGO: `CEntity_EffectController` skips every
-        // `cardSource.IsFlipped` source.
-        if face_down_source {
+        // through here (or through `effects_entry_by_index` / `effects_entry_for_source`).
+        // DCGO: `CEntity_EffectController` skips every `cardSource.IsFlipped` source.
+        if self.card_is_face_down_source(handle) {
             return None;
         }
         // Key on the canonical data_index (Copy, no per-call String alloc) rather
@@ -4172,33 +4284,85 @@ impl Game {
         let Some(&data_index) = self.card_id_index.get(card_id) else {
             // Unknown card_id (defensive — shouldn't happen): build uncached.
             return self
-                .build_effects_for_card(card_id, handle, under_top)
+                .build_effects_for_card(card_id, handle)
                 .map(std::sync::Arc::new);
         };
+        self.effects_entry_by_index_inner(data_index, card_id, handle)
+            .map(|entry| entry.effects)
+    }
+
+    /// Fast indexed memo lookup for callers that already hold `CardSource::data_index`.
+    /// Skips the `card_id_index` HashMap lookup and returns precomputed summary flags.
+    pub(crate) fn effects_entry_by_index(
+        &self,
+        data_index: usize,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<CachedCardEffects> {
+        let card_id = self.card_data[data_index].card_id.as_str();
+        crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card");
+        // CR 4.3 4-7-9: see `effects_for_card`.
+        if self.card_is_face_down_source(handle) {
+            return None;
+        }
+        self.effects_entry_by_index_inner(data_index, card_id, handle)
+    }
+
+    /// O(1) indexed memo lookup for hot callers that already hold the live
+    /// `&CardSource` and know whether it sits below a permanent's top card.
+    /// Enforces CR 4.3 4-7-9 directly via `is_under_top && source.face_down`
+    /// without scanning battle/breeding areas.
+    pub(crate) fn effects_entry_for_source(
+        &self,
+        source: &crate::card_source::CardSource,
+        is_under_top: bool,
+    ) -> Option<CachedCardEffects> {
+        if is_under_top && source.face_down {
+            return None;
+        }
+        let card_id = self.card_data[source.data_index].card_id.as_str();
+        crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card");
+        self.effects_entry_by_index_inner(source.data_index, card_id, source.handle())
+    }
+
+    pub(crate) fn effects_for_card_by_index(
+        &self,
+        data_index: usize,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        self.effects_entry_by_index(data_index, handle)
+            .map(|entry| entry.effects)
+    }
+
+    fn effects_entry_by_index_inner(
+        &self,
+        data_index: usize,
+        card_id: &str,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<CachedCardEffects> {
         self.effects_cache.ensure_registry_generation(self.effect_registry.generation());
-        let key = (data_index, handle, under_top);
+        let key = (data_index, handle);
 
         if let Some(cached) = self.effects_cache.get(&key) {
             // Debug consistency check within the current registry generation.
             // Debug output equality does not prove callback purity or safety.
             #[cfg(debug_assertions)]
             {
-                let fresh = self.build_effects_for_card(card_id, handle, under_top);
+                let fresh = self.build_effects_for_card(card_id, handle);
                 let proj = |v: &[crate::effect::Effect]| -> Vec<String> {
                     v.iter().map(|e| format!("{e:?}")).collect()
                 };
                 debug_assert_eq!(
-                    cached.as_ref().map(|a| proj(&a[..])),
+                    cached.as_ref().map(|a| proj(&a.effects[..])),
                     fresh.as_ref().map(|v| proj(&v[..])),
-                    "effects_for_card cache divergence: card_id={card_id} handle={handle:?} under_top={under_top}"
+                    "effects_for_card cache divergence: card_id={card_id} handle={handle:?}"
                 );
             }
             return cached;
         }
 
         let built = self
-            .build_effects_for_card(card_id, handle, under_top)
-            .map(std::sync::Arc::new);
+            .build_effects_for_card(card_id, handle)
+            .map(CachedCardEffects::from_vec);
         self.effects_cache.insert(key, built.clone());
         built
     }
@@ -4235,7 +4399,8 @@ impl Game {
             return cached.clone();
         }
         let built = build();
-        self.effects_cache.1.borrow_mut().insert(key, built.clone());
+        std::sync::Arc::make_mut(&mut *self.effects_cache.1.borrow_mut())
+            .insert(key, built.clone());
         built
     }
 
@@ -4249,22 +4414,19 @@ impl Game {
         handle: crate::card_source::CardHandle,
     ) -> Option<Vec<crate::effect::Effect>> {
         crate::determinize::context_guard::check_registry_factory(self, card_id, "effects_for_card_owned");
-        let (under_top, face_down_source) = self.card_handle_stack_position(handle);
         // CR 4.3 4-7-9: see `effects_for_card`.
-        if face_down_source {
+        if self.card_is_face_down_source(handle) {
             return None;
         }
-        self.build_effects_for_card(card_id, handle, under_top)
+        self.build_effects_for_card(card_id, handle)
     }
 
     /// Build the per-card effect list from the registry + keyword synthesis.
-    /// Owned and un-memoized; `under_top` is threaded in so the memoized wrapper
-    /// keys on it without this body recomputing `card_handle_is_under_top`.
+    /// Owned and un-memoized; independent of whether the card is top or under-top.
     fn build_effects_for_card(
         &self,
         card_id: &str,
         handle: crate::card_source::CardHandle,
-        under_top: bool,
     ) -> Option<Vec<crate::effect::Effect>> {
         // Registry effects come first — a hand-authored script owns its
         // slot order. Phase 7 Task 6 appends keyword-derived auto-install
@@ -4314,7 +4476,6 @@ impl Game {
                 // end of the shorter list and the trigger silently resolved to
                 // nothing. A printed inherited <Retaliation> on a card with no
                 // grant clause never deleted anything in a live game.
-                let _ = under_top;
                 {
                     for kw in inherited_keywords(cd) {
                         // De-dup against an unconditional `scope: inherited`
@@ -4460,33 +4621,6 @@ impl Game {
             (None, false) => Some(auto_effects),
             (None, true) => None,
         }
-    }
-
-    fn card_handle_is_under_top(&self, handle: crate::card_source::CardHandle) -> bool {
-        self.card_handle_stack_position(handle).0
-    }
-
-    /// `(under_top, face_down_source)` for `handle`: whether it is a card
-    /// under the top card of a battle-area or breeding-area permanent, and
-    /// whether it is such a card lying FACE DOWN (CR 4.3 4-7-9: a card
-    /// without card information). Face-down security cards are not under a
-    /// card and read `(false, false)`.
-    pub(crate) fn card_handle_stack_position(
-        &self,
-        handle: crate::card_source::CardHandle,
-    ) -> (bool, bool) {
-        for player in &self.players {
-            for permanent in player.battle_area.iter().chain(player.breeding_area.iter()) {
-                let stack_len = permanent.card_sources.len();
-                for (source_index, source) in permanent.card_sources.iter().enumerate() {
-                    if source.handle() == handle {
-                        let under_top = source_index + 1 < stack_len;
-                        return (under_top, under_top && source.face_down);
-                    }
-                }
-            }
-        }
-        (false, false)
     }
 
     /// Resolve a `CardHandle` (card_index) to its `CardKind` by scanning all

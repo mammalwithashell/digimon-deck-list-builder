@@ -47,13 +47,17 @@ fn real_main() {
     let cards_root = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR set by cargo")).join("cards");
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR set by cargo"));
     let pack_path = out_dir.join("cards.pack");
+    let index_path = out_dir.join("cards.idx");
 
     // Handle the case where cards/ doesn't exist yet (fresh clone): write an
     // empty pack so downstream `include_bytes!` doesn't fail.
     if !cards_root.exists() {
         let empty = digimon_dsl::CardPack::new("core", vec![]);
-        let bytes = empty.to_bytes().expect("serialize empty pack");
+        let (bytes, index_bytes) = empty
+            .to_bytes_with_index()
+            .expect("serialize empty pack");
         std::fs::write(&pack_path, &bytes).expect("write empty cards.pack");
+        std::fs::write(&index_path, &index_bytes).expect("write empty cards.idx");
         return;
     }
 
@@ -111,6 +115,9 @@ fn real_main() {
         cards: registry.iter().map(|(_, c)| c.clone()).collect(),
     };
 
-    let bytes = pack.to_bytes().expect("bincode serialize cards.pack");
+    let (bytes, index_bytes) = pack
+        .to_bytes_with_index()
+        .expect("bincode serialize cards.pack");
     std::fs::write(&pack_path, &bytes).expect("write cards.pack");
+    std::fs::write(&index_path, &index_bytes).expect("write cards.idx");
 }
