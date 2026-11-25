@@ -22,6 +22,7 @@ fn setup(same_turn: bool) -> DebugRunner {
     let req = |color| DnaRequirement {
         level: 6,
         card_colors: vec![color],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };
@@ -284,6 +285,7 @@ fn delay_field_dna_result_pick_excludes_examon_without_a_legal_field_pair() {
     let req = |color| DnaRequirement {
         level: 6,
         card_colors: vec![color],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };
@@ -710,6 +712,7 @@ fn delay_field_dna_result_pick_excludes_unpayable_examon() {
     let req = |color| DnaRequirement {
         level: 6,
         card_colors: vec![color],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };

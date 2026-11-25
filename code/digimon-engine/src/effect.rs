@@ -670,6 +670,7 @@ impl Effect {
         let eligible = match self.timing {
             EffectTiming::OnPlay => self.on_play,
             EffectTiming::WhenDigivolving => self.when_digivolving,
+            EffectTiming::OnDeletion => self.on_deletion,
             EffectTiming::OptionMain => self.option_main,
             _ => false,
         };

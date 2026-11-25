@@ -3126,6 +3126,29 @@ impl Game {
         cost: u16,
         effect_initiated: bool,
     ) -> Option<PermanentHandle> {
+        self.dna_digivolve_from_zone(
+            target_a, target_b, hand_owner, Some(hand_index), cost, effect_initiated,
+        )
+    }
+
+    pub(crate) fn dna_digivolve_pending_option(
+        &mut self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        owner: PlayerId,
+    ) -> Option<PermanentHandle> {
+        self.dna_digivolve_from_zone(target_a, target_b, owner, None, 0, true)
+    }
+
+    fn dna_digivolve_from_zone(
+        &mut self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        owner: PlayerId,
+        hand_index: Option<usize>,
+        cost: u16,
+        effect_initiated: bool,
+    ) -> Option<PermanentHandle> {
         use crate::enums::EffectTiming;
         use crate::selection::TriggerSource;
 
@@ -3138,16 +3161,15 @@ impl Game {
         if (target_b.index as usize) >= self.player(target_b.player).battle_area.len() {
             return None;
         }
-        if hand_index >= self.player(hand_owner).hand.len() {
-            return None;
-        }
-
         // Our source vectors are bottom-to-top. Recipe requirement1 is the
         // upper material, not the first block to append. Effect callers may
         // supply the same legal pair in either order, so keep the carrier and
         // its physical identity separate from the stack orientation.
         let a_is_upper = {
-            let result = &self.player(hand_owner).hand[hand_index];
+            let result = match hand_index {
+                Some(index) => self.player(owner).hand.get(index)?,
+                None => &self.pending_option.as_ref().filter(|p| p.owner == owner)?.card,
+            };
             let extras_a = self.dna_material_extras(target_a, result);
             let extras_b = self.dna_material_extras(target_b, result);
             crate::dna_digivolve::get_dna_stacking_order_ext(
@@ -3164,7 +3186,7 @@ impl Game {
         // from the turn player's perspective, so the hand owner pays toward
         // their opponent even when the hand owner is the non-turn player.
         if cost > 0 {
-            if hand_owner == self.turn_player() {
+            if owner == self.turn_player() {
                 if !self.pay_memory(cost) {
                     return None;
                 }
@@ -3172,7 +3194,7 @@ impl Game {
                 if i32::from(self.memory) + i32::from(cost) > i32::from(self.rules.memory_range.1) {
                     return None;
                 }
-                self.lose_memory_for_player(hand_owner, cost as i16);
+                self.lose_memory_for_player(owner, cost as i16);
             }
         }
 
@@ -3192,7 +3214,7 @@ impl Game {
         let from_stack_top = self
             .player(target_a.player)
             .battle_area
-            .get(target_a_index_after)
+            .get(target_a.index as usize)
             .map(|p| p.top_card().card_id(&self.card_data).to_string())
             .unwrap_or_default();
 
@@ -3203,8 +3225,11 @@ impl Game {
         // Field compaction changes surviving observers' positional handles,
         // but does not turn them into new cards (15-4-4-3).
         self.shift_effect_queue_after_battle_area_remove(target_b.player, target_b.index);
-        let new_top = self.player_mut(hand_owner).hand.remove(hand_index);
-        // Capture top_card_id from the removed-hand source before it moves
+        let new_top = match hand_index {
+            Some(index) => self.player_mut(owner).hand.remove(index),
+            None => self.pending_option.take().expect("checked above").card,
+        };
+        // Capture top_card_id from the result source before it moves
         // into the merged permanent's stack.
         let top_card_id = new_top.card_id(&self.card_data).to_string();
         let top_card_name = new_top.card_name(&self.card_data).to_string();
@@ -3260,10 +3285,10 @@ impl Game {
         // ignored to preserve the original `-> ()` signature of this
         // function; the symptom of a misaligned reveal source is a
         // downstream parity divergence the replay harness will catch.
-        if let Err(e) = self.draw_one_for_player(hand_owner) {
+        if let Err(e) = self.draw_one_for_player(owner) {
             eprintln!(
                 "[opaque-deck] DNA digivolve draw error for player {}: {}",
-                hand_owner, e
+                owner, e
             );
         }
 

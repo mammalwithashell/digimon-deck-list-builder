@@ -1,0 +1,30 @@
+card: BT27-060
+name: "Thundermon (X Antibody)"
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Mutant, X Antibody]
+form: Champion
+attribute: Data
+also_treated_as: ["Mamemon Thundermon (X Antibody)"]
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, name_is: Thundermon }
+    cost: 0
+
+effects:
+  - text: "[On Play] [When Digivolving] [On Deletion] Until your opponent's turn ends, 1 of your Digimon with [Mamemon] in its name gains ＜Blocker＞ and their effects can't return it to hands or decks."
+    when: [on_play, when_digivolving, on_deletion]
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: protected
+          filter: { kind: digimon, name_contains: Mamemon }
+          prompt: "Give 1 of your [Mamemon]-name Digimon Blocker and return protection"
+      - grant_keyword: { target: protected, keyword: Blocker, expiry: end_of_opponents_turn }
+      - add_modifier: { target: protected, modifier: CannotBeReturnedToHand, value: 1, opponent_only: true, expiry: end_of_opponents_turn }
+      - add_modifier: { target: protected, modifier: CannotBeReturnedToDeck, value: 1, opponent_only: true, expiry: end_of_opponents_turn }
+  - { text: "＜Blocker＞", kind: grant_keyword, scope: inherited, keyword: Blocker }

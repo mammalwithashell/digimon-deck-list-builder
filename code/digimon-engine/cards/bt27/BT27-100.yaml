@@ -1,0 +1,41 @@
+card: BT27-100
+name: "Hjaðningar Waltz"
+kind: option
+color: [black]
+cost: 3
+traits: [X Antibody, Royal Knight]
+effects:
+  - text: '[Main] Give 1 of your opponent''s Digimon "[Start of Your Main Phase] This Digimon attacks." until their turn ends. Then, place this card in the battle area.'
+    when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: attacker
+          filter: { kind: digimon }
+          prompt: "Choose an opponent Digimon that must attack at the start of its Main Phase"
+      - grant_triggered_effect:
+          target: attacker
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack: { attacker: carrier, targets: any, prompt: "This Digimon attacks" }
+      - place_self_as_delay_option: {}
+  - text: "[All Turns] When any of your Digimon with [Craniamon] in their names suspend, ＜Delay＞. ・＜De-Digivolve 1＞ all of your opponent's Digimon. Then, delete all of their Digimon with the lowest play cost."
+    kind: delay
+    trigger: on_suspend
+    active_when: { event_target_owner: you, event_card_kind: digimon, event_card_name_contains: Craniamon }
+    process:
+      - for_each:
+          over: { of: opponent, zone: [battle_area], kind: digimon }
+          bind_as: victim
+          body:
+            - de_digivolve: { target: victim, amount: 1, stop_at_level: 3 }
+      - delete_all_permanents: &lowest
+          over: { of: opponent, zone: [battle_area], kind: digimon }
+          selector: lowest_play_cost
+  - text: "[Security] Delete all of your opponent's Digimon with the lowest play cost. Then, add this card to the hand."
+    when: on_security
+    scope: inherited
+    process:
+      - delete_all_permanents: *lowest
+      - add_this_option_to_hand: {}

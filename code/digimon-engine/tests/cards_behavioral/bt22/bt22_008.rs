@@ -652,6 +652,7 @@ fn bt22_008_eot_strict_surfaces_partner_selection() {
     let requirement = DnaRequirement {
         level: 4,
         card_colors: vec![CardColor::Red],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };

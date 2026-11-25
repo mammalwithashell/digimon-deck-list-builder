@@ -1,0 +1,74 @@
+card: BT27-043
+name: "Kentaurosmon (X Antibody)"
+kind: dual
+level: 6
+dp: 13000
+cost: 5
+color: [yellow]
+traits: [Holy Warrior, X Antibody, Royal Knight]
+form: Mega
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, name_is: Kentaurosmon }
+    cost: 2
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [yellow]
+    traits: [Holy Warrior, X Antibody, Royal Knight]
+    effects:
+      - { text: "＜Blocker＞", kind: grant_keyword, keyword: Blocker }
+      - { text: "＜Barrier＞", kind: grant_keyword, keyword: Barrier }
+      - { text: "＜Ascension＞", kind: grant_keyword, keyword: Ascension }
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] By trashing your top security card, this Digimon unsuspends."
+        when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        optional: true
+        condition: { security_count_gte: 1 }
+        process:
+          - trash_top_security: { of: you, bind_count_as: trashed }
+          - if:
+              condition: { binding_present: trashed, not: { equals: [trashed, 0] } }
+              then:
+                - unsuspend: { target: source }
+              else:
+                - refund_opt: {}
+      - text: "[All Turns] [Once Per Turn] When your security stack is removed from, by placing 1 [Kentaurosmon] or [X Antibody] from this Digimon's digivolution cards as the bottom security card, activate 1 [Main] effect on this card's Option side."
+        when: on_own_security_removed
+        once_per_turn: true
+        process:
+          - select_union_zone:
+              of: you
+              zones: [material]
+              material_of: source
+              bind_as: payment
+              optional: true
+              filter: { any_of: [{ name_is: Kentaurosmon }, { name_is: X Antibody }] }
+              prompt: "Put a [Kentaurosmon] or [X Antibody] digivolution card at the bottom of security"
+          - security_place_stacked_card: { carrier: source, source: payment, of: you, position: bottom, face: down, bind_success_as: placed }
+          - if:
+              condition: { equals: [placed, 1] }
+              then:
+                - refire_effect: { source: source, timing: option_main, optional: false }
+              else:
+                - refund_opt: {}
+  option:
+    use_cost: 5
+    colors: [yellow]
+    arts_digivolve: true
+    effect_text: "[Main] 1 of your opponent's Digimon gets -20000 DP until their turn ends. For each card in both players' security stacks, add 1000 to this effect's DP reduction."
+    effects:
+      - text: "[Main] 1 of your opponent's Digimon gets -20000 DP until their turn ends. For each card in both players' security stacks, add 1000 to this effect's DP reduction."
+        when: main
+        process:
+          - select_opponent_permanent:
+              optional: false
+              bind_as: reduced
+              filter: { kind: digimon }
+              prompt: "Reduce 1 opponent Digimon's DP until their turn ends"
+          - add_dp_modifier:
+              target: reduced
+              value: { base: -20000, per: { card_count_in_zone: { of: any, zone: security } }, delta: -1000 }
+              expiry: end_of_opponents_turn

@@ -1,0 +1,66 @@
+card: BT27-065
+name: "Mamemon (X Antibody)"
+kind: digimon
+level: 5
+dp: 7000
+cost: 7
+color: [black, red]
+traits: [Mutant, X Antibody]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from:
+      any_color: true
+      level_eq: 5
+      name_contains: Mamemon
+      not: { trait_has: X Antibody }
+    cost: 1
+
+effects:
+  - text: "[When Digivolving] If a card with [Mamemon] in its name is in this Digimon's digivolution cards, 1 of your Digimon with [Mamemon] in its name may gain ＜Rush＞ for the turn and attack. At the end of that attack, delete it."
+    when: when_digivolving
+    condition: { self_source_count: { filter: { name_contains: Mamemon }, op: gte, value: 1 } }
+    process:
+      - select_own_permanent:
+          optional: true
+          bind_as: attacker
+          filter: { kind: digimon, name_contains: Mamemon, can_attack: { targets: any, ignore_summoning_sickness: true } }
+          prompt: "Choose a [Mamemon] Digimon to gain Rush and attack"
+      - grant_keyword: { target: attacker, keyword: Rush, expiry: end_of_turn }
+      - grant_triggered_effect:
+          target: attacker
+          timing: end_of_attack
+          expiry: end_of_turn
+          trigger_if: { event_target_is_source: true }
+          body:
+            - delete_permanent: { target: carrier }
+      - force_attack: { attacker: attacker, targets: any, prompt: "Choose the target of the attack" }
+  - text: "[On Deletion] Delete 1 of your opponent's lowest DP Digimon. If this effect didn't delete, trash their top security card."
+    when: on_deletion
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "Delete 1 opponent Digimon with the lowest DP"
+      - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - trash_top_security: { of: opponent }
+  - text: "[All Turns] [Once Per Turn] When any of your other Digimon with [Mamemon] in their names are deleted, delete 1 of your opponent's Digimon with the lowest play cost."
+    scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    trigger_if: { event_target_owner: you, event_target_is_source: false, event_card_name_contains: Mamemon, event_target_kind: digimon }
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          selector: lowest_play_cost
+          filter: { kind: digimon }
+          prompt: "Delete 1 opponent Digimon with the lowest play cost"
+      - delete_permanent: { target: victim }

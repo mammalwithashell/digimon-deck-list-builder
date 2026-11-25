@@ -55,6 +55,9 @@ pub struct DnaRequirement {
         deserialize_with = "deserialize_card_colors"
     )]
     pub card_colors: Vec<CardColor>,
+    /// Exact card name. Empty = no exact-name constraint.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub name_is: String,
     /// Case-insensitive substring against `card_name`. Empty = no constraint.
     #[serde(default)]
     pub name_contains: String,

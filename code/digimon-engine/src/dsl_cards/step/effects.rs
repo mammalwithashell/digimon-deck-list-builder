@@ -101,10 +101,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             else {
                 return true;
             };
-            let timing_filter = match timing.as_str() {
-                "on_play" => TimingFilter::OnPlay,
-                "when_digivolving" => TimingFilter::WhenDigivolving,
-                _ => TimingFilter::Either,
+            let Some(timing_filter) = TimingFilter::from_refire_timing(timing) else {
+                return true;
             };
             let _ = ctx.activate_foreign_card_effect(&card_id, carrier, timing_filter, ctx.player);
             true

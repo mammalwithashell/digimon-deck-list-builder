@@ -211,12 +211,14 @@ fn bt12_050_dna_digivolving_into_blue_gains_one_memory() {
         requirement1: DnaRequirement {
             level: 4,
             card_colors: vec![CardColor::Green],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },
         requirement2: DnaRequirement {
             level: 4,
             card_colors: vec![CardColor::Blue],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },
@@ -286,12 +288,14 @@ fn bt12_050_dna_digivolving_into_non_blue_does_not_gain_memory() {
         requirement1: DnaRequirement {
             level: 4,
             card_colors: vec![CardColor::Green],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },
         requirement2: DnaRequirement {
             level: 4,
             card_colors: vec![CardColor::Red],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },
@@ -360,12 +364,14 @@ fn bt12_050_clause_0_does_not_fire_on_opponents_turn() {
         requirement1: DnaRequirement {
             level: 4,
             card_colors: vec![CardColor::Green],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },
         requirement2: DnaRequirement {
             level: 4,
             card_colors: vec![CardColor::Blue],
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         },

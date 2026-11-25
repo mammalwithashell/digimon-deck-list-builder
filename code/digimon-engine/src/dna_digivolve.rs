@@ -2081,6 +2081,13 @@ fn card_data_matches_req_ext(
     if !req.card_colors.is_empty() && !req.card_colors.iter().any(|c| meta.colors.contains(c)) {
         return false;
     }
+    if !req.name_is.is_empty()
+        && meta.card_name != req.name_is
+        && !meta.also_treated_as.contains(&req.name_is)
+        && !extras.names.contains(&req.name_is)
+    {
+        return false;
+    }
     if !req.name_contains.is_empty() {
         let needle = req.name_contains.to_lowercase();
         let printed_ok = crate::card_data::rules_name_contains(&meta.card_name, &needle);

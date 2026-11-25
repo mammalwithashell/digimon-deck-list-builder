@@ -313,11 +313,11 @@ effects:
     process:
       - refire_card_effect:
           card: placed
-          timing: on_deletion
+          timing: when_attacking
 "#;
     let spec: CardSpec = serde_yml::from_str(yaml).expect("yaml parses");
     assert!(
         compile(&spec).is_err(),
-        "refire_card_effect must reject timings outside on_play / when_digivolving"
+        "refire_card_effect must reject when_attacking"
     );
 }

@@ -538,6 +538,7 @@ fn ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects() {
         let any_lv6 = || DnaRequirement {
             level: 6,
             card_colors: Vec::new(),
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         };
@@ -673,6 +674,7 @@ fn ad1_012_opponents_turn_hand_pick_excludes_card_without_a_legal_field_pair() {
         let req = || DnaRequirement {
             level,
             card_colors: Vec::new(),
+            name_is: String::new(),
             name_contains: String::new(),
             text_contains: String::new(),
         };

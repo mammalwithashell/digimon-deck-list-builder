@@ -250,6 +250,7 @@ pub(crate) struct BeforePayCostSourceInfo {
 pub(crate) struct ArtsDigivolveSelectionState {
     pub(crate) owner: PlayerId,
     pub(crate) targets: Vec<PermanentHandle>,
+    pub(crate) dna_first: Option<PermanentHandle>,
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
@@ -1218,8 +1219,70 @@ impl Game {
                 data.keywords.contains(&Keyword::ArtsDigivolve)
                     || dual.option.keywords.contains(&Keyword::ArtsDigivolve)
                     || dual.digimon.keywords.contains(&Keyword::ArtsDigivolve)
+                    || dual.option.keywords.contains(&Keyword::ArtsDnaDigivolve)
             })
             .unwrap_or(false)
+    }
+
+    fn pending_option_uses_arts_dna(&self) -> bool {
+        self.pending_option.as_ref().is_some_and(|pending| {
+            self.card_data[pending.card.data_index]
+                .dual
+                .as_ref()
+                .is_some_and(|dual| dual.option.keywords.contains(&Keyword::ArtsDnaDigivolve))
+        })
+    }
+
+    fn arts_dna_pair_is_legal(&self, first: PermanentHandle, second: PermanentHandle) -> bool {
+        let Some(pending) = self.pending_option.as_ref() else {
+            return false;
+        };
+        if first == second || first.player != pending.owner || second.player != pending.owner {
+            return false;
+        }
+        let battle = &self.player(pending.owner).battle_area;
+        let (Some(first_perm), Some(second_perm)) =
+            (battle.get(first.index as usize), battle.get(second.index as usize))
+        else {
+            return false;
+        };
+        if self.modifiers.player_has(pending.owner, ModifierType::CannotDigivolveDigimonByEffect)
+            || [(first, first_perm), (second, second_perm)].into_iter().any(|(target, perm)| {
+            !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, target)
+                || self.modifiers.has(target, ModifierType::CannotDigivolve)
+                || self.digivolve_target_blocked_by_restriction(target, &pending.card)
+        }) {
+            return false;
+        }
+        let first_extras = self.dna_material_extras(first, &pending.card);
+        let second_extras = self.dna_material_extras(second, &pending.card);
+        crate::dna_digivolve::get_dna_stacking_order_ext(
+            &self.card_data[pending.card.data_index],
+            (first_perm, &first_extras),
+            (second_perm, &second_extras),
+            &self.card_data,
+        )
+        .is_some()
+    }
+
+    fn arts_dna_targets(
+        &self,
+        owner: PlayerId,
+        first: Option<PermanentHandle>,
+    ) -> Vec<PermanentHandle> {
+        let field = (0..self.player(owner).battle_area.len()).map(|index| PermanentHandle {
+            player: owner,
+            index: index as u8,
+        });
+        field
+            .clone()
+            .filter(|&target| match first {
+                Some(first) => self.arts_dna_pair_is_legal(first, target),
+                None => field
+                    .clone()
+                    .any(|partner| self.arts_dna_pair_is_legal(target, partner)),
+            })
+            .collect()
     }
 
     fn arts_digivolve_battle_targets(&self, owner: PlayerId) -> Vec<PermanentHandle> {
@@ -1259,6 +1322,13 @@ impl Game {
     }
 
     pub(crate) fn install_arts_digivolve_selection(&mut self) -> bool {
+        self.install_arts_digivolve_material_selection(None)
+    }
+
+    fn install_arts_digivolve_material_selection(
+        &mut self,
+        dna_first: Option<PermanentHandle>,
+    ) -> bool {
         use crate::action::space::encode_attack;
 
         let Some(pending) = self.pending_option.as_ref() else {
@@ -1266,8 +1336,13 @@ impl Game {
         };
         let owner = pending.owner;
         let source_card = pending.card.handle();
-        let targets = self.arts_digivolve_battle_targets(owner);
-        let has_breeding = self.arts_digivolve_has_breeding_target(owner);
+        let dna = self.pending_option_uses_arts_dna();
+        let targets = if dna {
+            self.arts_dna_targets(owner, dna_first)
+        } else {
+            self.arts_digivolve_battle_targets(owner)
+        };
+        let has_breeding = !dna && self.arts_digivolve_has_breeding_target(owner);
         if targets.is_empty() && !has_breeding {
             return false;
         }
@@ -1279,7 +1354,13 @@ impl Game {
         if has_breeding {
             valid_action_ids.push(crate::action::space::BREEDING_SELECTION_TARGET);
         }
-        let target_snapshot = targets.clone();
+        let state = ArtsDigivolveSelectionState {
+            owner,
+            targets,
+            dna_first,
+            outer_conts: Vec::new(),
+        };
+        let callback_state = state.clone();
         let previous_phase = self.current_phase;
 
         if let Some(pending) = self.pending_option.as_mut() {
@@ -1294,26 +1375,17 @@ impl Game {
             previous_phase,
             valid_action_ids,
             is_optional: true,
-            prompt: "Choose a card for Arts Digivolve, or pass to trash this Option".to_string(),
+            prompt: match (dna, dna_first) {
+                (true, None) => "Choose the first Digimon for Arts Digivolve, or pass to trash this Option",
+                (true, Some(_)) => "Choose the second Digimon for Arts Digivolve, or pass to trash this Option",
+                (false, _) => "Choose a card for Arts Digivolve, or pass to trash this Option",
+            }.to_string(),
             effect_choices: None,
             source_card,
             source_permanent: None,
             source_kind: EffectSourceKind::Option,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
-                if action_id == crate::action::space::BREEDING_SELECTION_TARGET {
-                    let _ = game.arts_digivolve_pending_option_onto_breeding(owner);
-                    return;
-                }
-                let offset = action_id.saturating_sub(ATTACK_START);
-                let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
-                if target_snapshot.iter().any(|h| h.index == target_index) {
-                    let target = PermanentHandle {
-                        player: owner,
-                        index: target_index,
-                    };
-                    let _ = game.arts_digivolve_pending_option_onto_battle(target);
-                }
+                game.run_arts_digivolve_selection_step(callback_state, action_id, false);
             }),
             on_decline: Some(Box::new(|game: &mut Game| {
                 game.dispose_option();
@@ -1322,11 +1394,7 @@ impl Game {
         });
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::ArtsDigivolveSelection(
-                ArtsDigivolveSelectionState {
-                    owner,
-                    targets,
-                    outer_conts: Vec::new(),
-                },
+                state,
             )],
         });
         true
@@ -1353,12 +1421,23 @@ impl Game {
 
         let offset = action_id.saturating_sub(ATTACK_START);
         let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
-        if state.targets.iter().any(|h| h.index == target_index) {
-            let target = PermanentHandle {
-                player: state.owner,
-                index: target_index,
-            };
+        let Some(target) = state.targets.into_iter().find(|h| h.index == target_index) else {
+            return;
+        };
+        if !self.pending_option_uses_arts_dna() {
             let _ = self.arts_digivolve_pending_option_onto_battle(target);
+            return;
+        }
+        if let Some(first) = state.dna_first {
+            if !self.arts_dna_pair_is_legal(first, target)
+                || self.dna_digivolve_pending_option(first, target, state.owner).is_none()
+            {
+                self.dispose_option();
+            }
+            self.check_turn_end();
+        } else if !self.install_arts_digivolve_material_selection(Some(target)) {
+            self.dispose_option();
+            self.check_turn_end();
         }
     }
 
@@ -1366,7 +1445,7 @@ impl Game {
         &mut self,
         target: PermanentHandle,
     ) -> bool {
-        if !self.pending_option_can_arts_digivolve() {
+        if !self.pending_option_can_arts_digivolve() || self.pending_option_uses_arts_dna() {
             return false;
         }
         let Some(pending_ref) = self.pending_option.as_ref() else {
@@ -1441,7 +1520,7 @@ impl Game {
     }
 
     pub(crate) fn arts_digivolve_pending_option_onto_breeding(&mut self, owner: PlayerId) -> bool {
-        if !self.pending_option_can_arts_digivolve() {
+        if !self.pending_option_can_arts_digivolve() || self.pending_option_uses_arts_dna() {
             return false;
         }
         let Some(pending_ref) = self.pending_option.as_ref() else {

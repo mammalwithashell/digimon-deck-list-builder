@@ -3267,6 +3267,9 @@ fn compile_step(
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashFieldOption(a) => CompiledStep::TrashFieldOption {
+            target: compile_binding_ref(&a.target),
+        },
         S::PaySourcePrefix(a) => {
             if a.minimum == 0 || a.minimum > i64::MAX as u64 {
                 errors.push(ValidationError {
@@ -4899,7 +4902,7 @@ fn compile_step(
             card: compile_binding_ref(&a.card),
             timing: if matches!(
                 a.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "on_deletion"
             ) {
                 a.timing.clone()
             } else {
@@ -4907,7 +4910,7 @@ fn compile_step(
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.refire_card_effect.timing"),
                     message: format!(
-                        "refire_card_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        "unsupported refire_card_effect timing: {}",
                         a.timing
                     ),
                 });

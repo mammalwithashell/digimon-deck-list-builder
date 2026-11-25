@@ -279,6 +279,7 @@ fn batching_fixture(dna: bool, self_delete: bool) -> DebugRunner {
     let requirement = digimon_engine::card_data::DnaRequirement {
         level: 4,
         card_colors: vec![],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };

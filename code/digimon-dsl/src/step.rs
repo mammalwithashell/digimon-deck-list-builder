@@ -155,6 +155,7 @@ pub enum StepSpec {
 
     // Field / permanent
     DeletePermanent(TargetArg),
+    TrashFieldOption(TargetArg),
     /// `delete_for_cost_reduction: { target: <binding> }` — delete AS A COST and
     /// reduce the in-flight cost by a fixed amount or the deleted permanent's
     /// printed play cost.
@@ -670,6 +671,7 @@ impl Serialize for StepSpec {
             StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
+            StepSpec::TrashFieldOption(v) => kv!(s, "trash_field_option", v),
             StepSpec::PaySourcePrefix(v) => kv!(s, "pay_source_prefix", v),
             StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
@@ -982,6 +984,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
+            "trash_field_option" => StepSpec::TrashFieldOption(map.next_value()?),
             "pay_source_prefix" => StepSpec::PaySourcePrefix(map.next_value()?),
             "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
@@ -1253,6 +1256,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "choose_from_reveal",
                         "order_remainder",
                         "delete_permanent",
+                        "trash_field_option",
                         "delete_for_cost_reduction",
                         "delete_bound_permanents",
                         "delete_permanents",

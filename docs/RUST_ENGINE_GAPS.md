@@ -9,6 +9,13 @@
 - **Status:** Resolved in PR #793. Used by BT27-075.
 - **Requirement:** Offer the level 2 Digimon in the breeding area and grant the fixed reduction only after the chosen deletion succeeds.
 - **Implementation:** `select_own_breeding_permanent` and `pay_breeding_deletion` preserve the selected card's identity across the pending selection and apply the fixed reduction only if that Digimon is deleted.
+## Arts Digivolve with DNA materials — resolved
+
+`G-ARTS-DNA-MATERIALS`: BT27-103 specifies that two Digimon may DNA digivolve
+into the pending DUAL Option after its main effect resolves. The
+`ArtsDnaDigivolve` Option keyword opens two optional field selections using
+the card's DNA recipes. Accepting both commits a standard DNA digivolution
+from the pending Option; declining either discards the used Option.
 
 ## Player-directed forced attacks — resolved 2026-11-09
 

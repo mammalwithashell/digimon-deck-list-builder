@@ -763,6 +763,11 @@ fn write_resume_stack(
             .next()
             .unwrap_or("");
         field(hasher, "resume.frame", variant);
+        if let crate::resume::ResumeFrame::ArtsDigivolveSelection(state) = frame {
+            if let Some(first) = state.dna_first {
+                debug_field(hasher, "resume.arts_dna_first", &first);
+            }
+        }
         if let crate::resume::ResumeFrame::RunTail {
             bind_as,
             inner_tail,

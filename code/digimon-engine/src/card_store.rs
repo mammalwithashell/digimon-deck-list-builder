@@ -138,6 +138,7 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
                 for c in &req.card_colors {
                     (*c as u8).hash(&mut h);
                 }
+                req.name_is.hash(&mut h);
                 req.name_contains.hash(&mut h);
                 req.text_contains.hash(&mut h);
             }
