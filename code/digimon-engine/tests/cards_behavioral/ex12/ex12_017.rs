@@ -518,4 +518,214 @@ mod counter_runtime {
             next.prompt
         );
     }
+
+    /// WarGreymon's field-ability action in the counter timing.
+    fn declare_action() -> u16 {
+        digimon_engine::action::space::encode_attack(0, 0)
+    }
+
+    /// Answer every remaining decision of the current attack (PASS where
+    /// optional, else the first legal action); true if WarGreymon's [Counter]
+    /// was offered again in the counter timing.
+    fn ex12_017_finish_attack(runner: &mut DebugRunner) -> bool {
+        let mut reoffered = false;
+        for _ in 0..16 {
+            let Some(view) = runner.pending_selection_view() else {
+                break;
+            };
+            if runner.current_phase() == GamePhase::CounterTiming
+                && view.valid_action_ids.contains(&declare_action())
+            {
+                reoffered = true;
+            }
+            let action = if view.valid_action_ids.contains(&PASS) { PASS } else { view.valid_action_ids[0] };
+            runner.execute_action(view.selecting_player, action).unwrap();
+        }
+        assert!(runner.pending_selection().is_none(), "no decision is left");
+        reoffered
+    }
+
+    /// `attacked` gives player 1 no security, so its attack would end the
+    /// game; two 5000 DP security Digimon keep it going for a second attack.
+    fn give_security(runner: &mut DebugRunner) {
+        let idx = runner.game.card_data.iter().position(|c| c.card_id == "LV4").unwrap();
+        for _ in 0..2 {
+            let next = runner.game.next_card_index();
+            runner.game.players[1]
+                .security
+                .push(digimon_engine::card_source::CardSource::new(idx, 1, next));
+        }
+    }
+
+    fn counter_offered(runner: &DebugRunner) -> bool {
+        runner.current_phase() == GamePhase::CounterTiming
+            && runner
+                .pending_selection_view()
+                .is_some_and(|v| v.valid_action_ids.contains(&declare_action()))
+    }
+
+    /// Real combat. Only 1 [Counter] effect can be activated per attack
+    /// (CR 4.3 11-3-2; official Q6745). Declaring WarGreymon's [Counter] and
+    /// declining both the DNA and the redirect keeps the [Once Per Turn]
+    /// (W13), but that attack's counter timing is over: it is not offered
+    /// again in the same attack, so there is no declare-and-pass cycle. The
+    /// kept use is offered at the next attack's counter timing that turn.
+    #[test]
+    fn real_counter_declare_and_pass_closes_the_window_and_keeps_the_use() {
+        let Board { mut runner, .. } = attacked(&["OMNI-OK"]);
+        give_security(&mut runner);
+        assert!(counter_offered(&runner));
+        advance_to(&mut runner, SelectionKind::Hand);
+        runner.execute_action(1, PASS).expect("decline the DNA");
+        let redirect = runner.pending_selection_view().expect("redirect pick");
+        assert!(redirect.prompt.contains("attack target"), "{:?}", redirect.prompt);
+        runner.execute_action(1, PASS).expect("decline the redirect");
+        assert!(
+            !ex12_017_finish_attack(&mut runner),
+            "CR 4.3 11-3-2: one [Counter] per attack, so the declaration is not offered again"
+        );
+        assert!(runner.game.pending_attack.is_none(), "the first attack finished");
+
+        assert!(!runner.game.game_over);
+        let second = runner.place_on_field(0, "ATK", Some(0));
+        assert_ne!(runner.attack_player(second, 1, false), digimon_engine::combat::AttackResult::Invalid);
+        assert!(counter_offered(&runner), "the kept use is offered at the next attack");
+    }
+
+    /// One half executed spends the use (W13; CR 4.3 15-14-1-4): the DNA
+    /// digivolves and the redirect is declined, and the next attack that turn
+    /// opens no counter timing for WarGreymon.
+    #[test]
+    fn real_counter_dna_then_redirect_declined_spends_the_once_per_turn() {
+        use digimon_engine::action::space::encode_attack;
+        let Board { mut runner, lv5_a, lv5_b, .. } = attacked(&["OMNI-OK"]);
+        give_security(&mut runner);
+        let view = advance_to(&mut runner, SelectionKind::Hand);
+        let pick = hand_slot_actions(&runner, "OMNI-OK")
+            .into_iter()
+            .find(|a| view.valid_action_ids.contains(a))
+            .unwrap();
+        runner.execute_action(1, pick).expect("pick Omnimon");
+        let act = |h: PermanentHandle| encode_attack(h.player as u16, h.index as u16);
+        runner.execute_action(1, act(lv5_a)).expect("first material");
+        runner.execute_action(1, act(lv5_b)).expect("second material");
+        for _ in 0..6 {
+            let Some(view) = runner.pending_selection_view() else {
+                break;
+            };
+            if view.prompt.contains("attack target") {
+                runner.execute_action(1, PASS).expect("decline the redirect");
+                break;
+            }
+            let action = if view.valid_action_ids.contains(&PASS) { PASS } else { view.valid_action_ids[0] };
+            runner.execute_action(view.selecting_player, action).unwrap();
+        }
+        ex12_017_finish_attack(&mut runner);
+        assert!(
+            runner.game.players[1]
+                .battle_area
+                .iter()
+                .any(|p| p.top_card().card_id(&runner.game.card_data) == "OMNI-OK"),
+            "the DNA digivolution happened"
+        );
+
+        assert!(!runner.game.game_over);
+        let second = runner.place_on_field(0, "ATK", Some(0));
+        let security_before = runner.security_count(1);
+        assert_ne!(runner.attack_player(second, 1, false), digimon_engine::combat::AttackResult::Invalid);
+        assert!(!counter_offered(&runner), "the DNA spent the [Once Per Turn]");
+        ex12_017_finish_attack(&mut runner);
+        assert_eq!(runner.security_count(1), security_before - 1, "the second attack happened");
+    }
+}
+
+/// Fire WarGreymon's [Counter] directly.
+fn ex12_017_counter_fire(runner: &mut DebugRunner, wargreymon: digimon_engine::permanent::PermanentHandle) {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::CounterEffect, TriggerSource::Permanent(wargreymon));
+    runner.game.drain_effect_queue();
+}
+
+/// Drive one [Counter] activation: accept the effect, pass the DNA pick if one
+/// is offered, and answer the redirect pick with `redirect` (PASS declines).
+/// Returns the prompts seen.
+fn ex12_017_counter_run(runner: &mut DebugRunner, redirect: Option<u16>) -> Vec<String> {
+    use digimon_engine::action::space::PASS;
+    let mut prompts = Vec::new();
+    for _ in 0..6 {
+        let Some(sel) = runner.pending_selection() else {
+            break;
+        };
+        let (player, prompt) = (sel.selecting_player, sel.prompt.clone());
+        let first_non_pass = sel.valid_action_ids.iter().copied().find(|&a| a != PASS);
+        prompts.push(prompt.clone());
+        let action = if prompt.contains("attack target") {
+            redirect.unwrap_or(PASS)
+        } else if prompt.contains("DNA") {
+            PASS
+        } else {
+            first_non_pass.unwrap_or(PASS)
+        };
+        runner
+            .execute_action(player, action)
+            .unwrap_or_else(|e| panic!("{e:?} at {prompt:?} (seen {prompts:?})"));
+    }
+    prompts
+}
+
+/// WarGreymon (EX12-017) "[Counter] [Once Per Turn] 2 of your Digimon may DNA
+/// digivolve ... Then, you may change the attack target to 1 of your Digimon."
+/// is the owner-decided W13 shape ("you may A. Then, you may B.",
+/// qa/rules/mechanics-gaps-2026-10.md W13, 2026-10-21): with both halves
+/// declined nothing executed and the [Once Per Turn] is kept, at [Counter] as
+/// at any other timing (DCGO EX12_017.cs `if (!isUsed)
+/// activateClass.RemoveUse()`). The effect's accept prompt is DCGO's
+/// (`SetUpActivateClass(..., isOptional: true, ...)`), not printed.
+#[test]
+fn ex12_017_counter_both_halves_declined_keeps_the_once_per_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-017 YAML loads")
+        .start();
+    let wargreymon = runner.place_on_field(0, CARD_ID, Some(0));
+
+    ex12_017_counter_fire(&mut runner, wargreymon);
+    let prompts = ex12_017_counter_run(&mut runner, None);
+    assert!(
+        prompts.iter().any(|p| p.contains("attack target")),
+        "the redirect was offered and declined: {prompts:?}"
+    );
+    assert!(runner.pending_selection().is_none(), "{prompts:?}");
+
+    ex12_017_counter_fire(&mut runner, wargreymon);
+    assert!(
+        runner.pending_selection().is_some(),
+        "both halves declined kept the [Once Per Turn]: offered again this turn"
+    );
+}
+
+/// Choosing the redirect target executes the second half: the [Once Per Turn]
+/// is spent (W13; CR 4.3 15-14-1-4; DCGO sets `isUsed`).
+#[test]
+fn ex12_017_counter_redirect_chosen_spends_the_once_per_turn() {
+    use digimon_engine::action::space::encode_attack;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-017 YAML loads")
+        .start();
+    let wargreymon = runner.place_on_field(0, CARD_ID, Some(0));
+
+    ex12_017_counter_fire(&mut runner, wargreymon);
+    let pick = encode_attack(wargreymon.player as u16, wargreymon.index as u16);
+    let prompts = ex12_017_counter_run(&mut runner, Some(pick));
+    assert!(runner.pending_selection().is_none(), "{prompts:?}");
+
+    ex12_017_counter_fire(&mut runner, wargreymon);
+    assert!(
+        runner.pending_selection().is_none(),
+        "the redirect was chosen: no second activation this turn"
+    );
 }

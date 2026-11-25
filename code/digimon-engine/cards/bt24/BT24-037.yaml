@@ -86,3 +86,89 @@ effects:
           target: boosted
           value: 5000
           expiry: end_of_turn
+
+  # ─── [All Turns][Once Per Turn] would leave → play a Lv.4- source (own) ─────
+  #
+  # Printed twice on the card face (main box and inherited box), identical
+  # text; DCGO BT24_037.cs registers two WhenRemoveField ActivateClasses with
+  # separate hash keys (BT24_037_AT / BT24_037_AT_ESS) and maxCountPerTurn 1
+  # each, so each copy has its own [Once Per Turn] count.
+  #   CanUseCondition: this card's permanent would leave AND NOT
+  #     IsByEffect(effect owned by this card's owner) -> "other than by your
+  #     effects" = none_of replacement_cause own_effect.
+  #   Candidate: IsDigimon && Level <= 4 && (Yellow || Red || HasTSTraits)
+  #     && CanPlayAsNewPermanent(payCost false) -> the filter below; an
+  #     unplayable card is never offered, and with none the replacement is
+  #     not offered (preflight on the required pick).
+  #   Optional activation (isOptional true) is the printed "you may"; the
+  #   pick after accepting is the play (DCGO canNoSelect would only spend the
+  #   use with nothing played, the same as declining minus the OPT use).
+  # The play does not stop the leave (no "it doesn't leave" clause; the
+  # BT18-063 / AD1-003 non-cancelling idiom).
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost."
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[All Turns][Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost"
+    process:
+      - select_material:
+          optional: false
+          of_permanent: replacement_subject
+          bind_as: silphy_play
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - color_is: yellow
+                  - color_is: red
+                  - trait_has: TS
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 level 4 or lower yellow, red or [TS] trait Digimon card from this Digimon's digivolution cards without paying the cost"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: silphy_play
+          cost_delta: free
+
+  # ─── Inherited: the same clause on the Digimon that carries Silphymon ───────
+  - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost."
+    scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - is_source: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[Inherited][All Turns][Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, red or [TS] trait Digimon card from its digivolution cards without paying the cost"
+    process:
+      - select_material:
+          optional: false
+          of_permanent: replacement_subject
+          bind_as: silphy_play
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - color_is: yellow
+                  - color_is: red
+                  - trait_has: TS
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 level 4 or lower yellow, red or [TS] trait Digimon card from this Digimon's digivolution cards without paying the cost"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: silphy_play
+          cost_delta: free

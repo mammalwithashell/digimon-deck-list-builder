@@ -29,6 +29,21 @@
       "card_color": 2,
       "level": 6,
       "memory_cost": 7
+    },
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 7
+    },
+    {
+      "card_color": 5,
+      "level": 6,
+      "memory_cost": 7
+    },
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 7
     }
   ],
   "xros_req": "[DNA Digivolve] Yellow/Black Lv.6 + Green/Purple Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",

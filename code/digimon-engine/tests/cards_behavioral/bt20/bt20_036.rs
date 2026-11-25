@@ -265,12 +265,19 @@ fn bt20_036_eot_dna_pays_the_printed_dna_cost() {
     assert_eq!(r.memory(), 8, "printed DNA cost 2 paid");
 }
 
-/// A successful DNA grants the DNA-digivolved Digimon its attack ("Then, the
-/// DNA digivolved Digimon may attack"; DCGO :278-289 `OnDNASuccess` attacks
-/// with `cardSource.PermanentOfThisCard()`). The grant is the windowed
-/// `MayAttack` (the end-of-turn attack idiom, as AD1-004).
+/// A successful DNA offers the DNA-digivolved Digimon its attack NOW, inside
+/// the [End of Your Turn] effect ("Then, the DNA digivolved Digimon may
+/// attack"; DCGO :278-289 `OnDNASuccess` runs `SelectAttackEffect.Activate()`
+/// inline with `cardSource.PermanentOfThisCard()`, declinable). The official
+/// Q&A for this card confirms the attack happens during this effect: a 2nd
+/// copy's [End of Your Turn] can be activated before the counter timing of
+/// that attack but cannot declare another attack (CR 4.3 11-2-4).
+///
+/// This test used to pin a deferred `windowed` MayAttack grant; that device
+/// let the attack happen later in the end-of-turn window (scan finding F02).
 #[test]
-fn bt20_036_eot_successful_dna_grants_the_merged_digimon_its_attack() {
+fn bt20_036_eot_successful_dna_offers_the_merged_digimon_its_attack_now() {
+    use digimon_engine::action::space::SECURITY_TARGET;
     use digimon_engine::enums::ModifierType;
     let (mut r, bancho, others) = eot_runner(&["M6"], &["C-OK"]);
     fire_eot(&mut r, bancho);
@@ -279,10 +286,27 @@ fn bt20_036_eot_successful_dna_grants_the_merged_digimon_its_attack() {
         .map(|i| PermanentHandle { player: 0, index: i as u8 })
         .find(|&h| top_id(&r, h) == "C-OK")
         .expect("the DNA digivolved Digimon is on the field");
+    let view = r
+        .pending_selection_view()
+        .expect("the attack is offered inside the effect");
+    assert_eq!(view.kind, SelectionKind::Target, "attack target prompt");
+    assert!(view.is_optional, "\"may attack\" is declinable");
     assert!(
-        r.game.modifiers.has(merged, ModifierType::MayAttack),
-        "the DNA-digivolved Digimon may attack"
+        view.valid_action_ids
+            .contains(&encode_attack(merged.index as u16, SECURITY_TARGET)),
+        "the DNA-digivolved Digimon is the attacker: {:?}",
+        view.valid_action_ids
     );
+    assert!(
+        !r.game.modifiers.has(merged, ModifierType::MayAttack),
+        "no deferred end-of-turn MayAttack grant"
+    );
+    r.execute_action(0, PASS).expect("decline the attack");
+    assert!(
+        !r.game.modifiers.has(merged, ModifierType::MayAttack),
+        "declining leaves no grant behind"
+    );
+    assert!(!r.game.players[0].battle_area[merged.index as usize].is_suspended);
 }
 
 /// Declining the DNA grants no attack: "the DNA digivolved Digimon may

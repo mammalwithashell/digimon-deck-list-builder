@@ -20,7 +20,11 @@ effects:
       - search_own_security_stack:
           bind_as: selected
           optional: true
-          filter: {}
+          # An authored play-legality leaf that admits every card: the DSL
+          # lowering (`digimon_dsl::play_candidates`) then adds none of its own,
+          # so a restriction added after the offer reaches the play verb's own
+          # refusal, which is what these tests measure.
+          filter: { any_of: [{can_play_from_effect_without_cost: true}, {not: {can_play_from_effect_without_cost: true}}] }
           on_select: []
           prompt: Choose a card to play
       - play_security_card: { of: you, card: selected }

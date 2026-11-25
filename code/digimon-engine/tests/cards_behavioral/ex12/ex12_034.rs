@@ -135,13 +135,20 @@ fn ex12_034_leave_offers_only_zones_with_a_playable_card() {
     assert_eq!(labels, vec!["Hand".to_string(), "Don't play".to_string()]);
 }
 
-/// Playing nothing refunds the [Once Per Turn] (DCGO RemoveUse), so the next
-/// leave this turn offers the replacement again.
+/// The replacement's accept prompt is not printed: it is DCGO's skippable
+/// prompt (EX12_034.cs `SetIsSkippable(true)`). The printed effect is the
+/// whole "you may play 1 ... card", so the choice to activate it is the choice
+/// to play. Accepting and then choosing "Don't play" while a card could be
+/// played is choosing not to play, which keeps the [Once Per Turn] (official
+/// Q1818, Q4086, Q6946; CR 4.3 15-14-1-4 counts the use only when the player
+/// chooses to activate). DCGO agrees (`if (!isUsed) activateClass.RemoveUse()`
+/// inside `if (validHandCard || validDigivolutionCard)`).
 #[test]
-fn ex12_034_leave_playing_nothing_refunds_once_per_turn() {
+fn ex12_034_leave_accepted_then_dont_play_keeps_once_per_turn() {
     let (mut runner, _) = leave_setup(&["SW-5"]);
     delete_own(&mut runner, "VICTIM-A");
     runner.accept_optional_trigger().expect("accept the replacement");
+    assert_eq!(choice_labels(&runner), vec!["Hand".to_string(), "Don't play".to_string()]);
     runner.execute_branch(1).expect("choose Don't play");
     let _ = runner.auto_resolve();
     assert!(!field_contains(&runner, 0, "VICTIM-A"), "the first Digimon left");
@@ -149,13 +156,53 @@ fn ex12_034_leave_playing_nothing_refunds_once_per_turn() {
     delete_own(&mut runner, "VICTIM-B");
     assert!(
         runner.pending_selection().is_some(),
-        "the refunded [Once Per Turn] replacement is offered again"
+        "choosing not to play kept the [Once Per Turn]: offered again this turn"
     );
 }
 
-/// After choosing "Hand" the card pick can't be passed: declining there would
-/// spend the [Once Per Turn] without the refund. "Don't play" is the opt-out
-/// (DCGO's decline-then-RemoveUse has the same outcome).
+/// Choosing to play a card spends the [Once Per Turn] (CR 4.3 15-14-1-4;
+/// official Q5426: the use counts as soon as the player chooses the action).
+/// DCGO sets `isUsed` once a card is selected.
+#[test]
+fn ex12_034_leave_accepted_and_card_played_spends_once_per_turn() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    runner.execute_branch(0).expect("choose Hand");
+    let sel = runner.pending_selection().expect("hand pick pending");
+    let (player, pick) = (sel.selecting_player, sel.valid_action_ids[0]);
+    runner.execute_action(player, pick).expect("play SW-5");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    assert!(field_contains(&runner, 0, "SW-5"), "SW-5 was played");
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
+        runner.pending_selection().is_none(),
+        "a card was played: no second offer this turn"
+    );
+    assert!(!field_contains(&runner, 0, "VICTIM-B"), "the second Digimon left");
+}
+
+/// The other side (official Q1818: a "you may" effect the player chooses not
+/// to activate does not use up its [Once Per Turn]): declining the replacement
+/// itself keeps the use, and the next leave this turn offers it again.
+#[test]
+fn ex12_034_leave_declined_keeps_once_per_turn() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    delete_own(&mut runner, "VICTIM-A");
+    runner.decline_optional_trigger().expect("decline the replacement");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    assert!(!field_contains(&runner, 0, "VICTIM-A"), "the first Digimon left");
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
+        runner.pending_selection().is_some(),
+        "a declined replacement was never activated: it is offered again"
+    );
+}
+
+/// After choosing "Hand" the card pick can't be passed. "Don't play" is the
+/// opt-out offered with the zone choice.
 #[test]
 fn ex12_034_leave_hand_pick_after_choosing_hand_is_mandatory() {
     let (mut runner, _) = leave_setup(&["SW-5"]);
@@ -168,7 +215,12 @@ fn ex12_034_leave_hand_pick_after_choosing_hand_is_mandatory() {
 }
 
 /// With nothing playable anywhere, the choice is only "Don't play" (it
-/// auto-binds, no prompt) and the [Once Per Turn] is refunded.
+/// auto-binds, no prompt). The player still chose to activate, so the
+/// [Once Per Turn] is spent (CR 4.3 15-14-1-4, "even if the effect's
+/// processing can't be executed"). DCGO offers the effect here too
+/// (`CanActivateCondition` only checks that Erlangmon is on the field) and
+/// spends the use: its `RemoveUse()` sits inside
+/// `if (validHandCard || validDigivolutionCard)`.
 #[test]
 fn ex12_034_leave_with_no_playable_card_plays_nothing() {
     let (mut runner, _) = leave_setup(&[]);
@@ -177,6 +229,12 @@ fn ex12_034_leave_with_no_playable_card_plays_nothing() {
     let _ = runner.auto_resolve();
     assert!(!field_contains(&runner, 0, "VICTIM-A"));
     assert!(runner.pending_selection().is_none());
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
+        runner.pending_selection().is_none(),
+        "the accepted activation used the [Once Per Turn]"
+    );
 }
 
 /// "Play ... without paying the cost" stays free for a DigiXros card: Erlangmon
@@ -312,6 +370,31 @@ fn ex12_034_leave_offers_no_hand_zone_when_battle_area_full() {
     );
     let _ = runner.auto_resolve();
     assert!(super::support::hand_contains(&runner, 0, "SW-5"), "SW-5 stays in hand");
+}
+
+/// "Don't play" when the only [SW] card cannot be played (no free frame) is
+/// row d of the [Once Per Turn] table (qa/rules/mechanics-gaps-2026-10.md
+/// W14), not row b: nothing was possible, so the accepted activation spends
+/// the use (CR 4.3 15-14-1-4; DCGO's RemoveUse sits inside
+/// `if (validHandCard || validDigivolutionCard)`). VICTIM-A's departure frees
+/// a frame, so SW-5 would be playable at the second leave: the effect is not
+/// offered there because the use is spent, not because nothing is playable.
+#[test]
+fn ex12_034_leave_dont_play_with_only_unplayable_candidates_spends_once_per_turn() {
+    let (mut runner, _) = leave_setup(&["SW-5"]);
+    runner.game.rules.field_slots = runner.game.players[0].battle_area.len() as u8;
+    delete_own(&mut runner, "VICTIM-A");
+    runner.accept_optional_trigger().expect("accept the replacement");
+    assert!(!choice_labels(&runner).contains(&"Hand".to_string()));
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    assert!(!field_contains(&runner, 0, "VICTIM-A"), "VICTIM-A left");
+    assert!(super::support::hand_contains(&runner, 0, "SW-5"));
+
+    delete_own(&mut runner, "VICTIM-B");
+    assert!(
+        runner.pending_selection().is_none(),
+        "row d: the accepted activation with nothing playable used the [Once Per Turn]"
+    );
 }
 
 /// The digivolution-card zone uses the same filter: with a play prohibition

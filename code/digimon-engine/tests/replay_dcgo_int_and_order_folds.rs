@@ -21,6 +21,13 @@
 //!    BT18_097.cs:190-215) before `AddDigivolutionCardsBottom`. The engine's
 //!    single `select_zone_cards` takes the PICK order as the placement order.
 //!
+//! 4. A kept `[Main]` use declared again after a passed pick with nothing
+//!    changed in between. DCGO's human UI allows it; the engine's
+//!    main-declaration guard withholds it (owner ruling 2026-11-24,
+//!    `game::main_declare_guard`). The replay lifts the park for that DCGO row
+//!    and notes it (`dcgo_main_redeclare_after_pass`); it never reports a
+//!    mask miss for it.
+//!
 //! Staged with `DebugRunner` (real YAML, synthetic boards). No recording
 //! content.
 
@@ -33,6 +40,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::game::Game;
 use digimon_engine::runners::replay::{DivergenceKind, RecordingSource, ReplayError, ReplaySession, StepPolicy, StepSpec};
+use digimon_engine::selection::SelectionKind;
 use digimon_engine::TriggerSource;
 
 struct StagedDcgo {
@@ -187,6 +195,15 @@ fn chirinmon_gate(security: usize, face_down_tamer: bool) -> Game {
     r.game
 }
 
+/// Is Chirinmon's own cost choice ("Will you pay the cost?") still waiting? The
+/// paid branch then asks the [When Digivolving] lock pick, which the staged
+/// rows do not answer, so "nothing parked" is not the check.
+fn cost_choice_parked(game: &Game) -> bool {
+    game.pending_selection
+        .as_ref()
+        .is_some_and(|p| matches!(p.kind, SelectionKind::EffectChoice))
+}
+
 fn chirinmon_suspended(game: &Game) -> bool {
     game.players[0]
         .battle_area
@@ -229,13 +246,16 @@ fn ex13_032_trash_face_down_card_pays_the_tamer_cost() {
     assert!(!chirinmon_suspended(&s.game), "the paid cost unsuspends this Digimon");
 }
 
-/// Only the security cost is payable: DCGO's menu lists 1 and 3 only, so the 1
-/// is forced and accepting the gate is the whole answer.
+/// Only the security cost is payable: DCGO's menu lists 1 and 3 only. The 1
+/// accepts the gate and answers the engine's cost choice, which still offers
+/// "Don't pay the cost" beside the one payable cost (W14 row (f) parity,
+/// 076608011), so the accept alone is not the answer.
 #[test]
 fn ex13_032_security_only_menu_value_one_accepts() {
     let s = run(chirinmon_gate(2, false), vec![menu(1)]);
     assert!(s.divergences().is_empty(), "{:?}", s.divergences());
     assert!(s.is_complete());
+    assert!(!cost_choice_parked(&s.game), "the one row answered the gate and the cost choice");
     assert_eq!(s.game.players[0].security.len(), 1, "the top security card was trashed");
     assert!(!chirinmon_suspended(&s.game));
 }
@@ -251,8 +271,9 @@ fn ex13_032_a_cost_nobody_can_pay_is_refused() {
     assert_eq!(s.game.players[0].security.len(), 2, "nothing paid");
 }
 
-/// Only the face-down cost is payable: 2 accepts, and the Tamer pick that
-/// follows is the next row's.
+/// Only the face-down cost is payable: 2 accepts the gate and answers the
+/// engine's cost choice ("Don't pay the cost" is still offered beside it), and
+/// the Tamer pick that follows is the next row's.
 #[test]
 fn ex13_032_face_down_only_menu_value_two_accepts() {
     let s = run(
@@ -263,6 +284,8 @@ fn ex13_032_face_down_only_menu_value_two_accepts() {
     );
     assert!(s.divergences().is_empty(), "{:?}", s.divergences());
     assert!(s.is_complete());
+    assert!(!cost_choice_parked(&s.game), "the menu row answered the cost choice");
+    assert!(under(&s.game, "TAMER").is_empty(), "the Tamer row answered the Tamer pick: its face-down card was trashed");
     assert!(!chirinmon_suspended(&s.game), "the paid cost unsuspends this Digimon");
 }
 
@@ -472,4 +495,85 @@ fn bt18_097_a_single_card_needs_no_order_row() {
     assert!(s.is_complete());
     assert_eq!(under(&s.game, "TAMER"), vec!["HYB-B"]);
     let _ = PASS;
+}
+
+// ─── 4. Kept [Main] use re-declared after a pass ───────────────────────────
+
+/// Synthetic: "[Main] [Once Per Turn] You may play 1 Digimon card from your
+/// hand." with the use given back on a passed pick (DCGO `RemoveUse()`).
+const KEEP_MAIN: &str = r#"
+card: KEEP-MAIN
+name: Keeper
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 5000
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    optional: true
+    summary: "[Main] [Once Per Turn] You may play 1 Digimon card from your hand."
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Play 1 Digimon card from your hand"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - play_or_use_from_hand: { of: you, hand_index: pick }
+          else:
+            - refund_opt: {}
+"#;
+
+fn keeper() -> Game {
+    let mut filler = make_test_card("FILL", "FILL");
+    filler.card_kind = CardKind::Digimon;
+    filler.colors = vec![CardColor::Red];
+    filler.level = Some(3);
+    filler.dp = Some(3000);
+    filler.play_cost = 2;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(KEEP_MAIN)
+        .expect("KEEP-MAIN compiles")
+        .add_card(filler)
+        .hand(0, &["FILL"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(6)
+        .start();
+    r.set_first_player(0);
+    r.skip_mulligan();
+    r.game.enter_main_phase();
+    r.place_on_field(0, "KEEP-MAIN", Some(0));
+    r.game
+}
+
+fn declare_keeper() -> StepSpec {
+    use digimon_engine::action::space::{
+        EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
+    };
+    let _ = EFFECTS_PER_PERMANENT;
+    spec(FIELD_EFFECT_START + FIELD_EFFECT_SLOT_FOR_MAIN, "main_phase", None)
+}
+
+#[test]
+fn kept_main_redeclared_after_a_pass_replays_with_one_note() {
+    let s = run(
+        keeper(),
+        vec![declare_keeper(), hand_pick(&[]), declare_keeper(), hand_pick(&["FILL"])],
+    );
+    assert!(s.divergences().is_empty(), "{:?}", s.divergences());
+    assert!(s.is_complete(), "every row replays");
+    let notes: Vec<_> = s
+        .replay_notes()
+        .iter()
+        .filter(|n| n.contains("dcgo_main_redeclare_after_pass"))
+        .collect();
+    assert_eq!(notes.len(), 1, "{:?}", s.replay_notes());
+    assert_eq!(s.game.players[0].battle_area.len(), 2, "the second declaration played FILL");
+    assert!(s.game.players[0].hand.is_empty());
 }

@@ -24,7 +24,7 @@
 //! | Clause B positive: SourceMulti(2,2) prompt with ≥2 own sources | select_own_sources from:source | PASS |
 //! | Clause B negative: no prompt when <2 own sources | select_own_sources silent-skip | PASS |
 //! | Clause B: SecurityAttackChange +1 granted after cost | add_modifier SecurityAttackChange | PASS |
-//! | Clause B: +3000 DP granted after cost | add_dp_modifier end_of_turn | PASS |
+//! | Clause B: +3000 DP granted after cost | add_dp_modifier end_of_your_turn | PASS |
 //! | Clause B: 2 sources removed from stack after cost | trash_selected_sources | PASS |
 //! | Clause B OPT lockout: second when_attacking same turn no prompt | once_per_turn | PASS |
 
@@ -432,6 +432,79 @@ fn ex10_034_clause_b_on_opponent_attack_prompts_source_multi_2_of_2() {
         "after accepting, Clause B on on_opponent_attack must prompt SourceMulti(2,2); got {:?}",
         runner.pending_kind()
     );
+}
+
+/// "until your turn ends": used on the OPPONENT's turn, the <Security A. +1>
+/// and +3000 DP last through the end of that turn and expire only when the
+/// controller's own next turn ends. CR 4.3 15-10-1-1-1 ("you"/"your" means
+/// the player of that card); DCGO EX10_034.cs `EffectDuration.UntilOwnerTurnEnd`
+/// on both changes. The spec used `expiry: end_of_turn`, which dropped both at
+/// the end of the opponent's turn (scan finding F18).
+#[test]
+fn ex10_034_clause_b_on_opponents_turn_lasts_until_the_end_of_your_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-034")
+        .expect("EX10-034 YAML parses and compiles")
+        .add_card(make_source("YT-SRC1"))
+        .add_card(make_source("YT-SRC2"))
+        .memory(10)
+        .start();
+    runner.set_first_player(1); // the opponent's turn
+
+    let blastmon = runner.place_on_field(0, "EX10-034", None);
+    runner.push_source(blastmon, "YT-SRC1");
+    runner.push_source(blastmon, "YT-SRC2");
+    let dp_before = runner.dp_of(blastmon).unwrap_or(0);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentAttack,
+        TriggerSource::Permanent(blastmon),
+    );
+    runner.game.drain_effect_queue();
+    runner
+        .accept_optional_trigger()
+        .expect("accept outer optional");
+    // Pay the cost: both of Blastmon's digivolution cards (SourceMulti 2 of 2).
+    assert!(matches!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti { min: 2, max: 2, .. })
+    ));
+    for _ in 0..2 {
+        let v = runner.pending_selection_view().expect("the 2-source cost pick");
+        let a = *v
+            .valid_action_ids
+            .iter()
+            .find(|&&a| a != digimon_engine::action::space::PASS)
+            .expect("a digivolution card to trash");
+        runner.execute_action(v.selecting_player, a).expect("pick a source");
+    }
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+
+    let sec_attack = |r: &DebugRunner| {
+        r.game
+            .modifiers
+            .sum(blastmon, ModifierType::SecurityAttackChange)
+    };
+    assert_eq!(sec_attack(&runner), 1, "bonus granted on the opponent's turn");
+    assert_eq!(runner.dp_of(blastmon).unwrap_or(0) - dp_before, 3000);
+
+    // The opponent's (current) turn ends: the bonus stays.
+    runner.game.modifiers.expire_end_of_turn(1);
+    assert_eq!(
+        sec_attack(&runner),
+        1,
+        "<Security A. +1> survives the end of the opponent's turn"
+    );
+    assert_eq!(
+        runner.dp_of(blastmon).unwrap_or(0) - dp_before,
+        3000,
+        "+3000 DP survives the end of the opponent's turn"
+    );
+
+    // The controller's own turn ends: the bonus is gone.
+    runner.game.modifiers.expire_end_of_turn(0);
+    assert_eq!(sec_attack(&runner), 0, "expires when your turn ends");
+    assert_eq!(runner.dp_of(blastmon).unwrap_or(0), dp_before);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

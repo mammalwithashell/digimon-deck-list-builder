@@ -168,7 +168,8 @@ pub(crate) fn field_value(
             // highest- nor a lowest-play-cost candidate. Deck audit 2026-11-10.
             .filter(|perm| top_card_has_play_cost(perm, &game.card_data))
             .map(|perm| i32::from(perm.top_card().play_cost(&game.card_data))),
-        CompiledFieldSelector::LowestMaterialCount => game
+        CompiledFieldSelector::LowestMaterialCount
+        | CompiledFieldSelector::LowestMaterialCountRedirection => game
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
@@ -202,7 +203,8 @@ pub(crate) fn selected_field_extreme(
     match selector {
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
         CompiledFieldSelector::HighestDp | CompiledFieldSelector::HighestPlayCost => values.max(),
-        CompiledFieldSelector::LowestMaterialCount => values.min(),
+        CompiledFieldSelector::LowestMaterialCount
+        | CompiledFieldSelector::LowestMaterialCountRedirection => values.min(),
     }
 }
 
@@ -250,6 +252,22 @@ impl CompiledFieldFilter {
     }
 }
 
+pub(crate) fn is_eligible_field_selector_target(
+    game: &crate::game::Game,
+    handle: PermanentHandle,
+    selector: CompiledFieldSelector,
+) -> bool {
+    if selector != CompiledFieldSelector::LowestMaterialCountRedirection {
+        return true;
+    }
+    let Some(attacker) = game.live_attack_attacker() else {
+        return false;
+    };
+    let (current, removed) = game.attack_target_for_switch();
+    let target = crate::selection::AttackTarget::Digimon(handle);
+    (removed || current != target) && game.validate_attack_redirect_target(attacker, target).is_ok()
+}
+
 fn matches_selected_field(
     game: &crate::game::Game,
     handle: PermanentHandle,
@@ -259,6 +277,7 @@ fn matches_selected_field(
     match selected {
         SelectedField::Any => true,
         SelectedField::Exact(want) => selector
+            .filter(|&selector| is_eligible_field_selector_target(game, handle, selector))
             .and_then(|selector| field_value(game, handle, selector))
             .is_some_and(|candidate| candidate == want),
         SelectedField::None => false,
@@ -1189,6 +1208,7 @@ pub(crate) fn run_resume(
                         (*inner_tail).clone(),
                         b,
                         runtime,
+                        false,
                     );
                 }
                 ResumeSelectKind::UnionZone {
@@ -4196,29 +4216,13 @@ fn install_security_position_choice(
 /// candidates must be read against the current board, not the state of the last tick. Without this
 /// the injected leaf filtered the card out and the printed play was never offered.
 ///
-/// The tick is fingerprint-memoized, so it is a no-op when nothing declarative-relevant changed.
-/// G-ENGINE-PLAY-PICK-STALE-CONTINUOUS-STATE.
-fn settle_continuous_state_for_play_pick(step: &CompiledStep, ctx: &mut EffectContext<'_>) {
-    use digimon_dsl::play_candidates::has_play_leaf;
-    let reads_play_legality = match step {
-        CompiledStep::SelectHand { filter, .. }
-        | CompiledStep::SelectTrash { filter, .. }
-        | CompiledStep::SelectReveal { filter, .. }
-        | CompiledStep::SelectCountCappedMulti { filter, .. } => has_play_leaf(filter),
-        CompiledStep::SelectUnionZone {
-            filter,
-            zone_filters,
-            ..
-        } => {
-            has_play_leaf(filter)
-                || [&zone_filters.hand, &zone_filters.trash, &zone_filters.material]
-                    .into_iter()
-                    .flatten()
-                    .any(has_play_leaf)
-        }
-        _ => false,
-    };
-    if reads_play_legality {
+/// Called by the step dispatcher (`run_leaf_step`) before ANY step installs, so it covers every
+/// selection the pass marks (`digimon_dsl::play_candidates::step_reads_play_legality`: hand, trash,
+/// reveal, reveal buckets, security, union zones, materials, digivolution sources, zone cards), not
+/// only the ones `try_install` dispatches. The tick is fingerprint-memoized, so it is a no-op when
+/// nothing declarative-relevant changed. G-ENGINE-PLAY-PICK-STALE-CONTINUOUS-STATE.
+pub(super) fn settle_continuous_state_for_play_pick(step: &CompiledStep, ctx: &mut EffectContext<'_>) {
+    if digimon_dsl::play_candidates::step_reads_play_legality(step) {
         ctx.game.tick_declarative_effects();
     }
 }
@@ -4236,7 +4240,6 @@ pub fn try_install(
     bindings: Bindings,
     runtime: &StepRuntime,
 ) -> InstallResult {
-    settle_continuous_state_for_play_pick(step, ctx);
     match step {
         CompiledStep::PaySourcePrefix {
             host_filter,
@@ -4358,6 +4361,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            offer_unpayable_deletion_payers,
             then,
             ..
         } => {
@@ -4372,10 +4376,16 @@ pub fn try_install(
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
+                *offer_unpayable_deletion_payers,
             );
             selection_result(ctx)
         }
-        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of, optional } => {
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+            of,
+            optional,
+            continue_on_decline,
+            bind_as,
+        } => {
             // Bundled activation cost: "pick one of `of`'s Tamers with a
             // face-down card under it â†’ trash its bottom (lowest) face-down
             // card". Payable iff the shared count
@@ -4401,14 +4411,32 @@ pub fn try_install(
                 ctx.cost_unpayable = true;
                 return InstallResult::TailAlreadyRan;
             }
+            // `continue_on_decline` (G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-
+            // DECLINE-TAIL): a PASS runs the same tail with `bind_as` unbound,
+            // so the clause can tell a declined cost from a paid one (DCGO
+            // `canNoSelect` + `RemoveUse()`, owner ruling 2026-11-23).
+            let decline_tail = (*optional && *continue_on_decline).then(|| {
+                (
+                    Arc::new(tail.to_vec()),
+                    bindings.clone(),
+                    runtime.clone(),
+                    ctx.game.current_trigger_context.clone(),
+                )
+            });
             install_trash_bottom_face_down_source_under_tamer(
                 ctx,
                 filter,
                 *optional,
+                bind_as.clone(),
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
             );
+            if let Some((d_tail, d_bindings, d_runtime, d_trigger)) = decline_tail {
+                attach_any_permanent_continue_on_decline(
+                    ctx, d_tail, d_bindings, d_runtime, d_trigger,
+                );
+            }
             // With â‰¥1 candidate, `select_own_permanent` always installs a
             // pending selection (even a single candidate is exposed as a
             // 1-option selection â€” no auto-resolve; `optional` adds a PASS), so
@@ -4522,6 +4550,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            offer_unpayable_deletion_payers,
             then,
             ..
         } => {
@@ -4536,6 +4565,7 @@ pub fn try_install(
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
+                *offer_unpayable_deletion_payers,
             );
             selection_result(ctx)
         }
@@ -4546,6 +4576,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            offer_unpayable_deletion_payers,
             then,
             ..
         } => {
@@ -4571,6 +4602,7 @@ pub fn try_install(
                 compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
+                *offer_unpayable_deletion_payers,
             );
             if let Some((d_tail, d_bindings, d_runtime, d_trigger)) = decline_tail {
                 attach_any_permanent_continue_on_decline(
@@ -6471,6 +6503,7 @@ fn install_select_own_permanent(
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    offer_unpayable_payers: bool,
 ) {
     // Pre-filter candidates using the compiled predicate so that an empty
     // result (e.g. "kind: token" with no tokens on field) short-circuits
@@ -6478,7 +6511,8 @@ fn install_select_own_permanent(
     let target_player = ctx.player;
     let candidates = collect_matching_permanents(ctx, target_player, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
-    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
+    let deletion_payment = super::deletion_payment::filters_unpayable_payers(
+        bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
     if candidates.is_empty() {
         return;
     }
@@ -6606,6 +6640,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
     optional: bool,
+    bind_as: Option<String>,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -6617,6 +6652,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
     // Resumable-VM: capture for the FieldPermanent{post:TrashBottomFaceDownSource}
     // frame before the closures consume tail/bindings/runtime/trigger. of_player =
     // ctx.player (select_own_permanent selects own field).
@@ -6656,6 +6692,9 @@ fn install_trash_bottom_face_down_source_under_tamer(
             // tail must not run.
             if trashed {
                 let mut b = bindings.clone();
+                if let Some(name) = &bind_as {
+                    bind_selected_battle_permanent(cb_ctx.game, &mut b, name, handle);
+                }
                 run_tail_preserving_trigger_context(
                     cb_ctx,
                     trigger_context,
@@ -6684,7 +6723,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
                     of_player: player,
                     post: Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource),
                 },
-                bind_as: None,
+                bind_as: bind_as_for_resume,
                 inner_tail: tail_for_resume,
                 outer_conts: Vec::new(),
                 bindings: bindings_for_resume,
@@ -7516,6 +7555,7 @@ fn install_select_opponent_permanent(
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    offer_unpayable_payers: bool,
 ) {
     // Pre-filter candidates using the compiled predicate so that an empty
     // result short-circuits without installing a PendingSelection.
@@ -7524,7 +7564,8 @@ fn install_select_opponent_permanent(
     // candidate; it is chosen and not affected.
     let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
-    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
+    let deletion_payment = super::deletion_payment::filters_unpayable_payers(
+        bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
     if candidates.is_empty() {
         return;
     }
@@ -7690,12 +7731,14 @@ fn install_select_any_permanent(
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
+    offer_unpayable_payers: bool,
 ) {
     use crate::action::space::encode_attack;
 
     let handles = collect_matching_any_permanents(ctx, excluded, &filter, Some(&bindings));
     let selected_field = select_field_extreme(ctx.game, &handles, selector);
-    let deletion_payment = super::deletion_payment::selection_pays_deletion(bind_as.as_deref(), &[], &tail);
+    let deletion_payment = super::deletion_payment::filters_unpayable_payers(
+        bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
     let candidates: Vec<(u16, PermanentHandle)> = handles
         .into_iter()
         .filter(|handle| matches_selected_field(ctx.game, *handle, selector, selected_field))
@@ -7961,6 +8004,7 @@ fn install_select_dna_pair(
                 tail,
                 b,
                 runtime,
+                false,
             );
         }),
         on_decline: None,

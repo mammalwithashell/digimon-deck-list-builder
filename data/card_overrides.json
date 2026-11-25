@@ -2,6 +2,13 @@
   "EX12-057": {
     "attribute_eng": [
       "Vaccine"
+    ],
+    "type_eng": [
+      "Shaman",
+      "Saneiketsu",
+      "Tentei Hachibushu",
+      "Shambala",
+      "SW"
     ]
   },
   "ST12-13": {
@@ -188,6 +195,9 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Free"
     ]
   },
   "BT12-028": {
@@ -215,16 +225,6 @@
         "card_color": 3,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 4,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 3,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -379,16 +379,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -1240,11 +1230,6 @@
       },
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 6,
         "level": 5,
         "memory_cost": 4
       }
@@ -2764,6 +2749,9 @@
         "level": 3,
         "memory_cost": 2
       }
+    ],
+    "attribute_eng": [
+      "Vaccine"
     ]
   },
   "BT12-021": {
@@ -2819,11 +2807,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 6,
-        "level": 2,
-        "memory_cost": 0
       }
     ]
   },
@@ -3048,11 +3031,6 @@
         "card_color": 2,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
       }
     ]
   },
@@ -3074,11 +3052,6 @@
     "evo_costs": [
       {
         "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 0,
         "level": 5,
         "memory_cost": 4
       }
@@ -3648,11 +3621,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -4084,11 +4052,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 0,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -4203,11 +4166,6 @@
     "evo_costs": [
       {
         "card_color": 3,
-        "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 3,
         "level": 3,
         "memory_cost": 2
       }
@@ -4246,11 +4204,6 @@
       {
         "card_color": 5,
         "level": 4,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
         "memory_cost": 4
       }
     ]
@@ -4345,11 +4298,6 @@
         "card_color": 2,
         "level": 2,
         "memory_cost": 1
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 0
       }
     ]
   },
@@ -4364,11 +4312,6 @@
         "card_color": 2,
         "level": 3,
         "memory_cost": 3
-      },
-      {
-        "card_color": 0,
-        "level": 3,
-        "memory_cost": 2
       }
     ]
   },
@@ -4411,11 +4354,6 @@
         "card_color": 1,
         "level": 6,
         "memory_cost": 4
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 6
       }
     ]
   },
@@ -4556,16 +4494,6 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 3,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 3
       }
     ]
   },
@@ -4650,16 +4578,6 @@
         "card_color": 3,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 3,
-        "level": 4,
-        "memory_cost": 0
       }
     ]
   },
@@ -4809,16 +4727,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 3,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 3
       }
     ]
   },
@@ -4893,11 +4801,6 @@
         "card_color": 3,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 3,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -4935,11 +4838,6 @@
         "card_color": 5,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 5,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -4954,11 +4852,6 @@
         "card_color": 5,
         "level": 4,
         "memory_cost": 1
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -5346,16 +5239,6 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] [Seraphimon]: Cost 1"
@@ -5408,11 +5291,6 @@
         "card_color": 0,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 4
       }
     ]
   },
@@ -5490,11 +5368,6 @@
     "evo_costs": [
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 0,
         "level": 5,
         "memory_cost": 3
       }
@@ -7291,11 +7164,6 @@
         "card_color": 0,
         "level": 2,
         "memory_cost": 0
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 2
       }
     ]
   },
@@ -7352,11 +7220,6 @@
   },
   "BT19-027": {
     "evo_costs": [
-      {
-        "card_color": 6,
-        "level": 5,
-        "memory_cost": 4
-      },
       {
         "card_color": 1,
         "level": 5,
@@ -7520,16 +7383,6 @@
   },
   "BT19-053": {
     "evo_costs": [
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
       {
         "card_color": 3,
         "level": 5,
@@ -7914,11 +7767,6 @@
       {
         "card_color": 5,
         "level": 2,
-        "memory_cost": 1
-      },
-      {
-        "card_color": 2,
-        "level": 3,
         "memory_cost": 1
       }
     ]
@@ -8642,11 +8490,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 3
       }
     ]
   },
@@ -9697,11 +9540,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -9895,11 +9733,6 @@
         "card_color": 6,
         "level": 2,
         "memory_cost": 0
-      },
-      {
-        "card_color": 6,
-        "level": 2,
-        "memory_cost": 2
       }
     ]
   },
@@ -10665,11 +10498,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 0
       }
     ]
   },
@@ -10992,16 +10820,6 @@
         "card_color": 0,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 5,
-        "level": 2,
-        "memory_cost": 2
-      },
-      {
-        "card_color": 0,
-        "level": 2,
-        "memory_cost": 2
       }
     ]
   },
@@ -11121,11 +10939,6 @@
     "evo_costs": [
       {
         "card_color": 1,
-        "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 1,
         "level": 3,
         "memory_cost": 2
       }
@@ -11136,11 +10949,6 @@
       {
         "card_color": 1,
         "level": 3,
-        "memory_cost": 2
-      },
-      {
-        "card_color": 1,
-        "level": 4,
         "memory_cost": 2
       }
     ]
@@ -11184,16 +10992,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 2,
-        "level": 4,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 0,
-        "level": 4,
-        "memory_cost": 0
       }
     ]
   },
@@ -11685,6 +11483,11 @@
         "card_color": 6,
         "level": 5,
         "memory_cost": 6
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 6
       }
     ],
     "card_colors": [
@@ -12103,11 +11906,6 @@
         "card_color": 1,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 3
       }
     ]
   },
@@ -12164,11 +11962,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 6,
-        "level": 4,
-        "memory_cost": 3
       }
     ],
     "type_eng": [
@@ -12421,11 +12214,6 @@
       {
         "card_color": 6,
         "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 6,
-        "level": 5,
         "memory_cost": 3
       }
     ]
@@ -12483,11 +12271,6 @@
         "card_color": 6,
         "level": 4,
         "memory_cost": 4
-      },
-      {
-        "card_color": 5,
-        "level": 4,
-        "memory_cost": 4
       }
     ]
   },
@@ -12499,7 +12282,7 @@
         "memory_cost": 3
       },
       {
-        "card_color": 6,
+        "card_color": 5,
         "level": 4,
         "memory_cost": 3
       }
@@ -12567,11 +12350,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 4,
-        "memory_cost": 4
       }
     ]
   },
@@ -13182,11 +12960,6 @@
       },
       {
         "card_color": 2,
-        "level": 5,
-        "memory_cost": 4
-      },
-      {
-        "card_color": 3,
         "level": 5,
         "memory_cost": 4
       }
@@ -13922,6 +13695,11 @@
         "card_color": 5,
         "level": 6,
         "memory_cost": 7
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 7
       }
     ]
   },
@@ -14164,11 +13942,6 @@
         "card_color": 0,
         "level": 5,
         "memory_cost": 5
-      },
-      {
-        "card_color": 3,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -14267,16 +14040,6 @@
         "card_color": 3,
         "level": 5,
         "memory_cost": 5
-      },
-      {
-        "card_color": 5,
-        "level": 5,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 5
       }
     ]
   },
@@ -14319,11 +14082,6 @@
         "card_color": 1,
         "level": 5,
         "memory_cost": 3
-      },
-      {
-        "card_color": 1,
-        "level": 5,
-        "memory_cost": 4
       }
     ]
   },
@@ -14511,11 +14269,6 @@
         "card_color": 1,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 1,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -14553,11 +14306,6 @@
         "card_color": 2,
         "level": 3,
         "memory_cost": 2
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -14812,11 +14560,6 @@
       {
         "card_color": 1,
         "level": 2,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 1,
-        "level": 3,
         "memory_cost": 0
       }
     ]
@@ -15439,11 +15182,6 @@
         "card_color": 0,
         "level": 4,
         "memory_cost": 3
-      },
-      {
-        "card_color": 0,
-        "level": 5,
-        "memory_cost": 3
       }
     ]
   },
@@ -15466,15 +15204,10 @@
       {
         "card_color": 0,
         "level": 6,
-        "memory_cost": 5
+        "memory_cost": 6
       },
       {
         "card_color": 6,
-        "level": 6,
-        "memory_cost": 5
-      },
-      {
-        "card_color": 0,
         "level": 6,
         "memory_cost": 6
       }
@@ -15519,16 +15252,6 @@
         "card_color": 6,
         "level": 3,
         "memory_cost": 3
-      },
-      {
-        "card_color": 2,
-        "level": 3,
-        "memory_cost": 0
-      },
-      {
-        "card_color": 6,
-        "level": 3,
-        "memory_cost": 0
       }
     ]
   },
@@ -15895,11 +15618,6 @@
     "evo_costs": [
       {
         "card_color": 3,
-        "level": 5,
-        "memory_cost": 3
-      },
-      {
-        "card_color": 1,
         "level": 5,
         "memory_cost": 3
       }
@@ -18373,7 +18091,10 @@
       }
     ],
     "inherited_effect_description_eng": "",
-    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost."
+    "xros_req": "[Digivolve] [Grademon]/Lv.5 w/[Chronicle] trait: Cost 4 \r\nAssembly Requirements [Assembly -5] Lv.5 × Lv.4 × Lv.3, all w/[Chronicle] trait\r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+    "attribute_eng": [
+      "Vaccine"
+    ]
   },
   "EX13-061": {
     "inherited_effect_description_eng": "",
@@ -19462,6 +19183,75 @@
       1
     ]
   },
+  "_note_trait_line_face_check_2026_11": "Trait-line corrections read off each card face (DCGO_Application/Assets/Textures/Card/<ID>.webp) on 2026-11-22; the digimoncard.io API drops or garbles them. Saneiketsu Megas Nezhamon (EX12-019), Erlangmon (EX12-034) and Takutoumon (EX12-057) print .../Shambala/SW: [SW] was missing, so Saneiketsu Invitation (EX12-071) <Use Req. ([SW] trait)> and every [SW] filter ignored them; Erlangmon prints Vaccine (the API said Data). Attributes the API got wrong, all agreeing with the official mirror: Garurumon AD1-010 Vaccine, Gallantmon BT23-014 Virus, Craniamon BT23-058 Vaccine, SkullGreymon BT24-072 Virus and SkullBaluchimon BT24-075 Data (both filed as 'Ultimate'), Alphamon EX13-060 Vaccine. Ingest residue: Imperialdramon Dragon Mode ST9-06 'Free}}' -> Free, Angewomon (X Antibody) BT9-040 'X Antibody}}' -> X Antibody; Keisuke Amasawa BT23-090 'Hudie/CS' is two traits. Guarded by code/tests/test_card_trait_lines.py.",
+  "EX12-019": {
+    "type_eng": [
+      "Cyborg",
+      "Saneiketsu",
+      "Tentei Hachibushu",
+      "Shambala",
+      "SW"
+    ]
+  },
+  "EX12-034": {
+    "type_eng": [
+      "Shaman",
+      "Saneiketsu",
+      "Tentei Hachibushu",
+      "Shambala",
+      "SW"
+    ],
+    "attribute_eng": [
+      "Vaccine"
+    ]
+  },
+  "BT23-014": {
+    "attribute_eng": [
+      "Virus"
+    ]
+  },
+  "BT23-058": {
+    "attribute_eng": [
+      "Vaccine"
+    ]
+  },
+  "BT24-072": {
+    "attribute_eng": [
+      "Virus"
+    ]
+  },
+  "BT24-075": {
+    "attribute_eng": [
+      "Data"
+    ]
+  },
+  "BT9-040": {
+    "type_eng": [
+      "Archangel",
+      "X Antibody"
+    ]
+  },
+  "BT23-090": {
+    "type_eng": [
+      "Hudie",
+      "CS"
+    ]
+  },
+  "BT3-055": {
+    "evo_costs": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ]
+  },
+  "_note_face_read_digivolve_circles_2026_11": "Standard digivolve circles read off each card face (DCGO_Application/Assets/Textures/Card/<ID>.webp) on 2026-11-22 for the 57 cards whose cards.json circles differed from the DCGO card asset's EvoCosts. 54 were wrong here and are corrected (DCGO agreed with the face on all 54): most extra rows came from the official mirror, which keeps rows of every printing and reads a name-gated 'Digivolve: N from [X]' cost as a circle (Imperialdramon: Dragon Mode BT12-030 blue|green Lv.4/3, RizeGreymon (X Antibody) BT9-041 yellow|red Lv.4/0), the rest from the API alone (Garurumon BT21-067 purple Lv.3/3 beside the printed 2, which opened a cost choice). Dinobeemon BT3-055 (blue Lv.4/3), MaloMyotismon EX10-011 (blue Lv.5/6), UltimateChaosmon EX6-062 (purple Lv.6/7) and Lavogaritamon EX3-011 (black, not purple, Lv.4/3) gained a printed colour; Proximamon RB1-036 costs 6, not 5. Yasyamon BT12-051, Ganemon BT12-061 and Bulucomon P-067 have no local image: mirror and DCGO agree. The table is FACE_READ_CIRCLES in code/digimon-engine/tests/support/printed_circles.rs; tests/data_official_parity.rs pins these entries.",
   "BT27-001": {
     "effect_description_eng": "",
     "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your Digimon with [Huckmon] in their texts suspend, ＜Draw 1＞."
@@ -19742,6 +19532,11 @@
     ]
   },
   "BT27-022": {
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ],
     "evo_costs": [
       {
         "card_color": 1,
@@ -19752,12 +19547,7 @@
     "play_cost": 3,
     "dp": 2000,
     "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Ice-Snow] or [ALYSION] trait card and 1 blue Tamer card among them to the hand. Return the rest to the bottom of the deck. (Rule) Trait: Has [Ice-Snow] Type.",
-    "inherited_effect_description_eng": "[When Attacking] If this Digimon has the [Ice-Snow] trait, you may change the attack target to 1 of your opponent's unsuspended Digimon with the fewest digivolution cards.",
-    "type_eng": [
-      "Beastkin",
-      "ALYSION",
-      "Ice-Snow"
-    ]
+    "inherited_effect_description_eng": "[When Attacking] If this Digimon has the [Ice-Snow] trait, you may change the attack target to 1 of your opponent's unsuspended Digimon with the fewest digivolution cards."
   },
   "BT27-023": {
     "evo_costs": [
@@ -19803,6 +19593,11 @@
     "inherited_effect_description_eng": ""
   },
   "BT27-027": {
+    "type_eng": [
+      "Mysterious Beast",
+      "ALYSION",
+      "Ice-Snow"
+    ],
     "evo_costs": [
       {
         "card_color": 1,
@@ -19813,14 +19608,14 @@
     "play_cost": 5,
     "dp": 5000,
     "effect_description_eng": "＜Iceclad＞ [On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. Then, you may place 1 level 4 or lower [Ice-Snow] trait Digimon card from your hand as any of your Digimon's bottom digivolution card. (Rule) Trait: Has [Ice-Snow] Type.",
-    "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory.",
-    "type_eng": [
-      "Mysterious Beast",
-      "ALYSION",
-      "Ice-Snow"
-    ]
+    "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory."
   },
   "BT27-029": {
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ],
     "evo_costs": [
       {
         "card_color": 1,
@@ -19831,12 +19626,7 @@
     "play_cost": 7,
     "dp": 7000,
     "effect_description_eng": "＜Iceclad＞ [On Play] [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if they don't have a Digimon with digivolution cards, this Digimon gains ＜Blocker＞ and can't be deleted other than in battle until their turn ends. (Rule) Trait: Has [Ice-Snow] Type.",
-    "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. If this effect didn't trash, this [Ice-Snow] trait Digimon may unsuspend.",
-    "type_eng": [
-      "Beastkin",
-      "ALYSION",
-      "Ice-Snow"
-    ]
+    "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. If this effect didn't trash, this [Ice-Snow] trait Digimon may unsuspend."
   },
   "BT27-031": {
     "inherited_effect_description_eng": "",

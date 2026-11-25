@@ -12,3 +12,6 @@ mod replacement_integration;
 mod standard_flow;
 mod start_delay_flow;
 mod training_flow;
+mod option_body_attack_at_declaration;
+mod review_option_body_attack_adversarial;
+mod use_option_then_text_order;

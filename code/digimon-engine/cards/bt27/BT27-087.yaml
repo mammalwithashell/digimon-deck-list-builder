@@ -1,0 +1,55 @@
+card: BT27-087
+name: Yuji Musya
+kind: tamer
+color: [red]
+cost: 4
+traits: [Chronicle]
+
+effects:
+  - text: "[Start of Your Main Phase] If you have a Digimon with the [Chronicle] trait, gain 1 memory."
+    when: start_of_your_main_phase
+    condition:
+      any_permanent: { of: you, zone: [battle_area], kind: digimon, trait_has: Chronicle }
+    process:
+      - gain_memory: 1
+  - text: "[On Play] Activate 1 of the effects below: ・Reveal the top 3 cards of your deck. Add 1 [X Antibody] or [Chronicle] trait card among them to the hand. Trash the rest. ・You may play 1 level 3 [Chronicle] trait Digimon card from your hand to your breeding area without paying the cost."
+    when: on_play
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels: ["Reveal 3 and add an X Antibody or Chronicle card", "Play a level 3 Chronicle Digimon to breeding"]
+          prompt: "Choose one effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+            - select_reveal_buckets:
+                from: revealed
+                buckets:
+                  - bind_as: chosen
+                    min: 1
+                    max: 1
+                    filter: { any_of: [{ trait_has: X Antibody }, { trait_has: Chronicle }] }
+                prompt: "Add an X Antibody or Chronicle card"
+            - per_selected:
+                selection: chosen
+                bind_as: picked
+                body:
+                  - add_to_hand_from_reveal: { of: you, card: picked }
+            - per_selected:
+                selection: revealed
+                bind_as: rest
+                body:
+                  - trash_from_reveal: { of: you, card: rest }
+          else:
+            - select_hand:
+                of: you
+                bind_as: rookie
+                optional: true
+                filter: { kind: digimon, level_eq: 3, trait_has: Chronicle, can_play_to_breeding_from_hand: true }
+                prompt: "Play a level 3 Chronicle Digimon into breeding?"
+            - play_to_breeding_from_hand: { of: you, hand_index: rookie }
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    process:
+      - play_from_security: {}
