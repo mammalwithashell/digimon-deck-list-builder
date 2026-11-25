@@ -1127,11 +1127,16 @@ impl<'a> EffectContext<'a> {
             .battle_area
             .iter()
             .enumerate()
-            .flat_map(|(index, p)| {
+            .filter_map(|(index, p)| {
                 let h = PermanentHandle {
                     player: target_player,
                     index: index as u8,
                 };
+                (p.card_sources.len() > 1
+                    && p.is_digimon_for_rules(&self.game.card_data, &self.game.modifiers, h))
+                    .then_some((h, p))
+            })
+            .flat_map(|(h, p)| {
                 p.card_sources
                     .iter()
                     .take(p.card_sources.len().saturating_sub(1))

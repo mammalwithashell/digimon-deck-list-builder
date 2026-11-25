@@ -5230,6 +5230,12 @@ impl Walk for digimon_dsl::compiled::CompiledFieldSelector {
                 "ENUM_SCALAR",
                 serde_json::json!("LowestMaterialCount"),
             ),
+            digimon_dsl::compiled::CompiledFieldSelector::LowestMaterialCountRedirection => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledFieldSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("LowestMaterialCountRedirection"),
+            ),
         }
     }
 }

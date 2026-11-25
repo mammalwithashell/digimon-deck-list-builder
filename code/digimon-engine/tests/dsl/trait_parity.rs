@@ -32,18 +32,13 @@ const STAGE_FORMS: [&str; 6] = [
 
 /// Printed attributes cards.json gets wrong, checked against each card image; the YAML is
 /// right. Remove an entry once cards.json is corrected — the guard fails on a stale entry.
-const CARDS_JSON_ATTRIBUTE_ERRORS: [(&str, &str); 5] = [
-    // Garurumon prints Champion | Vaccine; cards.json has attribute_eng ["Data"].
-    ("AD1-010", "Vaccine"),
-    // Craniamon prints Mega | Vaccine; cards.json has attribute_eng ["Data"].
-    ("BT23-058", "Vaccine"),
-    // SkullGreymon prints Ultimate | Virus; cards.json has attribute_eng ["Ultimate"].
-    ("BT24-072", "Virus"),
-    // SkullBaluchimon prints Ultimate | Data; cards.json has attribute_eng ["Ultimate"].
-    ("BT24-075", "Data"),
-    // Alphamon prints Mega | Vaccine; cards.json has attribute_eng ["Data"].
-    ("EX13-060", "Vaccine"),
-];
+/// Empty since 2026-11-22: Garurumon (AD1-010), Craniamon (BT23-058), SkullGreymon
+/// (BT24-072), SkullBaluchimon (BT24-075) and Alphamon (EX13-060) were corrected in
+/// cards.json + card_overrides.json. This guard only checks YAML ⊆ cards.json, so a trait
+/// missing from BOTH (Saneiketsu Megas EX12-019/034/057 and [SW]) is caught instead by
+/// code/tests/test_card_trait_lines.py, which compares cards.json with the official mirror
+/// or the card face.
+const CARDS_JSON_ATTRIBUTE_ERRORS: [(&str, &str); 0] = [];
 
 fn is_stage_form(name: &str) -> bool {
     STAGE_FORMS

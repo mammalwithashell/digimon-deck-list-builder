@@ -55,8 +55,27 @@ use std::collections::BTreeSet;
 // Rebuild packs; bincode layouts differ.
 // 0.36.0 adds the `event_batch_card_trait_has` compiled predicate leaf (any card of
 // the event's moved-card batch has the trait). Rebuild packs; bincode layouts differ.
-// 0.37.0 adds the compiled suspend payment step.
-pub const PACK_FORMAT_VERSION: &str = "0.37.0";
+// 0.37.0 removes the `windowed` field from the compiled `may_attack_now` step
+// (an effect's "may attack" is declared inside the effect). Rebuild packs;
+// bincode layouts differ.
+// 0.38.0 adds `continue_on_decline` and `bind_as` to the compiled
+// `trash_bottom_face_down_source_under_tamer` step. Rebuild packs; bincode
+// layouts differ.
+// 0.39.0 is the merge of main's unbumped 0.36.0-era layout changes
+// (`TrashBottomSources.bind_trashed_as`, the `LowestMaterialCountRedirection`
+// field selector) with 0.37.0 and 0.38.0 above. Rebuild packs; bincode
+// layouts differ.
+// A parallel branch (claude/mf3-opt) numbered its own two changes 0.39.0
+// and 0.40.0 from 0.38.0: `offer_unpayable_deletion_payers` on the compiled
+// `select_own_permanent` / `select_opponent_permanent` /
+// `select_any_permanent` steps, and the `link_requirement_met_by_self`
+// compiled predicate leaf.
+// 0.41.0 is the merge of that branch: the union of the 0.39.0 layout above
+// and both of its changes, a layout neither 0.39.0 nor 0.40.0 describes.
+// Rebuild packs; bincode layouts differ.
+// 0.42.0 adds the compiled suspend payment step (`SuspendAsCost`). Rebuild
+// packs; bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.42.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

@@ -30,6 +30,11 @@
       "card_color": 0,
       "level": 4,
       "memory_cost": 4
+    },
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
     }
   ],
   "xros_req": "[DNA Digivolve] Red Lv.4 + Purple Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",

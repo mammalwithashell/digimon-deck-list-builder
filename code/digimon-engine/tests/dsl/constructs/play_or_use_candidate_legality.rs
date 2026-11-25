@@ -225,7 +225,9 @@ fn play_or_use_candidates_include_the_off_colour_option_when_colour_is_ignored()
 }
 
 /// A pick that does not filter on legality (any Option) still can't commit an
-/// off-colour use: the card stays in hand and no memory moves.
+/// off-colour use: the card stays in hand and no memory moves. Its authored
+/// leaf admits every card, so the DSL lowering (`digimon_dsl::play_candidates`)
+/// adds none of its own and the off-colour Option stays offered.
 const PLAY_OR_USE_ANY_OPTION: &str = r#"
 card: PLAY-OR-USE-SOURCE
 name: Play or use source
@@ -239,7 +241,7 @@ effects:
           of: you
           bind_as: chosen
           optional: true
-          filter: {kind: option}
+          filter: {kind: option, any_of: [{can_play_or_use_from_effect: true}, {not: {can_play_or_use_from_effect: true}}]}
           prompt: Use 1 Option card from your hand without paying the cost
       - if:
           condition: {binding_present: chosen}

@@ -598,22 +598,22 @@ fn required_selection_step_has_candidate(
             )
         }
         CompiledStep::SelectOwnPermanent {
-            filter, selector, bind_as, then, ..
+            filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings,
-            super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail),
+            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers),
             super::step::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), then, tail)),
         CompiledStep::SelectOpponentPermanent {
-            filter, selector, bind_as, then, ..
+            filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => {
             let opponent = ctx.game.next_clockwise(ctx.player);
             has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings,
-                super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail),
+                super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers),
                 super::step::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), then, tail))
         }
         CompiledStep::SelectAnyPermanent {
-            filter, selector, bind_as, then, ..
+            filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => has_matching_permanent(ctx, None, filter, *selector, bindings,
-            super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail),
+            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers),
             super::step::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), then, tail)),
         CompiledStep::SelectHand { of, filter, .. } => {
             has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings)
@@ -995,7 +995,8 @@ fn field_value(
                 crate::dsl_cards::step::selections::top_card_has_play_cost(perm, ctx.card_data())
             })
             .map(|perm| i32::from(perm.top_card().play_cost(ctx.card_data()))),
-        CompiledFieldSelector::LowestMaterialCount => ctx
+        CompiledFieldSelector::LowestMaterialCount
+        | CompiledFieldSelector::LowestMaterialCountRedirection => ctx
             .game
             .player(handle.player)
             .battle_area
@@ -1018,7 +1019,8 @@ fn selected_field_extreme(
     let extreme = match selector {
         CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
         CompiledFieldSelector::HighestDp | CompiledFieldSelector::HighestPlayCost => values.max(),
-        CompiledFieldSelector::LowestMaterialCount => values.min(),
+        CompiledFieldSelector::LowestMaterialCount
+        | CompiledFieldSelector::LowestMaterialCountRedirection => values.min(),
     };
     extreme
         .map(SelectedField::Exact)
@@ -1034,6 +1036,7 @@ fn matches_selected_field(
     match selected {
         SelectedField::Any => true,
         SelectedField::Exact(want) => selector
+            .filter(|&selector| crate::dsl_cards::step::selections::is_eligible_field_selector_target(ctx.game, handle, selector))
             .and_then(|selector| field_value(ctx, handle, selector))
             .is_some_and(|candidate| candidate == want),
         SelectedField::None => false,

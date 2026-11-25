@@ -241,3 +241,20 @@ streams; 004 differs from zero-based digest 62 to the end, for two fixes.
   token controller's turn (digest 64) each token carries a `CannotSuspend`
   modifier it did not have.
 - **Result:** `replay_corpus verify` 10/10 on the merged tree.
+
+## Digest-only re-bless 2026-11-24: main's BT27 ingest shifts `data_index` (no action changed)
+
+After merging main 2dd3d714f into claude/matrix-bug-fixes-2, `replay_corpus verify`
+failed 10/10 at step 1 (Digest). Cause: 2b45f7484 (BT27 ingest) added 104 `BT27-*`
+rows to `data/cards.json`; the card store assigns `data_index` in sorted card_id
+order and `write_card` hashes it, so every card sorting after `BT27-*` moved, and
+main did not re-bless.
+
+- **Proof it is index-only:** on the merged tree, `replay_corpus verify` with a copy
+  of `data/cards.json` minus the 104 `BT27-*` ids (and nothing else) verified 10/10
+  through every step. No golden deck contains a BT27 card.
+- **Bless:** `replay_corpus bless` with the real `data/cards.json`: 10 blessed,
+  0 retired. Seeds, decks and every recorded action are unchanged; only the digest
+  streams differ. 003 and 007 also gain an explicit `"action_schema_version": 1`,
+  the serde default the field already had when absent.
+- **Result:** `replay_corpus verify` 10/10 on the merged tree.

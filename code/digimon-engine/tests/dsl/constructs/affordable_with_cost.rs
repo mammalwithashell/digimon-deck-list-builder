@@ -39,11 +39,11 @@ effects:
           bind_as: chosen
           optional: true
           filter: {{{filter_cost}}}
-          prompt: Play 1 card from your hand with the cost reduced
+          prompt: Play or use 1 card from your hand with the cost reduced
       - if:
           condition: {{binding_present: chosen}}
           then:
-            - play_from_hand: {{of: you, hand_index: chosen, cost_delta: {FORMULA}}}
+            - play_or_use_from_hand: {{of: you, hand_index: chosen, cost_delta: {FORMULA}}}
 "#
     )
 }

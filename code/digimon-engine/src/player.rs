@@ -535,6 +535,9 @@ impl Player {
     pub fn unrecord_security_activation(&mut self, card: CardHandle, key: u8) {
         if let Some(entry) = self.security_effect_activations.get_mut(&(card, key)) {
             *entry = entry.saturating_sub(1);
+            if *entry == 0 {
+                self.security_effect_activations.remove(&(card, key));
+            }
         }
     }
 

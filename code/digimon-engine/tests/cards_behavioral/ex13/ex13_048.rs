@@ -299,7 +299,7 @@ fn ex13_048_no_match_returns_all_three_to_bottom() {
 // Section 3/5 — Inherited [All Turns][OPT] leave prevention
 // ════════════════════════════════════════════════════════════════════════════
 
-fn inherited_setup() -> (DebugRunner, PermanentHandle) {
+fn ex13_048_inherited_setup() -> (DebugRunner, PermanentHandle) {
     let mut r = builder().deck(0, &["FILL"; 6]).deck(1, &["FILL"; 6]).start();
     r.skip_mulligan();
     let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
@@ -323,7 +323,7 @@ fn accept_and_pay(r: &mut DebugRunner) {
 
 #[test]
 fn ex13_048_inherited_deletes_other_knightmon_text_digimon_and_carrier_stays() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.place_on_field(0, "ALLY-PLAIN", Some(0));
     r.game
@@ -354,7 +354,7 @@ fn ex13_048_inherited_deletes_other_knightmon_text_digimon_and_carrier_stays() {
 
 #[test]
 fn ex13_048_inherited_knightmon_named_digimon_also_qualifies() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "DARK", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -366,7 +366,7 @@ fn ex13_048_inherited_knightmon_named_digimon_also_qualifies() {
 
 #[test]
 fn ex13_048_inherited_not_offered_without_other_knightmon_text_digimon() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-PLAIN", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -379,7 +379,7 @@ fn ex13_048_inherited_not_offered_without_other_knightmon_text_digimon() {
 
 #[test]
 fn ex13_048_inherited_opponent_knightmon_is_not_a_legal_cost() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(1, "OPP-KNIGHT", Some(1));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -404,7 +404,7 @@ fn ex13_048_inherited_carrier_itself_with_knightmon_text_is_not_other() {
 
 #[test]
 fn ex13_048_inherited_not_offered_for_own_effect_removal() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OwnEffect);
@@ -417,7 +417,7 @@ fn ex13_048_inherited_not_offered_for_own_effect_removal() {
 
 #[test]
 fn ex13_048_inherited_offered_for_battle_deletion_cause() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::Battle);
@@ -429,7 +429,7 @@ fn ex13_048_inherited_offered_for_battle_deletion_cause() {
 
 #[test]
 fn ex13_048_inherited_decline_lets_carrier_leave() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -444,7 +444,7 @@ fn ex13_048_inherited_decline_lets_carrier_leave() {
 
 #[test]
 fn ex13_048_inherited_protects_only_this_digimon() {
-    let (mut r, _carrier) = inherited_setup();
+    let (mut r, _carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     let plain = r.place_on_field(0, "ALLY-PLAIN", Some(0));
     r.game
@@ -455,7 +455,7 @@ fn ex13_048_inherited_protects_only_this_digimon() {
 
 #[test]
 fn ex13_048_inherited_once_per_turn() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.place_on_field(0, "DARK", Some(0));
     r.game
@@ -475,7 +475,7 @@ fn ex13_048_inherited_once_per_turn() {
 
 #[test]
 fn ex13_048_inherited_lockout_clears_next_turn() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_048_inherited_setup();
     r.place_on_field(0, "ALLY-TEXT", Some(0));
     r.place_on_field(0, "DARK", Some(0));
     r.game
@@ -491,4 +491,262 @@ fn ex13_048_inherited_lockout_clears_next_turn() {
         r.pending_selection_view().is_some(),
         "OPT resets on the next turn"
     );
+}
+
+// ─── Inherited [OPT]: DCGO parity (owner ruling 2026-11-23) ──────────────────
+//
+// DCGO EX13_048.cs: offered only while another of your [Knightmon]-text
+// Digimon exists (`CanActivateCondition`); after the accept, a
+// `SelectPermanentEffect` with canNoSelect true. None chosen -> `RemoveUse()`
+// and the carrier leaves. One chosen -> `isUsed` (spent); the carrier stays
+// only if it was deleted. qa/rules/mechanics-gaps-2026-10.md W14 row (f).
+// <Evade> on the carrier keeps it after the would-leave window so the use can
+// be observed on a later removal the same turn.
+
+fn grant_evade(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.modifiers.grant_keyword(
+        h,
+        digimon_engine::enums::Keyword::Evade,
+        digimon_engine::enums::Expiry::Permanent,
+        0,
+    );
+}
+
+/// While <Evade> can also answer the deletion, the engine first asks which
+/// immediate replacement effect applies next (CR 4.3 15-8-5); pick <Evade>
+/// (`evade`) or the carrier's inherited clause. With one candidate left, its
+/// own accept prompt is already pending.
+fn pick_replacement(r: &mut DebugRunner, evade: bool) {
+    let v = r.pending_selection_view().expect("replacement prompt");
+    if v.kind == SelectionKind::EffectChoice && v.prompt.contains("immediate replacement") {
+        let row = v
+            .effect_choices
+            .as_ref()
+            .and_then(|rows| rows.iter().find(|c| c.label.contains("Evade") == evade))
+            .unwrap_or_else(|| panic!("replacement order rows: {:?}", v.effect_choices))
+            .action_id;
+        r.execute_action(v.selecting_player, row).expect("order pick");
+    }
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+/// PASS is legal at the pending prompt (the action mask, not the raw ids).
+fn pass_legal(r: &DebugRunner) -> bool {
+    let p = r.pending_selection().expect("prompt").selecting_player;
+    digimon_engine::action::build_action_mask(&r.game, p)[PASS as usize] == 1.0
+}
+
+fn ex13_048_accept_evade(r: &mut DebugRunner) {
+    pick_replacement(r, true);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept <Evade>");
+    assert!(
+        r.pending_selection().is_none(),
+        "the same removal does not offer the declined clause again"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_outer_decline_keeps_opt() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    r.place_on_field(0, "ALLY-TEXT", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, PASS).expect("decline the replacement");
+    ex13_048_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "declined at the accept prompt: offered again this turn"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_accept_then_decline_cost_keeps_opt() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    r.place_on_field(0, "ALLY-TEXT", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(
+        pass_legal(&r),
+        "DCGO EX13_048.cs canNoSelect: the deletion may be declined after the accept"
+    );
+    r.execute_action(0, PASS).expect("decline the cost");
+    assert!(field_ids(&r, 0).contains(&"ALLY-TEXT".to_string()), "nothing deleted");
+    ex13_048_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_declined_cost_lets_carrier_leave() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    r.place_on_field(0, "ALLY-TEXT", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(pass_legal(&r), "the cost may be declined");
+    r.execute_action(0, PASS).expect("decline the cost");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    let field = field_ids(&r, 0);
+    assert!(!field.contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
+    assert!(field.contains(&"ALLY-TEXT".to_string()));
+}
+
+// ─── Inherited: an undeletable payer is still offered (owner ruling 2026-11-24) ─
+//
+// DCGO EX13_048.cs offers the clause whenever another of your [Knightmon]-text
+// Digimon exists (`CanActivateCondition` = `HasMatchConditionPermanent`, no
+// deletability check) and its pick lists every printed match. Picking one that
+// can't be deleted sets `isUsed` (spent), `DestroyPermanentsClass` deletes
+// nothing, and the carrier leaves. Owner, 2026-11-24: "You can pick a target
+// that is immune from the removal, and it will fizzle. Nothing is deleted,
+// right? That is a valid choice."
+//
+// The payer here is your own [Knightmon]-text Digimon under a cause-agnostic
+// "can't be deleted by effects" (e.g. Craniamon (BT3-075)'s "All of your
+// Digimon with <Blocker> can't be deleted by effects"), which also stops your
+// own effect.
+
+fn protect_from_all_effects(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.modifiers.add(
+        h,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotBeDestroyedByEffect,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            h.player,
+        ),
+    );
+}
+
+fn own_knight_protected(r: &mut DebugRunner) -> PermanentHandle {
+    let h = r.place_on_field(0, "ALLY-TEXT", Some(0));
+    protect_from_all_effects(r, h);
+    h
+}
+
+fn own_field_id(h: PermanentHandle) -> u16 {
+    digimon_engine::action::space::encode_attack(0, h.index as u16)
+}
+
+#[test]
+fn ex13_048_inherited_offered_when_the_only_match_is_undeletable() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    let k = own_knight_protected(&mut r);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO offers the clause while a printed match exists, deletable or not"
+    );
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(
+        cost.valid_action_ids.contains(&own_field_id(k)),
+        "the undeletable [Knightmon]-text Digimon is listed: {cost:?}"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    let k = own_knight_protected(&mut r);
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    r.execute_action(0, own_field_id(k)).expect("pick the undeletable payer");
+    assert!(field_ids(&r, 0).contains(&"ALLY-TEXT".to_string()), "nothing was deleted");
+    ex13_048_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        r.pending_selection().is_none(),
+        "DCGO isUsed: a Digimon was chosen, so the [Once Per Turn] is spent"
+    );
+    assert!(!field_ids(&r, 0).contains(&"CARRIER".to_string()));
+}
+
+#[test]
+fn ex13_048_inherited_picking_an_undeletable_payer_lets_the_carrier_leave() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    let k = own_knight_protected(&mut r);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    r.execute_action(0, own_field_id(k)).expect("pick the undeletable payer");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    let field = field_ids(&r, 0);
+    assert!(!field.contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
+    assert!(field.contains(&"ALLY-TEXT".to_string()), "the payer was not deleted");
+}
+
+#[test]
+fn ex13_048_inherited_undeletable_only_pass_keeps_opt() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    own_knight_protected(&mut r);
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    assert!(pass_legal(&r), "canNoSelect");
+    r.execute_action(0, PASS).expect("select nothing");
+    assert!(field_ids(&r, 0).contains(&"ALLY-TEXT".to_string()));
+    ex13_048_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: nothing chosen keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex13_048_inherited_deletable_payer_still_protects_beside_an_undeletable_one() {
+    let (mut r, carrier) = ex13_048_inherited_setup();
+    let k = own_knight_protected(&mut r);
+    let other = r.place_on_field(0, "KNIGHT", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(cost.valid_action_ids.contains(&own_field_id(k)), "{cost:?}");
+    assert!(cost.valid_action_ids.contains(&own_field_id(other)), "{cost:?}");
+    r.execute_action(0, own_field_id(other)).expect("pay with the deletable Knightmon");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    let field = field_ids(&r, 0);
+    assert!(field.contains(&"CARRIER".to_string()), "paid: the carrier doesn't leave");
+    assert!(!field.contains(&"KNIGHT".to_string()), "the payer was deleted");
+    assert!(field.contains(&"ALLY-TEXT".to_string()));
 }

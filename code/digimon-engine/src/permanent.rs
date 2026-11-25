@@ -168,10 +168,16 @@ impl Permanent {
     /// Decrement the activation count for a specific effect on this permanent.
     /// DCGO `ActivateClass.RemoveUse()` — refunds a once-per-turn use when the
     /// optional body executed nothing (`refund_opt` step,
-    /// G-OPT-REFUND-ON-DECLINE). Saturates at zero.
+    /// G-OPT-REFUND-ON-DECLINE). Saturates at zero, and a count back at zero
+    /// removes its entry: `activation_count` reads an absent key as 0, so a
+    /// refunded use leaves no residue for the digests to see (the
+    /// main-declaration guard compares them; `game::main_declare_guard`).
     pub fn unrecord_activation(&mut self, card: CardHandle, slot: u8) {
         if let Some(entry) = self.effect_activations.get_mut(&(card, slot)) {
             *entry = entry.saturating_sub(1);
+            if *entry == 0 {
+                self.effect_activations.remove(&(card, slot));
+            }
         }
     }
 

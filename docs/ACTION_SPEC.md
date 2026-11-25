@@ -240,6 +240,12 @@ Used in `SelectSource` / `SelectMaterial` when effects need a specific card from
 
 - Mask size is always `2192`
 - `1.0` means legal, `0.0` illegal
+- Field `[Main]` (sub-slot `+2`): the bit is the first effect on the permanent's
+  stack that passes every gate (`main_effect_select::field_main_match`), and the
+  decoder fires exactly that effect. A `[Main]` whose use was given back after a
+  declare-then-pass that changed nothing (owner ruling 2026-11-24) is withheld
+  until the game state changes (main-declaration guard,
+  `docs/RUST_ENGINE_API.md`), so no legal action is a no-op. The use is kept.
 - Frontend and RL agents must select only masked-legal actions
 - Backend decoder is phase-aware and resolves semantics from current `GamePhase`
 

@@ -1,0 +1,57 @@
+card: BT27-023
+name: KausGammamon
+kind: digimon
+level: 4
+color: [blue, black]
+cost: 4
+dp: 5000
+form: Champion
+attribute: Data
+traits: [Dragonkin, VB]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, any_of: [{ name_is: Gammamon }, { level_eq: 3, trait_has: VB }] }
+    cost: 2
+
+effects:
+  - text: "[When Moving] [On Play] 1 of your Digimon with [Gammamon] in its text or the [VB] trait can't be deleted in battle for the turn."
+    when: [on_move, on_play]
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    process:
+      - select_own_permanent:
+          bind_as: protected
+          optional: false
+          filter: { kind: digimon, any_of: [{ in_text_contains: Gammamon }, { trait_has: VB }] }
+          prompt: "Choose a Gammamon-text or VB Digimon"
+      - add_modifier:
+          target: protected
+          modifier: CannotBeDestroyedByBattle
+          value: 1
+          expiry: end_of_turn
+  - text: "[When Attacking] [Once Per Turn] 1 of your opponent's level 5 or lower Digimon can't suspend until their turn ends."
+    when: when_attacking
+    once_per_turn: true
+    process:
+      - select_opponent_permanent:
+          bind_as: locked
+          optional: false
+          filter: { kind: digimon, level_lte: 5 }
+          prompt: "Choose a level 5 or lower opponent's Digimon"
+      - add_modifier:
+          target: locked
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+  - text: "＜Evade＞ (When this Digimon would be deleted, by suspending it, it isn't deleted.)"
+    scope: inherited
+    kind: grant_keyword
+    keyword: Evade

@@ -75,7 +75,10 @@ fn bt26_012_main_plays_tb_digimon_with_cost_reduced_by_2() {
     pick_hand(&mut r, 0, "TBMON");
     assert_eq!(field_ids(&r, 0), vec![CARD_ID, "TBMON"]);
     assert_eq!((mem - r.memory()).abs(), 3, "cost 5 - 2");
-    // Once per turn.
+    // Once per turn: a picked card spends the use (DCGO BT26_012.cs:79-81
+    // sets isUsed before the play), and a later state change does not
+    // reopen it, so the loop guard is not what masks it.
+    assert_eq!(uses_spent(&r, m.index), 1);
     push_hand(&mut r, 0, "TBTAMER");
     assert!(!mask_has(&r, a));
 }
@@ -90,34 +93,77 @@ fn bt26_012_main_plays_tb_tamer() {
     pick_hand(&mut r, 0, "TBTAMER");
     assert_eq!(field_ids(&r, 0), vec![CARD_ID, "TBTAMER"]);
     assert_eq!((mem - r.memory()).abs(), 1, "cost 3 - 2");
+    assert_eq!(uses_spent(&r, m.index), 1, "a played Tamer spends the use");
+    push_hand(&mut r, 0, "PLAIN");
+    assert!(!mask_has(&r, main_action(m.index)));
 }
 
+/// Once-per-turn uses Manekimon at `field_index` has recorded this turn
+/// (a refunded use leaves no entry).
+fn uses_spent(r: &DebugRunner, field_index: u8) -> u32 {
+    r.game.players[0].battle_area[field_index as usize]
+        .effect_activations
+        .values()
+        .map(|&n| n as u32)
+        .sum()
+}
+
+/// Declared, then the [TB] pick passed while a [TB] card was selectable: the
+/// use is given back. Owner ruling 2026-11-24 "Match dcgo on the main use":
+/// DCGO BT26_012.cs:138 `if (!isUsed) activateClass.RemoveUse();` (isUsed is
+/// set only when a card is picked, :79-81). The owner chose DCGO parity over
+/// the CR 4.3 15-14-1-4 / 15-8-4-1/-2 reading that a declared [Main] spends.
+/// Nothing else changed, so the main-declaration loop guard withholds the
+/// identical declaration (docs/RUST_ENGINE_API.md "Main-declaration guard").
 #[test]
-fn bt26_012_declining_after_activation_spends_once_per_turn() {
+fn bt26_012_main_declared_then_pick_passed_keeps_the_once_per_turn() {
     let mut r = setup();
     push_hand(&mut r, 0, "TBMON");
     let m = r.place_on_field(0, CARD_ID, Some(0));
     let other = r.place_on_field(0, CARD_ID, Some(0));
     let a = main_action(m.index);
     let memory = r.memory();
+    let trash = trash_ids(&r, 0);
+    let field = field_ids(&r, 0);
     assert!(mask_has(&r, a));
     r.game.decode_action(a, 0);
+    assert_eq!(uses_spent(&r, m.index), 1, "the declaration records the use");
     pass(&mut r, 0);
     assert!(r.game.pending_selection.is_none());
     assert_eq!(hand_ids(&r, 0), vec!["TBMON"]);
-    assert_eq!(
-        r.memory(),
-        memory,
-        "declining plays nothing and pays no memory"
-    );
+    assert_eq!(r.memory(), memory, "declining plays nothing and pays no memory");
+    assert_eq!(trash_ids(&r, 0), trash);
+    assert_eq!(field_ids(&r, 0), field);
+    assert_eq!(uses_spent(&r, m.index), 0, "DCGO RemoveUse: the passed pick keeps the use");
     assert!(
         !mask_has(&r, a),
-        "CR 4.3 15-14-1-4: activation spends the use even when processing is declined"
+        "loop guard: the identical declaration is withheld while nothing changed"
     );
-    assert!(
-        mask_has(&r, main_action(other.index)),
-        "each copy has its own use"
-    );
+    assert!(mask_has(&r, main_action(other.index)), "each copy has its own use");
+}
+
+/// The kept use is real: after a state change the same [Main] is offered
+/// again, a [TB] card is played at cost -2, and that spends the use for the
+/// rest of the turn (the pick binding is present, BT26_012.cs:79-81).
+#[test]
+fn bt26_012_main_pass_then_state_change_redeclares_and_spends() {
+    let mut r = setup();
+    push_hand(&mut r, 0, "TBMON");
+    let m = r.place_on_field(0, CARD_ID, Some(0));
+    let a = main_action(m.index);
+    r.game.decode_action(a, 0);
+    pass(&mut r, 0);
+    assert!(!mask_has(&r, a));
+    push_hand(&mut r, 0, "PLAIN");
+    assert!(mask_has(&r, a), "the state changed: the kept use is offered again");
+    let memory = r.memory();
+    r.game.decode_action(a, 0);
+    pick_hand(&mut r, 0, "TBMON");
+    assert_eq!(field_ids(&r, 0), vec![CARD_ID, "TBMON"]);
+    assert_eq!(memory - r.memory(), 3, "cost 5 - 2");
+    assert_eq!(uses_spent(&r, m.index), 1);
+    push_hand(&mut r, 0, "TBTAMER");
+    assert!(!mask_has(&r, a), "spent for the turn, whatever else changes");
 }
 
 #[test]

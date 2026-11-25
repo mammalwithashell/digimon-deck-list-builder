@@ -87,10 +87,19 @@ effects:
   # leave-prevention shape). DCGO `WhenRemoveField` + `IsByEffect` →
   # `none_of: [replacement_cause: battle]` (removed BY AN EFFECT, not by battle;
   # own- and opponent-effect both qualify, matching DCGO which does NOT exclude
-  # own_effect). DCGO `SetUpActivateClass(..., 1, ...)` = once per turn;
-  # `canNoSelect: () => true` makes the whole clause optional, but
-  # `CanEndSelectCondition` forces exactly 1 source once engaged → `min: 1,
-  # max: 1`.
+  # own_effect). DCGO `SetUpActivateClass(..., 1, true, ...)` = once per
+  # turn AND the accept prompt (isOptional = true; accepting registers the
+  # use before the body runs). After the accept, the source picker
+  # (BT13_075.cs L363-379) has its own `canNoSelect: () => true` ("No
+  # Selection"); `CanEndSelectCondition` only gates "End Selection", it does
+  # not force a pick. So the pick is `min: 0, max: 1` (PASS = No Selection),
+  # and the return + cancel run only when a source was chosen
+  # (`binding_count_eq` 1: a passed `select_own_sources` binds an EMPTY list).
+  # The script has no `RemoveUse()`: accepting and then choosing no source
+  # keeps the use spent and the removal goes through (owner ruling
+  # 2026-11-24, "Generally let's look to match dcgo"; W14 row (f) spends a
+  # declined "by X" cost, and DCGO spends here too). No loop: the declined
+  # pick lets Alphamon leave.
   #
   # `active_when` source-trait guard mirrors DCGO `CanActivateCondition`
   # (`DigivolutionCards.Count(CanSelectCardCondition) >= 1`): the prevention is
@@ -125,14 +134,20 @@ effects:
       - select_own_sources:
           target: source
           bind_as: returned_source
-          min: 1
+          min: 0
           max: 1
           filter:
             any_of:
               - trait_has: "X Antibody"
               - trait_has: "Royal Knight"
           prompt: "Return 1 [X Antibody]/[Royal Knight] digivolution card to the bottom of your deck to prevent removal"
-      - return_selected_sources_to_deck:
-          source_refs: returned_source
-          position: bottom
-      - cancel_replacement: {}
+      - if:
+          condition:
+            binding_count_eq:
+              binding: returned_source
+              n: 1
+          then:
+            - return_selected_sources_to_deck:
+                source_refs: returned_source
+                position: bottom
+            - cancel_replacement: {}

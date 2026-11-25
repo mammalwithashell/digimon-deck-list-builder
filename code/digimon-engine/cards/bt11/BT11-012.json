@@ -33,6 +33,11 @@
       "card_color": 0,
       "level": 3,
       "memory_cost": 3
+    },
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
     }
   ],
   "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",

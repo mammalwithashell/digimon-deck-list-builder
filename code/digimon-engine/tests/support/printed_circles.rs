@@ -264,3 +264,172 @@ pub const SPLIT_CIRCLES_COMPLETED: &[(&str, u8, i16, &[CardColor])] = &[
     ("ST20-10", 2, 0, &[Black, Red]),         // Agumon
     ("ST20-11", 5, 4, &[Black, Red]),         // WarGreymon
 ];
+
+/// Every standard circle a card prints, read off the card face on 2026-11-22,
+/// for the cards whose data held a circle the card does not print or lacked
+/// one it does: `(card_id, &[(colour, level digivolved from, printed cost)])`.
+///
+/// The list is the 57 cards whose `cards.json` circles differed from the DCGO
+/// card asset's `EvoCosts` (`Assets/CardBaseEntity`, compared set against set),
+/// each judged from the card image (a circle crop where colours were close).
+/// On 54 the face disagreed with `cards.json`, and the rows here are what it
+/// prints; DCGO agreed with the face on all 54. The other three are not here:
+/// Omnimon: Merciful Mode (EX13-077) prints a rainbow circle (`cards.json` is
+/// right, the DCGO asset lacks the white row), and Guardromon (BT2-058) and
+/// HerculesKabuterimon (BT15-053) have no local image while the official
+/// mirror sides with `cards.json`, so they were left as they are.
+///
+/// Yasyamon (BT12-051), Ganemon (BT12-061) and Bulucomon (P-067) have no local
+/// image either; their rows are the official mirror and the DCGO asset, which
+/// agree with each other against the `cards.json` row that was removed.
+///
+/// Most removed rows came from the official mirror, which keeps rows of every
+/// printing on its page and reads the cost of a name-gated "Digivolve: N from
+/// [X]" line as a circle (Imperialdramon: Dragon Mode (BT12-030) blue|green
+/// Lv.4 / 3, RizeGreymon (X Antibody) (BT9-041) yellow|red Lv.4 / 0). The rest
+/// came from the digimoncard.io ingest alone (Garurumon (BT21-067) purple Lv.3
+/// / 3 beside the printed 2). On the four cards marked "added" the mirror and
+/// `cards.json` both missed a circle the face prints.
+///
+/// `tests/data_official_parity.rs` pins `cards.json`, `card_overrides.json` and
+/// the per-card JSON to this table, `tests/digivolve_color_requirements.rs`
+/// checks production digivolves over exactly these circles, and
+/// `tests/alt_path_printed_cost_guard.rs` uses it as the printed baseline.
+pub const FACE_READ_CIRCLES: &[(&str, &[(CardColor, u8, i16)])] = &[
+    ("BT10-011", &[(Red, 4, 4)]), // Canoweissmon (not red Lv.4 / 3: the Gammamon line)
+    ("BT10-050", &[(Green, 3, 2)]), // WezenGammamon (not green Lv.2 / 0)
+    ("BT10-066", &[(Black, 4, 4)]), // DarkKnightmon (not black Lv.5 / 4)
+    ("BT11-009", &[(Red, 3, 0), (Yellow, 2, 1)]), // Shoutmon + Star Sword (not red Lv.2 / 0)
+    ("BT11-012", &[(Red, 3, 3), (Yellow, 3, 3)]), // Shoutmon X3 (not red Lv.3 / 2)
+    ("BT11-019", &[(Red, 5, 6), (Blue, 6, 4)]), // Shoutmon X7 (not blue Lv.5 / 6)
+    ("BT11-054", &[(Green, 4, 3), (Blue, 4, 3)]), // Panjyamon (not green|blue Lv.5 / 3)
+    ("BT11-068", &[(Black, 4, 3), (Green, 4, 3)]), // Mamemon (not black|green Lv.4 / 0)
+    ("BT12-012", &[(Red, 3, 2)]), // Agunimon (not red|yellow Lv.3 / 3)
+    ("BT12-030", &[(Blue, 5, 4), (Green, 5, 4)]), // Imperialdramon: Dragon Mode (not blue|green Lv.4 / 3)
+    ("BT12-051", &[(Green, 3, 2)]), // Yasyamon (not green Lv.3 / 0; no image)
+    ("BT12-061", &[(Black, 3, 2)]), // Ganemon (not black Lv.3 / 0; no image)
+    ("BT12-064", &[(Black, 3, 3), (Black, 4, 1)]), // Tuwarmon (not black Lv.4 / 3)
+    ("BT13-088", &[(Purple, 5, 3)]), // Belphemon: Sleep Mode (not purple Lv.2 / 0)
+    ("BT14-081", &[(Purple, 5, 4)]), // Fenriloogamon (not yellow|black Lv.5 / 4)
+    ("BT15-017", &[(Red, 5, 3)]), // Phoenixmon (not purple Lv.5 / 4)
+    ("BT15-042", &[(Yellow, 5, 3)]), // Magnadramon (not red Lv.5 / 3)
+    ("BT19-007", &[(Red, 2, 0)]), // Guilmon (not red Lv.2 / 2)
+    ("BT19-027", &[(Blue, 5, 4)]), // Ryugumon (not purple Lv.5 / 4)
+    ("BT19-053", &[(Green, 5, 4), (Black, 5, 4)]), // QueenBeemon (not blue|yellow Lv.5 / 4)
+    ("BT20-030", &[(Yellow, 2, 1), (Black, 2, 1)]), // Liollmon (not yellow Lv.3 / 1)
+    ("BT21-067", &[(Purple, 3, 2)]), // Garurumon (not purple Lv.3 / 3)
+    ("BT23-024", &[(Blue, 5, 4)]), // Poseidomon (not blue Lv.5 / 5)
+    ("BT24-070", &[(Purple, 3, 2)]), // Growlmon (not purple Lv.3 / 0)
+    ("BT25-079", &[(Purple, 2, 0)]), // Hyemon (not purple Lv.2 / 2)
+    ("BT3-055", &[(Green, 4, 3), (Blue, 4, 3)]), // Dinobeemon (added blue Lv.4 / 3)
+    ("BT8-013", &[(Red, 3, 2)]), // BetelGammamon (not red Lv.2 / 0)
+    ("BT8-064", &[(Black, 3, 2), (Red, 3, 2)]), // Greymon (not black|red Lv.2 / 2)
+    ("BT9-023", &[(Blue, 3, 2)]), // KausGammamon (not blue Lv.2 / 0)
+    ("BT9-024", &[(Blue, 3, 2)]), // Garurumon (X Antibody) (not blue Lv.4 / 2)
+    ("BT9-041", &[(Yellow, 4, 4), (Red, 4, 4)]), // RizeGreymon (X Antibody) (not yellow|red Lv.4 / 0)
+    ("EX10-011", &[(Red, 5, 6), (Blue, 5, 6), (Purple, 5, 6)]), // MaloMyotismon (added blue Lv.5 / 6)
+    ("EX11-041", &[(Blue, 4, 4), (Black, 4, 4)]), // Oblivimon (not black Lv.4 / 3)
+    ("EX11-050", &[(Red, 4, 4), (Purple, 4, 4)]), // Loudmon (not purple Lv.4 / 3)
+    ("EX2-044", &[(Purple, 5, 3)]), // Beelzemon (not purple Lv.5 / 4)
+    ("EX3-010", &[(Red, 4, 4), (Purple, 4, 4)]), // Paildramon (not black Lv.4 / 4)
+    ("EX3-011", &[(Red, 4, 3), (Black, 4, 3)]), // Lavogaritamon (added black Lv.4 / 3; not purple)
+    ("EX3-023", &[(Blue, 5, 3)]), // Plesiomon (not blue Lv.4 / 4)
+    ("EX4-050", &[(Black, 5, 4), (Yellow, 5, 4)]), // ShadowSeraphimon (not green Lv.5 / 4)
+    ("EX6-029", &[(Yellow, 5, 4), (Purple, 5, 4)]), // Mastemon (not yellow|purple Lv.5 / 5)
+    ("EX6-062", &[(Yellow, 6, 7), (Green, 6, 7), (Black, 6, 7), (Purple, 6, 7)]), // UltimateChaosmon (added purple)
+    ("EX7-030", &[(Yellow, 5, 4)]), // Cendrillmon (not black Lv.5 / 4)
+    ("EX7-062", &[(Red, 5, 5), (Purple, 5, 5)]), // HeavyMetaldramon (not green Lv.5 / 5)
+    ("EX8-016", &[(Red, 5, 5), (Green, 5, 5)]), // Dinomon (not blue|black Lv.5 / 5)
+    ("EX8-027", &[(Blue, 5, 3)]), // Plesiomon (not blue Lv.5 / 4)
+    ("EX8-028", &[(Blue, 5, 4), (Yellow, 5, 4)]), // Skadimon (not purple Lv.5 / 4)
+    ("EX8-055", &[(Black, 5, 4)]), // Pyramidimon (not red Lv.5 / 4)
+    ("EX9-017", &[(Blue, 3, 2)]), // Garurumon (not blue Lv.3 / 0)
+    ("EX9-026", &[(Yellow, 3, 2)]), // Angemon (not yellow Lv.3 / 0)
+    ("P-067", &[(Blue, 2, 0)]), // Bulucomon (not blue Lv.3 / 0; no image)
+    ("RB1-009", &[(Red, 4, 3)]), // Canoweissmon (not red Lv.5 / 3)
+    ("RB1-036", &[(Red, 6, 6), (Purple, 6, 6)]), // Proximamon (added: cost 6, not 5)
+    ("ST10-04", &[(Yellow, 3, 3), (Purple, 3, 3)]), // Gatomon (not yellow|purple Lv.3 / 0)
+    ("ST18-12", &[(Green, 5, 3)]), // Zephagamon (not blue Lv.5 / 3)
+];
+
+/// The `cards.json` rows the cards of `FACE_READ_CIRCLES` lost on 2026-11-22:
+/// `(card_id, colour, level, cost)`. Each was a live digivolution in real games
+/// (production reads `cards.json`); none is printed.
+pub const UNPRINTED_ROWS_REMOVED: &[(&str, CardColor, u8, i16)] = &[
+    ("BT10-011", Red, 4, 3),
+    ("BT10-050", Green, 2, 0),
+    ("BT10-066", Black, 5, 4),
+    ("BT11-009", Red, 2, 0),
+    ("BT11-012", Red, 3, 2),
+    ("BT11-019", Blue, 5, 6),
+    ("BT11-054", Green, 5, 3),
+    ("BT11-054", Blue, 5, 3),
+    ("BT11-068", Black, 4, 0),
+    ("BT11-068", Green, 4, 0),
+    ("BT12-012", Red, 3, 3),
+    ("BT12-012", Yellow, 3, 3),
+    ("BT12-030", Blue, 4, 3),
+    ("BT12-030", Green, 4, 3),
+    ("BT12-051", Green, 3, 0),
+    ("BT12-061", Black, 3, 0),
+    ("BT12-064", Black, 4, 3),
+    ("BT13-088", Purple, 2, 0),
+    ("BT14-081", Yellow, 5, 4),
+    ("BT14-081", Black, 5, 4),
+    ("BT15-017", Purple, 5, 4),
+    ("BT15-042", Red, 5, 3),
+    ("BT19-007", Red, 2, 2),
+    ("BT19-027", Purple, 5, 4),
+    ("BT19-053", Blue, 5, 4),
+    ("BT19-053", Yellow, 5, 4),
+    ("BT20-030", Yellow, 3, 1),
+    ("BT21-067", Purple, 3, 3),
+    ("BT23-024", Blue, 5, 5),
+    ("BT24-070", Purple, 3, 0),
+    ("BT25-079", Purple, 2, 2),
+    ("BT8-013", Red, 2, 0),
+    ("BT8-064", Black, 2, 2),
+    ("BT8-064", Red, 2, 2),
+    ("BT9-023", Blue, 2, 0),
+    ("BT9-024", Blue, 4, 2),
+    ("BT9-041", Yellow, 4, 0),
+    ("BT9-041", Red, 4, 0),
+    ("EX11-041", Black, 4, 3),
+    ("EX11-050", Purple, 4, 3),
+    ("EX2-044", Purple, 5, 4),
+    ("EX3-010", Black, 4, 4),
+    ("EX3-011", Purple, 4, 3),
+    ("EX3-023", Blue, 4, 4),
+    ("EX4-050", Green, 5, 4),
+    ("EX6-029", Yellow, 5, 5),
+    ("EX6-029", Purple, 5, 5),
+    ("EX7-030", Black, 5, 4),
+    ("EX7-062", Green, 5, 5),
+    ("EX8-016", Blue, 5, 5),
+    ("EX8-016", Black, 5, 5),
+    ("EX8-027", Blue, 5, 4),
+    ("EX8-028", Purple, 5, 4),
+    ("EX8-055", Red, 5, 4),
+    ("EX9-017", Blue, 3, 0),
+    ("EX9-026", Yellow, 3, 0),
+    ("P-067", Blue, 3, 0),
+    ("RB1-009", Red, 5, 3),
+    ("RB1-036", Red, 6, 5),
+    ("RB1-036", Purple, 6, 5),
+    ("ST10-04", Yellow, 3, 0),
+    ("ST10-04", Purple, 3, 0),
+    ("ST18-12", Blue, 5, 3),
+];
+
+/// `FACE_READ_CIRCLES` rows for `card_id` as `(colour code, level, cost)`, or
+/// `None` when the card is not in the table.
+pub fn face_read_rows(card_id: &str) -> Option<Vec<(u8, u8, i64)>> {
+    FACE_READ_CIRCLES
+        .iter()
+        .find(|(id, _)| *id == card_id)
+        .map(|(_, rows)| {
+            rows.iter()
+                .map(|(colour, level, cost)| (*colour as u8, *level, i64::from(*cost)))
+                .collect()
+        })
+}
