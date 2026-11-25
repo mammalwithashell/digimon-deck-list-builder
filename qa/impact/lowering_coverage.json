@@ -51046,6 +51046,12 @@
     "dsl::battle_deleter.rs::winner_that_evolves_into_the_trait_during_opponents_on_deletion_did_not_trigger": [
      "yaml_key"
     ],
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection": [
+     "yaml_key"
+    ],
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding": [
+     "yaml_key"
+    ],
     "dsl::constructs/breeding_move_binding.rs::breeding_move_cost_filter_exposes_only_legal_own_lv3_chronicle_hosts": [
      "yaml_key"
     ],
@@ -52946,6 +52952,8 @@
     "dsl::battle_deleter.rs::winner_predicates_do_not_follow_a_reused_slot_after_winner_deletion",
     "dsl::battle_deleter.rs::winner_predicates_do_not_follow_materials_into_a_new_dna_digimon",
     "dsl::battle_deleter.rs::winner_that_evolves_into_the_trait_during_opponents_on_deletion_did_not_trigger",
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection",
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding",
     "dsl::constructs/breeding_move_binding.rs::breeding_move_cost_filter_exposes_only_legal_own_lv3_chronicle_hosts",
     "dsl::constructs/breeding_move_binding.rs::departed_moved_host_never_retargets_a_replacement_in_its_slot",
     "dsl::constructs/breeding_move_binding.rs::move_rechecks_payment_after_a_parked_choice_before_binding_its_benefit",
@@ -53600,6 +53608,12 @@
    "name": "level_eq",
    "parsed_only": false,
    "signals": {
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection": [
+     "yaml_key"
+    ],
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding": [
+     "yaml_key"
+    ],
     "dsl::constructs/cost_target_event.rs::cost_target_matches_digivolve_and_play": [
      "yaml_key"
     ],
@@ -54444,6 +54458,8 @@
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection",
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding",
     "dsl::constructs/cost_target_event.rs::cost_target_matches_digivolve_and_play",
     "dsl::constructs/cost_target_event.rs::deletion_cost_reduction_credits_only_completed_payment",
     "dsl::constructs/cost_target_event.rs::ordinary_digivolve_never_addition_event",
@@ -78015,6 +78031,28 @@
     "dsl::track_e_reveal_ordering.rs::yaml_round_trip_compiles_new_verbs_to_expected_shapes"
    ]
   },
+  "verb:pay_breeding_deletion": {
+   "kind": "verb",
+   "lowering_files": [
+    "code/digimon-engine/src/dsl_cards/step/permanent_mutations.rs"
+   ],
+   "name": "pay_breeding_deletion",
+   "parsed_only": false,
+   "signals": {
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection": [
+     "yaml_key"
+    ],
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection",
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding"
+   ]
+  },
   "verb:pay_source_prefix": {
    "kind": "verb",
    "lowering_files": [
@@ -83406,6 +83444,12 @@
    "name": "select_own_breeding_permanent",
    "parsed_only": false,
    "signals": {
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection": [
+     "yaml_key"
+    ],
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding": [
+     "yaml_key"
+    ],
     "dsl::constructs/breeding_move_binding.rs::breeding_move_cost_filter_exposes_only_legal_own_lv3_chronicle_hosts": [
      "yaml_key"
     ],
@@ -83468,11 +83512,16 @@
     ],
     "dsl::royal_knights_union_source_flows.rs::select_union_zone_can_offer_trash_or_breeding_sources_in_one_prompt": [
      "yaml_key"
+    ],
+    "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection": [
+     "variant"
     ]
    },
    "tested": true,
    "tested_behaviourally": true,
    "tests": [
+    "dsl::breeding_deletion_payment.rs::bt27_075_breeding_payment_resumes_from_a_cloned_selection",
+    "dsl::breeding_deletion_payment.rs::bt27_075_does_not_offer_payment_without_an_own_level_two_in_breeding",
     "dsl::constructs/breeding_move_binding.rs::breeding_move_cost_filter_exposes_only_legal_own_lv3_chronicle_hosts",
     "dsl::constructs/breeding_move_binding.rs::departed_moved_host_never_retargets_a_replacement_in_its_slot",
     "dsl::constructs/breeding_move_binding.rs::move_rechecks_payment_after_a_parked_choice_before_binding_its_benefit",
@@ -83493,7 +83542,8 @@
     "dsl::phase2g_breeding_selection.rs::select_own_breeding_permanent_filter_rejects_non_matching_name",
     "dsl::royal_knights_training_gate.rs::breeding_trash_processes_overflow_on_remaining_sources",
     "dsl::royal_knights_training_gate.rs::trash_breeding_permanent_trashes_whole_selected_stack_and_preserves_other_zones",
-    "dsl::royal_knights_union_source_flows.rs::select_union_zone_can_offer_trash_or_breeding_sources_in_one_prompt"
+    "dsl::royal_knights_union_source_flows.rs::select_union_zone_can_offer_trash_or_breeding_sources_in_one_prompt",
+    "lib::src/dsl_cards/lower_triggered.rs::face_down_under_tamer_trash_costs_install_a_selection"
    ]
   },
   "verb:select_own_permanent": {
@@ -87041,7 +87091,7 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2317,
+  "behavioural_tests": 2319,
   "cards": {
    "behaviourally_covered": 1306,
    "lowering_covered": 1324,
@@ -87078,9 +87128,9 @@
    },
    "verb": {
     "parsed_only": 5,
-    "tested": 184,
-    "tested_behaviourally": 179,
-    "total": 189,
+    "tested": 185,
+    "tested_behaviourally": 180,
+    "total": 190,
     "untested": 5,
     "used_by_cards": 178,
     "used_untested": 5
@@ -87204,8 +87254,8 @@
    "tests/rules_conformance/meta.rs",
    "tests/rules_conformance/support.rs"
   ],
-  "scanned_files": 426,
-  "scanned_tests": 2743,
+  "scanned_files": 427,
+  "scanned_tests": 2745,
   "top_untested": [
    {
     "cards_blocked": 3,

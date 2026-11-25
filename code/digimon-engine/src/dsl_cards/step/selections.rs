@@ -60,6 +60,16 @@ fn bind_selected_breeding_permanent(
     game: &mut crate::game::Game, bindings: &mut Bindings, name: &str,
     selected: crate::selection::BreedingPermanentSelectionRef,
 ) {
+    if !game
+        .player(selected.player)
+        .breeding_area
+        .as_ref()
+        .and_then(|p| p.card_sources.last())
+        .is_some_and(|top| top.handle() == selected.card)
+    {
+        bindings.clear_for_merge(name);
+        return;
+    }
     let handle = PermanentHandle {
         player: selected.player, index: crate::action::space::BREEDING_TARGET as u8,
     };
@@ -764,17 +774,7 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
-                ResumeSelectKind::BreedingPermanent { of_player } => {
-                    // The single breeding permanent is reconstructed from state
-                    // (mirrors ctx.select_own_breeding_permanent), not decoded.
-                    let Some(card) = game
-                        .player(of_player)
-                        .breeding_area
-                        .as_ref()
-                        .map(|p| p.top_card().handle())
-                    else {
-                        return;
-                    };
+                ResumeSelectKind::BreedingPermanent { of_player, card } => {
                     let selection_ref = crate::selection::BreedingPermanentSelectionRef {
                         player: of_player,
                         card,
@@ -9646,6 +9646,16 @@ fn install_select_own_breeding_permanent(
     bindings: Bindings,
     runtime: StepRuntime,
 ) {
+    let Some(card) = ctx
+        .game
+        .player(ctx.player)
+        .breeding_area
+        .as_ref()
+        .and_then(|p| p.card_sources.last())
+        .map(|top| top.handle())
+    else {
+        return;
+    };
     let success_tail = Arc::new(success_tail);
     let decline_tail = Arc::new(decline_tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
@@ -9731,6 +9741,7 @@ fn install_select_own_breeding_permanent(
                 },
                 select_kind: crate::resume::ResumeSelectKind::BreedingPermanent {
                     of_player: player,
+                    card,
                 },
                 bind_as: bind_as_for_resume,
                 inner_tail: success_tail_for_resume,

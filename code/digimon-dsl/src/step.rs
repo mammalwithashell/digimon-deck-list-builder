@@ -187,6 +187,8 @@ pub enum StepSpec {
     /// batch delete (EX9-074 Kimeramon Branch B).
     DeleteOnePerOpponentColor(DeleteOnePerOpponentColorArgs),
     TrashBreedingPermanent(TrashBreedingPermanentArgs),
+    /// Delete a selected breeding-area Digimon as a required payment.
+    PayBreedingDeletion(TargetArg),
     ReturnAllToHand(DeleteAllPermanentsArgs),
     ReturnAllToDeck(ReturnAllToDeckArgs),
     ReturnToHand(TargetArg),
@@ -674,6 +676,7 @@ impl Serialize for StepSpec {
                 kv!(s, "delete_one_per_opponent_color", v)
             }
             StepSpec::TrashBreedingPermanent(v) => kv!(s, "trash_breeding_permanent", v),
+            StepSpec::PayBreedingDeletion(v) => kv!(s, "pay_breeding_deletion", v),
             StepSpec::ReturnAllToHand(v) => kv!(s, "return_all_to_hand", v),
             StepSpec::ReturnAllToDeck(v) => kv!(s, "return_all_to_deck", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
@@ -984,6 +987,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 StepSpec::DeleteOnePerOpponentColor(map.next_value()?)
             }
             "trash_breeding_permanent" => StepSpec::TrashBreedingPermanent(map.next_value()?),
+            "pay_breeding_deletion" => StepSpec::PayBreedingDeletion(map.next_value()?),
             "return_all_to_hand" => StepSpec::ReturnAllToHand(map.next_value()?),
             "return_all_to_deck" => StepSpec::ReturnAllToDeck(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
@@ -1249,6 +1253,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "delete_permanents",
                         "delete_one_per_opponent_color",
                         "trash_breeding_permanent",
+                        "pay_breeding_deletion",
                         "return_all_to_hand",
                         "return_all_to_deck",
                         "return_to_hand",

@@ -3445,6 +3445,7 @@ pub enum CompiledStep {
     },
     /// Public reveal only; the cards stay in their original security stack.
     RevealSecurity { of: CompiledPlayerRef },
+    PayBreedingDeletion { target: CompiledBindingRef },
 }
 
 /// Compiled per-zone filter overrides for `select_union_zone`. Each `Some`

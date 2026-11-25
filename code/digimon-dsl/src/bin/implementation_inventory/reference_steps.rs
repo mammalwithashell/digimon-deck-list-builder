@@ -327,6 +327,15 @@ impl Walk for digimon_dsl::step::StepSpec {
                 );
                 f0.walk(c, &format!("{}@TrashBreedingPermanent.0", path), role);
             }
+            digimon_dsl::step::StepSpec::PayBreedingDeletion(target) => {
+                c.node(
+                    path,
+                    "digimon_dsl::step::StepSpec",
+                    "VARIANT",
+                    serde_json::json!("PayBreedingDeletion"),
+                );
+                target.walk(c, &format!("{}@PayBreedingDeletion.0", path), role);
+            }
             digimon_dsl::step::StepSpec::ReturnToHand(f0) => {
                 c.node(
                     path,
@@ -5631,6 +5640,7 @@ digimon_dsl::compiled::CompiledStep::DeletePermanents{targets} => { c.node(path,
 digimon_dsl::compiled::CompiledStep::DeleteAllPermanents{over,selector} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeleteAllPermanents"));over.walk(c, &format!("{}.over", &format!("{}@DeleteAllPermanents",path)), "UNCLASSIFIED_STRING");selector.walk(c, &format!("{}.selector", &format!("{}@DeleteAllPermanents",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::DeleteOnePerOpponentColor{filter,prompt} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("DeleteOnePerOpponentColor"));filter.walk(c, &format!("{}.filter", &format!("{}@DeleteOnePerOpponentColor",path)), "UNCLASSIFIED_STRING");prompt.walk(c, &format!("{}.prompt", &format!("{}@DeleteOnePerOpponentColor",path)), "METADATA_NO_EXECUTABLE_REFERENCE");},
 digimon_dsl::compiled::CompiledStep::TrashBreedingPermanent{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("TrashBreedingPermanent"));target.walk(c, &format!("{}.target", &format!("{}@TrashBreedingPermanent",path)), "EXISTING_INSTANCE_BINDING");},
+digimon_dsl::compiled::CompiledStep::PayBreedingDeletion{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("PayBreedingDeletion"));target.walk(c, &format!("{}.target", &format!("{}@PayBreedingDeletion",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::ReturnToHand{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnToHand"));target.walk(c, &format!("{}.target", &format!("{}@ReturnToHand",path)), "EXISTING_INSTANCE_BINDING");},
 digimon_dsl::compiled::CompiledStep::ReturnToDeck{target,position,include_sources} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("ReturnToDeck"));target.walk(c, &format!("{}.target", &format!("{}@ReturnToDeck",path)), "EXISTING_INSTANCE_BINDING");position.walk(c, &format!("{}.position", &format!("{}@ReturnToDeck",path)), "UNCLASSIFIED_STRING");include_sources.walk(c, &format!("{}.include_sources", &format!("{}@ReturnToDeck",path)), "UNCLASSIFIED_STRING");},
 digimon_dsl::compiled::CompiledStep::Suspend{target} => { c.node(path,"digimon_dsl::compiled::CompiledStep","VARIANT",serde_json::json!("Suspend"));target.walk(c, &format!("{}.target", &format!("{}@Suspend",path)), "EXISTING_INSTANCE_BINDING");},

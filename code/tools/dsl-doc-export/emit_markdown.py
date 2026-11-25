@@ -222,7 +222,8 @@ def step_family(k: str) -> str:
         return "Modifier / Keyword"
     if k in ("delete_permanent", "delete_bound_permanents", "return_to_hand", "return_to_deck",
              "suspend", "unsuspend", "de_digivolve", "place_on_security", "play_token",
-             "bind_permanent_property", "hatch", "trash_breeding_permanent"):
+             "bind_permanent_property", "hatch", "trash_breeding_permanent",
+             "pay_breeding_deletion"):
         return "Field mutation"
     if k.startswith(("battle", "may_attack", "force_attack", "redirect_attack", "cancel_attack",
                      "open_counter", "end_attack", "refire", "refund")):

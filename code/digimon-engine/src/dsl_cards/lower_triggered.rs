@@ -932,6 +932,7 @@ pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool 
             | CompiledStep::SelectOwnPermanent { .. }
             | CompiledStep::SelectOpponentPermanent { .. }
             | CompiledStep::SelectAnyPermanent { .. }
+            | CompiledStep::SelectOwnBreedingPermanent { .. }
             | CompiledStep::SelectMaterial { .. }
             | CompiledStep::SelectOwnSources { .. }
             | CompiledStep::SelectCountCappedMulti { .. }
@@ -1017,6 +1018,13 @@ pub(crate) fn first_step_candidate_guard(
             let filter = Arc::new(filter.clone());
             Some(Box::new(move |rctx| {
                 permanent_zone_has_match(rctx, rctx.player, &filter)
+            }))
+        }
+        CompiledStep::SelectOwnBreedingPermanent { filter, .. } => {
+            let filter = Arc::new(filter.clone());
+            Some(Box::new(move |rctx| {
+                rctx.game.player(rctx.player).breeding_area.is_some()
+                    && eval_predicate(&filter, rctx, PredicateSubject::BreedingPermanent(rctx.player))
             }))
         }
         CompiledStep::SelectOpponentPermanent { filter, .. } => {
