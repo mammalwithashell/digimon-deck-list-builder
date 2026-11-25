@@ -33577,14 +33577,12 @@
       "untested_constructs": []
     },
     "EX2-007": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
-      "has_card_test": false,
+      "has_card_test": true,
       "needs_card_test": true,
-      "reason": "untested_card",
-      "reasons": [
-        "untested_card"
-      ],
+      "reason": null,
+      "reasons": [],
       "untested_constructs": []
     },
     "EX2-008": {
@@ -47004,21 +47002,21 @@
     }
   },
   "counts": {
-    "admissible": 1230,
+    "admissible": 1231,
     "diverged_no_quirk": 0,
     "failed_verdict": 26,
     "registered": 4483,
     "unregistered": 0,
-    "untested_card": 17,
+    "untested_card": 16,
     "untested_lowering": 3210
   },
-  "generated_at": "2026-11-24T22:26:42+00:00",
+  "generated_at": "2026-11-25T09:13:59+00:00",
   "sources": {
-    "behavioral_test_modules_sha256": "7ce1cb566db59854601bda0482e4e220ef7aab8ae3d37f4e18db8df67618099f",
+    "behavioral_test_modules_sha256": "4b56fd45f6b960a429144b370db0a2eeefa3e1c67f2ffbb0516a2c38ea1b1bfb",
     "card_registry_sha256": "9a604ff3e4feb20a16ff8ce38febf866191d6d2b9697162e5b7e002332799599",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "48b267d0684f26986bac83c208a0943a0001c7936e6b051e8c0004bf5ed6d2bd",
-    "validated_cards_dsl_sha256": "a9a457faebc38623a7fb22be2c9e1c7ba0d459116e52ac1822569baac47eb827",
+    "lowering_coverage_sha256": "7feb288b13bc0d625fbe11abf02169730983cc305d0f8db7a9599dad04cc43ff",
+    "validated_cards_dsl_sha256": "9424881d191c7f0d7d219f664abbab6595c6d9184aee6b359eb26826639514e3",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
   "version": 2
