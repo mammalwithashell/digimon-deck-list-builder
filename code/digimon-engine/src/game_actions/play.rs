@@ -125,6 +125,7 @@ impl Game {
         // §18-3: a player's play is a decision; the loop watch starts over.
         if matches!(source, PlaySource::ByHand) {
             self.reset_loop_watch();
+            self.note_turn_action();
         }
         self.play_from_hand_with_cost_result(player_id, hand_index, cost_delta, source, true)
             .into_option()
@@ -545,6 +546,7 @@ impl Game {
         // `effect.name == "<Training>"`) so a stale or hand-rolled
         // `MainOnField` on the same card cannot leak through.
         if field_index == crate::action::space::BREEDING_TARGET as usize {
+            self.clear_main_declare_parks();
             return self.activate_breeding_main_training(player_id);
         }
 
@@ -559,142 +561,100 @@ impl Game {
             index: field_index as u8,
         };
         if self.delayed_option_main_activation_available(delay_handle) {
+            self.clear_main_declare_parks();
             return self.activate_delayed_option_main(delay_handle);
         }
 
-        // Snapshot per-source identity without holding the battle_area borrow
-        // across the effect closure invocations (which need `&mut self`).
-        let (perm_handle, sources) = {
-            let Some(player) = self.players.get(player_id as usize) else {
-                return false;
-            };
-            let Some(perm) = player.battle_area.get(field_index) else {
-                return false;
-            };
-            let stack_size = perm.card_sources.len();
-            let handle = PermanentHandle {
-                player: player_id,
-                index: field_index as u8,
-            };
-            // `<Succession>`: an adopted source's top-scope `[Main]` is the
-            // carrier's own (mirrors `main_effect_select::field_main_match`).
-            let adopted = self.succession_source_indices(handle);
-            let mut infos: Vec<(usize, usize, bool, String, crate::card_source::CardHandle)> =
-                Vec::with_capacity(stack_size);
-            for (i, source) in perm.card_sources.iter().enumerate() {
-                infos.push((
-                    i,
-                    stack_size,
-                    adopted.contains(&i),
-                    source.card_id(&self.card_data).to_string(),
-                    source.handle(),
-                ));
-            }
-            (handle, infos)
+        if self.players.get(player_id as usize).is_none() {
+            return false;
+        }
+        // The ONE match the mask emitted and `explain_action` labelled
+        // (`main_effect_select::field_main_match`: first match across the
+        // stack with the inherited/OPT/guard/condition/activation gates). A
+        // second scan here could pick a different effect (it used to skip the
+        // outer-optional and activation-cost gates the mask applies).
+        let Some(target) = crate::action::main_effect_select::field_main_match(
+            self,
+            player_id,
+            field_index,
+        )
+        .and_then(|m| m.field) else {
+            return false;
         };
-
-        for (source_index, stack_size, is_adopted, card_id, source_handle) in sources {
-            // Use `effects_for_card` rather than the raw registry so that
-            // keyword-derived auto-installed effects (e.g. printed
-            // `<Mind Link>` / `<Training>`) are visible here. The action mask uses the
-            // same accessor — without this, the mask would emit a Field
-            // [Main] bit for an auto-installed keyword that this dispatcher
-            // could not honor.
-            let Some(effects) = self.effects_for_card(&card_id, source_handle) else {
-                continue;
-            };
-            for (slot, effect) in effects.iter().enumerate() {
-                if effect.timing != EffectTiming::MainOnField {
-                    continue;
-                }
-                if !Game::source_effect_is_active(source_index, stack_size, is_adopted, effect) {
-                    continue;
-                }
-                // G-OPT-MULTI-TIMING-SHARED-LOCKOUT / G-OPT-REFUND-ON-DECLINE:
-                // key the OPT counter exactly as the mask
-                // (`main_effect_select`) and the `refund_opt` step do — the
-                // clause's `shared_opt_group` when set, else the slot (moved
-                // onto its own counter for a `<Succession>` copy).
-                let opt_key = self.opt_key_for_source(
-                    perm_handle,
-                    source_handle,
-                    effect.inherited,
-                    effect.linked,
-                    effect.shared_opt_group.unwrap_or(slot as u8),
-                );
-                if effect.max_per_turn > 0 {
-                    let perm = &self.players[player_id as usize].battle_area[field_index];
-                    if perm.activation_count(source_handle, opt_key) >= effect.max_per_turn {
-                        continue;
-                    }
-                }
-                if let Some(cond) = &effect.condition {
-                    let ctx =
-                        EffectReadContext::new(self, source_handle, Some(perm_handle), player_id);
-                    if !cond(&ctx) {
-                        continue;
-                    }
-                }
-                // §15-8-4-4-1: a `[Main]` whose optional processing condition
-                // can't be performed is not declarable — skip it exactly as
-                // the mask (`main_effect_select::field_main_match`) does, so
-                // first-match-wins picks the same effect on both sides.
-                // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
-                if let Some(cost_guard) = &effect.optional_condition_guard {
-                    if !self.cost_guard_holds_at(
-                        cost_guard,
-                        source_handle,
-                        Some(perm_handle),
-                        player_id,
-                    ) {
-                        continue;
-                    }
-                }
-                // Python records activation before invoking the callback so a
-                // panic inside the process still counts toward OPT. Mirror that.
-                if let Some(perm) = self.players[player_id as usize]
-                    .battle_area
-                    .get_mut(field_index)
-                {
-                    perm.record_activation(source_handle, opt_key);
-                }
-                // Printed "By <cost>, …" gate — an OPTIONAL PROCESSING
-                // CONDITION (general_rule.pdf 15-7-1). 15-7-2: "If the content
-                // of the optional processing conditions isn't executed, the
-                // processing after the conditions can't be executed." The
-                // triggered path pays this in
-                // `effect_queue::run_queued_effect_inner`; the `[Main]` ACTION
-                // path (this function, the FIELD_EFFECT +2 sub-slot the RL
-                // decoder hits) used to skip it entirely, so a field `[Main]`
-                // activated through the action space got its body for free.
-                //
-                // Matches the queue's failure semantics: the body does NOT run
-                // and the OPT slot stays consumed (recorded just above), so a
-                // cost-impossible activation cannot be retried this turn.
-                // `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
-                // The activated effect resolves as ONE effect: triggers it
-                // causes (e.g. "when digivolution cards are trashed") wait
-                // until it has finished (§15-8-3-2), exactly as a queued
-                // effect's body does. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
-                self.enter_deferred_drain();
-                let mut paid = true;
-                if let Some(activation_cost) = &effect.activation_cost_fn {
-                    let mut ctx =
-                        EffectContext::new(self, source_handle, Some(perm_handle), player_id);
-                    paid = activation_cost(&mut ctx);
-                }
-                if paid {
-                    if let Some(process) = &effect.process {
-                        let mut ctx =
-                            EffectContext::new(self, source_handle, Some(perm_handle), player_id);
-                        process(&mut ctx);
-                    }
-                }
-                self.exit_deferred_drain_and_flush();
-                return paid;
+        let perm_handle = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        let source_handle = target.source_card;
+        let card_id = self.players[player_id as usize].battle_area[field_index].card_sources
+            [target.source_index]
+            .card_id(&self.card_data)
+            .to_string();
+        // `effects_for_card`, as the mask: keyword-derived auto-installed
+        // effects (printed `<Mind Link>` / `<Training>`) are visible here.
+        let Some(effects) = self.effects_for_card(&card_id, source_handle) else {
+            return false;
+        };
+        let Some(effect) = effects.get(target.slot) else {
+            return false;
+        };
+        let opt_key = target.opt_key;
+        // Main-declaration guard (owner ruling 2026-11-24): a declaration
+        // that may give its use back is tracked until it settles; any other
+        // [Main] drops the parks (`game::main_declare_guard`).
+        if effect.main_refund_capable {
+            self.begin_main_declaration(crate::game::main_declare_guard::MainDeclareKey {
+                player: player_id,
+                permanent: field_index as u8,
+                source_card: source_handle,
+                opt_key,
+            });
+        } else {
+            self.clear_main_declare_parks();
+        }
+        // Python records activation before invoking the callback so a
+        // panic inside the process still counts toward OPT. Mirror that.
+        if let Some(perm) = self.players[player_id as usize]
+            .battle_area
+            .get_mut(field_index)
+        {
+            perm.record_activation(source_handle, opt_key);
+        }
+        // Printed "By <cost>, …" gate — an OPTIONAL PROCESSING
+        // CONDITION (general_rule.pdf 15-7-1). 15-7-2: "If the content
+        // of the optional processing conditions isn't executed, the
+        // processing after the conditions can't be executed." The
+        // triggered path pays this in
+        // `effect_queue::run_queued_effect_inner`; the `[Main]` ACTION
+        // path (this function, the FIELD_EFFECT +2 sub-slot the RL
+        // decoder hits) used to skip it entirely, so a field `[Main]`
+        // activated through the action space got its body for free.
+        //
+        // Matches the queue's failure semantics: the body does NOT run
+        // and the OPT slot stays consumed (recorded just above), so a
+        // cost-impossible activation cannot be retried this turn.
+        // `G-ENGINE-MAIN-ON-FIELD-ACTIVATION-COST-UNPAID`.
+        // The activated effect resolves as ONE effect: triggers it
+        // causes (e.g. "when digivolution cards are trashed") wait
+        // until it has finished (§15-8-3-2), exactly as a queued
+        // effect's body does. G-ENGINE-INLINE-DRAIN-SIBLING-TRIGGERS.
+        self.enter_deferred_drain();
+        let mut paid = true;
+        if let Some(activation_cost) = &effect.activation_cost_fn {
+            let mut ctx = EffectContext::new(self, source_handle, Some(perm_handle), player_id);
+            paid = activation_cost(&mut ctx);
+        }
+        if paid {
+            if let Some(process) = &effect.process {
+                let mut ctx = EffectContext::new(self, source_handle, Some(perm_handle), player_id);
+                process(&mut ctx);
             }
         }
-        false
+        self.exit_deferred_drain_and_flush();
+        // A declaration that finished without a prompt (e.g. nothing to pick)
+        // settles here; one that parked a prompt settles when it resolves.
+        self.settle_main_declaration();
+        paid
     }
 
     /// Activate a `[Main]` effect on the card at `player_id`'s trash slot

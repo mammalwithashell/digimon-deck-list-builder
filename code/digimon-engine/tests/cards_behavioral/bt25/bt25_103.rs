@@ -309,6 +309,10 @@ fn bt25_103_clause_shape() {
             _ => None,
         })
         .collect();
+    // The bounce, then ONE clause for the one printed [When Attacking]
+    // [Counter] [Once Per Turn] effect: both timings share its single
+    // [Once Per Turn] (official Q1550) and its refund (W13), as DCGO's one
+    // shared effect does (BT25_103.cs "Shared WA / Counter").
     assert_eq!(t.len(), 2);
     let bounce = t
         .iter()
@@ -549,8 +553,45 @@ fn bt25_103_no_sources_on_self_skips_trash_still_offers_end() {
     assert_eq!(opp_source_total(&r), 1);
 }
 
+/// [When Attacking] arm: "you may trash ... Then, you may end this attack"
+/// with both halves declined executed nothing, so the use is kept
+/// (owner-decided 2026-10-21, W13, qa/rules/mechanics-gaps-2026-10.md; DCGO
+/// BT25_103.cs `if (!used) activateClass.RemoveUse()`).
 #[test]
-fn bt25_103_declining_everything_refunds_opt() {
+fn bt25_103_when_attacking_declining_everything_keeps_opt() {
+    let mut r = start(&[], 5);
+    let me = r.place_stack(0, &["SRC", "RED-L6", CARD_ID]); // 2 sources
+    // 3 sources: no target for the mandatory WD/WA bounce that also triggers.
+    r.place_stack(1, &["OPP-S", "OPP-S", "OPP-S", "OPP-A"]);
+    fire(&mut r, EffectTiming::WhenAttacking, me);
+    for _ in 0..8 {
+        match r.pending_kind() {
+            Some(SelectionKind::TriggerOrder) => resolve_trigger_order(&mut r),
+            Some(SelectionKind::SourceMulti { .. }) => finish_source_picks(&mut r),
+            Some(SelectionKind::EffectChoice) => answer_end_attack(&mut r, false),
+            _ => break,
+        }
+    }
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(opp_source_total(&r), 3, "nothing was trashed");
+    // OPT not spent: the shared effect is still available, at either timing.
+    fire(&mut r, EffectTiming::CounterEffect, me);
+    assert!(
+        matches!(r.pending_kind(), Some(SelectionKind::SourceMulti { .. })),
+        "a [When Attacking] that declined both halves keeps the [Once Per Turn]: {:?}",
+        r.pending_kind()
+    );
+}
+
+/// [Counter] timing: the same "you may trash ... Then, you may end this
+/// attack" with both halves declined executed nothing, so the use is kept at
+/// [Counter] too (owner-decided 2026-10-21, W13: "DCGO has the
+/// Dianamon/GraceNovamon effect correct"; DCGO BT25_103.cs runs one shared
+/// effect for both timings with `if (!used) activateClass.RemoveUse()`). The
+/// kept use is the one [Once Per Turn] of both timings (official Q1550).
+#[test]
+fn bt25_103_counter_declining_everything_keeps_opt() {
     let mut r = start(&[], 5);
     let me = r.place_stack(0, &["SRC", "RED-L6", CARD_ID]);
     r.place_stack(1, &["OPP-S", "OPP-A"]);
@@ -559,11 +600,45 @@ fn bt25_103_declining_everything_refunds_opt() {
     answer_end_attack(&mut r, false);
     let _ = r.auto_resolve();
     assert!(r.game.pending_selection.is_none());
-    // OPT not spent: the clause fires again.
+    assert_eq!(opp_source_total(&r), 1, "nothing was trashed");
     fire(&mut r, EffectTiming::CounterEffect, me);
     assert!(
         matches!(r.pending_kind(), Some(SelectionKind::SourceMulti { .. })),
-        "declining everything refunds [Once Per Turn]: {:?}",
+        "a [Counter] that declined both halves keeps the [Once Per Turn]: {:?}",
+        r.pending_kind()
+    );
+}
+
+/// One half executed at [When Attacking] spends the one [Once Per Turn] of
+/// both timings (official Q1550; W13: "spends it as soon as either half
+/// executes").
+#[test]
+fn bt25_103_when_attacking_trashing_spends_opt_for_counter() {
+    let mut r = start(&[], 5);
+    let me = r.place_stack(0, &["SRC", "RED-L6", CARD_ID]); // 2 sources
+    // 3 sources: no target for the mandatory WD/WA bounce that also triggers.
+    r.place_stack(1, &["OPP-S", "OPP-S", "OPP-S", "OPP-A"]);
+    fire(&mut r, EffectTiming::WhenAttacking, me);
+    let mut trashed = false;
+    for _ in 0..8 {
+        match r.pending_kind() {
+            Some(SelectionKind::TriggerOrder) => resolve_trigger_order(&mut r),
+            Some(SelectionKind::SourceMulti { .. }) if !trashed => {
+                pick_sources(&mut r, 1);
+                finish_source_picks(&mut r);
+                trashed = true;
+            }
+            Some(SelectionKind::SourceMulti { .. }) => finish_source_picks(&mut r),
+            Some(SelectionKind::EffectChoice) => answer_end_attack(&mut r, false),
+            _ => break,
+        }
+    }
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert_eq!(opp_source_total(&r), 2, "one card was trashed");
+    fire(&mut r, EffectTiming::CounterEffect, me);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "the [When Attacking] use spent the [Counter] timing too: {:?}",
         r.pending_kind()
     );
 }
@@ -705,6 +780,81 @@ fn bt25_103_counter_on_attack_on_player_can_end_it() {
     assert_eq!(sources(&r, attacker), 0, "attacker's 2 sources trashed");
     assert_eq!(r.security_count(0), 3, "attack ended — security untouched");
     assert!(r.game.pending_attack.is_none(), "no attack in progress");
+}
+
+/// Answer every remaining decision of the current attack (PASS where
+/// optional, else the first legal action); true if GraceNovamon's [Counter]
+/// (`declare`) was offered again in the counter timing.
+fn bt25_103_finish_attack(r: &mut DebugRunner, declare: u16) -> bool {
+    use digimon_engine::enums::GamePhase;
+    let mut reoffered = false;
+    for _ in 0..16 {
+        let Some(v) = r.pending_selection_view() else {
+            break;
+        };
+        if r.current_phase() == GamePhase::CounterTiming && v.valid_action_ids.contains(&declare) {
+            reoffered = true;
+        }
+        let action = if v.valid_action_ids.contains(&PASS) { PASS } else { v.valid_action_ids[0] };
+        r.execute_action(v.selecting_player, action).unwrap();
+    }
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    reoffered
+}
+
+/// Real combat. Only 1 [Counter] effect can be activated per attack (CR 4.3
+/// 11-3-2; official Q6717). Declaring GraceNovamon's [Counter], trashing
+/// nothing and not ending the attack keeps the [Once Per Turn] (W13), but the
+/// counter timing of that attack is over: it is not offered again in the same
+/// attack, so there is no declare-and-pass cycle. The kept use is offered at
+/// the next attack's counter timing that turn; ending that attack spends it,
+/// and a third attack opens no counter timing for it.
+#[test]
+fn bt25_103_real_counter_declare_and_pass_closes_the_window_and_keeps_the_use() {
+    use digimon_engine::enums::GamePhase;
+    let mut r = builder()
+        .deck(0, &["FILL"; 8])
+        .deck(1, &["FILL"; 8])
+        .security(0, &["FILL"; 5])
+        .security(1, &["FILL"; 3])
+        .memory(0)
+        .start();
+    r.set_first_player(1);
+    r.set_turn(3);
+    let me = r.place_stack(0, &["SRC", "RED-L6", CARD_ID]); // 2 sources
+    let declare = encode_attack(0, me.index as u16);
+    let first = r.place_stack(1, &["OPP-S", "OPP-A"]);
+    let second = r.place_stack(1, &["OPP-S", "OPP-B"]);
+
+    let _ = r.attack_player(first, 0, false);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    assert!(r.pending_selection_view().unwrap().valid_action_ids.contains(&declare));
+    r.execute_action(0, declare).unwrap();
+    finish_source_picks(&mut r); // trash nothing
+    answer_end_attack(&mut r, false);
+    assert!(
+        !bt25_103_finish_attack(&mut r, declare),
+        "CR 4.3 11-3-2: one [Counter] per attack, so the declaration is not offered again"
+    );
+    assert!(r.game.pending_attack.is_none(), "the first attack finished");
+    assert_eq!(sources(&r, first), 1, "nothing was trashed");
+    assert_eq!(r.security_count(0), 4, "the attack was not ended");
+
+    assert_ne!(r.attack_player(second, 0, false), digimon_engine::combat::AttackResult::Invalid);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming, "the kept use is offered at the next attack");
+    r.execute_action(0, declare).unwrap();
+    finish_source_picks(&mut r);
+    answer_end_attack(&mut r, true);
+    bt25_103_finish_attack(&mut r, declare);
+    assert_eq!(r.security_count(0), 4, "the second attack was ended");
+
+    r.game.players[1].battle_area[first.index as usize].is_suspended = false;
+    assert_ne!(r.attack_player(first, 0, false), digimon_engine::combat::AttackResult::Invalid, "the third attack is declared");
+    assert!(
+        !(r.current_phase() == GamePhase::CounterTiming
+            && r.pending_selection_view().is_some_and(|v| v.valid_action_ids.contains(&declare))),
+        "ending the attack spent the [Once Per Turn]"
+    );
 }
 
 #[test]

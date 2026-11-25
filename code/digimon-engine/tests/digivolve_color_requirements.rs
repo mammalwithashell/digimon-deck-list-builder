@@ -497,41 +497,18 @@ fn colour_specific_circles_take_only_their_printed_colours_at_the_printed_cost()
 /// is checked here, on the production card data: each card digivolves over
 /// exactly its printed colours, at the printed cost, with no cost choice.
 ///
-/// Mastemon (EX6-029) is the one card that does not: `cards.json` lists a
-/// yellow|purple Lv.5 / cost 5 pair beside the printed cost 4, which the card
-/// face does not print, so production asks which cost to pay. That is a data
-/// error this test pins rather than hides (see `BASELINE_PHANTOM_ROWS` in
-/// `tests/alt_path_printed_cost_guard.rs`): when the rows are removed the
-/// assertion on the cost choice fails and the exception has to go.
+/// Mastemon (EX6-029) used to be the exception: `cards.json` listed a
+/// yellow|purple Lv.5 / cost 5 pair beside the printed cost 4, so production
+/// asked which cost to pay. The pair left the data on 2026-11-22 (see
+/// `FACE_READ_CIRCLES`), and the card is held to the same rule as the rest.
 #[test]
 fn completed_split_circles_take_exactly_their_printed_colours_in_production() {
     use printed_circles::SPLIT_CIRCLES_COMPLETED;
-    const COST_CHOICE_FROM_A_ROW_THE_CARD_DOES_NOT_PRINT: &[&str] = &["EX6-029"];
     on_big_stack(|| {
         let data = digimon_engine::deck_tools::full_card_data();
         let mut failures: Vec<String> = Vec::new();
         for (id, level, cost, printed) in SPLIT_CIRCLES_COMPLETED {
-            let known_bad = COST_CHOICE_FROM_A_ROW_THE_CARD_DOES_NOT_PRINT.contains(id);
             for color in ALL_COLOURS {
-                if known_bad && printed.contains(&color) {
-                    // The action pauses on a two-option "which digivolution
-                    // cost do you pay?" choice (the printed 4 and the phantom
-                    // 5) instead of digivolving.
-                    let evolver = data.get(*id).expect("in production cards.json").clone();
-                    let (mut r, slot) =
-                        field_runner(evolver, plain_base("PLAIN-BASE", *level, color));
-                    let proceeded = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
-                    let options = r
-                        .pending_selection_view()
-                        .and_then(|view| view.effect_choices.as_ref().map(|c| c.len()));
-                    assert!(
-                        !proceeded && options == Some(2),
-                        "{id} over a {color:?} Lv.{level}: expected the cost choice its \
-                         phantom cards.json row causes, got proceeded = {proceeded}, options = \
-                         {options:?}. If the row left cards.json, delete this exception."
-                    );
-                    continue;
-                }
                 let got = probe_field_digivolve(&data, id, *level, color);
                 if printed.contains(&color) {
                     if got != Ok(*cost) {
@@ -553,6 +530,111 @@ fn completed_split_circles_take_exactly_their_printed_colours_in_production() {
             failures.len(),
             failures.join("\n")
         );
+    });
+}
+
+/// Production digivolves the `FACE_READ_CIRCLES` cards over exactly the
+/// circles their faces print, at the printed cost, with no cost choice; every
+/// row in `UNPRINTED_ROWS_REMOVED` is refused (or, where the card prints a
+/// circle of that colour and level at another cost, costs the printed amount
+/// with no choice). CR 4.3 2-3-5-1 / 2-3-5-2: the digivolution requirement is
+/// the printed colour, level and cost.
+///
+/// The bases are plain (no name, no matching trait), so name- and trait-gated
+/// lines such as Imperialdramon: Dragon Mode (BT12-030)'s "3 from
+/// [Paildramon] or [Dinobeemon]" cannot satisfy them.
+#[test]
+fn face_read_circles_are_the_only_digivolutions_in_production() {
+    use printed_circles::{FACE_READ_CIRCLES, UNPRINTED_ROWS_REMOVED};
+    on_big_stack(|| {
+        let data = digimon_engine::deck_tools::full_card_data();
+        let mut failures: Vec<String> = Vec::new();
+        for (id, printed) in FACE_READ_CIRCLES {
+            let mut levels: Vec<u8> = printed.iter().map(|(_, level, _)| *level).collect();
+            levels.extend(
+                UNPRINTED_ROWS_REMOVED
+                    .iter()
+                    .filter(|(rid, ..)| rid == id)
+                    .map(|(_, _, level, _)| *level),
+            );
+            levels.sort_unstable();
+            levels.dedup();
+            for level in levels {
+                for color in ALL_COLOURS {
+                    let want = printed
+                        .iter()
+                        .find(|(c, l, _)| *c == color && *l == level)
+                        .map(|(_, _, cost)| *cost);
+                    let got = probe_field_digivolve(&data, id, level, color);
+                    match want {
+                        Some(cost) if got != Ok(cost) => failures.push(format!(
+                            "{id} over a {color:?} Lv.{level}: the card prints cost {cost}, got {got:?}"
+                        )),
+                        None if got.is_ok() => failures.push(format!(
+                            "{id} over a {color:?} Lv.{level}: the card prints no such circle, \
+                             but the digivolve was legal for {}",
+                            got.unwrap()
+                        )),
+                        _ => {}
+                    }
+                }
+            }
+        }
+        for (id, ..) in UNPRINTED_ROWS_REMOVED {
+            if !FACE_READ_CIRCLES.iter().any(|(fid, _)| fid == id) {
+                failures.push(format!("{id}: in UNPRINTED_ROWS_REMOVED but not in FACE_READ_CIRCLES"));
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "{} digivolution(s) disagree with the card face in production:\n{}",
+            failures.len(),
+            failures.join("\n")
+        );
+    });
+}
+
+/// Digivolve production `evolver_id` over a plain `color` Lv.`level` base and
+/// require it to complete at once for `cost`: no "which digivolution cost do
+/// you pay?" selection may open (CR 4.3 8-1-3-1: with one printed requirement
+/// that fits there is nothing to choose).
+fn assert_digivolves_without_a_cost_choice(evolver_id: &str, level: u8, color: CardColor, cost: i16) {
+    let evolver = production_card(evolver_id);
+    let (mut r, slot) = field_runner(evolver, plain_base("PLAIN-BASE", level, color));
+    let mem_before = r.game.memory;
+    let proceeded = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    let choices = r
+        .pending_selection_view()
+        .and_then(|view| view.effect_choices.as_ref().map(|c| c.len()));
+    assert!(
+        proceeded && choices.is_none(),
+        "{evolver_id} over a {color:?} Lv.{level}: expected the digivolve to complete with no \
+         cost choice, got proceeded = {proceeded}, cost options = {choices:?}"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[slot].top_card().card_id(&r.game.card_data),
+        evolver_id,
+        "{evolver_id} lands on top"
+    );
+    assert_eq!(mem_before - r.game.memory, cost, "{evolver_id}: the printed cost {cost} is paid");
+}
+
+/// Garurumon (BT21-067) prints one purple Lv.3 / 2 circle; `cards.json` also
+/// held a purple Lv.3 / 3 row, so every digivolve from a purple Lv.3 stopped on
+/// a choice between 2 and 3 (scan finding F05).
+#[test]
+fn garurumon_bt21_067_digivolves_over_a_purple_lv3_for_two_without_a_cost_choice() {
+    on_big_stack(|| assert_digivolves_without_a_cost_choice("BT21-067", 3, CardColor::Purple, 2));
+}
+
+/// Mastemon (EX6-029) prints one yellow|purple Lv.5 / 4 circle; `cards.json`
+/// also held a yellow|purple Lv.5 / 5 pair, so it stopped on a choice between
+/// 4 and 5 over either colour.
+#[test]
+fn mastemon_ex6_029_digivolves_over_a_yellow_or_purple_lv5_for_four_without_a_cost_choice() {
+    on_big_stack(|| {
+        assert_digivolves_without_a_cost_choice("EX6-029", 5, CardColor::Yellow, 4);
+        assert_digivolves_without_a_cost_choice("EX6-029", 5, CardColor::Purple, 4);
     });
 }
 

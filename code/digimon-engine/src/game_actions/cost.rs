@@ -523,13 +523,15 @@ impl Game {
         if target.index == crate::action::space::BREEDING_TARGET as u8 {
             return None;
         }
+        // "one of your green Digimon" asks about the Digimon's colors as
+        // currently modified (CR 4.3 4-22-2 wording; DCGO BT3_103.cs reads
+        // `TopCard.CardColors`, which folds color-change effects), not the
+        // printed top card. Scan finding F04 class.
         let top_colors = self
             .player(target.player)
             .battle_area
             .get(target.index as usize)?
-            .top_card()
-            .digimon_colors(&self.card_data)
-            .to_vec();
+            .colors_for_rules(&self.card_data, &self.modifiers, target);
         use super::digivolve::{DigivolveReducerChoice, DigivolveReducerState};
         let mut remaining: Vec<_> = self
             .player_digivolve_cost_reducers

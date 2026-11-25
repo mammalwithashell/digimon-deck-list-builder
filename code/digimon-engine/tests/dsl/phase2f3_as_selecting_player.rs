@@ -44,7 +44,7 @@ fn as_selecting_player_routes_prompt_to_opponent() {
         prompt: "pick".to_string(),
         prompt_key: None,
         optional: false,
-        continue_on_decline: false,
+        continue_on_decline: false, offer_unpayable_deletion_payers: false,
     }];
     let steps = vec![CompiledStep::AsSelectingPlayer {
         of: CompiledPlayerRef::Opponent,
@@ -99,7 +99,7 @@ fn as_selecting_player_chained_selects_all_route_to_override() {
             prompt: "pick perm".to_string(),
             prompt_key: None,
             optional: false,
-            continue_on_decline: false,
+            continue_on_decline: false, offer_unpayable_deletion_payers: false,
         },
         CompiledStep::SelectHand {
             then: vec![],
@@ -200,7 +200,7 @@ fn as_selecting_player_with_self_as_of_routes_to_controller() {
         prompt: "pick".to_string(),
         prompt_key: None,
         optional: false,
-        continue_on_decline: false,
+        continue_on_decline: false, offer_unpayable_deletion_payers: false,
     }];
     let steps = vec![CompiledStep::AsSelectingPlayer {
         of: CompiledPlayerRef::You,
@@ -242,7 +242,7 @@ fn as_selecting_player_parked_body_drains_outer_tail() {
         prompt: "pick".to_string(),
         prompt_key: None,
         optional: false,
-        continue_on_decline: false,
+        continue_on_decline: false, offer_unpayable_deletion_payers: false,
     }];
     let steps = vec![
         CompiledStep::AsSelectingPlayer {
@@ -306,7 +306,7 @@ fn as_selecting_player_outer_tail_select_does_not_inherit_override() {
         prompt: "body pick".to_string(),
         prompt_key: None,
         optional: false,
-        continue_on_decline: false,
+        continue_on_decline: false, offer_unpayable_deletion_payers: false,
     }];
     let steps = vec![
         CompiledStep::AsSelectingPlayer {
@@ -321,7 +321,7 @@ fn as_selecting_player_outer_tail_select_does_not_inherit_override() {
             prompt: "outer-tail pick".to_string(),
             prompt_key: None,
             optional: false,
-            continue_on_decline: false,
+            continue_on_decline: false, offer_unpayable_deletion_payers: false,
         },
     ];
 

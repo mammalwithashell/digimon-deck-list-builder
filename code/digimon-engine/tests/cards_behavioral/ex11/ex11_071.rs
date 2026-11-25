@@ -70,8 +70,8 @@ fn ex11_071_on_play_uses_dual_reveal_buckets_and_bottoms_remainder() {
 
     assert_eq!(
         card.effects.len(),
-        2,
-        "On Play search clause plus [Main] return-self reduced-cost play clause"
+        3,
+        "On Play search clause, [Main] return-self reduced-cost play clause, [Security] play this card"
     );
     let on_play = card
         .effects
@@ -479,4 +479,32 @@ fn ex11_071_main_pick_is_optional_and_passing_plays_nothing() {
         "nothing was played"
     );
     assert_eq!(r.game.memory, 5, "no memory was paid");
+}
+
+// ─── [Security] Play this card without paying the cost (card face) ───────────
+
+/// Cool Boy (EX11-071) checked from security is played to its owner's battle
+/// area without paying the cost.
+#[test]
+fn ex11_071_security_plays_itself_without_paying_cost() {
+    let mut attacker = digimon_engine::debug_runner::make_test_card("ATTACKER", "Attacker");
+    attacker.card_kind = digimon_engine::enums::CardKind::Digimon;
+    attacker.level = Some(4);
+    attacker.dp = Some(9000);
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-071")
+        .expect("EX11-071 YAML loads")
+        .add_card(attacker)
+        .security(1, &["EX11-071"])
+        .memory(10)
+        .start();
+    let a = r.place_on_field(0, "ATTACKER", Some(0));
+    let mem = r.memory();
+    r.attack_player(a, 1, false);
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(r.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&r.game.card_data) == "EX11-071"));
+    assert_eq!(r.memory(), mem, "the play is free (no memory moves)");
 }

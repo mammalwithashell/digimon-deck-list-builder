@@ -1,3 +1,92 @@
+## G-DSL-LINK-REQUIREMENT-MET-BY-SELF — resolved 2026-11-24
+
+Logimon (BT25-052)'s [Main] [Once Per Turn] link was offered on every board.
+DCGO (BT25_052.cs:63-80 `CanUseCondition`) offers it only when a
+[Social]/[Tool]/[Game] Digimon card in the hand or among this Digimon's
+digivolution cards can link to this Digimon with the cost ignored
+(`CanLinkToTargetPermanent(permanent, payCost: false)`). Owner ruling
+2026-11-24: "Generally let's look to match dcgo". The clause `condition:`
+had no way to ask whether a card's [Link] requirement is met by this
+permanent.
+
+Closed by a card-subject predicate leaf `link_requirement_met_by_self: bool`:
+true when the subject card's [Link] requirement is met by the effect's own
+permanent (`Game::link_card_qualifies_for`, the same test as the link rule
+check, Q4533), link cost ignored. False with no source permanent; a
+face-down card never meets it (printed information, CR 4.3 4-7-9). Used in a
+`count_gte` over the hand and a `self_source_count` over the digivolution
+cards. The compiled predicate grew a field: `PACK_FORMAT_VERSION` 0.40.0.
+
+Proof: `tests/dsl/constructs/link_requirement_met_by_self.rs`; behavioural
+`tests/cards_behavioral/bt25/bt25_052.rs::bt25_052_main_not_offered_*` and
+`bt25_052_main_offered_*`.
+
+## G-DSL-OFFER-UNPAYABLE-DELETION-PAYERS — resolved 2026-11-24
+
+A "by deleting 1 ... Digimon, it doesn't leave" clause (a payer pick, then
+`delete_permanent` of that binding and `cancel_replacement`) hid payers whose
+deletion is impossible, in the pick and in the replacement's offer
+(`deletion_payment::can_pay`, CR 4.3 15-7-4). DCGO does not: on Chuumon
+(EX13-027), Sukamon (EX13-028), Kotemon (EX13-048) and Gladimon (EX13-052) its
+`CanActivateCondition` is `HasMatchConditionPermanent` over the printed
+predicate and the pick has no can-be-deleted filter, so a Digimon that can't be
+deleted is offered; picking it spends the use, deletes nothing, and the carrier
+leaves. Owner ruling 2026-11-24: "You can pick a target that is immune from the
+removal, and it will fizzle. Nothing is deleted, right? That is a valid choice."
+
+Closed by an opt-in field on `select_own_permanent` / `select_opponent_permanent`
+/ `select_any_permanent`: `offer_unpayable_deletion_payers: true` turns the
+`can_pay` filter off for that pick and for the replacement offer preflight
+(`deletion_payment::filters_unpayable_payers`). The paid-deletion receipt is
+unchanged: an unpayable payer is skipped by `deletion_payment::expand`, so the
+removal is not cancelled. The existing-vocabulary alternative (a plain
+`delete_permanent` then an `if` on a recorded deletion before
+`cancel_replacement`, the EX13-015 shape) was not used: it loses the
+identity-matched receipt (`PaidDeletionPreventionFinalize` checks that this
+payer's top card and host were the ones deleted) and the payment's effect
+attribution reset in `start_deletion_payment`. Default off; the authoring lint
+`unpayable-payers-without-paid-deletion` rejects the flag anywhere but a
+paid-deletion payer pick, and the pool guard
+`pool_guard_unpayable_deletion_payers_are_exactly_the_owner_ruling_list` holds
+it to `authoring_lint::UNPAYABLE_DELETION_PAYERS_BY_OWNER_RULING` (the four
+clauses). The compiled layout grew one field: `PACK_FORMAT_VERSION` 0.39.0.
+
+Not covered (engine-wide gap, not this field): DCGO also drops an
+opponent-owned candidate under "can't be chosen by your opponent's effects"
+(`CanSelectBySkill`); no DSL selection enforces `CannotBeSelectedByEffect`.
+
+Proof: `tests/dsl/constructs/unpayable_deletion_payers.rs`; behavioural tests
+`*_inherited_*undeletable*` in `tests/cards_behavioral/ex13/ex13_027.rs`,
+`ex13_028.rs`, `ex13_048.rs`, `ex13_052.rs`.
+
+## G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER-DECLINE-TAIL — resolved 2026-11-23
+
+`trash_bottom_face_down_source_under_tamer` with `optional: true` dropped the
+rest of the clause on a declined Tamer pick, so a clause could not refund its
+[Once Per Turn] when the cost was declined after the accept. DCGO does that on
+BT26-044 Lilamon's inherited save and EX13-032 Chirinmon's Tamer cost (a
+`canNoSelect` Tamer pick, then `RemoveUse()` when none was chosen), and the
+owner ruled on 2026-11-23 that those clauses follow DCGO
+(qa/rules/mechanics-gaps-2026-10.md W14 row (f)).
+
+Closed by two fields on the verb: `continue_on_decline: true` (requires
+`optional: true`) runs the following steps on a decline with the binding
+unbound, and `bind_as` binds the chosen Tamer when the card was trashed. A
+clause then branches on `binding_present` / `binding_absent` (`else:
+refund_opt`). Both default off, so every existing card keeps its shape. The
+compiled layout grew two fields: `PACK_FORMAT_VERSION` 0.38.0.
+
+Proof: `code/digimon-dsl/tests/trash_face_down_under_tamer_decline_tail.rs`
+(compile, pack round trip, validation); behavioural
+`tests/cards_behavioral/bt26/bt26_044.rs::bt26_044_inherited_accept_then_decline_cost_keeps_opt`
+and `tests/cards_behavioral/ex13/ex13_032.rs::ex13_032_tamer_cost_declined_at_the_tamer_pick_keeps_opt`.
+
+The other nine clauses of that ruling needed no new vocabulary: an optional
+`select_*_permanent` / `select_hand` with `continue_on_decline` (or a non-cost
+optional hand pick) followed by `binding_present` / `binding_absent`, and
+`select_effect_choice` with `legal_when` and an always-legal "Don't pay the
+cost" row for Chirinmon's three-way cost choice.
+
 ## G-DSL-REFIRE-CARRIER-ON-DELETION — activate an On Deletion effect without deleting the Digimon
 
 - **Drivers:** BT27-010 and BT27-012. The paid Main effect can choose an On Deletion effect on the carrier, including one contributed by a digivolution card.
@@ -628,6 +717,45 @@ BT21-092 (`tests/cards_behavioral/bt21/bt21_092.rs`
   BT25_088.cs:155-171, does force it -- CR outranks). Tests
   `st23_04_two_option_use_reducers_are_both_credited_and_paid`,
   `bt25_088_reducer_that_cannot_make_the_play_payable_stays_declinable`.
+
+## Effect-pick candidate legality, round 4 — added 2026-11-22 (every pick that feeds a play verb, second bug scan)
+
+**Every selection whose binding an effect play verb consumes checks play legality at compile time
+[G-DSL-EFFECT-PLAY-PICK-LEGALITY, CLOSED].** Round 3 covered `select_trash` only. A replay of the same 1,224
+games on the fixed engine found the class still open on the other zones: Proximamon (EX12-077) "play or use 1
+play cost 10 or lower [Gammamon]-text / [VB] card from your Digimon's digivolution cards" offered the Digi-Egg
+Nyaromon (EX12-001) 34 times (no play cost, CR 4.3 7-1-1; DCGO EX12_077.cs requires `(IsOption &&
+!CanNotPlayThisOption) || (HasPlayCost && CanPlayAsNewPermanent(...))`); seven `select_union_zone` ->
+`play_union_bound_free` picks had no leaf (Gankoomon (BT13-019), BT21-090, Unique Emblem: Poseidia Lagoon
+(BT22-096) x2, The Sistermon Sisters Training Gym (BT23-099) x2, Tsunomon (BT24-007)); a `<Decode>` pick was made
+under Pomumon (BT9-047) (WereGarurumon (EX12-032) inherited Decode; DCGO `Decode.cs` filters with
+`CanPlayAsNewPermanent`).
+
+No new vocabulary. `code/digimon-dsl/src/play_candidates.rs` now maps every play verb that consumes a pick
+(`play_from_hand(_free)`, `play_from_trash(_free)`, `play_from_revealed_free`, `play_union_bound_free`,
+`play_from_materials`, `play_selected_sources_free`, `play_under_tamer_source`, `play_cards_free`,
+`play_security_card`, `play_or_use_from_hand`, `play_or_use_from_sources`) to its binding, and adds the leaf to
+every selection that binds it (`select_hand`, `select_trash`, `select_reveal`, `select_security`,
+`select_material(s)`, `select_own_sources`, `select_opponent_sources`, `select_zone_cards`,
+`select_count_capped_multi`, `search_own_security_stack`, `select_reveal_buckets` buckets, and `select_union_zone`
+on its shared filter AND each per-zone override). A binding that is also played-or-used (a `play_or_use_*` verb,
+or a play verb plus a `use_option_*` verb) gets `can_play_or_use_from_effect`, so usable Options stay candidates.
+The engine settles continuous state before ANY step whose filter reads play legality
+(`play_candidates::step_reads_play_legality`, called from `run_leaf_step`), so the round-3 Eye of the Gorgon
+(BT9-108) fix covers the new step shapes too. A `<Decode>` replacement whose only sources are unplayable is now
+not offered at all (its availability check reads the marked `select_material` filter), as in DCGO. 59 picks
+across 44 cards were marked (36 + 4 material picks, 6 `play_under_tamer_source`, 2 `play_selected_sources_free`,
+1 `play_or_use_from_sources`, 7 union, 2 security searches, 1 reveal bucket). Guards: unit tests in the pass;
+the pool tests `every_effect_play_pick_checks_play_legality_after_compilation` (digimon-dsl) and
+`pool_guard_every_effect_play_pick_checks_play_legality` (cards_behavioral) walk the serialized card so a new
+step variant or body the pass misses is named; per-card tests on EX12-077, BT13-019, BT22-096, BT23-099,
+BT24-007, EX12-032.
+
+Still per card (not checked by the leaf): affordability of a PAID play (`affordable_with_cost`; authored for
+Tsunomon (BT24-007) here, `cost_delta: reduce 2` per BT24_007.cs:47); N simultaneous plays checking one free slot;
+picks only a `use_option_*` verb consumes (Option usability, e.g. EX7-048); breeding-area plays; a
+`per_selected` re-binding that is played on one branch and added to hand on another (BT21-087 Vemmon: the pick
+must keep the hand route, so it is left unmarked).
 
 ## Effect-pick candidate legality, round 3 — added 2026-11-21 (play-from-trash picks, bug scan over 1,224 games)
 

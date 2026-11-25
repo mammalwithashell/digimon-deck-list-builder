@@ -36,6 +36,11 @@
       "card_color": 6,
       "level": 5,
       "memory_cost": 6
+    },
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 6
     }
   ],
   "xros_req": "[Digivolve] Lv.5 w/[Myotismon] in name: Cost 5"

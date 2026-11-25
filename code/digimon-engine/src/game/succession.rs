@@ -109,6 +109,11 @@ impl crate::game::Game {
             }
             for source_index in (0..len - 1).rev() {
                 let source = &perm.card_sources[source_index];
+                // CR 4.3 4-7-9: a face-down card has no card information, so
+                // it is never the "specified" card <Succession> adopts.
+                if source.face_down {
+                    continue;
+                }
                 let sref = crate::selection::SourceSelectionRef {
                     permanent: handle,
                     field_index: handle.index,

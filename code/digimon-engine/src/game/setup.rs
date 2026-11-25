@@ -237,6 +237,7 @@ impl Game {
             effect_chain_depth: 0,
             loop_watch: std::collections::BTreeMap::new(),
             loop_watch_steps: 0,
+            main_declare_guard: Default::default(),
             optional_decision_mark: None,
             optional_activation_mark: None,
             optional_activation_window: None,
@@ -345,6 +346,7 @@ impl Game {
             play_enters_suspended: false,
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
+            pending_digivolve_effect_initiated: false,
             pending_hand_discard: None,
             pending_deck_discards: Vec::new(),
             pending_deck_add: None,
@@ -450,6 +452,7 @@ impl Game {
         self.effect_chain_depth = 0;
         self.loop_watch.clear();
         self.loop_watch_steps = 0;
+        self.main_declare_guard = Default::default();
         self.optional_decision_mark = None;
         self.optional_activation_mark = None;
         self.optional_activation_window = None;
