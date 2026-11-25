@@ -4139,6 +4139,21 @@ resolves to the top card of the named player's deck. It is usable as the
 canonical shape for "place the top card of your deck face down under this
 Tamer" text (ST23-06, ST23-13/14, ST24-03, ST24-09, ST24-13/14).
 
+**`place_deck_top_under` step.** For placement of multiple cards as one
+event (BT27-094/096/097/098):
+
+```yaml
+- place_deck_top_under: { of: you, count: 2, target: source, face_down: true }
+```
+
+`of` is the deck owner. `target` resolves to a permanent (a Tamer or a
+Digimon, including a binding from an earlier selection). A positive
+`count` moves as many of the requested cards as the deck has. Per Bandai
+Q6413, place the deck-top card first and each subsequent card below it;
+the original top card ends up above the other moved cards. There is no
+reveal or ordering prompt, and the moved cards contribute to one
+`OnAddDigivolutionCards` batch. `face_down` defaults to `false`.
+
 **`trash_bottom_face_down_source_under_tamer` verb.** A cost-form verb for
 text such as "by trashing the bottom face-down card from under any of your
 Tamers, …":
