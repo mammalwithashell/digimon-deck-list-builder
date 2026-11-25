@@ -1,0 +1,88 @@
+card: BT27-067
+name: Artiomon
+kind: dual
+level: 6
+color: [black, red]
+cost: 5
+dp: 12000
+traits: [Beastkin, Glowing Dawn, BEATBREAK]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, level_eq: 5, trait_has: Glowing Dawn }
+    cost: 3
+
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [black, red]
+    traits: [Beastkin, Glowing Dawn, BEATBREAK]
+    effects:
+      - text: "＜Raid＞"
+        kind: grant_keyword
+        keyword: Raid
+      - text: "＜Piercing＞"
+        kind: grant_keyword
+        keyword: Piercing
+      - text: "＜Engage＞ (At the end of your turn, this Digimon may attack.)"
+        kind: grant_keyword
+        keyword: Engage
+      - text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 2 bottom face-down cards from under any of your Tamers, it doesn't leave."
+        kind: replacement
+        trigger: when_would_leave_battle_area
+        optional: true
+        once_per_turn: true
+        active_when: { is_source: true, replacement_subject_is_mine: true, face_down_sources_under_tamers_gte: 2 }
+        process:
+          - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
+          - cancel_replacement: {}
+      - text: "[All Turns] [Once Per Turn] When attack targets change or effects trash cards from under your Tamers, you may activate 1 [Main] effect on this card's Option side."
+        when: [on_attack_target_change, on_digivolution_card_trashed]
+        once_per_turn: true
+        optional: true
+        as_option_effect: true
+        timing_conditions:
+          - when: on_digivolution_card_trashed
+            condition:
+              event_host_is_own_tamer: true
+              any_of:
+                - event_cause: own_effect
+                - event_cause: opponent_effect
+        process: &artio_main
+          - if:
+              condition: { any_permanent: { of: opponent, zone: [battle_area], kind: digimon } }
+              then:
+                - select_opponent_permanent:
+                    optional: false
+                    bind_as: to_devolve
+                    filter: { kind: digimon }
+                    prompt: De-Digivolve 2 an opponent's Digimon
+                - de_digivolve: { target: to_devolve, amount: 2 }
+          - select_own_permanent:
+              optional: false
+              bind_as: to_boost
+              filter: { kind: digimon }
+              prompt: Choose 1 of your Digimon to unsuspend and give +5000 DP
+          - unsuspend: { target: to_boost }
+          - add_dp_modifier: { target: to_boost, value: 5000, expiry: end_of_your_turn }
+  option:
+    use_cost: 5
+    colors: [black]
+    effect_text: "[Main] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, 1 of your Digimon unsuspends and gets +5000 DP until your turn ends."
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of: [{ kind: digimon }, { kind: tamer }]
+        trait_has: Glowing Dawn
+    arts_digivolve: true
+    effects:
+      - text: "[Main] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, 1 of your Digimon unsuspends and gets +5000 DP until your turn ends."
+        when: main
+        process: *artio_main

@@ -1,0 +1,72 @@
+card: BT27-050
+name: Monarchlizamon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Cyborg, Glowing Dawn, BEATBREAK]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, level_eq: 4, trait_has: Glowing Dawn }
+    cost: 3
+
+effects:
+  - text: "{Hand} [Main] If you have a Tamer with [Tomoro Tenma] in its name, by placing 1 [Armalizamon] from your trash as any of your [Gekkomon]'s bottom digivolution card, that Digimon digivolves into this card, ignoring level."
+    when: main_from_hand
+    condition:
+      all_of:
+        - any_permanent: { of: you, zone: [battle_area], kind: tamer, name_contains: Tomoro Tenma }
+        - any_permanent: { of: you, zone: [battle_area], kind: digimon, name_is: Gekkomon }
+        - count_gte:
+            filter: { of: you, zone: [trash], kind: digimon, name_is: Armalizamon }
+            n: 1
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: base
+          filter: { kind: digimon, name_is: Gekkomon }
+          prompt: Choose the Gekkomon to digivolve
+      - select_trash:
+          optional: false
+          of: you
+          bind_as: material
+          filter: { kind: digimon, name_is: Armalizamon }
+          prompt: Choose the Armalizamon to place as a bottom digivolution card
+      - place_as_bottom_source: { source: material, target: base }
+      - effect_initiated_digivolve: { target: base, from_hand: self, cost: printed, ignore_level: true }
+  - text: "[On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon or Tamers. Then, by trashing the bottom face-down card from under any of your Tamers, 1 of their Digimon or Tamers can't unsuspend until their turn ends."
+    when: [on_play, when_digivolving]
+    process:
+      - select_opponent_permanent:
+          bind_as: to_suspend
+          optional: true
+          filter:
+            any_of: [{ kind: digimon }, { kind: tamer }]
+            is_unsuspended: true
+            can_change_orientation: true
+          prompt: You may suspend an opponent's Digimon or Tamer
+      - suspend: { target: to_suspend }
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+      - select_opponent_permanent:
+          bind_as: to_lock
+          optional: false
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          prompt: Choose an opposing Digimon or Tamer that cannot unsuspend
+      - add_modifier: { target: to_lock, modifier: CannotUnsuspend, value: 1, expiry: end_of_opponents_turn }
+  - text: "[End of Attack] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, this [Glowing Dawn] trait Digimon unsuspends."
+    scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    optional: true
+    condition: { face_down_sources_under_tamers_gte: 1 }
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: false }
+      - if:
+          condition: { source_permanent_trait_has: Glowing Dawn }
+          then:
+            - unsuspend: { target: source }
