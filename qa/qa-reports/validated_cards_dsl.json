@@ -17718,6 +17718,51 @@
       "archetype": "Kurata's Army",
       "yaml_path": "code/digimon-engine/cards/bt27/BT27-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_102.rs"
+    },
+    "LM-066": {
+      "card_name": "Zephagamon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_066.rs",
+      "test_count": 5,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Piercing/Vortex/Blocker, Rule trait [Bird Dragon]; WD/WA OPT optional unsuspend 1 Digimon then may battle; [All Turns][OPT] leave-field replacement by suspending 1 Digimon (not own effects). Option: suspend-2 cost -2, CannotUnsuspend until their turn ends, then bottom-deck 1 per 2 suspended Digimon."
+    },
+    "LM-067": {
+      "card_name": "Gundramon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_067.rs",
+      "test_count": 4,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Reboot/Blocker/Fragment(3); WD/Counter OPT reveal 6 play-or-use 1 cost<=6 [Three Musketeers]-text card free, rest bottom; WD/WA trash up to 3 [Three Musketeers] sources, delete 1 cost<=7 per card. Option: Use Req, <De-Digivolve 3> 3 Digimon, may place 1 [Three Musketeers] card from hand/trash as bottom source."
+    },
+    "LM-068": {
+      "card_name": "HeavyMetaldramon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_068.rs",
+      "test_count": 7,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Security A.+1; WD/End of Attack hand<=4 play lv<=4 Evil/Dark Dragon/Evil Dragon from trash free; WD/On Deletion trash 2 then may activate Option-side [Main]. Option: [Trash][Your Turn] on ally Evil-family attack, hand<=4, use from trash cost -3 (engine: trash-scoped OnAllyAttack enqueue); [Main] delete 1 with level >= hand size."
     }
   }
 }

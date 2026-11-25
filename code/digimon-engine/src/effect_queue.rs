@@ -848,6 +848,10 @@ impl Game {
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
                 if timing == EffectTiming::OnAllyAttack {
+                    // `[Trash]`-scoped "when one of your Digimon attacks" clauses
+                    // (LM-068 Black Sabbath) operate from the attacker's trash.
+                    let trash_context = self.trigger_context_for_source(&source, None, timing);
+                    self.enqueue_from_player_trash(timing, player, Some(trash_context));
                     let security_cards: Vec<_> = self
                         .player(player)
                         .security

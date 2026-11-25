@@ -1,0 +1,197 @@
+card: LM-067
+name: Gundramon
+kind: dual
+
+level: 6
+color: [black]
+cost: 6
+dp: 13000
+traits: [Machine, Three Musketeers, Titan, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - any_color: true
+        - level_eq: 5
+        - any_of:
+            - in_text_contains: "Three Musketeers"
+            - trait_has: TS
+    cost: 4
+
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [black]
+    traits: [Machine, Three Musketeers, Titan, TS]
+    effect_text: |
+      ＜Reboot＞ ＜Blocker＞ ＜Fragment (3)＞
+      [When Digivolving] [Counter] [Once Per Turn] Reveal the top 6 cards of your deck. You may play or use 1 play or use cost 6 or lower [Three Musketeers] text card among them without paying the cost. Return the rest to the bottom of the deck.
+      [When Digivolving] [When Attacking] By trashing up to 3 [Three Musketeers] text cards from any of your Digimon's digivolution cards, for each one trashed, delete 1 of your opponent's play cost 7 or lower Digimon.
+    effects:
+      - text: "＜Reboot＞"
+        kind: grant_keyword
+        keyword: Reboot
+        summary: "<Reboot>"
+
+      - text: "＜Blocker＞"
+        kind: grant_keyword
+        keyword: Blocker
+        summary: "<Blocker>"
+
+      - text: "＜Fragment (3)＞"
+        kind: grant_keyword
+        keyword: Fragment
+        value: 3
+        summary: "<Fragment (3)>"
+
+      - text: "[When Digivolving] [Counter] [Once Per Turn] Reveal the top 6 cards of your deck. You may play or use 1 play or use cost 6 or lower [Three Musketeers] text card among them without paying the cost. Return the rest to the bottom of the deck."
+        when: [when_digivolving, counter]
+        once_per_turn: true
+        summary: "[WD][Counter][OPT] Reveal top 6; you may play or use 1 play/use cost <=6 [Three Musketeers] text card among them free; rest to the bottom of the deck"
+        process:
+          - reveal_top_deck: { of: you, count: 6, bind_as: revealed }
+          - select_reveal_buckets:
+              from: revealed
+              buckets:
+                - bind_as: picked
+                  min: 0
+                  max: 1
+                  filter:
+                    all_of:
+                      - in_text_contains: "Three Musketeers"
+                      - play_or_use_cost_lte: 6
+                      - can_play_or_use_from_effect: true
+                      - any_of:
+                          - kind: digimon
+                          - kind: tamer
+                          - kind: option
+              prompt: "You may play or use 1 play or use cost 6 or lower [Three Musketeers] text card among them without paying the cost"
+          - if:
+              condition: { binding_present: picked }
+              then:
+                - if:
+                    condition: { binding_card_kind: { binding: picked, kind: option } }
+                    then:
+                      - use_option_from_revealed:
+                          of: you
+                          card: picked
+                          cost: free
+                    else:
+                      - play_from_revealed_free: { of: you, card: picked }
+          - place_remainder_on_deck: { of: you, position: bottom }
+
+      - text: "[When Digivolving] [When Attacking] By trashing up to 3 [Three Musketeers] text cards from any of your Digimon's digivolution cards, for each one trashed, delete 1 of your opponent's play cost 7 or lower Digimon."
+        when: [when_digivolving, when_attacking]
+        summary: "[WD][WA] By trashing up to 3 [Three Musketeers] text cards from your Digimon's digivolution cards, delete 1 opp play cost <=7 Digimon per card trashed"
+        process:
+          - select_own_sources:
+              filter:
+                in_text_contains: "Three Musketeers"
+              min: 0
+              max: 3
+              bind_as: tm_sources
+              prompt: "Trash up to 3 [Three Musketeers] text cards from your Digimon's digivolution cards; delete 1 of your opponent's play cost 7 or lower Digimon for each"
+              then:
+                - trash_selected_sources_as_cost: { source_refs: tm_sources }
+                - if:
+                    condition: { binding_count_eq: { binding: tm_sources, n: 3 } }
+                    then:
+                      - select_count_capped_multi:
+                          of: opponent
+                          zone: battle_area
+                          max: 3
+                          clamp_to_available: true
+                          filter: { all_of: [{ kind: digimon }, { play_cost_lte: 7 }] }
+                          bind_as: doomed
+                          prompt: "Delete 3 of your opponent's play cost 7 or lower Digimon"
+                          optional_zero: false
+                - if:
+                    condition: { binding_count_eq: { binding: tm_sources, n: 2 } }
+                    then:
+                      - select_count_capped_multi:
+                          of: opponent
+                          zone: battle_area
+                          max: 2
+                          clamp_to_available: true
+                          filter: { all_of: [{ kind: digimon }, { play_cost_lte: 7 }] }
+                          bind_as: doomed
+                          prompt: "Delete 2 of your opponent's play cost 7 or lower Digimon"
+                          optional_zero: false
+                - if:
+                    condition: { binding_count_eq: { binding: tm_sources, n: 1 } }
+                    then:
+                      - select_count_capped_multi:
+                          of: opponent
+                          zone: battle_area
+                          max: 1
+                          clamp_to_available: true
+                          filter: { all_of: [{ kind: digimon }, { play_cost_lte: 7 }] }
+                          bind_as: doomed
+                          prompt: "Delete 1 of your opponent's play cost 7 or lower Digimon"
+                          optional_zero: false
+                - delete_bound_permanents: { binding: doomed }
+
+  option:
+    use_cost: 6
+    colors: [black]
+    effect_text: |
+      <Use Req. ([Three Musketeers] in text)> [Main] <De-Digivolve 3> 3 of your opponent's Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card.
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of:
+          - kind: digimon
+          - kind: tamer
+        in_text_contains: "Three Musketeers"
+    arts_digivolve: true
+    effects:
+      - text: "[Main] <De-Digivolve 3> 3 of your opponent's Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        when: main
+        summary: "[Main] <De-Digivolve 3> 3 of your opponent's Digimon; then you may place 1 [Three Musketeers] trait card from hand or trash as any of your Digimon's bottom digivolution card"
+        process:
+          - select_count_capped_multi:
+              of: opponent
+              zone: battle_area
+              max: 3
+              clamp_to_available: true
+              filter: { kind: digimon }
+              bind_as: dd_targets
+              prompt: "<De-Digivolve 3> 3 of your opponent's Digimon"
+              optional_zero: false
+          - per_selected:
+              selection: dd_targets
+              bind_as: dd
+              body:
+                - de_digivolve:
+                    target: dd
+                    amount: 3
+          - if:
+              condition:
+                any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+              then:
+                - select_union_zone:
+                    of: you
+                    zones: [hand, trash]
+                    optional: true
+                    bind_as: tm_card
+                    filter:
+                      trait_has: "Three Musketeers"
+                    prompt: "You may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card"
+                    then:
+                      - select_own_permanent:
+                          bind_as: bottom_target
+                          optional: false
+                          filter: { kind: digimon }
+                          prompt: "Choose 1 of your Digimon to receive the [Three Musketeers] card as its bottom digivolution card"
+                      - place_as_bottom_source:
+                          source: tm_card
+                          target: bottom_target

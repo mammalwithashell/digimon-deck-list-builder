@@ -1374,6 +1374,9 @@ LM-064 text_not_printed 2
 LM-065 text_not_printed 0
 LM-065 text_not_printed 1
 LM-065 text_not_printed 2
+LM-067 text_not_printed 2
+LM-067 text_not_printed 5
+LM-068 text_not_printed 3
 P-035 missing_text 0
 P-035 missing_text 1
 P-037 missing_text 0

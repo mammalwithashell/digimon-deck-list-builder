@@ -5797,12 +5797,7 @@ fn resolve_count_bound(
 ) -> u8 {
     let value = match max {
         CompiledCountBound::Literal(n) => i32::from(*n),
-        CompiledCountBound::Formula(formula) => ctx
-            .source_permanent
-            .map(|target| {
-                formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
-            })
-            .unwrap_or(0),
+        CompiledCountBound::Formula(formula) => formula_value(formula, ctx, bindings),
     };
     // Count bounds are u8 values, not the old ten-card UI presentation cap.
     // The selector separately checks physical candidate/action reachability.
