@@ -578,3 +578,109 @@ fn determinized_worlds_agree_on_the_park() {
         assert!(!offered(&world, main_bit(0)), "seed {seed}: its own declare and pass parks");
     }
 }
+
+/// A DUAL card whose [When Digivolving] re-fires its own Option-side [Main]
+/// (main's 34307f3f5, `refire_effect { timing: option_main }`).
+const DUAL_REFIRE: &str = r#"
+card: DUAL-REFIRE
+name: Dual Refire
+kind: dual
+level: 4
+dp: 5000
+color: [red]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+dual:
+  digimon:
+    level: 4
+    dp: 5000
+    colors: [red]
+    effects:
+      - text: "[When Digivolving] You may activate this card's Option [Main] effect."
+        when: when_digivolving
+        process:
+          - refire_effect: { source: source, timing: option_main, optional: true }
+  option:
+    use_cost: 5
+    colors: [red]
+    effects:
+      - text: "[Main] Delete 1 of your opponent's Digimon."
+        when: main
+        process:
+          - select_opponent_permanent:
+              bind_as: victim
+              optional: false
+              filter: { kind: digimon }
+              prompt: "Choose an opposing Digimon to delete"
+          - delete_permanent: { target: victim }
+"#;
+
+/// Merge check (claude/mf3-opt into claude/matrix-bug-fixes-2): the guard
+/// with a DUAL card's re-fired Option [Main]. A parked KEEP-MAIN declaration
+/// is lifted by the digivolve (a turn action), the re-fired Option body never
+/// becomes an in-flight [Main] declaration (it is not one), and after it the
+/// kept use is offered again and can park again. Both answers to the re-fire.
+#[test]
+fn a_dual_option_main_refire_lifts_the_park_and_is_not_a_main_declaration() {
+    use digimon_engine::action::space::encode_digivolve;
+    for accept in [false, true] {
+        let mut r = DebugRunner::builder()
+            .from_dsl_yaml(KEEP)
+            .expect("keeper")
+            .from_dsl_yaml(DUAL_REFIRE)
+            .expect("dual")
+            .add_card(filler("G-LV3"))
+            .deck(0, &["G-LV3"; 8])
+            .deck(1, &["G-LV3"; 8])
+            .security(0, &["G-LV3"; 3])
+            .security(1, &["G-LV3"; 3])
+            .hand(0, &["DUAL-REFIRE", "G-LV3"])
+            .hand(1, &["G-LV3", "G-LV3"])
+            .memory(6)
+            .start();
+        r.set_first_player(0);
+        r.place_on_field(0, "KEEP-MAIN", Some(0));
+        let base = r.place_on_field(0, "G-LV3", Some(0));
+        r.place_on_field(1, "G-LV3", Some(0));
+        r.game.enter_main_phase();
+        let g = &mut r.game;
+
+        declare(g, 0);
+        pass_pick(g);
+        assert!(!offered(g, main_bit(0)), "parked");
+
+        let dv = encode_digivolve(0, base.index as u16);
+        assert!(offered(g, dv), "digivolving into the DUAL card is legal");
+        g.decode_action(dv, 0);
+        assert!(g.main_declare_guard().parked().is_empty(), "the digivolve lifted the park");
+        assert!(g.pending_selection.is_some(), "the re-fire is offered");
+        assert!(offered(g, PASS), "the re-fire is optional");
+        if accept {
+            let a = g.pending_selection.as_ref().unwrap().valid_action_ids
+                .iter().copied().find(|&a| a != PASS).expect("accept");
+            g.decode_action(a, 0);
+            assert!(
+                g.main_declare_guard().in_flight().is_none(),
+                "a re-fired Option [Main] is not a field [Main] declaration"
+            );
+            let victim = g.pending_selection.as_ref().expect("the Option body's pick")
+                .valid_action_ids.iter().copied().find(|&a| a != PASS).expect("a victim");
+            g.decode_action(victim, 0);
+            assert_eq!(g.players[1].battle_area.len(), 0, "the Option body deleted its pick");
+        } else {
+            g.decode_action(PASS, 0);
+            assert_eq!(g.players[1].battle_area.len(), 1);
+        }
+        assert!(g.pending_selection.is_none(), "no decision is left");
+        assert!(g.main_declare_guard().is_empty(), "nothing parked or in flight");
+        assert!(g.pending_option.is_none(), "no Option card is in use");
+        assert_eq!(uses_spent(g, 0), 0, "KEEP-MAIN's use is still kept");
+        assert!(offered(g, main_bit(0)), "the kept use is offered again");
+
+        declare(g, 0);
+        pass_pick(g);
+        assert!(!offered(g, main_bit(0)), "and parks again on a new no-op");
+    }
+}

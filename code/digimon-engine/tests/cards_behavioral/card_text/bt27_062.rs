@@ -81,6 +81,41 @@ fn inherited_prevention_requires_a_different_knightmon_text_digimon() {
     assert_eq!(ids(&r, &r.game.players[0].trash), ["KNIGHT"]);
 }
 
+/// Merge check (claude/mf3-opt into claude/matrix-bug-fixes-2): the owner's
+/// 2026-11-24 ruling lets four "by deleting ..." clauses offer a payer that
+/// can't be deleted, as their DCGO scripts do (Chuumon (EX13-027), Sukamon
+/// (EX13-028), Kotemon (EX13-048), Gladimon (EX13-052);
+/// `offer_unpayable_deletion_payers`). Maildramon (BT27-062) has the same
+/// shape but no DCGO script yet, so it keeps CR 4.3 15-7-4: with the only
+/// [Knightmon]-text payer unable to be deleted, the clause is not offered and
+/// the Digimon leaves.
+#[test]
+fn inherited_prevention_is_not_offered_when_the_only_payer_cannot_be_deleted() {
+    let knight = make_test_card("KNIGHT", "Knightmon");
+    let mut r = start(builder(CARD).add_card(knight));
+    let carrier = r.place_stack(0, &[CARD, "TEXT-5"]);
+    let payer = r.place_on_field(0, "KNIGHT", Some(0));
+    r.game.modifiers.add(
+        payer,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            digimon_engine::enums::ModifierType::CannotBeDestroyedByEffect,
+            0,
+            digimon_engine::enums::Expiry::Permanent,
+            payer.player,
+        ),
+    );
+    let enemy = r.place_on_field(1, "TEXT-6", Some(0));
+    r.battle_digimon(carrier, enemy);
+    assert!(
+        r.pending_selection().is_none(),
+        "no payable [Knightmon]-text Digimon: the clause is not offered"
+    );
+    let mut trash = ids(&r, &r.game.players[0].trash);
+    trash.sort();
+    assert_eq!(trash, [CARD, "TEXT-5"], "the carrier left");
+    assert_eq!(r.battle_area_size(0), 1, "only the protected payer is left");
+}
+
 #[test]
 fn attacking_can_use_a_knightmon_text_option_at_discount_or_decline() {
     const OPTION: &str = "TEXT-KNIGHTMON-OPTION";
