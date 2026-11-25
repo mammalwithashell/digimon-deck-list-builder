@@ -120,3 +120,5 @@ mod ulforce_exact_export;
 mod dynasmon_exact_fixture;
 
 mod royal_knights_new_cards;
+
+mod bt27;

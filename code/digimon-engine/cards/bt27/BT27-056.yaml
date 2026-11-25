@@ -1,0 +1,30 @@
+# Bandai English BT27 list/image, 2026-11-22; Q7759 excludes breeding.
+# Canonical metadata/stable registration remains blocked.
+card: BT27-056
+name: Pristimon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+traits: [Puppet, Glowing Dawn, BEATBREAK]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Glowing Dawn }
+    cost: 0
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - not: { in_breeding: true }
+        - cost_target: { kind: digimon, color_is: black, trait_has: BEATBREAK }
+    amount: 1
+  - kind: grant_keyword
+    scope: inherited
+    keyword: Reboot
