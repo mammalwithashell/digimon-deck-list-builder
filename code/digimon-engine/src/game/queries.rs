@@ -151,10 +151,13 @@ impl Game {
         // under the top card contribute inherited text, and any active_when
         // condition must pass before the keyword is considered live.
         let stack_size = perm.card_sources.len();
+        // CR 4.3 4-7-9: a face-down digivolution card has no card
+        // information -- neither its printed keywords nor its clauses count.
         let source_ids: Vec<(usize, usize, String, crate::card_source::CardHandle)> = perm
             .card_sources
             .iter()
             .enumerate()
+            .filter(|(i, s)| !(s.face_down && i + 1 < stack_size))
             .map(|(i, s)| {
                 (
                     i,
@@ -433,6 +436,11 @@ impl Game {
         let stack_size = perm.card_sources.len();
         let adopted = self.succession_source_indices(target);
         for (source_index, src) in perm.card_sources.iter().enumerate() {
+            // CR 4.3 4-7-9: a face-down digivolution card's printed keywords
+            // can't be referenced.
+            if src.face_down && source_index + 1 < stack_size {
+                continue;
+            }
             let card_data = &self.card_data[src.data_index];
             let mut keywords = if source_index + 1 == stack_size {
                 face_keywords(card_data)
@@ -647,6 +655,10 @@ impl Game {
             return 0;
         };
         let stack_size = permanent.card_sources.len();
+        // CR 4.3 4-7-9: a face-down digivolution card has no effects.
+        if source.face_down && source_index + 1 < stack_size {
+            return 0;
+        }
         let mut total = 0i32;
         for effect in effects.iter() {
             if effect.dp_modifier == 0 && effect.dp_modifier_fn.is_none() {

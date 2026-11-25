@@ -29,6 +29,11 @@
       "card_color": 1,
       "level": 5,
       "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
     }
   ],
   "xros_req": "[Digivolve] Lv.5 w/[Ice-Snow] trait: Cost 3",

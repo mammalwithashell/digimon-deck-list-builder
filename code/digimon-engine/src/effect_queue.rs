@@ -338,6 +338,8 @@ impl Game {
         // (`is_source`, source-carrier rebinding) must still resolve to the
         // Digimon the effect was borrowed from, not to nothing.
         let source_identity = Some(self.source_move_anchor(effect.source));
+        let allow_below_top_liveness = effect.timing == EffectTiming::OnDeletion
+            && self.top_card_handle(effect.source) != Some(effect.source_card);
         QueuedEffect {
             source_identity,
             source_card: effect.source_card,
@@ -353,7 +355,7 @@ impl Game {
             is_optional,
             is_turn_player,
             card_id: effect.card_id,
-            allow_below_top_liveness: false,
+            allow_below_top_liveness,
             dna_origin_context: None,
             granted_effect_id: None,
             keyword_effect: None,
@@ -2298,10 +2300,16 @@ impl Game {
         // A non-DNA evolution caused by a DNA effect still has non-DNA
         // self triggers; do not inherit its caller's origin while collecting.
         self.current_dna_origin = Some(dna_origin);
+        // The self [When Digivolving] context records whether an effect did
+        // the digivolving (DCGO `IsByEffect` on the WhenDigivolving
+        // hashtable), as the OnPlay context does for an effect play.
+        let previous_wd_effect = self.pending_digivolve_effect_initiated;
+        self.pending_digivolve_effect_initiated = effect_initiated;
         self.enqueue_triggered(
             EffectTiming::WhenDigivolving,
             TriggerSource::Permanent(permanent),
         );
+        self.pending_digivolve_effect_initiated = previous_wd_effect;
         if dna_origin {
             self.enqueue_triggered(
                 EffectTiming::OnDnaDigivolve,
@@ -2363,6 +2371,13 @@ impl Game {
                 // enqueue; it is `false` for every other timing/source.
                 effect_initiated: timing == EffectTiming::OnPlay
                     && self.pending_play_effect_initiated,
+                // The [When Digivolving] firing of a digivolution an effect
+                // performed. Kept apart from `effect_initiated` so the On
+                // Play-only `played_by_effect` (BT24-023 "IsByEffect &&
+                // CanTriggerOnPlay") is unchanged; `event_is_effect_initiated`
+                // reads both.
+                self_digivolve_effect_initiated: timing == EffectTiming::WhenDigivolving
+                    && self.pending_digivolve_effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
@@ -6094,8 +6109,7 @@ impl Game {
                             );
                         }
                     }
-                    SecurityRemovalDestination::Digivolve { player, target, turn }
-                    | SecurityRemovalDestination::DigivolveAsTamer {
+                    SecurityRemovalDestination::Digivolve {
                         player,
                         target,
                         turn,
@@ -6111,9 +6125,7 @@ impl Game {
                             // digivolution procedure, including results from
                             // security, and precedes When Digivolving effects.
                             let _ = self.draw_one_for_player(player);
-                            if matches!(pending.destination, SecurityRemovalDestination::Digivolve { .. }) {
-                                completed_digivolve = Some((target, event_card));
-                            }
+                            completed_digivolve = Some((target, event_card));
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).put_in_trash(security.card);

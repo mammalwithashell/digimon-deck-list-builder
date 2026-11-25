@@ -603,14 +603,22 @@ fn eval_predicate_ref_known(
         // the observer's battle-area Tamer permanents. ST20-10's warp
         // alt-path condition ("your Tamers have 3 or more total colors").
         let mut colors: Vec<CardColor> = Vec::new();
-        for perm in &rctx.game.player(rctx.player).battle_area {
+        for (index, perm) in rctx.game.player(rctx.player).battle_area.iter().enumerate() {
             let top = perm.top_card();
             if top.card_kind(rctx.card_data()) != CardKind::Tamer {
                 continue;
             }
-            for c in top.colors(rctx.card_data()) {
-                if !colors.contains(c) {
-                    colors.push(*c);
+            // A Tamer's colors as currently modified (`ChangeBaseCardColor` /
+            // `AddColor`), the same rules colors `distinct_colors_gte` reads.
+            // DCGO counts `TopCard.CardColors`, which folds color-change
+            // effects (CardSource.cs:446-476). Scan finding F04 class.
+            let handle = crate::permanent::PermanentHandle {
+                player: rctx.player,
+                index: index as u8,
+            };
+            for c in perm.colors_for_rules(rctx.card_data(), &rctx.game.modifiers, handle) {
+                if !colors.contains(&c) {
+                    colors.push(c);
                 }
             }
         }
@@ -1776,6 +1784,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.has_refireable_effect.is_none()
         && pred.can_change_orientation.is_none()
         && pred.can_play_from_effect_without_cost.is_none()
+        && pred.link_requirement_met_by_self.is_none()
         && pred.can_play_or_use_from_effect.is_none()
         && pred.affordable_with_cost.is_none()
         && pred.can_play_to_breeding_from_hand.is_none()
@@ -2593,7 +2602,11 @@ fn eval_event_fields(
         let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
             return false;
         };
-        if trigger.effect_initiated != want {
+        // "if played or digivolved by an effect": the OnPlay context's
+        // `effect_initiated`, or the self [When Digivolving] context of an
+        // effect-performed digivolution.
+        let by_effect = trigger.effect_initiated || trigger.self_digivolve_effect_initiated;
+        if by_effect != want {
             return false;
         }
     }
@@ -3633,6 +3646,7 @@ printed_card_information_constraints!(
     has_inherited, has_on_deletion_effect, play_cost_lte, play_cost_gte,
     play_cost_eq, play_cost_eq_binding, play_or_use_cost_lte, affordable_with_cost_reduce, affordable_with_cost,
     dp_eq, dp_lte, dp_gte, self_color_count_gte, self_color_count_lte,
+    link_requirement_met_by_self,
 );
 
 fn eval_card_fields(
@@ -3787,6 +3801,16 @@ fn eval_card_fields(
                 }
                 crate::enums::CardKind::DigiEgg | crate::enums::CardKind::Token => false,
             });
+        if can != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.link_requirement_met_by_self {
+        // DCGO `CanLinkToTargetPermanent(host, payCost: false)`: the card's
+        // [Link] requirement against this effect's permanent, cost ignored.
+        let can = rctx
+            .source_permanent
+            .is_some_and(|host| rctx.game.link_card_qualifies_for(host, card));
         if can != want {
             return false;
         }
@@ -4548,7 +4572,7 @@ fn this_card_can_digivolve_onto(
 }
 
 /// `has_digivolve_candidate` â€” permanent-subject probe: does any card in the
-/// listed hand/trash/reveal zones of `of` satisfy `filter` AND have a normal-digivolve
+/// listed zones of `of` satisfy `filter` AND have a normal-digivolve
 /// route onto `handle`? DCGO BT25_092 `CanDigivolveDigimon(permanent)` =
 /// `HasMatchConditionOwnersHand(ValidTarget(â€¦, Root.Hand, permanent)) ||
 /// HasMatchConditionOwnersCardInTrash(ValidTarget(â€¦, Root.Trash, permanent))`.
@@ -4579,6 +4603,16 @@ fn permanent_has_digivolve_candidate(
                 CompiledZone::Hand => &state.hand,
                 CompiledZone::Trash => &state.trash,
                 CompiledZone::Reveal => &rctx.game.revealed_cards,
+                CompiledZone::Material => {
+                    let Some(source) = rctx.source_permanent.filter(|source| source.player == player)
+                    else {
+                        continue;
+                    };
+                    let Some(perm) = permanent_for_handle(rctx, source) else {
+                        continue;
+                    };
+                    &perm.card_sources[..perm.card_sources.len().saturating_sub(1)]
+                }
                 // Validated away at compile time; defensively contribute
                 // nothing rather than scanning an unsupported zone.
                 _ => continue,
@@ -5942,7 +5976,12 @@ fn card_cost_affordable(
             })
             .unwrap_or(0),
     };
-    let pay = (i32::from(delta.resolve(base)) - credit).max(0);
+    let adjusted = if is_use {
+        delta.resolve(base)
+    } else {
+        rctx.game.resolve_effect_play_cost(rctx.player, base, delta)
+    };
+    let pay = (i32::from(adjusted) - credit).max(0);
     rctx.game.payer_can_pay(rctx.player, pay)
 }
 

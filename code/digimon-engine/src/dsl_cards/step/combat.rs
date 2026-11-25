@@ -128,7 +128,6 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             without_suspending,
             ignore_summoning_sickness,
             optional,
-            windowed,
             prompt,
             cost_upgrade,
         } => {
@@ -141,27 +140,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             if attacker.player != ctx.game.turn_player() {
                 return true;
             }
-            if *windowed {
-                use crate::enums::{Expiry, ModifierType};
-                use crate::modifiers::ModifierEntry;
-                let owner = attacker.player;
-                ctx.game.modifiers.add(
-                    attacker,
-                    ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
-                );
-                if *without_suspending {
-                    ctx.game.modifiers.add(
-                        attacker,
-                        ModifierEntry::simple(
-                            ModifierType::CanAttackUnsuspended,
-                            1,
-                            Expiry::EndOfTurn,
-                            owner,
-                        ),
-                    );
-                }
-                return true;
-            }
+            // "...may attack" is declared inside the effect's own processing
+            // (CR 4.3 15-1-2; DCGO runs SelectAttackEffect inline). A former
+            // `windowed` flag deferred it to an end-of-turn MayAttack grant,
+            // which let the attack happen after later processing (Arts
+            // Digivolve, other end-of-turn effects) or by another Digimon --
+            // Monarchlizamon (BT25-057), scan finding F02. Removed.
             let prompt = prompt.as_deref().unwrap_or("Attack with this Digimon?");
             let lowered_upgrade = lower_attack_cost_upgrade(*cost_upgrade);
             let _ = if *ignore_summoning_sickness {

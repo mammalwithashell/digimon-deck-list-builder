@@ -161,7 +161,7 @@ traits: ["DATA SQUAD"]
 }
 
 #[test]
-fn printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers() {
+fn printed_thunderbirdmon_route_stacks_draws_and_fires_when_digivolving() {
     let mut r = setup(RESULT, &["TEST-THUNDERBIRD"]);
     let host = r.place_stack(0, &["TEST-OBSERVER", "TEST-KURATA"]);
     let other_tamer = r.place_on_field(0, "TEST-OBSERVER", Some(0));
@@ -181,7 +181,16 @@ fn printed_thunderbirdmon_route_stacks_and_draws_without_digimon_triggers() {
     );
     let before = r.hand_size(0);
     r.game.decode_action(action, 0);
-    assert_eq!(r.memory(), 3);
+    while let Some(prompt) = r.pending_selection() {
+        assert_eq!(prompt.kind, SelectionKind::TriggerOrder);
+        let first = prompt.valid_action_ids[0];
+        r.execute_action(0, first).unwrap();
+    }
+    assert_eq!(
+        r.memory(),
+        6,
+        "pay 2, then [When Digivolving] and both on_digivolve observers grant 1 each"
+    );
     assert_eq!(r.hand_size(0), before);
     let perm = &r.game.players[0].battle_area[host.index as usize];
     let cards = &r.game.card_data;
@@ -265,7 +274,16 @@ fn bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free() {
     r.game.decode_action(PLAY_HAND_START, 0);
     r.choose_prompt_card("TEST-KURATA", None).unwrap();
     r.choose_prompt_card("TEST-THUNDERBIRD", None).unwrap();
-    assert_eq!(r.memory(), 5);
+    if let Some(prompt) = r.pending_selection() {
+        assert_eq!(prompt.kind, SelectionKind::TriggerOrder);
+        let first = prompt.valid_action_ids[0];
+        r.execute_action(0, first).unwrap();
+    }
+    assert_eq!(
+        r.memory(),
+        7,
+        "free digivolve, then [When Digivolving] and on_digivolve triggers grant 1 each"
+    );
     assert_eq!(r.hand_size(0), 1);
     assert_eq!(
         r.game.players[0].battle_area[host.index as usize]

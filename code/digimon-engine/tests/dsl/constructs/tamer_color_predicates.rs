@@ -211,3 +211,29 @@ fn distinct_colors_gte_counts_gained_colours() {
     );
     assert!(holds(&r, &adventure_tamers(3)), "Blue Tamer gaining Green → 3 rules colours");
 }
+
+#[test]
+fn distinct_tamer_colors_gte_counts_gained_and_drops_replaced_colours() {
+    let mut r = runner();
+    r.place_on_field(0, "T-R", None);
+    let blue = r.place_on_field(0, "T-B", None);
+    assert!(!holds(&r, &all_tamers(3)));
+    r.game.modifiers.add(
+        blue,
+        ModifierEntry::simple(ModifierType::AddColor, 0, Expiry::Permanent, 0)
+            .with_payload(ModifierPayload::Colors { value: vec![CardColor::Green], base: false }),
+    );
+    assert!(holds(&r, &all_tamers(3)), "Blue Tamer gaining Green → Red + Blue + Green");
+
+    let mut r = runner();
+    r.place_on_field(0, "T-R", None);
+    let rb = r.place_on_field(0, "T-RB", None);
+    r.place_on_field(0, "T-G", None);
+    assert!(holds(&r, &all_tamers(3)), "control: Red + Blue + Green");
+    r.game.modifiers.add(
+        rb,
+        ModifierEntry::simple(ModifierType::ChangeBaseCardColor, 0, Expiry::Permanent, 0)
+            .with_payload(ModifierPayload::Colors { value: vec![CardColor::Red], base: true }),
+    );
+    assert!(!holds(&r, &all_tamers(3)), "the Red/Blue Tamer changed to Red: Blue no longer counts");
+}

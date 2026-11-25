@@ -760,6 +760,7 @@ pub enum ModifierType {
     CannotBeDestroyed,
     CannotBeDestroyedByBattle,
     CannotBeDestroyedByEffect,
+    CannotBeDestroyedOutsideBattle,
     CannotBeRemoved,
 
     // Movement protection (Phase 7 Task 5 — auto-install as replacements)

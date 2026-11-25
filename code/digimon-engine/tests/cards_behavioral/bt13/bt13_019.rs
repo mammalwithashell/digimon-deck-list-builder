@@ -274,3 +274,36 @@ fn bt13_019_decline_leaves_board_unchanged() {
 
 #[path = "../../support/owned_card_choice.rs"]
 mod physical_menu;
+
+/// Play-legality of the union pick: under "can't play Digimon by effects"
+/// (Pomumon (BT9-047)) neither the trash [Sistermon] nor the breeding [Royal
+/// Knight] can be played, so no pick opens (bug scan 2026-11: the pick fed
+/// `play_union_bound_free` with no play-legality leaf; DCGO BT13_019.cs filters
+/// with `CanPlayAsNewPermanent`). The leaf is added by the DSL lowering
+/// (`digimon_dsl::play_candidates`) to the base filter AND to each per-zone
+/// override, since an override replaces the base filter for its zone.
+#[test]
+fn bt13_019_offers_no_pick_while_effects_cannot_play_digimon() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+    let mut runner = union_runner();
+    runner.game.modifiers.add_player_modifier(
+        0,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotPlayDigimonByEffect,
+            0,
+            Expiry::Permanent,
+            None,
+            1,
+        ),
+    );
+    runner.fire_on_play(0, 0);
+    let offered = runner.game.pending_selection.as_ref().map_or(0, |p| {
+        if p.card_choice.is_some() { physical_menu::commits(&runner.game).len() } else { 0 }
+    });
+    assert_eq!(
+        offered, 0,
+        "no candidate the play would accept: {:?}",
+        runner.pending_selection().map(|p| p.valid_action_ids.clone())
+    );
+}

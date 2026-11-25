@@ -295,6 +295,7 @@ pub fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
         ModifierType::CannotBeDestroyed => "CannotBeDestroyed",
         ModifierType::CannotBeDestroyedByBattle => "CannotBeDestroyedByBattle",
         ModifierType::CannotBeDestroyedByEffect => "CannotBeDestroyedByEffect",
+        ModifierType::CannotBeDestroyedOutsideBattle => "CannotBeDestroyedOutsideBattle",
         ModifierType::CannotBeRemoved => "CannotBeRemoved",
         ModifierType::CannotBeReturnedToDeck => "CannotBeReturnedToDeck",
         ModifierType::CannotBeReturnedToHand => "CannotBeReturnedToHand",

@@ -145,14 +145,18 @@ fn ex9_013_has_three_grant_keyword_declarative_clauses() {
         .filter(|c| {
             matches!(
                 c,
-                CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { .. })
+                CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
+                    scope: CompiledScope::FaceUp,
+                    ..
+                })
             )
         })
         .collect();
     assert_eq!(
         kw_clauses.len(),
         3,
-        "Should have BlastDigivolve + Alliance + Blocker grant_keyword clauses"
+        "Should have BlastDigivolve + Alliance + Blocker face-up grant_keyword clauses \
+         (the inherited <Security A. +1> is the fourth grant, scope inherited)"
     );
 }
 
@@ -259,12 +263,13 @@ fn ex9_013_has_end_of_your_turn_optional_triggered_clause() {
 }
 
 #[test]
-fn ex9_013_total_effect_clause_count_is_five() {
+fn ex9_013_total_effect_clause_count_is_six() {
+    // Was 5: the printed inherited <Security A. +1> had no clause.
     let compiled = compiled_ex9_013();
     assert_eq!(
         compiled.effects.len(),
-        5,
-        "3 grant_keyword + 1 on_play/when_digivolving + 1 end_of_your_turn = 5 clauses"
+        6,
+        "3 grant_keyword + 1 on_play/when_digivolving + 1 end_of_your_turn + inherited <Security A. +1> = 6 clauses"
     );
 }
 
@@ -691,4 +696,39 @@ fn ex9_013_eot_after_dna_one_digimon_may_attack() {
         }),
         "the chosen post-DNA attacker should pay the normal suspend cost"
     );
+}
+
+// ─── Inherited <Security A. +1> (card face inherited box) ────────────────────
+
+fn ex9_013_sa_runner() -> DebugRunner {
+    let mut top = make_test_card("SA-TOP", "Carrier");
+    top.card_kind = digimon_engine::enums::CardKind::Digimon;
+    top.level = Some(7);
+    top.dp = Some(13000);
+    DebugRunner::builder()
+        .dsl_card("EX9-013")
+        .expect("EX9-013 YAML")
+        .add_card(top)
+        .start()
+}
+
+/// BlitzGreymon (EX9-013) under another Digimon gives it <Security A. +1>.
+#[test]
+fn ex9_013_inherited_security_attack_plus_one_reaches_the_carrier() {
+    let mut r = ex9_013_sa_runner();
+    let h = r.place_stack(0, &["EX9-013", "SA-TOP"]);
+    r.game.tick_declarative_effects();
+    assert_eq!(r.game.security_attack_keyword_bonus(h), 1);
+}
+
+/// The inherited box is not BlitzGreymon's own text: face up it has no
+/// <Security A. +1>, and a carrier without it in its stack gets nothing.
+#[test]
+fn ex9_013_security_attack_plus_one_is_inherited_only() {
+    let mut r = ex9_013_sa_runner();
+    let own = r.place_on_field(0, "EX9-013", Some(0));
+    let other = r.place_on_field(0, "SA-TOP", Some(0));
+    r.game.tick_declarative_effects();
+    assert_eq!(r.game.security_attack_keyword_bonus(own), 0);
+    assert_eq!(r.game.security_attack_keyword_bonus(other), 0);
 }

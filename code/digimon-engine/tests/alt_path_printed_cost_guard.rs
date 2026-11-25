@@ -60,13 +60,14 @@
 //!     Specs that author NO gate for the group, and gates with extra
 //!     conditions (trait/name), are out of scope. The rule is the pure function
 //!     `split_circles`, with its own tests at the bottom of this file.
-//!   - `stale-phantom-row`: an entry of `BASELINE_PHANTOM_ROWS` names a row the
-//!     baseline no longer carries (the data was corrected): delete the entry.
 //!
-//! The baseline is not the card. Where it lists a row the card face does not
-//! print, the row goes in `BASELINE_PHANTOM_ROWS` and is dropped before every
-//! rule above, so authoring it fails as `no-printed-row` and the remaining
-//! colours of its circle are still checked.
+//! The mirror is not the card. Where the card face disagrees with it, the card
+//! is in `FACE_READ_CIRCLES` (`support/printed_circles.rs`, every circle read
+//! off the image) and that table is the baseline instead, so authoring a row
+//! the mirror lists but the face does not print fails as `no-printed-row`.
+//! (Until 2026-11-22 a `BASELINE_PHANTOM_ROWS` list here dropped single rows
+//! from the mirror; the cards it named now have their whole face in the table,
+//! and their data files were corrected to match.)
 //!
 //! Authoring the printed circle as an alt-path at its printed cost and colour
 //! is the established convention (it also backfills DebugRunner fixtures'
@@ -81,71 +82,16 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+#[path = "support/printed_circles.rs"]
+mod printed_circles;
+use printed_circles::face_read_rows;
+
 use digimon_dsl::compiled::{
     CompiledAltPathDirection, CompiledAltPathKind, CompiledCardKind, CompiledColor, CompiledCost,
     CompiledPredicate,
 };
 
 const COLOUR_NAMES: [&str; 7] = ["red", "blue", "yellow", "green", "white", "black", "purple"];
-
-/// Baseline rows the card face does NOT print: `(card id, colour, level, cost,
-/// what the card prints instead)`.
-///
-/// The official mirror (and `cards.json`, which was reconciled from it) lists
-/// each of these rows; the card image and the DCGO card asset's `EvoCosts`
-/// agree with each other that the card has no such circle. Every entry was read
-/// off the card image on 2026-11-22 (every printing in the local image mirror).
-///
-/// A listed row is removed from the baseline before any rule runs, so:
-/// - a spec that authors it fails `no-printed-row` (it would give every test of
-///   the card an illegal digivolution);
-/// - the other colours of the same circle are still held to the split-circle
-///   rule (an entry never switches a whole circle off).
-///
-/// These are DATA errors that are still live: production reads `cards.json`,
-/// so real games offer the phantom digivolution until the row is removed there
-/// (and from `card_overrides.json`, with the card added to
-/// `PRINTED_OVER_MIRROR` in `code/tests/test_cards_json_integrity.py`). When
-/// that happens for a card whose baseline here is `cards.json`, or the mirror
-/// is corrected, the entry fails as `stale-phantom-row` and must be deleted.
-/// Do not add an entry without reading the card image.
-const BASELINE_PHANTOM_ROWS: &[(&str, &str, u8, i64, &str)] = &[
-    // Imperialdramon: Dragon Mode (BT12-030): the cost 3 on the card is the
-    // name-gated "Digivolve: 3 from [Paildramon] or [Dinobeemon]" line, not a
-    // Lv.4 circle. With these rows production digivolves it from ANY blue or
-    // green Lv.4 for 3.
-    ("BT12-030", "blue", 4, 3, "two circles: blue Lv.5 / 4 and green Lv.5 / 4"),
-    ("BT12-030", "green", 4, 3, "two circles: blue Lv.5 / 4 and green Lv.5 / 4"),
-    // Mastemon (EX6-029): one circle, cost 4. No cost-5 circle on any printing.
-    ("EX6-029", "yellow", 5, 5, "one yellow|purple Lv.5 / 4 circle"),
-    ("EX6-029", "purple", 5, 5, "one yellow|purple Lv.5 / 4 circle"),
-    // Cendrillmon (EX7-030), a mono-yellow card.
-    ("EX7-030", "black", 5, 4, "one yellow Lv.5 / 4 circle"),
-    // Skadimon (EX8-028), a blue/yellow card: the circle has two colours on
-    // all three printings (compare the three-colour Gallantmon (X Antibody)
-    // (EX8-073)).
-    ("EX8-028", "purple", 5, 4, "one blue|yellow Lv.5 / 4 circle"),
-    // Pyramidimon (EX8-055), a mono-black card.
-    ("EX8-055", "red", 5, 4, "one black Lv.5 / 4 circle"),
-];
-
-fn colour_code(name: &str) -> u8 {
-    COLOUR_NAMES
-        .iter()
-        .position(|n| *n == name)
-        .unwrap_or_else(|| panic!("`{name}` is not a card colour")) as u8
-}
-
-/// `rows` without the rows `BASELINE_PHANTOM_ROWS` lists for `card_id`.
-fn without_phantom_rows(card_id: &str, rows: Vec<Row>) -> Vec<Row> {
-    rows.into_iter()
-        .filter(|(colour, level, cost)| {
-            !BASELINE_PHANTOM_ROWS.iter().any(|(id, c, l, k, _)| {
-                *id == card_id && colour_code(c) == *colour && l == level && k == cost
-            })
-        })
-        .collect()
-}
 
 /// Per-card allowlist for bare paths that are FAITHFUL despite not matching a
 /// baseline row. Every entry needs a justification verified against the
@@ -239,24 +185,17 @@ fn official_rows() -> HashMap<String, Vec<Row>> {
     out
 }
 
-/// Printed rows for `card_id`: the official mirror when it carries the card
-/// (authoritative, including "no circles"), else production `cards.json` —
-/// minus the rows `BASELINE_PHANTOM_ROWS` records as not printed.
+/// Printed rows for `card_id`: the card face when it was read off the image
+/// (`FACE_READ_CIRCLES`), else the official mirror when it carries the card
+/// (authoritative, including "no circles"), else production `cards.json`.
 fn baseline_rows(
     official: &HashMap<String, Vec<Row>>,
     production: &HashMap<String, digimon_engine::card_data::CardData>,
     card_id: &str,
 ) -> Option<(Vec<Row>, &'static str)> {
-    let (rows, source) = raw_baseline_rows(official, production, card_id)?;
-    Some((without_phantom_rows(card_id, rows), source))
-}
-
-/// The baseline exactly as the data files hold it.
-fn raw_baseline_rows(
-    official: &HashMap<String, Vec<Row>>,
-    production: &HashMap<String, digimon_engine::card_data::CardData>,
-    card_id: &str,
-) -> Option<(Vec<Row>, &'static str)> {
+    if let Some(rows) = face_read_rows(card_id) {
+        return Some((rows, "card face (FACE_READ_CIRCLES)"));
+    }
     if let Some(rows) = official.get(card_id) {
         return Some((rows.clone(), "official Bandai DB mirror"));
     }
@@ -461,27 +400,6 @@ fn check_printed_costs() {
             };
 
             if matching.is_empty() {
-                // The gate may be one the data files do list but the card
-                // does not print: say so, the generic message would point
-                // the author at a baseline that seems to agree with the gate.
-                let phantom = color.and_then(|c| {
-                    BASELINE_PHANTOM_ROWS.iter().find(|(id, pc, pl, pk, _)| {
-                        *id == card_id.as_str()
-                            && colour_code(pc) == evo_code(c)
-                            && *pl == level
-                            && *pk == i64::from(cost)
-                    })
-                });
-                if let Some((_, _, _, _, prints)) = phantom {
-                    violations.push(format!(
-                        "  {card_id} [{} Lv.{level} -> cost {cost}]: the {source} lists this \
-                         row, but the card face does not print it (BASELINE_PHANTOM_ROWS: the \
-                         card prints {prints}). The alt-path is a digivolve route the card does \
-                         not have. Remove it from the YAML.",
-                        color_name(color),
-                    ));
-                    continue;
-                }
                 violations.push(format!(
                     "  {card_id} [{} Lv.{level} -> cost {cost}]: NO printed digivolve circle \
                      matches this gate in the {source} (rows: {rows:?}) — the alt-path INVENTS \
@@ -541,8 +459,7 @@ fn check_printed_costs() {
                      per the {source}) is authored for only [{authored}]; missing [{missing}]. \
                      Author one `{{ level_eq: {level}, color_is: <colour> }}` alt_path per \
                      printed colour at cost {cost} -- after reading the card image: if the \
-                     card does not print the missing colour, the baseline row is the error \
-                     and belongs in BASELINE_PHANTOM_ROWS.",
+                     card does not print the missing colour, the baseline row is the error:                      add the card's printed circles to FACE_READ_CIRCLES and correct the data.",
                     level = gap.level,
                     cost = gap.cost,
                     printed = colour_names(&gap.printed),
@@ -577,22 +494,6 @@ fn check_printed_costs() {
                     ));
                 }
             }
-        }
-    }
-
-    // A phantom-row entry whose row the baseline no longer lists is dead
-    // weight that would hide a later regression: the data was fixed, so the
-    // entry goes.
-    for (card_id, colour, level, cost, prints) in BASELINE_PHANTOM_ROWS {
-        let row = (colour_code(colour), *level, *cost);
-        let listed = raw_baseline_rows(&official, &production, card_id)
-            .is_some_and(|(rows, _)| rows.contains(&row));
-        if !listed {
-            violations.push(format!(
-                "  {card_id}: BASELINE_PHANTOM_ROWS lists a {colour} Lv.{level} / cost {cost} \
-                 row (the card prints {prints}), but the baseline no longer carries that row \
-                 -- stale entry, delete it.",
-            ));
         }
     }
 
@@ -737,34 +638,42 @@ fn plain_and_rainbow_circles_are_not_split_circles() {
 }
 
 #[test]
-fn a_phantom_row_leaves_the_baseline_of_its_card_and_no_other() {
-    // Cendrillmon (EX7-030): the baseline lists yellow and black Lv.5 / 4, the
-    // card prints yellow only.
-    let listed: Vec<Row> = vec![(2, 5, 4), (5, 5, 4)];
-    let printed = without_phantom_rows("EX7-030", listed.clone());
+fn the_card_face_replaces_the_mirror_baseline_of_its_card_and_no_other() {
+    let official: HashMap<String, Vec<Row>> = [
+        // Cendrillmon (EX7-030): the mirror lists yellow and black Lv.5 / 4,
+        // the card prints yellow only.
+        ("EX7-030".to_string(), vec![(2, 5, 4), (5, 5, 4)]),
+        ("EX7-031".to_string(), vec![(2, 5, 4), (5, 5, 4)]),
+        // Skadimon (EX8-028): the mirror adds purple to the blue|yellow circle.
+        ("EX8-028".to_string(), vec![(1, 5, 4), (2, 5, 4), (6, 5, 4)]),
+    ]
+    .into_iter()
+    .collect();
+    let production = HashMap::new();
+    let (printed, source) = baseline_rows(&official, &production, "EX7-030").unwrap();
     assert_eq!(printed, vec![(2, 5, 4)]);
-    // With the phantom gone the circle is a plain one: nothing asks the spec
-    // for black.
+    assert_eq!(source, "card face (FACE_READ_CIRCLES)");
+    // A plain circle now: nothing asks the spec for black.
     assert_eq!(split_circles(&printed, &[(2, 5, 4)]), SplitCircles::default());
-    // The same rows on another card are left alone.
-    assert_eq!(without_phantom_rows("EX7-031", listed.clone()), listed);
+    // A card the table does not name keeps its mirror rows.
+    let (other, source) = baseline_rows(&official, &production, "EX7-031").unwrap();
+    assert_eq!(other, vec![(2, 5, 4), (5, 5, 4)]);
+    assert_eq!(source, "official Bandai DB mirror");
 
-    // Skadimon (EX8-028): a three-colour baseline circle with one phantom is
-    // still a two-colour split circle, and still has to be whole.
-    let skadimon = without_phantom_rows("EX8-028", vec![(1, 5, 4), (2, 5, 4), (6, 5, 4)]);
+    // Skadimon is still a two-colour split circle that has to be whole.
+    let (skadimon, _) = baseline_rows(&official, &production, "EX8-028").unwrap();
     assert_eq!(skadimon, vec![(1, 5, 4), (2, 5, 4)]);
     assert_eq!(split_circles(&skadimon, &[(1, 5, 4)]).incomplete.len(), 1);
     assert_eq!(split_circles(&skadimon, &[(1, 5, 4), (2, 5, 4)]).complete, vec![(5, 4)]);
 }
 
 #[test]
-fn every_phantom_row_names_a_real_colour_once() {
-    let mut seen = BTreeSet::new();
-    for (card_id, colour, level, cost, prints) in BASELINE_PHANTOM_ROWS {
-        assert!(!prints.is_empty(), "{card_id}: say what the card prints");
-        assert!(
-            seen.insert((*card_id, colour_code(colour), *level, *cost)),
-            "{card_id}: {colour} Lv.{level} / cost {cost} is listed twice"
-        );
+fn every_face_read_card_is_listed_once_with_distinct_rows() {
+    let mut cards = BTreeSet::new();
+    for (card_id, rows) in printed_circles::FACE_READ_CIRCLES {
+        assert!(cards.insert(*card_id), "{card_id} is listed twice");
+        assert!(!rows.is_empty(), "{card_id}: list what the card prints");
+        let distinct: BTreeSet<_> = rows.iter().map(|(c, l, k)| (*c as u8, *l, *k)).collect();
+        assert_eq!(distinct.len(), rows.len(), "{card_id}: a row is listed twice");
     }
 }

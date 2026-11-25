@@ -242,6 +242,10 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
         // Keyword machinery owns the choices described by keyword reminder text.
         if !keyword && !references_other_effect(&text) {
             let text = without_reminders(&text);
+            let detach = matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::Replacement)
+                && text.strip_prefix(['<', '＜']).is_some_and(|keyword| {
+                    keyword.split([' ', '>', '＞']).next() == Some("detach")
+                });
             let activated_payment = has_optional_payment(&text)
                 && !has_may(&text)
                 && matches!(clause, ClauseSpec::Triggered(c) if match &c.when {
@@ -250,6 +254,7 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
                 });
             let text_optional = has_may(&text)
                 || has_optional_payment(&text)
+                || detach
                 || matches!(clause, ClauseSpec::Declarative(c) if c.kind == DeclarativeKind::Delay);
             match (text_optional, has_optional(&value) || activated_payment) {
                 (true, false) => report("may_without_optional"),
@@ -277,13 +282,16 @@ pub fn check_printed_text(spec: &CardSpec, printed: &[PrintedSection]) -> Vec<Pr
             ClauseSpec::Triggered(c) => mapped.iter().any(|t| match &c.when {
                 TimingSet::Single(when) => {
                     when == t
-                        || (zones.is_empty() && *t == Timing::Main && *when == Timing::MainFromHand)
+                        || (zones.is_empty()
+                            && *t == Timing::Main
+                            && matches!(when, Timing::MainFromHand | Timing::MainOnField))
                 }
                 TimingSet::Multi(when) => {
                     when.contains(t)
                         || (zones.is_empty()
                             && *t == Timing::Main
-                            && when.contains(&Timing::MainFromHand))
+                            && (when.contains(&Timing::MainFromHand)
+                                || when.contains(&Timing::MainOnField)))
                 }
             }),
             ClauseSpec::Declarative(c) => {

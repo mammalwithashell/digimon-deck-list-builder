@@ -14,7 +14,7 @@ mod modifier_context_dispatch_tests;
 use crate::action::space::{BREEDING_TARGET, REPLACEMENT_ACCEPT};
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::{EffectTiming, GamePhase, PlayerId, Zone};
+use crate::enums::{EffectTiming, GamePhase, ModifierType, PlayerId, Zone};
 use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind};
 
@@ -1053,7 +1053,6 @@ fn collect_candidates_inner(
 pub(crate) fn passive_modifier_to_would(
     modifier: crate::enums::ModifierType,
 ) -> Option<EffectTiming> {
-    use crate::enums::ModifierType;
     match modifier {
         ModifierType::CannotBeReturnedToDeck => Some(EffectTiming::WhenWouldBeReturnedToDeck),
         ModifierType::CannotBeReturnedToHand => Some(EffectTiming::WhenWouldBeReturnedToHand),
@@ -1067,6 +1066,7 @@ pub(crate) fn passive_modifier_to_would(
         ModifierType::CannotBeDestroyed => Some(EffectTiming::WhenWouldBeDeleted),
         ModifierType::CannotBeDestroyedByBattle => Some(EffectTiming::WhenWouldBeDeleted),
         ModifierType::CannotBeDestroyedByEffect => Some(EffectTiming::WhenWouldBeDeleted),
+        ModifierType::CannotBeDestroyedOutsideBattle => Some(EffectTiming::WhenWouldBeDeleted),
         // Phase 9 combat restrictions — map Phase 6 attack-restriction
         // modifiers onto Phase 7/9 replacement timings so the attack
         // declaration fire site can dispatch them without a parallel scan.
@@ -1122,7 +1122,10 @@ fn passive_modifier_candidates(
             let Some(entry_timing) = passive_modifier_to_would(entry.modifier) else {
                 continue;
             };
-            if entry_timing != timing {
+            if entry_timing != timing
+                || (entry.modifier == ModifierType::CannotBeDestroyedOutsideBattle
+                    && cause == ReplacementCause::Battle)
+            {
                 continue;
             }
             if let Some(cf) = entry.cause_filter {
@@ -1161,7 +1164,10 @@ fn passive_modifier_candidates(
         let Some(entry_timing) = passive_modifier_to_would(entry.modifier) else {
             continue;
         };
-        if entry_timing != timing {
+        if entry_timing != timing
+            || (entry.modifier == ModifierType::CannotBeDestroyedOutsideBattle
+                && cause == ReplacementCause::Battle)
+        {
             continue;
         }
         if let Some(cf) = entry.cause_filter {

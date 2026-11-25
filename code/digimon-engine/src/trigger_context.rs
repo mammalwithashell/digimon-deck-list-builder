@@ -210,6 +210,10 @@ pub struct TriggerContext {
     pub selected_results: Vec<ResultBinding>,
     pub moved_card_sets: MovedCardSets,
     pub effect_initiated: bool,
+    /// The self `[When Digivolving]` firing of a digivolution an effect
+    /// performed (`Game::pending_digivolve_effect_initiated` at enqueue).
+    /// Read by `event_is_effect_initiated` only.
+    pub self_digivolve_effect_initiated: bool,
     pub dna_origin: bool,
     pub deleted_object: Option<DeletedObjectSnapshot>,
     pub old_attack_target: Option<crate::selection::AttackTarget>,
@@ -623,6 +627,7 @@ impl std::fmt::Debug for TriggerContext {
         if let Some(value)=&self.replacement_deletion_cause { d.field("replacement_deletion_cause", value); }
         if !self.simultaneous_play_members.is_empty() { d.field("simultaneous_play_members", &self.simultaneous_play_members); }
         if self.in_source_move_event { d.field("in_source_move_event", &self.in_source_move_event); }
+        if self.self_digivolve_effect_initiated { d.field("self_digivolve_effect_initiated", &true); }
         if self.projected_reference_reads_guarded { d.field("projected_reference_reads_guarded", &true); }
         if let Some(value) = self.deck_trash_generation { d.field("deck_trash_generation", &value); }
         d.finish()

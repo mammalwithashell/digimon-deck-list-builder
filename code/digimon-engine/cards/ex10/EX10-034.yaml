@@ -79,8 +79,12 @@ alt_paths:
 #   sources exist on this Digimon, `select_own_sources` silently skips per the
 #   no-approximations silent-skip contract — no over-fire.
 #
-# Effect: SecurityAttackChange +1 + +3000 DP, both `expiry: end_of_turn`.
-#   "until your turn ends" = end_of_turn (the turn on which the effect resolves).
+# Effect: SecurityAttackChange +1 + +3000 DP, both `expiry: end_of_your_turn`.
+#   "until your turn ends": "your" is this card's player (CR 4.3 15-10-1-1-1),
+#   so a use on the opponent's turn lasts through the controller's next turn;
+#   DCGO EX10_034.cs uses EffectDuration.UntilOwnerTurnEnd for both. (Was
+#   `end_of_turn`, which dropped both at the end of the opponent's turn --
+#   scan finding F18.)
 #
 # ─── Implementation status ────────────────────────────────────────────────────────
 #
@@ -91,8 +95,8 @@ alt_paths:
 # | <Blocker> keyword                                         | IMPLEMENTED |
 # | [OP][WD] grant forced-attack to 1 opp Digimon            | IMPLEMENTED |
 # | [All Turns][OPT] when Digimon attack, trash 2 sources     | IMPLEMENTED |
-# | [All Turns][OPT] this Digimon gains SecurityA+1 until EoT | IMPLEMENTED |
-# | [All Turns][OPT] this Digimon gains +3000 DP until EoT   | IMPLEMENTED |
+# | [All Turns][OPT] this Digimon gains SecurityA+1 until your turn ends | IMPLEMENTED |
+# | [All Turns][OPT] this Digimon gains +3000 DP until your turn ends | IMPLEMENTED |
 
 effects:
   # ─── Printed keywords ──────────────────────────────────────────────────────
@@ -134,7 +138,7 @@ effects:
     once_per_turn: true
     optional: true
     active_when: { all_turns: true }
-    summary: "[All Turns][OPT] When Digimon attack, trash 2 of this Digimon's sources → SecurityA+1 and +3000 DP until EoT"
+    summary: "[All Turns][OPT] When Digimon attack, trash 2 of this Digimon's sources → SecurityA+1 and +3000 DP until your turn ends"
     process:
       # Cost: select and trash any 2 of THIS Digimon's digivolution cards.
       # `from: source` restricts the pool to the permanent carrying EX10-034 as
@@ -153,9 +157,9 @@ effects:
                 target: source
                 modifier: SecurityAttackChange
                 value: 1
-                expiry: end_of_turn
+                expiry: end_of_your_turn
             # +3000 DP until your turn ends.
             - add_dp_modifier:
                 target: source
                 value: 3000
-                expiry: end_of_turn
+                expiry: end_of_your_turn

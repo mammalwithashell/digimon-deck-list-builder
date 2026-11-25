@@ -707,9 +707,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 /// `option_use_requirement_or_color_available` before this helper runs.
 pub(crate) fn option_color_match_available(
     card: &crate::card_source::CardSource,
-    me: &crate::player::Player,
-    card_data: &[crate::card_data::CardData],
+    game: &Game,
+    player_id: PlayerId,
 ) -> bool {
+    let card_data = &game.card_data[..];
+    let me = game.player(player_id);
     let option_colors = card.option_colors(card_data);
 
     // A colorless Option has nothing to satisfy.
@@ -721,19 +723,28 @@ pub(crate) fn option_color_match_available(
     // 4-22-4 lets a single multicolor permanent cover several of the Option's
     // colors and lets different colors come from different permanents.
     let mut covered: Vec<crate::enums::CardColor> = Vec::new();
-    for perm in &me.battle_area {
+    for (index, perm) in me.battle_area.iter().enumerate() {
         if !perm.is_digimon(card_data) && !perm.is_tamer(card_data) {
             continue;
         }
-        let perm_colors = if perm.is_digimon(card_data) {
-            perm.top_card().digimon_colors(card_data)
-        } else {
-            perm.top_card().colors(card_data)
+        // A permanent's colors AS CURRENTLY MODIFIED (4-22-2 "the same color"):
+        // printed top card, then `ChangeBaseCardColor`, then `AddColor` -- the
+        // same synthesized identity the digivolve check reads. DCGO tests
+        // `permanent.TopCard.CardColors` (CardSource.cs:308-310), whose getter
+        // folds every `IChangeCardColorEffect` (CardSource.cs:446-476). Reading
+        // the printed colors ignored a gained color (Omnimon: Merciful Mode
+        // (EX13-077) "gains all colors in its digivolution cards") and kept a
+        // color a color-change effect had replaced. Scan finding F04.
+        let handle = PermanentHandle {
+            player: player_id,
+            index: index as u8,
         };
-        covered.extend(perm_colors);
+        covered.extend(perm.colors_for_rules(card_data, &game.modifiers, handle));
     }
     // Breeding area: only Digimon can be there (Tamers cannot). See the
     // breeding note above -- 3-4-6 puts the breeding area inside the field.
+    // Printed colors: a breeding-area Digimon can't be affected by effects
+    // (3-4-7-3), so no color-change effect applies to it.
     if let Some(ref breeding) = me.breeding_area {
         // A hatched Digi-Egg is a Digimon on the field (rules 4-3-1/2),
         // and therefore supplies its color for an Option under 4-22-2.
@@ -761,7 +772,7 @@ pub(crate) fn option_use_requirement_or_color_available(
         return true;
     }
 
-    if option_color_match_available(card, game.player(player_id), &game.card_data) {
+    if option_color_match_available(card, game, player_id) {
         return true;
     }
 

@@ -9,7 +9,10 @@
 #   battle area other than by your effects, by deleting 1 of your other
 #   Digimon with [Knightmon] in its text, it doesn't leave.
 #
-# DCGO C# reference: none at b9a0638cd (no EX13_052.cs). Printed text governs.
+# DCGO C# reference: none at b9a0638cd; present in the current submodule as
+# DCGO/Assets/Scripts/CardEffect/EX13/Black/EX13_052.cs. Its inherited clause
+# is followed exactly by owner ruling 2026-11-23 (W14 row (f)): declining the
+# deletion pick after accepting gives the [Once Per Turn] back (`RemoveUse()`).
 #
 # DSL: printed `grant_keyword: Guard` (engine keyword, EX13-065 precedent);
 # [On Play]/[On Deletion] `de_digivolve` (EX13-053 idiom); inherited
@@ -60,10 +63,31 @@ effects:
       none_of:
         - replacement_cause: own_effect
     summary: "Inherited [All Turns][OPT] When this Digimon would leave other than by your effects, by deleting 1 of your other [Knightmon]-text Digimon, it doesn't leave"
+    # DCGO flow (EX13_052.cs), followed by owner ruling 2026-11-23 ("parity
+    # with DCGO", qa/rules/mechanics-gaps-2026-10.md W14 row (f)): offered only
+    # while another of your [Knightmon]-text Digimon exists
+    # (`CanActivateCondition`); after the accept, a pick with canNoSelect true.
+    # None chosen -> `RemoveUse()`: the use is kept and the carrier leaves. One
+    # chosen -> spent; it doesn't leave only if that Digimon was deleted.
+    # Unpayable payers (owner ruling 2026-11-24, DCGO parity; quoted: "You
+    # can pick a target that is immune from the removal, and it will fizzle.
+    # Nothing is deleted, right? That is a valid choice."): DCGO's
+    # `CanActivateCondition` is `HasMatchConditionPermanent` over the printed
+    # predicate only, and the pick has no can-be-deleted filter, so a Digimon
+    # that can't be deleted is offered and listed; `offer_unpayable_deletion_payers`
+    # turns off the CR 4.3 15-7-4 payer filter for this clause only. Choosing
+    # one: nothing is deleted, the removal is not cancelled (the paid-deletion
+    # receipt stays empty), the carrier leaves, and the use stays SPENT (the
+    # binding is present, so no refund). Loop check: the spent use cannot be
+    # re-offered this turn; a pass gives the use back but the carrier then
+    # leaves, which ends that would-leave event, so a re-offer needs a new
+    # removal of a new carrier state.
     process:
       - select_own_permanent:
-          optional: false
           bind_as: prevent_cost
+          optional: true
+          continue_on_decline: true
+          offer_unpayable_deletion_payers: true
           filter:
             all_of:
               - other: true
@@ -72,3 +96,8 @@ effects:
           prompt: "Delete 1 of your other Digimon with [Knightmon] in its text"
       - delete_permanent: { target: prevent_cost }
       - cancel_replacement: {}
+      - if:
+          condition: { binding_absent: prevent_cost }
+          then:
+            # DCGO `if (selectedPermanent == null) activateClass.RemoveUse()`.
+            - refund_opt: {}

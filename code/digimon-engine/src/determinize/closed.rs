@@ -1255,6 +1255,12 @@ pub fn materialize_closed_with_diagnostics(
     world.belief_knowledge_error = None;
     world.effects_cache = Default::default();
     *world.movement_observer.borrow_mut() = None;
+    // Main-declaration guard: same legal actions in every world of the
+    // infoset (`game::main_declare_guard`). Rebased BEFORE the mask check: a
+    // park is stamped with the root's digest, which the world (different
+    // hidden zones) never matches, so an un-rebased world would offer a
+    // [Main] the root withholds.
+    world.rebase_main_declare_guard_for_world(root);
     if crate::build_action_mask(root, viewer) != crate::build_action_mask(&world, viewer) {
         return Err(
             "hypothesis changes viewer root action mask; unsupported hidden dependency".into(),

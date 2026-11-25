@@ -120,7 +120,9 @@ fn bt26_021_main_plays_ts_tamer_from_trash_reduced_once_per_turn() {
     let _ = r.auto_resolve();
     assert!(field_ids(&r, 0).contains(&"TS-T".to_string()));
     assert_eq!(r.memory(), mem - 3, "cost 5 reduced by 2");
-    // Once per turn: the [Main] is no longer offered.
+    // Once per turn: a chosen Tamer spends the use (DCGO BT26_021.cs:138
+    // sets isUsed before the play), so the [Main] is no longer offered.
+    assert_eq!(uses_spent(&r, 0), 1);
     assert!(!main_legal(&r), "[Main] already used this turn");
     assert_eq!(
         trash_ids(&r, 0).iter().filter(|c| *c == "TS-T").count(),
@@ -252,19 +254,75 @@ fn bt26_021_inherited_needs_a_hand_card() {
     assert!(r.pending_selection_view().is_none());
 }
 
+/// Once-per-turn uses the Gekomon at `field_index` has recorded this turn
+/// (a refunded use leaves no entry).
+fn uses_spent(r: &DebugRunner, field_index: usize) -> u32 {
+    r.game.players[0].battle_area[field_index]
+        .effect_activations
+        .values()
+        .map(|&n| n as u32)
+        .sum()
+}
+
+/// Declared, then the [TS] Tamer pick passed: the use is given back. Owner
+/// ruling 2026-11-24 "Match dcgo on the main use": DCGO BT26_021.cs:184
+/// `if (!isUsed) activateClass.RemoveUse();` (isUsed is set only when a card
+/// is chosen, :136-138). The owner chose DCGO parity over the CR 4.3
+/// 15-14-1-4 / 15-8-4-1/-2 reading. Nothing else changed, so the
+/// main-declaration loop guard withholds the identical declaration.
 #[test]
-fn bt26_021_main_decline_spends_once_per_turn() {
+fn bt26_021_main_pass_refunds_once_per_turn() {
     let mut r = setup();
     r.place_on_field(0, CARD_ID, Some(0));
     r.place_on_field(0, CARD_ID, Some(0));
     push_trash(&mut r, 0, "TS-T");
     r.game.enter_main_phase();
     let _ = r.auto_resolve();
+    let memory = r.memory();
+    let hand = hand_ids(&r, 0);
+    let trash = trash_ids(&r, 0);
     r.game.decode_action(main_bit(0), 0);
+    assert_eq!(uses_spent(&r, 0), 1, "the declaration records the use");
     pass(&mut r, 0);
     let _ = r.auto_resolve();
+    assert!(r.game.pending_selection.is_none());
     assert_eq!(field_ids(&r, 0).len(), 2, "nothing played");
-    assert!(!main_legal(&r), "CR 15-14-1-4: activation spends the use");
-    assert!(build_action_mask(&r.game, 0)[main_bit(1) as usize] > 0.0,
-        "another copy retains its independent use");
+    assert_eq!(trash_ids(&r, 0), trash, "the [TS] Tamer stays in trash");
+    assert_eq!(hand_ids(&r, 0), hand);
+    assert_eq!(r.memory(), memory);
+    assert_eq!(uses_spent(&r, 0), 0, "DCGO RemoveUse: the passed pick keeps the use");
+    assert!(
+        !main_legal(&r),
+        "loop guard: the identical declaration is withheld while nothing changed"
+    );
+    assert!(
+        build_action_mask(&r.game, 0)[main_bit(1) as usize] > 0.0,
+        "another copy retains its independent use"
+    );
+}
+
+/// The kept use is real: after a state change the [Main] is offered again,
+/// the Tamer is played at cost -2, and that spends the use for the turn.
+#[test]
+fn bt26_021_main_pass_then_state_change_redeclares_and_spends() {
+    let mut r = setup();
+    r.place_on_field(0, CARD_ID, Some(0));
+    push_trash(&mut r, 0, "TS-T");
+    r.game.enter_main_phase();
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    r.game.decode_action(main_bit(0), 0);
+    pass(&mut r, 0);
+    assert!(!main_legal(&r));
+    push_hand(&mut r, 0, "FILLER");
+    assert!(main_legal(&r), "the state changed: the kept use is offered again");
+    let memory = r.memory();
+    r.game.decode_action(main_bit(0), 0);
+    let tamer_pick = r.pending_selection_view().expect("the [TS] Tamer pick");
+    r.execute_action(0, tamer_pick.valid_action_ids[0]).unwrap();
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(field_ids(&r, 0).contains(&"TS-T".to_string()));
+    assert_eq!(r.memory(), memory - 3, "cost 5 reduced by 2");
+    assert_eq!(uses_spent(&r, 0), 1);
+    push_trash(&mut r, 0, "TS-T");
+    assert!(!main_legal(&r), "spent for the turn, whatever else changes");
 }

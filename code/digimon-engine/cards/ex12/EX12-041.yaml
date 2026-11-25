@@ -20,9 +20,21 @@
 #   - Main (OnDeclaration, OPT, hash EX12_041_Main): hand pick canNoSelect:true
 #     of a [Mutant]/[ME] card that is an Option (not CanNotPlayThisOption) or a
 #     Digimon/Tamer with a play cost that can be played for cost-2; the chosen
-#     card is then played/used paying the reduced cost. Nothing picked ->
-#     RemoveUse() (the once-per-turn is not consumed) -> `refund_opt`.
-#     Mirrors EX12-013 (BetelGammamon).
+#     card is then played/used paying the reduced cost. With no playable card
+#     DCGO does not offer the [Main] (CanUseCondition) and neither does the
+#     `condition:`.
+#   - [Once Per Turn] on a passed pick: KEPT, by the owner ruling of
+#     2026-11-24 "Match dcgo on the main use". DCGO EX12_041.cs:180
+#     `if (!isUsed) activateClass.RemoveUse();` gives the use back when no
+#     card is picked; isUsed is set (:96) as soon as a card is picked, before
+#     the play, so a picked card spends the use whatever the play then does.
+#     `else: refund_opt` on the absent pick is exactly that path. The owner
+#     chose DCGO parity over the CR 4.3 15-14-1-4 / 15-8-4-1/-2 reading (a
+#     declared [Main] spends); this reverses the 2026-10-25 record and commit
+#     4606e6b4d. The main-declaration loop guard (docs/RUST_ENGINE_API.md
+#     "Main-declaration guard") withholds the identical declaration until the
+#     state changes, so the kept use is not a free repeatable no-op.
+#     Mirrors EX12-013 (BetelGammamon) and EX12-043 (Hakubamon).
 #   - Inherited: OnAllyAttack, OPT (hash EX12_041_Inherited), mandatory target.
 
 card: EX12-041
@@ -91,8 +103,8 @@ effects:
                 of: you
                 hand_index: pick
                 cost_delta: { reduce: 2 }
+          # DCGO EX12_041.cs:180 RemoveUse (owner ruling 2026-11-24).
           else:
-            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
             - refund_opt: {}
 
   - scope: inherited

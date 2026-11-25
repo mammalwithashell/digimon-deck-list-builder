@@ -950,7 +950,7 @@ fn validate_predicate(
             errors.push(ValidationError {
                 card_id: card_id.to_string(),
                 path: format!("{prefix}.has_digivolve_candidate.zone"),
-                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal`"
+                message: "has_digivolve_candidate.zone must list at least one of `hand` / `trash` / `reveal` / `material`"
                     .to_string(),
             });
         }
@@ -960,12 +960,13 @@ fn validate_predicate(
                 crate::predicate::Zone::Hand
                     | crate::predicate::Zone::Trash
                     | crate::predicate::Zone::Reveal
+                    | crate::predicate::Zone::Material
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.has_digivolve_candidate.zone"),
                     message: format!(
-                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` (got {z:?})"
+                        "has_digivolve_candidate.zone only supports `hand` / `trash` / `reveal` / `material` (got {z:?})"
                     ),
                 });
             }
@@ -1032,6 +1033,15 @@ pub(crate) fn validate_scoped_step_modes(
                 });
             }
         }
+        StepSpec::TrashBottomFaceDownSourceUnderTamer(args) => {
+            if args.continue_on_decline && !args.optional {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.continue_on_decline"),
+                    message: "continue_on_decline requires optional: true (a mandatory Tamer pick has no decline)".into(),
+                });
+            }
+        }
         _ => {}
     }
 }
@@ -1093,13 +1103,17 @@ fn validate_step(
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
             if !matches!(
                 args.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play"
+                    | "when_digivolving"
+                    | "on_play_or_when_digivolving"
+                    | "on_deletion"
+                    | "option_main"
             ) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
                     path: format!("{prefix}.timing"),
                     message: format!(
-                        "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        "unsupported refire_effect timing: {}",
                         args.timing
                     ),
                 });
@@ -2037,6 +2051,9 @@ fn validate_step_binding_scope(
             );
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::TrashBottomFaceDownSourceUnderTamer(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::SelectOwnSources(args) | StepSpec::SelectUnderTamerSources(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
@@ -2308,6 +2325,9 @@ fn validate_step_binding_scope(
         }
         StepSpec::RevealTopDeck(args) => {
             declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::TrashBottomSources(args) => {
+            declare_optional_binding(scope, &args.bind_trashed_as);
         }
         // `bind_placed_as` names the placed card ONLY on a successful
         // placement — it is a legitimate optional binding for a downstream
@@ -3295,6 +3315,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotBeDestroyed",
     "CannotBeDestroyedByBattle",
     "CannotBeDestroyedByEffect",
+    "CannotBeDestroyedOutsideBattle",
     "CannotBeRemoved",
     "CannotBeReturnedToDeck",
     "CannotBeReturnedToHand",
