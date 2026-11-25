@@ -507,11 +507,14 @@ fn outer_arts_at_declaration_then_inner_placed_option() {
 ///
 /// The old top card's own [When Attacking] (T-MEMHOST's "Gain 1 memory") was
 /// pending from the declaration and the Arts Digivolve took that text away
-/// before it activated. Neither DCGO nor the official Q&A settles this case
-/// (DCGO was not traced past `PlayCard`), so the test follows CR 4.3
-/// 15-4-4-4: "When a card with an effect that's pending activation loses the
-/// effect before it activates, the effect can no longer be activated." No
-/// memory is gained.
+/// before it activated. CR 4.3 15-4-4-4: "When a card with an effect that's
+/// pending activation loses the effect before it activates, the effect can no
+/// longer be activated." DCGO agrees (traced in source, not observed at
+/// runtime): the queued SkillInfo records the permanent and its top card when
+/// it triggered (Script/AutoProcessing.cs:107-114), and
+/// `ICardEffect.CanActivate` is false for a non-inherited, non-linked effect
+/// whose source card is no longer its permanent's top card
+/// (Script/ICardEffect.cs:487-492). No memory is gained.
 #[test]
 fn arts_onto_the_attacker_at_declaration_keeps_the_attack_going() {
     let mut r = base_builder()
