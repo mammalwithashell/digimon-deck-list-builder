@@ -411,7 +411,7 @@ fn ex13_052_inherited_picking_an_undeletable_payer_lets_the_carrier_leave() {
     delete_with(&mut r, carrier, ReplacementCause::OpponentEffect);
     ex13_052_accept(&mut r);
     pick_field(&mut r, k);
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     let field = field_ids(&r, 0);
     assert!(!field.contains(&"TOP".to_string()), "not paid: the carrier leaves");
     assert!(field.contains(&"KNIGHT-TEXT".to_string()), "the payer was not deleted");
@@ -449,7 +449,7 @@ fn ex13_052_inherited_deletable_payer_still_protects_beside_an_undeletable_one()
     assert!(field_offered(&r, other));
     assert_eq!(legal(&r).len(), 2);
     pick_field(&mut r, other);
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     let field = field_ids(&r, 0);
     assert!(field.contains(&"TOP".to_string()), "paid: the carrier doesn't leave");
     assert!(!field.contains(&"KNIGHT".to_string()), "the payer was deleted");

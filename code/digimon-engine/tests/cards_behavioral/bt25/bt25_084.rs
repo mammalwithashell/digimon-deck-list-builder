@@ -179,7 +179,7 @@ fn bt25_084_op_wd_declining_cost_does_nothing() {
     runner
         .execute_action(0, digimon_engine::action::space::PASS)
         .expect("choose no card");
-    runner.auto_resolve().expect("resolve");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert_eq!(
         runner.battle_area_size(1),
         opp_before,
@@ -724,7 +724,7 @@ fn bt25_084_op_wd_paying_spends_opt() {
         .find(|&&a| a != digimon_engine::action::space::PASS)
         .unwrap();
     runner.execute_action(0, card).unwrap();
-    runner.auto_resolve().unwrap();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert_eq!(runner.battle_area_size(1), 0, "OPP-BIG deleted");
     runner
         .game
@@ -798,7 +798,7 @@ fn bt25_084_tied_highest_dp_deleted_as_one_batch() {
         .find(|&&a| a != digimon_engine::action::space::PASS)
         .unwrap();
     runner.execute_action(0, card).unwrap();
-    runner.auto_resolve().unwrap();
+    assert!(runner.pending_selection().is_none(), "no decision is left");
     assert_eq!(runner.battle_area_size(1), 0, "both tied Digimon deleted");
     assert_eq!(
         runner.game.memory - memory_before,

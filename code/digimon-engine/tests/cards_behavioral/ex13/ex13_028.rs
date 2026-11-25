@@ -548,7 +548,7 @@ fn any_field_id(h: PermanentHandle) -> u16 {
 
 #[test]
 fn ex13_028_inherited_offered_when_the_only_match_is_undeletable() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     let opp = opp_sukamon_protected(&mut r);
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -568,7 +568,7 @@ fn ex13_028_inherited_offered_when_the_only_match_is_undeletable() {
 
 #[test]
 fn ex13_028_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     let opp = opp_sukamon_protected(&mut r);
     grant_evade(&mut r, carrier);
     r.game
@@ -578,7 +578,7 @@ fn ex13_028_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothin
         .expect("accept");
     r.execute_action(0, any_field_id(opp)).expect("pick the undeletable Sukamon");
     assert_eq!(r.game.players[1].battle_area.len(), 1, "nothing was deleted");
-    accept_evade(&mut r);
+    ex13_028_accept_evade(&mut r);
     let carrier = handle_of(&r, "CARRIER");
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -591,21 +591,21 @@ fn ex13_028_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothin
 
 #[test]
 fn ex13_028_inherited_picking_an_undeletable_payer_lets_the_carrier_leave() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     let opp = opp_sukamon_protected(&mut r);
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
     r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
         .expect("accept");
     r.execute_action(0, any_field_id(opp)).expect("pick the undeletable Sukamon");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!field_ids(&r, 0).contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
     assert_eq!(r.game.players[1].battle_area.len(), 1, "the Sukamon was not deleted");
 }
 
 #[test]
 fn ex13_028_inherited_undeletable_only_pass_keeps_opt() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     let opp = opp_sukamon_protected(&mut r);
     grant_evade(&mut r, carrier);
     r.game
@@ -617,7 +617,7 @@ fn ex13_028_inherited_undeletable_only_pass_keeps_opt() {
     r.execute_action(0, PASS).expect("select nothing");
     assert_eq!(r.game.players[1].battle_area.len(), 1);
     let _ = opp;
-    accept_evade(&mut r);
+    ex13_028_accept_evade(&mut r);
     let carrier = handle_of(&r, "CARRIER");
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -630,7 +630,7 @@ fn ex13_028_inherited_undeletable_only_pass_keeps_opt() {
 
 #[test]
 fn ex13_028_inherited_deletable_payer_still_protects_beside_an_undeletable_one() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_028_inherited_setup();
     let opp = opp_sukamon_protected(&mut r);
     let own = r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.game
@@ -641,7 +641,7 @@ fn ex13_028_inherited_deletable_payer_still_protects_beside_an_undeletable_one()
     assert!(cost.valid_action_ids.contains(&any_field_id(opp)), "{cost:?}");
     assert!(cost.valid_action_ids.contains(&any_field_id(own)), "{cost:?}");
     r.execute_action(0, any_field_id(own)).expect("pay with the deletable Sukamon");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     let field = field_ids(&r, 0);
     assert!(field.contains(&"CARRIER".to_string()), "paid: the carrier doesn't leave");
     assert!(!field.contains(&"OTHER-SUKA".to_string()), "the payer was deleted");

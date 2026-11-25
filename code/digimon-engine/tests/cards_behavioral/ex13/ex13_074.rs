@@ -397,14 +397,14 @@ fn ex13_074_main_decline_then_state_change_redeclares_and_spends() {
     let rie = rie_with_knights(&mut r, 3);
     assert!(r.game.activate_field_main(0, rie.index as usize));
     r.execute_action(0, PASS).expect("decline");
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!main_offered(&r, rie));
     r.game.set_memory(4);
     assert!(main_offered(&r, rie), "the state changed: the kept use is offered again");
     assert!(r.game.activate_field_main(0, rie.index as usize));
     let a = first_non_pass(&r);
     r.execute_action(0, a).expect("pick LordKnightmon");
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(stack(&r, rie).last().map(|(id, _)| id.as_str()), Some("LKM"));
     assert_eq!(r.memory(), 1, "fixed digivolution cost 3");
     assert_eq!(rie_uses(&r, rie), 1, "digivolving spends the use");
@@ -498,7 +498,7 @@ fn ex13_074_main_is_once_per_turn() {
     assert!(r.game.activate_field_main(0, rie.index as usize));
     let a = first_non_pass(&r);
     r.execute_action(0, a).expect("pick LordKnightmon");
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(rie_uses(&r, rie), 1);
     r.inject_trash(0, "LKM");
     assert!(!main_offered(&r, rie), "[Once Per Turn]");

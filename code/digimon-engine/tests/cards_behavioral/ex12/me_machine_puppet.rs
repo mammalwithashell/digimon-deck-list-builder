@@ -565,14 +565,14 @@ fn ex12_041_main_pass_then_state_change_redeclares_and_spends() {
     let bit = thundermon_main_action(t.index);
     assert!(r.game.activate_field_main(0, t.index as usize));
     r.execute_action(0, PASS).expect("pass the pick");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(build_action_mask(&r.game, 0)[bit], 0.0);
     r.game.memory -= 1;
     assert_eq!(build_action_mask(&r.game, 0)[bit], 1.0, "the state changed: offered again");
     let memory_before = r.memory();
     r.game.decode_action(bit as u16, 0);
     select_hand_card(&mut r, 0, "MUTANT-3");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!hand_contains(&r, 0, "MUTANT-3"), "the picked card was played");
     assert_eq!(memory_before - r.memory(), 1, "play cost 3 reduced by 2");
     assert_eq!(thundermon_uses(&r, t.index), 1);

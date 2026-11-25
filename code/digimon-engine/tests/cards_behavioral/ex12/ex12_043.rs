@@ -269,7 +269,7 @@ fn ex12_043_main_declared_then_pick_passed_keeps_the_once_per_turn() {
     assert_eq!(ex12_043_uses(&r, m.index), 1, "the declaration records the use");
     assert!(r.pending_selection_view().expect("the hand pick").is_optional);
     r.execute_action(0, PASS).expect("pass the pick");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(r.game.pending_selection.is_none(), "the effect ended");
     assert_eq!(ex12_043_hand(&r), vec!["SW-PLAY"], "nothing was played");
     assert_eq!(r.memory(), memory, "no cost was paid");
@@ -287,14 +287,14 @@ fn ex12_043_main_pass_then_state_change_redeclares_and_spends() {
     let m = r.place_on_field(0, CARD_ID, Some(0));
     r.game.decode_action(ex12_043_main_bit(m.index) as u16, 0);
     r.execute_action(0, PASS).expect("pass the pick");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(!ex12_043_main_offered(&r, m.index));
     r.game.memory -= 1;
     assert!(ex12_043_main_offered(&r, m.index), "the state changed: the kept use is offered again");
     let memory = r.memory();
     r.game.decode_action(ex12_043_main_bit(m.index) as u16, 0);
     select_hand_card(&mut r, 0, "SW-PLAY");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(ex12_043_hand(&r).is_empty(), "the picked card was played");
     assert_eq!(memory - r.memory(), 1, "play cost 3 reduced by 2");
     assert_eq!(ex12_043_uses(&r, m.index), 1, "a picked card spends the use");

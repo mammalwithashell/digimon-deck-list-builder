@@ -309,7 +309,7 @@ fn bt26_021_main_pass_then_state_change_redeclares_and_spends() {
     r.place_on_field(0, CARD_ID, Some(0));
     push_trash(&mut r, 0, "TS-T");
     r.game.enter_main_phase();
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     r.game.decode_action(main_bit(0), 0);
     pass(&mut r, 0);
     assert!(!main_legal(&r));
@@ -317,8 +317,9 @@ fn bt26_021_main_pass_then_state_change_redeclares_and_spends() {
     assert!(main_legal(&r), "the state changed: the kept use is offered again");
     let memory = r.memory();
     r.game.decode_action(main_bit(0), 0);
-    pick_first(&mut r, 0);
-    let _ = r.auto_resolve();
+    let tamer_pick = r.pending_selection_view().expect("the [TS] Tamer pick");
+    r.execute_action(0, tamer_pick.valid_action_ids[0]).unwrap();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(field_ids(&r, 0).contains(&"TS-T".to_string()));
     assert_eq!(r.memory(), memory - 3, "cost 5 reduced by 2");
     assert_eq!(uses_spent(&r, 0), 1);

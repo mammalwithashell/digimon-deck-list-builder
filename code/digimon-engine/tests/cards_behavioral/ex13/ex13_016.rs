@@ -104,14 +104,14 @@ fn cannot_suspend(r: &DebugRunner, h: PermanentHandle) -> bool {
 
 /// [On Play] queues the lock AND the delete offer together: resolve the
 /// simultaneous-trigger order prompt (first entry = the lock clause).
-fn order_first(r: &mut DebugRunner) {
+fn ex13_016_order_first(r: &mut DebugRunner) {
     while r.pending_kind() == Some(SelectionKind::TriggerOrder) {
         let v = r.pending_selection_view().unwrap();
         r.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
     }
 }
 
-fn pick(r: &mut DebugRunner, idx: usize) {
+fn ex13_016_pick(r: &mut DebugRunner, idx: usize) {
     let v = r.pending_selection_view().expect("pending");
     r.execute_action(v.selecting_player, v.valid_action_ids[idx])
         .expect("pick");
@@ -157,19 +157,19 @@ fn ex13_016_on_play_locks_two_of_three_opponent_digimon_or_tamers() {
     let o3 = r.place_on_field(1, "OPP", Some(0));
     let omni = r.place_stack(0, &["L6", CARD_ID]);
     r.fire_on_play(0, omni.index as usize);
-    order_first(&mut r);
+    ex13_016_order_first(&mut r);
     // The lock is mandatory; with 3 candidates the controller picks 2.
     let v = r.pending_selection_view().expect("lock pick");
     assert_eq!(v.valid_action_ids.len(), 3, "2 Digimon + 1 Tamer offered");
     assert_eq!(v.selecting_player, 0);
-    pick(&mut r, 0);
-    pick(&mut r, 0);
+    ex13_016_pick(&mut r, 0);
+    ex13_016_pick(&mut r, 0);
     // Resolve whatever follows (the optional delete offer: decline).
     while let Some(v) = r.pending_selection_view() {
         if v.is_optional {
             r.decline_optional_trigger().unwrap();
         } else {
-            pick(&mut r, 0);
+            ex13_016_pick(&mut r, 0);
         }
     }
     let locked = [o1, o2, o3].iter().filter(|h| cannot_suspend(&r, **h)).count();
@@ -186,7 +186,7 @@ fn ex13_016_lock_takes_every_target_when_fewer_than_two() {
         if v.is_optional {
             r.decline_optional_trigger().unwrap();
         } else {
-            pick(&mut r, 0);
+            ex13_016_pick(&mut r, 0);
         }
     }
     assert!(cannot_suspend(&r, o1), "the only opponent Tamer can't suspend");
@@ -202,7 +202,7 @@ fn ex13_016_lock_is_once_per_turn_across_on_play_and_when_attacking() {
         if v.is_optional {
             r.decline_optional_trigger().unwrap();
         } else {
-            pick(&mut r, 0);
+            ex13_016_pick(&mut r, 0);
         }
     }
     assert!(cannot_suspend(&r, o1));
@@ -214,7 +214,7 @@ fn ex13_016_lock_is_once_per_turn_across_on_play_and_when_attacking() {
         if v.is_optional {
             r.decline_optional_trigger().unwrap();
         } else {
-            pick(&mut r, 0);
+            ex13_016_pick(&mut r, 0);
         }
     }
     assert!(!cannot_suspend(&r, o2), "[Once Per Turn] — the lock didn't re-fire");
@@ -234,17 +234,17 @@ fn ex13_016_on_play_may_delete_opponent_digimon_with_no_more_sources() {
     let omni = r.place_stack(0, &["L5", "L6", CARD_ID]);
     // Lock resolves first (mandatory); decline nothing there.
     r.fire_on_play(0, omni.index as usize);
-    order_first(&mut r);
+    ex13_016_order_first(&mut r);
     // Lock pick (2 opp Digimon): take both.
     let v = r.pending_selection_view().expect("lock pick");
     assert!(!v.is_optional);
-    pick(&mut r, 0);
+    ex13_016_pick(&mut r, 0);
     // (second pick, if still pending as a lock pick)
     if r
         .pending_selection_view()
         .is_some_and(|v| !v.is_optional && v.valid_action_ids.len() == 1)
     {
-        pick(&mut r, 0);
+        ex13_016_pick(&mut r, 0);
     }
     // "You may delete": DCGO EX13_016.cs has no Yes/No at [On Play] (optional:
     // false); the canNoSelect delete pick itself is the decline.
@@ -274,12 +274,12 @@ fn reach_delete_pick(r: &mut DebugRunner, omni: PermanentHandle, timing: EffectT
     r.game.enqueue_triggered(timing, TriggerSource::Permanent(omni));
     r.game.drain_effect_queue();
     for _ in 0..8 {
-        order_first(r);
+        ex13_016_order_first(r);
         let Some(v) = r.pending_selection_view() else { return false };
         if v.is_optional {
             return true;
         }
-        pick(r, 0); // the mandatory lock pick
+        ex13_016_pick(r, 0); // the mandatory lock pick
     }
     false
 }
@@ -297,7 +297,7 @@ fn ex13_016_delete_pick_passed_keeps_the_once_per_turn() {
     assert!(reach_delete_pick(&mut r, omni, EffectTiming::OnPlay), "[On Play] delete pick");
     assert_ne!(r.pending_kind(), Some(SelectionKind::Replacement), "no outer accept prompt");
     r.decline_optional_trigger().expect("pass the delete pick");
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(r.game.players[1].battle_area.len(), 1, "nothing deleted");
 
     assert!(
@@ -306,7 +306,7 @@ fn ex13_016_delete_pick_passed_keeps_the_once_per_turn() {
     );
     let v = r.pending_selection_view().unwrap();
     r.execute_action(v.selecting_player, non_pass(&v.valid_action_ids)[0]).unwrap();
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert!(r.game.players[1].battle_area.is_empty(), "deleted at [When Digivolving]");
     let _ = target;
 }
@@ -323,7 +323,7 @@ fn ex13_016_delete_chosen_spends_the_once_per_turn() {
     assert_ne!(r.pending_kind(), Some(SelectionKind::Replacement), "no outer accept prompt");
     let v = r.pending_selection_view().unwrap();
     r.execute_action(v.selecting_player, non_pass(&v.valid_action_ids)[0]).unwrap();
-    let _ = r.auto_resolve();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(r.game.players[1].battle_area.len(), 1, "one deleted");
     assert!(
         !reach_delete_pick(&mut r, omni, EffectTiming::WhenDigivolving),
@@ -413,7 +413,7 @@ fn ex13_016_delete_not_offered_without_an_eligible_target() {
             !v.is_optional,
             "no 'may delete' offer: the opponent Digimon has more sources than Omnimon"
         );
-        pick(&mut r, 0);
+        ex13_016_pick(&mut r, 0);
     }
     assert_eq!(r.game.players[1].battle_area.len(), 1);
 }
@@ -433,10 +433,10 @@ fn ex13_016_save_trashes_a_same_level_pair_and_stays() {
     let v = r.pending_selection_view().expect("first pair pick");
     assert_eq!(v.valid_action_ids.len(), 2, "only the two level-4 cards start a pair");
     assert!(!v.is_optional, "exactly 2 must be trashed");
-    pick(&mut r, 0);
+    ex13_016_pick(&mut r, 0);
     let v = r.pending_selection_view().expect("second pair pick");
     assert_eq!(v.valid_action_ids.len(), 1, "only the other level-4 card");
-    pick(&mut r, 0);
+    ex13_016_pick(&mut r, 0);
     let _ = r.auto_resolve();
     assert_eq!(r.game.players[0].battle_area.len(), 1, "it doesn't leave");
     assert_eq!(top_id(&r, omni), CARD_ID);
@@ -479,8 +479,8 @@ fn ex13_016_save_is_not_once_per_turn() {
         delete_with(&mut r, omni, ReplacementCause::OpponentEffect);
         assert_replacement_prompt(&r);
         r.accept_optional_trigger().unwrap();
-        pick(&mut r, 0);
-        pick(&mut r, 0);
+        ex13_016_pick(&mut r, 0);
+        ex13_016_pick(&mut r, 0);
         let _ = r.auto_resolve();
         assert_eq!(r.game.players[0].battle_area.len(), 1, "saved in round {round}");
     }

@@ -546,7 +546,7 @@ fn bt13_075_would_leave_accept_then_decline_source_lets_it_leave_and_spends_opt(
     assert_eq!(uses, 1, "the [Once Per Turn] is recorded at the accept");
 
     runner.execute_action(0, PASS).expect("No Selection");
-    runner.auto_resolve().expect("finish the removal");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
 
     assert!(
         !permanent_exists(&runner, 0, "BT13-075"),

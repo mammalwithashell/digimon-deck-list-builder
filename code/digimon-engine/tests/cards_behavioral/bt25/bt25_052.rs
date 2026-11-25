@@ -1045,7 +1045,7 @@ fn bt25_052_main_offered_and_links_from_hand_on_the_minimal_board() {
         .find(|&&a| a != PASS)
         .expect("the Tool card");
     r.execute_action(0, pick).expect("link it");
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(linked_count(&r, logi), 1);
     assert!(!main_offered(&r, logi), "[Once Per Turn]");
 }
@@ -1066,7 +1066,7 @@ fn bt25_052_main_offered_for_a_linkable_digivolution_card() {
         .find(|&&a| a != PASS)
         .expect("the Tool source");
     r.execute_action(0, pick).expect("link it");
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(linked_count(&r, logi), 1);
 }
 
@@ -1084,7 +1084,7 @@ fn bt25_052_main_offer_ignores_the_link_cost_and_the_declared_use_stays_spent() 
         r.game.activate_field_main(0, logi.index as usize),
         "declarable: the link cost is ignored for the offer"
     );
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(linked_count(&r, logi), 0, "4 can't be paid from -8: nothing linked");
     assert_eq!(uses(&r, logi), 1, "the declared use stays spent");
 }

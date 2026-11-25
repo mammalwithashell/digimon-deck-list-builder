@@ -103,7 +103,7 @@ fn ex2_007_main_offered_and_places_a_searcher_from_the_hand() {
         .find(|&&a| a != PASS)
         .expect("the Searcher");
     r.execute_action(0, pick).expect("place it");
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(bottom_source(&r, m), SEARCHER, "placed as the bottom digivolution card");
     assert_eq!(uses(&r, m), 1);
     assert!(!offered(&r, m), "[Once Per Turn]");
@@ -124,7 +124,7 @@ fn ex2_007_main_offered_and_places_a_searcher_from_the_battle_area() {
         .find(|&&a| a != PASS)
         .expect("the Searcher");
     r.execute_action(0, pick).expect("place it");
-    r.auto_resolve().ok();
+    assert!(r.pending_selection().is_none(), "no decision is left");
     assert_eq!(r.game.players[0].battle_area.len(), 1, "the Searcher left the battle area");
     assert_eq!(bottom_source(&r, m), SEARCHER);
 }
