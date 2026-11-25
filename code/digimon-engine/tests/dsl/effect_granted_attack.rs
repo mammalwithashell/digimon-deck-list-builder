@@ -41,7 +41,6 @@ effects:
         without_suspending,
         ignore_summoning_sickness,
         optional,
-        windowed: _,
         prompt,
         cost_upgrade,
     } = &process[0]

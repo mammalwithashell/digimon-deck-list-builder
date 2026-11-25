@@ -14,7 +14,10 @@
 #   stacked card as the top security card, it doesn't leave.
 #   Official Q&A: the "After" part resolves ONLY if one of the costs was paid.
 #
-# DCGO: no EX13_032.cs at b9a0638cd.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/Yellow/EX13_032.cs
+# (absent at b9a0638cd, present in the current submodule). Clause 1 follows
+# it exactly by owner ruling 2026-11-23 ("parity with DCGO",
+# qa/rules/mechanics-gaps-2026-10.md W14 row (f)); see "Clause 1 modelling".
 #
 # ─── Status: IMPLEMENTED (all clauses) ─────────────────────────────────────
 # Clauses 2 and 3 unblocked by G-TOP-STACKED-CARD-TO-SECURITY (RESOLVED
@@ -39,12 +42,22 @@
 # Optional processing condition with two alternative costs:
 # - `optional` + `outer_prompt`: accept/decline confirm surfaces before any
 #   cost moves (15-7-4; BT23-035 idiom).
-# - `condition`: at least one cost payable (15-7-2) — otherwise nothing offers.
-# - Both payable → `select_effect_choice` picks which cost; only one payable →
-#   that cost directly (no dead menu entry).
-# - `trash_bottom_face_down_source_under_tamer` surfaces the Tamer pick ("any
-#   of your Tamers") and runs its tail only when the trash happened, so the
-#   unsuspend + "After" lock are gated on payment (Official Q&A).
+# - `condition`: at least one cost payable (15-7-2) — otherwise nothing offers
+#   (DCGO `AdditionalActivateCondition`).
+# - DCGO flow after the accept: one `SetIntSelection` listing each payable
+#   cost ("Trash top security card" when security exists, "Trash bottom face
+#   down card from 1 tamer" when a Tamer has a face-down card) plus "Don't pay
+#   the cost". Mirrored as one `select_effect_choice` with `legal_when` per
+#   cost row and an always-legal "Don't pay the cost" row (never a single
+#   auto-picked row: at least one cost is payable).
+# - "Don't pay the cost" → `RemoveUse()`: `refund_opt`, the use is kept.
+# - Security row: the top security card is trashed; paid.
+# - Tamer row: a Tamer pick with canNoSelect true
+#   (`trash_bottom_face_down_source_under_tamer`, `optional` +
+#   `continue_on_decline`); no Tamer → nothing paid → `RemoveUse()`
+#   (`refund_opt`); a Tamer → its bottom face-down card is trashed; paid.
+# - Paid → unsuspend + "After" lock (Official Q&A Q7301: only after a paid
+#   cost). A paid cost spends the use.
 # - Lock: CannotActivateWhenDigivolvingEffects, expiry end_of_opponents_turn
 #   ("until their turn ends"; BT19-038 idiom), guarded so an empty opponent
 #   field installs no dead prompt.
@@ -83,45 +96,55 @@ effects:
             has_face_down_source: true
     summary: "[When Digivolving][When Attacking][OPT] By trashing your top security card or a bottom face-down card under a Tamer, this Digimon unsuspends; after, 1 opponent Digimon can't activate [When Digivolving] effects until their turn ends"
     process:
+      # DCGO EX13_032.cs `SetIntSelection`: each payable cost plus "Don't pay
+      # the cost", one choice (owner ruling 2026-11-23, W14 row (f)).
+      - select_effect_choice:
+          bind_as: cost_choice
+          labels:
+            - "Trash your top security card"
+            - "Trash the bottom face-down card from under 1 of your Tamers"
+            - "Don't pay the cost"
+          legal_when:
+            - { security_count_gte: 1 }
+            - any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: tamer
+                has_face_down_source: true
+            - {}
+          prompt: "Will you pay the cost?"
       - if:
-          condition:
-            all_of:
-              - security_count_gte: 1
-              - any_permanent:
-                  of: you
-                  zone: [battle_area]
-                  kind: tamer
-                  has_face_down_source: true
+          condition: { equals: [cost_choice, 0] }
           then:
-            - select_effect_choice:
-                bind_as: cost_choice
-                labels:
-                  - "Trash your top security card"
-                  - "Trash the bottom face-down card from under 1 of your Tamers"
-                prompt: "Choose which cost to pay"
+            - trash_top_security: { of: you }
+            - unsuspend: { target: source }
             - if:
-                condition: { equals: [cost_choice, 0] }
+                condition:
+                  any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
                 then:
-                  - trash_top_security: { of: you }
-                  - unsuspend: { target: source }
-                  - if:
-                      condition:
-                        any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
-                      then:
-                        - select_opponent_permanent:
-                            optional: false
-                            bind_as: lock_a
-                            filter: { kind: digimon }
-                            prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
-                        - add_modifier:
-                            target: lock_a
-                            modifier: CannotActivateWhenDigivolvingEffects
-                            value: 1
-                            expiry: end_of_opponents_turn
+                  - select_opponent_permanent:
+                      optional: false
+                      bind_as: lock_a
+                      filter: { kind: digimon }
+                      prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
+                  - add_modifier:
+                      target: lock_a
+                      modifier: CannotActivateWhenDigivolvingEffects
+                      value: 1
+                      expiry: end_of_opponents_turn
+      - if:
+          condition: { equals: [cost_choice, 1] }
+          then:
+            # DCGO: the Tamer pick has canNoSelect true; no Tamer -> nothing
+            # paid -> `RemoveUse()`.
+            - trash_bottom_face_down_source_under_tamer:
+                of: you
+                optional: true
+                continue_on_decline: true
+                bind_as: paid_tamer
             - if:
-                condition: { equals: [cost_choice, 1] }
+                condition: { binding_present: paid_tamer }
                 then:
-                  - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
                   - unsuspend: { target: source }
                   - if:
                       condition:
@@ -137,43 +160,13 @@ effects:
                             modifier: CannotActivateWhenDigivolvingEffects
                             value: 1
                             expiry: end_of_opponents_turn
-          else:
-            - if:
-                condition: { security_count_gte: 1 }
-                then:
-                  - trash_top_security: { of: you }
-                  - unsuspend: { target: source }
-                  - if:
-                      condition:
-                        any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
-                      then:
-                        - select_opponent_permanent:
-                            optional: false
-                            bind_as: lock_c
-                            filter: { kind: digimon }
-                            prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
-                        - add_modifier:
-                            target: lock_c
-                            modifier: CannotActivateWhenDigivolvingEffects
-                            value: 1
-                            expiry: end_of_opponents_turn
                 else:
-                  - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
-                  - unsuspend: { target: source }
-                  - if:
-                      condition:
-                        any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
-                      then:
-                        - select_opponent_permanent:
-                            optional: false
-                            bind_as: lock_d
-                            filter: { kind: digimon }
-                            prompt: "1 of your opponent's Digimon can't activate [When Digivolving] effects until their turn ends"
-                        - add_modifier:
-                            target: lock_d
-                            modifier: CannotActivateWhenDigivolvingEffects
-                            value: 1
-                            expiry: end_of_opponents_turn
+                  - refund_opt: {}
+      - if:
+          condition: { equals: [cost_choice, 2] }
+          then:
+            # "Don't pay the cost": DCGO `if (!isUsed) RemoveUse()`.
+            - refund_opt: {}
 
   # ─── [All Turns] would-leave save (face-up) ────────────────────────────────
   - kind: replacement

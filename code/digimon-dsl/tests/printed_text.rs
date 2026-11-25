@@ -366,6 +366,12 @@ fn printed_text_timing_tags_after_zone_icons_and_angle_prefixes() {
 
 #[test]
 fn printed_text_main_timing_preserves_the_activation_zone() {
+    let text = "[Main] Draw 1.";
+    assert!(check(&format!("- when: main_on_field\n  text: '{text}'"), text).is_empty());
+    assert_eq!(
+        check(&format!("- when: main_from_trash\n  text: '{text}'"), text),
+        vec!["timing_tag_mismatch"]
+    );
     for (zone, timing) in [
         ("{Hand}", "main_from_hand"),
         ("[Hand]", "main_from_hand"),
@@ -513,5 +519,23 @@ fn printed_text_optionality_wording_exemptions() {
         ("- when: on_play\n  text: You may draw 1.\n  process:\n    - draw: {of: you, count: 1}", "You may draw 1.", vec!["may_without_optional"]),
     ] {
         assert_eq!(check(clause, printed), expected, "{clause}");
+    }
+}
+
+#[test]
+fn printed_detach_requires_an_optional_replacement() {
+    let printed = "＜Detach ([TS] trait)＞ (When this Digimon would leave the battle area, by trashing 1 of its specified link cards, it doesn't leave.)";
+    for optional in [true, false] {
+        let clause = format!(
+            "- kind: replacement\n  text: \"{printed}\"\n  trigger: when_would_leave_battle_area\n  optional: {optional}\n  outcome: prevent"
+        );
+        assert_eq!(
+            check(&clause, printed),
+            if optional {
+                vec![]
+            } else {
+                vec!["may_without_optional"]
+            }
+        );
     }
 }

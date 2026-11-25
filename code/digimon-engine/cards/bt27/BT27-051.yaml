@@ -1,0 +1,44 @@
+card: BT27-051
+name: LoaderLeomon
+kind: digimon
+level: 5
+color: [green, yellow]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Machine, ACCEL, Holy Beast]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, any_color: true, any_of: [{ name_contains: Leomon }, { trait_has: Holy Beast }, { trait_has: ACCEL }] }
+    cost: 3
+
+effects:
+  - text: "＜Fortitude＞"
+    kind: grant_keyword
+    keyword: Fortitude
+  - text: "[On Play] [When Digivolving] This Digimon may battle 1 of your opponent's Digimon."
+    when: [on_play, when_digivolving]
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Battle an opponent's Digimon?"
+      - battle: { attacker: source, defender: victim }
+  - text: "[On Deletion] ＜Recovery +1＞"
+    when: on_deletion
+    process:
+      - recover: { of: you, count: 1 }
+  - text: "[On Deletion] ＜Recovery +1＞"
+    scope: inherited
+    when: on_deletion
+    process:
+      - recover: { of: you, count: 1 }

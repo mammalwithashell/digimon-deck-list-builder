@@ -591,20 +591,20 @@ fn required_selection_step_has_candidate(
             )
         }
         CompiledStep::SelectOwnPermanent {
-            filter, selector, bind_as, then, ..
+            filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings,
-            super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail)),
+            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers)),
         CompiledStep::SelectOpponentPermanent {
-            filter, selector, bind_as, then, ..
+            filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => {
             let opponent = ctx.game.next_clockwise(ctx.player);
             has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings,
-                super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail))
+                super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers))
         }
         CompiledStep::SelectAnyPermanent {
-            filter, selector, bind_as, then, ..
+            filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => has_matching_permanent(ctx, None, filter, *selector, bindings,
-            super::step::deletion_payment::selection_pays_deletion(bind_as.as_deref(), then, tail)),
+            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers)),
         CompiledStep::SelectHand { of, filter, .. } => {
             has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings)
         }

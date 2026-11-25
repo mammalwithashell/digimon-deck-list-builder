@@ -1,0 +1,73 @@
+card: BT27-063
+name: Andromon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects:
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    keyword: Blocker
+  - text: "[All Turns] [Once Per Turn] When this Digimon suspends, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    when: on_suspend
+    once_per_turn: true
+    trigger_if: { event_permanent_is_source: true }
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter: { kind: digimon }
+          prompt: "Choose an opponent's Digimon to De-Digivolve"
+      - de_digivolve: { target: victim, amount: 1, stop_at_level: 3 }
+  - text: "[All Turns] When any of your Digimon with ＜Blocker＞ would leave the battle area other than by your effects, by suspending this Digimon, 1 of your Digimon doesn't leave."
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      replacement_subject_is_mine: true
+      kind: digimon
+      has_keyword: Blocker
+      source_is_unsuspended: true
+      none_of: [{ replacement_cause: own_effect }]
+    process:
+      - suspend: { target: source }
+      - if:
+          condition: { source_is_unsuspended: false }
+          then:
+            - cancel_replacement: {}
+  - text: "[Opponent's Turn] [Once Per Turn] When any of your Digimon suspend, you may play 1 level 5 or lower black Digimon card with ＜Blocker＞ from your hand without paying the cost."
+    scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    trigger_if: { event_target_owner: you, event_target_kind: digimon }
+    condition:
+      count_gte:
+        filter: &blockers
+          of: you
+          zone: [hand]
+          kind: digimon
+          level_lte: 5
+          color_is: black
+          printed_keyword: Blocker
+          can_play_from_effect_without_cost: true
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: candidate
+          optional: true
+          filter: *blockers
+          prompt: "Play a level 5 or lower black Blocker without paying its cost?"
+      - play_from_hand_free: { of: you, hand_index: candidate }

@@ -43,6 +43,8 @@ mod selected_source_security_receipt;
 
 mod bound_card_property;
 mod controller_security_add_eligibility;
+mod unpayable_deletion_payers;
+mod link_requirement_met_by_self;
 mod effect_play_results;
 
 mod tamer_color_predicates;

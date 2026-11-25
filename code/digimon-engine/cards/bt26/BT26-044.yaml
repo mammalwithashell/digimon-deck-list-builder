@@ -34,7 +34,8 @@
 # Inherited (WhenRemoveField, skippable, OPT): identical to ST24-10's inherited
 #   (HasText "Rosemon" || EqualsTraits DATA SQUAD; canNoSelect Tamer pick →
 #   trash bottom face-down; RemoveUse when declined). → ST24-10 replacement
-#   clause verbatim.
+#   shape, with the Tamer pick declinable after the accept and the use given
+#   back then (owner ruling 2026-11-23: this clause follows DCGO).
 
 card: BT26-044
 name: "Lilamon"
@@ -150,6 +151,23 @@ effects:
             - source_name_contains: "Rosemon"
             - source_permanent_trait_has: "DATA SQUAD"
     summary: "Inherited [All Turns][OPT] When this [Rosemon]-name / [DATA SQUAD] Digimon would leave, by trashing a bottom face-down card under a Tamer, it doesn't leave"
+    # DCGO flow (BT26_044.cs), followed by owner ruling 2026-11-23 ("parity
+    # with DCGO", qa/rules/mechanics-gaps-2026-10.md W14 row (f)): offered only
+    # while a Tamer of yours has a face-down card under it (the step's
+    # §15-7-4 guard); after the accept, a Tamer pick with canNoSelect true. No
+    # Tamer -> `RemoveUse()`: the use is kept and the carrier leaves. A Tamer
+    # -> `isUsed` (spent), its bottom face-down card is trashed, it doesn't
+    # leave.
     process:
-      - trash_bottom_face_down_source_under_tamer: { optional: false, of: you }
-      - cancel_replacement: {}
+      - trash_bottom_face_down_source_under_tamer:
+          of: you
+          optional: true
+          continue_on_decline: true
+          bind_as: paid_tamer
+      - if:
+          condition: { binding_present: paid_tamer }
+          then:
+            - cancel_replacement: {}
+          else:
+            # DCGO `if (!isUsed) activateClass.RemoveUse()`.
+            - refund_opt: {}

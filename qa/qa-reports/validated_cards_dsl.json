@@ -2,126 +2,6 @@
   "version": 1,
   "last_updated": "2026-11-23",
   "cards": {
-    "BT27-006": {
-      "card_name": "Gemmon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-006.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_006.rs",
-      "test_count": 4,
-      "tests_passing": 4,
-      "tests_ignored": 0
-    },
-    "BT27-011": {
-      "card_name": "Liskmon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-011.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_011.rs",
-      "test_count": 3,
-      "tests_passing": 3,
-      "tests_ignored": 0
-    },
-    "BT27-014": {
-      "card_name": "Reptilimon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-014.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_014.rs",
-      "test_count": 4,
-      "tests_passing": 4,
-      "tests_ignored": 0
-    },
-    "BT27-018": {
-      "card_name": "Rubeusdramon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-018.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_018.rs",
-      "test_count": 5,
-      "tests_passing": 5,
-      "tests_ignored": 0
-    },
-    "BT27-022": {
-      "card_name": "Renamon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-022.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_022.rs",
-      "test_count": 3,
-      "tests_passing": 3,
-      "tests_ignored": 0
-    },
-    "BT27-027": {
-      "card_name": "Tenkomon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-027.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_027.rs",
-      "test_count": 3,
-      "tests_passing": 3,
-      "tests_ignored": 0
-    },
-    "BT27-029": {
-      "card_name": "Sekkamon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-029.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_029.rs",
-      "test_count": 3,
-      "tests_passing": 3,
-      "tests_ignored": 0
-    },
-    "BT27-033": {
-      "card_name": "Yukinamon",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-033.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_033.rs",
-      "test_count": 4,
-      "tests_passing": 4,
-      "tests_ignored": 0
-    },
-    "BT27-086": {
-      "card_name": "Kanata Hondo",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-086.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_086.rs",
-      "test_count": 4,
-      "tests_passing": 4,
-      "tests_ignored": 0
-    },
-    "BT27-088": {
-      "card_name": "Valner Dragnogh",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "validated_date": "2026-11-23",
-      "archetype": "Gemmon / ALYSION",
-      "yaml_path": "code/digimon-engine/cards/bt27/BT27-088.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_088.rs",
-      "test_count": 5,
-      "tests_passing": 5,
-      "tests_ignored": 0
-    },
     "ST2-01": {
       "card_name": "Tsunomon",
       "validated_date": "2026-06-14",
@@ -1462,16 +1342,18 @@
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
-      "validated_date": "2026-05-22",
-      "report": "unblock-medusamon-tier3-cards",
+      "validated_date": "2026-11-23",
+      "report": "mf2-cards-review-2026-11-23",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/st22/ST22-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st22/st22_08.rs",
-      "test_count": 34,
+      "test_count": 41,
       "patterns": [],
-      "notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards): G-LINK-OPTION-DUAL-PLAY-MODE closed. classify_option_modes returns the set of available play modes; play_option_core installs an EffectChoice mode-select for a dual-mode Plug-In and forks cost (Standard use cost 4 vs flat Link cost 2) + disposal (Standard trash vs Link attach) on the chosen mode. ST22-08.yaml gained a kind: link_requirement clause (cost 2, level_gte 3). All 4 clauses behavioral; 34/34 tests pass, 0 ignored."
+      "notes": "Link box authored 2026-11-23 (card face ST22-08.webp + official bundle; cards.json drops it): scope linked aura DP +2000 and scope linked [End of Your Turn][Once Per Turn] optional 'This Digimon may attack' (DCGO ST22_08.cs EndOfTurnLinkedEffect: isOptional, maxCountPerTurn 1, activates only while the host can attack). All 6 clauses behavioural (st22_08: link DP, unlinked no DP, EOT attack accepted / declined, suspended host offered nothing, unlinked offers nothing).",
+      "previous_status": "IMPLEMENTED",
+      "previous_notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards): G-LINK-OPTION-DUAL-PLAY-MODE closed. classify_option_modes returns the set of available play modes; play_option_core installs an EffectChoice mode-select for a dual-mode Plug-In and forks cost (Standard use cost 4 vs flat Link cost 2) + disposal (Standard trash vs Link attach) on the chosen mode. ST22-08.yaml gained a kind: link_requirement clause (cost 2, level_gte 3). All 4 clauses behavioral; 34/34 tests pass, 0 ignored."
     },
     "BT21-072": {
       "card_name": "Arresterdramon: Superior Mode",
@@ -3861,10 +3743,10 @@
     },
     "EX7-063": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
-      "status": "IMPLEMENTED",
-      "gap_kind": null,
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-063.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_063.rs",
@@ -3873,7 +3755,9 @@
         "START-OF-MAIN",
         "SECURITY-PLAY-SELF"
       ],
-      "notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon and Security play-self. The all-turns Token/Puppet deletion observer that suspends this Tamer to play a level 3 Puppet from hand remains omitted pending reusable event-context plus suspend-cost support."
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [All Turns] When any of your Tokens or [Puppet] trait Digimon are deleted, by suspending this Tamer, you may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost. Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented.",
+      "previous_status": "IMPLEMENTED",
+      "previous_notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon and Security play-self. The all-turns Token/Puppet deletion observer that suspends this Tamer to play a level 3 Puppet from hand remains omitted pending reusable event-context plus suspend-cost support."
     },
     "EX11-021": {
       "card_name": "Kokeshimon",
@@ -4928,7 +4812,7 @@
         "ROYAL-KNIGHTS-POOL-STUB",
         "GAP-STUB"
       ],
-      "notes": "Gaps closed: G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM (would-leave self-protection) + On Play play-cost>=10 can't-attack aura (authorable-now). Both clauses authored. FULLY faithful.",
+      "notes": "Gaps closed: G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM (would-leave self-protection) + On Play play-cost>=10 can't-attack aura (authorable-now). Both clauses authored. FULLY faithful. 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[1]: the source pick can be passed after the accept; Alphamon then leaves and the use stays spent (DCGO has no RemoveUse).",
       "audit_note": "Engine/DSL gap closed 2026-06-15; consumer card now fully faithful."
     },
     "BT13-087": {
@@ -5511,22 +5395,23 @@
     },
     "BT22-009": {
       "card_name": "Effecmon",
-      "validated_date": "2026-06-15",
-      "report": "royal-knights-author-remaining-2026-06-15",
+      "validated_date": "2026-11-23",
+      "report": "mf2-cards-review-2026-11-23",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-009.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_009.rs",
-      "test_count": 4,
-      "tests_passing": 2,
-      "tests_ignored": 2,
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
       "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
+        "ROYAL-KNIGHTS-POOL-SLICE"
       ],
-      "notes": "[Security] end-of-battle play + On Play/WD delete + both digivolve circles (Lv3-red + Stnd.-trait) faithful. [Link]/[When Linking] is the Appmon Link subsystem (separate G-LINK-REQUIREMENTS), not an RK gap.",
-      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified."
+      "notes": "Link box authored 2026-11-23 (card face BT22-009.webp + official bundle; cards.json drops it): link_condition [Appmon] trait cost 2, scope linked aura +3000 DP, scope linked [When Linking] mandatory delete of 1 opponent Digimon with 4000 DP or less (DCGO BT22_009.cs WhenLinked, not optional, canNoSelect false). YAML trait line gains Appmon and Effect (cards.json form/type). The empty ignored G-LINK-REQUIREMENTS placeholder test is replaced by behavioural link tests.",
+      "audit_note": "Authored 2026-06-15 (parallel isolated-worktree wave); image+DCGO faithfulness-verified.",
+      "previous_status": "IMPLEMENTED",
+      "previous_notes": "[Security] end-of-battle play + On Play/WD delete + both digivolve circles (Lv3-red + Stnd.-trait) faithful. [Link]/[When Linking] is the Appmon Link subsystem (separate G-LINK-REQUIREMENTS), not an RK gap."
     },
     "BT23-064": {
       "card_name": "Bakemon",
@@ -6577,7 +6462,7 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_052.rs",
       "test_count": 0,
       "patterns": [],
-      "notes": "Drift fixed: dead Stnd. gate, missing App Fusion, missing linked +3000 DP, missing [Your Turn] gate, traits; tests 3->28"
+      "notes": "Drift fixed: dead Stnd. gate, missing App Fusion, missing linked +3000 DP, missing [Your Turn] gate, traits; tests 3->28 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[2]: the [Main] is offered only when a [Social]/[Tool]/[Game] Digimon card in hand or under this Digimon can link to it (DCGO CanUseCondition)."
     },
     "BT25-047": {
       "card_name": "Floramon",
@@ -7412,7 +7297,7 @@
       "archetype": "Titans / Plutomon",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_084.rs",
-      "notes": "Was PARTIAL. Added [All Turns] on-hand-trashed delete opp lowest DP, '[Titamon] w/o 3 colors' cost-2 path (self_color_count_lte), Red/Green circles; colours fixed to Purple/Red/Green (+card_colors override). Fixed leave-prevention gate (owner: you hand count never matched, so it never fired)."
+      "notes": "Was PARTIAL. Added [All Turns] on-hand-trashed delete opp lowest DP, '[Titamon] w/o 3 colors' cost-2 path (self_color_count_lte), Red/Green circles; colours fixed to Purple/Red/Green (+card_colors override). Fixed leave-prevention gate (owner: you hand count never matched, so it never fired). 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the leave-prevention's 2-card hand cost may now be declined after the accept (DCGO BT25_084.cs canNoSelect: 2 cards or none); declining keeps the [Once Per Turn] (refund_opt) and Titamon leaves. Not offered with fewer than 2 cards in hand (active_when); once the first card is chosen the second pick is mandatory (Q6398). 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[0]: a declined discard keeps the use; not offered with an empty hand; tied highest-DP Digimon deleted as one batch; the security tail now reads [When Digivolving] by an effect."
     },
     "BT25-075": {
       "status": "IMPLEMENTED",
@@ -8759,7 +8644,7 @@
         "is_source select filter",
         "decline-runs-tail permanent selects"
       ],
-      "notes": "TDD from card image + DCGO AD1_024.cs. 16/16 behavioral tests green: WD/WA shared-OPT mandatory lowest-DP bottom-deck bounce; [All Turns] observer (any play/digivolve incl. own digivolve) with DCGO-faithful initial Yes/No (outer_prompt), declinable suspend pick coupled to self-unsuspend via binding_exists, standalone unsuspend offer (is_source select), independent by-effect bounce leg, and FULL RemoveUse OPT-refund semantics (decline outer confirm OR accept-then-decline-everything both refund; any executed leg consumes). G-OPT-REFUND-ON-DECLINE closed in qa/resolved-gaps.md (2026-06-10).",
+      "notes": "TDD from card image + DCGO AD1_024.cs. 16/16 behavioral tests green: WD/WA shared-OPT mandatory lowest-DP bottom-deck bounce; [All Turns] observer (any play/digivolve incl. own digivolve) with DCGO-faithful initial Yes/No (outer_prompt), declinable suspend pick coupled to self-unsuspend via binding_exists, standalone unsuspend offer (is_source select), independent by-effect bounce leg, and FULL RemoveUse OPT-refund semantics (decline outer confirm OR accept-then-decline-everything both refund; any executed leg consumes). G-OPT-REFUND-ON-DECLINE closed in qa/resolved-gaps.md (2026-06-10). 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[3]: with no opponent Digimon, asks DCGO's standalone unsuspend Yes/No; Yes spends the [Once Per Turn], No keeps it.",
       "audit_note": null
     },
     "EX10-020": {
@@ -11495,7 +11380,7 @@
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-044.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_044.rs",
-      "notes": "TDD vs DCGO BT26_044.cs. DCGO checks the inherited Rosemon/DATA SQUAD gate on the inherited card itself (always true); we follow the printed carrier reading, so expect an oracle divergence on a non-DS carrier."
+      "notes": "TDD vs DCGO BT26_044.cs. DCGO checks the inherited Rosemon/DATA SQUAD gate on the inherited card itself (always true); we follow the printed carrier reading, so expect an oracle divergence on a non-DS carrier. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited save's Tamer pick may now be declined after the accept (DCGO canNoSelect); declining keeps the [Once Per Turn] (refund_opt) and the carrier leaves. Uses the new trash_bottom_face_down_source_under_tamer continue_on_decline / bind_as."
     },
     "BT26-076": {
       "card_name": "Crowmon",
@@ -11715,7 +11600,7 @@
       "archetype": "Chronomon support / Ceresmon / Bacchusmon",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_021.rs",
-      "notes": "OP/WD own [TS] Digimon CannotSwitchAttackTarget for the turn; [Main][OPT] play [TS] Tamer from trash cost-2 with refund_opt on decline (needed engine fix G-ENGINE-FIELD-MAIN-OPT-KEY); inherited any-Digimon-attacks (on_attack+on_ally_attack+on_opponent_attack, one shared OPT) trash 1 hand -> trash bottom 2 sources of 1 opp Digimon. Traits include Titan (official DB)."
+      "notes": "OP/WD own [TS] Digimon CannotSwitchAttackTarget for the turn; [Main][OPT] play [TS] Tamer from trash cost-2 with refund_opt on decline (needed engine fix G-ENGINE-FIELD-MAIN-OPT-KEY); inherited any-Digimon-attacks (on_attack+on_ally_attack+on_opponent_attack, one shared OPT) trash 1 hand -> trash bottom 2 sources of 1 opp Digimon. Traits include Titan (official DB). 2026-11-24: owner ruling \"Match dcgo on the main use\": a passed or empty [Main] pick keeps the use again (refund_opt on binding_absent; DCGO BT26_021.cs:184 RemoveUse), a chosen Tamer spends it; the main-declaration loop guard withholds the identical re-declaration until the state changes."
     },
     "BT26-096": {
       "card_name": "Kosuke Misono",
@@ -11871,7 +11756,7 @@
       "archetype": "Toho Braves",
       "yaml_path": "code/digimon-engine/cards/bt26/BT26-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt26/bt26_012.rs",
-      "notes": "[Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; corrected 2026-10-25 to spend the use on activation even if processing is declined (CR 4.3 15-14-1-1/4). The local DCGO source's RemoveUse refund conflicts with that rule; no installed-DCGO replay certification claimed. Regression: capped cloud game 340 plus per-card decline/copy isolation. Inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom)."
+      "notes": "[Main][OPT] optional select_hand [TB] -> play_or_use_from_hand reduce 2; corrected 2026-10-25 to spend the use on activation even if processing is declined (CR 4.3 15-14-1-1/4). The local DCGO source's RemoveUse refund conflicts with that rule; no installed-DCGO replay certification claimed. Regression: capped cloud game 340 plus per-card decline/copy isolation. Inherited [WA][OPT] -2000 for the turn. DCGO's CanPlayOrUse candidate pre-filter is enforced by the play/use verb at resolution (shared BT26-032/BT25-041 idiom). 2026-11-24: owner ruling \"Match dcgo on the main use\" reverses the 2026-10-25 correction: a passed [Main] pick now keeps the use (refund_opt in the else of binding_present; DCGO BT26_012.cs:138 RemoveUse), a picked card spends it; the main-declaration loop guard withholds the identical re-declaration until the state changes."
     },
     "BT26-013": {
       "card_name": "Musyamon",
@@ -12451,7 +12336,7 @@
         "F",
         "C"
       ],
-      "notes": "No DCGO script (BT22_090.cs analogue). [Start of Your Turn] memory floor 3; [All Turns][OPT] own [Knightmon]-text Digimon played or deleted (one clause, shared OPT) -> optional: place 1 [Knightmon]-text card from hand/trash face up under this Tamer (bottom), then Draw 1; [Main][OPT] with >=3 [Knightmon]-text cards under it -> optional hand/trash [LordKnightmon] digivolve onto this Tamer, fixed cost 3, ignoring requirements (G-TAMER-DIGIVOLVE-INTO-DIGIMON resolved 2026-10-01: the Tamer + its under-cards become digivolution cards, draw + [When Digivolving] fire); [Security] play self. Face-down under-cards are counted by printed text (DCGO HasText ignores IsFlipped) - unverified vs general_rule.pdf."
+      "notes": "No DCGO script (BT22_090.cs analogue). [Start of Your Turn] memory floor 3; [All Turns][OPT] own [Knightmon]-text Digimon played or deleted (one clause, shared OPT) -> optional: place 1 [Knightmon]-text card from hand/trash face up under this Tamer (bottom), then Draw 1; [Main][OPT] with >=3 [Knightmon]-text cards under it -> optional hand/trash [LordKnightmon] digivolve onto this Tamer, fixed cost 3, ignoring requirements (G-TAMER-DIGIVOLVE-INTO-DIGIMON resolved 2026-10-01: the Tamer + its under-cards become digivolution cards, draw + [When Digivolving] fire); [Security] play self. Face-down under-cards are counted by printed text (DCGO HasText ignores IsFlipped) - unverified vs general_rule.pdf. 2026-11-24: owner ruling \"Match dcgo on the main use\": the [Main] keeps its use when Rie does not digivolve (declined or empty pick; refund_opt in the else of binding_present; DCGO EX13_074.cs RemoveUse on \"Don't digivolve\" and if (!digivolved)); a digivolve spends it. DCGO EX13_074.cs now exists: it does not offer the [Main] without a [LordKnightmon] in hand or trash and counts only face-up [Knightmon] cards under Rie (both left for the owner). 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[2]: the [Main] is offered only with a [LordKnightmon] in hand or trash (DCGO CanUseCondition); its refund is unchanged."
     },
     "EX13-050": {
       "card_name": "Bokomon",
@@ -12519,7 +12404,7 @@
         "E",
         "F"
       ],
-      "notes": "No DCGO script. [WD][OD] reveal 3 → optional free play cost<=7 Digimon w/[Mamemon] name or [Mutant] (cap on both, official Q&A), trash rest; [EoYT][OPT] optional processing condition (outer_prompt) delete own [Mamemon]-named Digimon (self allowed; payable without opp Digimon per §15-7-4) → delete 1 opp lowest play cost (selector, ties = choice); inherited [EoYT][OPT] same cost → delete ALL opp lowest (BT23-058 sweep)."
+      "notes": "No DCGO script. [WD][OD] reveal 3 → optional free play cost<=7 Digimon w/[Mamemon] name or [Mutant] (cap on both, official Q&A), trash rest; [EoYT][OPT] optional processing condition (outer_prompt) delete own [Mamemon]-named Digimon (self allowed; payable without opp Digimon per §15-7-4) → delete 1 opp lowest play cost (selector, ties = choice); inherited [EoYT][OPT] same cost → delete ALL opp lowest (BT23-058 sweep). 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): both [End of Your Turn] [Mamemon] picks may now be declined after the accept (DCGO EX13_059.cs canNoSelect); declining keeps that clause's [Once Per Turn] (refund_opt). The opponent's Digimon are deleted only when the chosen [Mamemon] was deleted (was unconditional)."
     },
     "EX13-063": {
       "card_name": "PrinceMamemon",
@@ -12618,7 +12503,7 @@
         "E2",
         "F"
       ],
-      "notes": "IMPLEMENTED 2026-10-01: [WD][WA][OPT] two-cost optional processing condition -> unsuspend + opp Digimon CannotActivateWhenDigivolvingEffects; [All Turns] would-leave save and inherited [OPT] [Kentaurosmon]-carrier save both place the TOP card (security_place_top_stacked_card, fixed to card_sources[len-1] = DCGO TopCard; G-TOP-STACKED-CARD-TO-SECURITY RESOLVED) as top security face-down, then cancel_replacement."
+      "notes": "IMPLEMENTED 2026-10-01: [WD][WA][OPT] two-cost optional processing condition -> unsuspend + opp Digimon CannotActivateWhenDigivolvingEffects; [All Turns] would-leave save and inherited [OPT] [Kentaurosmon]-carrier save both place the TOP card (security_place_top_stacked_card, fixed to card_sources[len-1] = DCGO TopCard; G-TOP-STACKED-CARD-TO-SECURITY RESOLVED) as top security face-down, then cancel_replacement. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): after the accept, one choice lists each payable cost plus \"Don't pay the cost\" (DCGO EX13_032.cs SetIntSelection), and the Tamer cost's Tamer pick may be declined; either decline keeps the [Once Per Turn] (refund_opt). Previously one payable cost was paid without a choice."
     },
     "EX13-071": {
       "card_name": "Richard Sampson",
@@ -12705,7 +12590,7 @@
         "E3",
         "C-assembly"
       ],
-      "notes": "OP/WD/WA/Counter OPT delete 1 opp ≥12000 (DCGO filter is inverted ≤12000 — printed text governs), else trash their top security (result-log predicate); [All Turns][OPT] leave-replacement (not own effects) by deleting opp ≤9000; Assembly Guilmon/Growlmon line."
+      "notes": "OP/WD/WA/Counter OPT delete 1 opp ≥12000 (DCGO filter is inverted ≤12000 — printed text governs), else trash their top security (result-log predicate); [All Turns][OPT] leave-replacement (not own effects) by deleting opp ≤9000; Assembly Guilmon/Growlmon line. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the leave-replacement's deletion pick may now be declined after the accept (DCGO EX13_015.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt) and Gallantmon leaves. A chosen Digimon spends the use even if its deletion is prevented."
     },
     "EX13-036": {
       "card_name": "Kentaurosmon",
@@ -12722,7 +12607,7 @@
         "F5",
         "C-assembly"
       ],
-      "notes": "[Security][On Play] −7000 / 'instead' all −7000 at ≤6 total security; WD 3-way most-security trash choice → re-runs its single printed [Security] body inline (engine refire is OnPlay/WD-only); WD/EoA/Counter OPT optional place 1 of each player's Digimon on top security. Needed the 15-8-3-2 security-removal deferral fix."
+      "notes": "[Security][On Play] −7000 / 'instead' all −7000 at ≤6 total security; WD 3-way most-security trash choice → re-runs its single printed [Security] body inline (engine refire is OnPlay/WD-only); WD/EoA/Counter OPT optional place 1 of each player's Digimon on top security. Needed the 15-8-3-2 security-removal deferral fix. 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[2]: not offered when its controller can't add security (DCGO CanAddSecurity). Both picks stay mandatory by owner ruling (\"DCGO does get that wrong\")."
     },
     "EX13-037": {
       "card_name": "Dynasmon",
@@ -12866,7 +12751,7 @@
         "E",
         "F"
       ],
-      "notes": "IMPLEMENTED 2026-10-01: all clauses. Raid/Blocker; [OP][WD][WA][OPT] 2 opp Digimon/Tamers CannotSuspend until their turn ends (select_count_capped_multi clamp + per-pick modifier); [OP][WD][Counter][OPT] may delete opp Digimon with <= this Digimon's source count; [All Turns] would-leave save via select_materials {min: 2, max: 2, same_by: level} + trash_selected_materials + cancel_replacement (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION RESOLVED; only offered when a same-level pair exists). DNA + Assembly -7 routes authored (structural test). [Counter] timing covered structurally only (no live counter-window test)."
+      "notes": "IMPLEMENTED 2026-10-01: all clauses. Raid/Blocker; [OP][WD][WA][OPT] 2 opp Digimon/Tamers CannotSuspend until their turn ends (select_count_capped_multi clamp + per-pick modifier); [OP][WD][Counter][OPT] may delete opp Digimon with <= this Digimon's source count; [All Turns] would-leave save via select_materials {min: 2, max: 2, same_by: level} + trash_selected_materials + cancel_replacement (G-ENGINE-SAME-LEVEL-SOURCE-PAIR-SELECTION RESOLVED; only offered when a same-level pair exists). DNA + Assembly -7 routes authored (structural test). [Counter] timing covered structurally only (no live counter-window test). 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[3]: no outer accept; the delete pick is the decline. A pass keeps the use, a chosen target spends it, at every timing incl. [Counter]."
     },
     "EX13-023": {
       "card_name": "UlforceVeedramon",
@@ -13012,7 +12897,7 @@
         "F3",
         "G-inherited-replacement"
       ],
-      "notes": "[When Moving][On Play] reveal_search (hand bucket then trash bucket, de-dup; lone match -> hand per Q&A); inherited [All Turns][OPT] self-scoped leave-prevention by deleting another [Sukamon]-named Digimon (cost-gated, not own effects)."
+      "notes": "[When Moving][On Play] reveal_search (hand bucket then trash bucket, de-dup; lone match -> hand per Q&A); inherited [All Turns][OPT] self-scoped leave-prevention by deleting another [Sukamon]-named Digimon (cost-gated, not own effects). 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_027.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt). The pick now spans both battle areas (Q7287, DCGO IsPermanentExistsOnBattleArea), was own-only. 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[1]: the payer pick also offers a [Sukamon] that can't be deleted (as DCGO); picking it deletes nothing, the carrier leaves, the use is spent."
     },
     "EX13-028": {
       "card_name": "Sukamon",
@@ -13030,7 +12915,7 @@
         "F3",
         "G-inherited-replacement"
       ],
-      "notes": "<Blocker>; [On Deletion] reveal 3, may play 1 cost<=3 [Chuumon]/[Sukamon]-named Digimon free, trash rest (EX13-059 idiom); inherited identical to EX13-027."
+      "notes": "<Blocker>; [On Deletion] reveal 3, may play 1 cost<=3 [Chuumon]/[Sukamon]-named Digimon free, trash rest (EX13-059 idiom); inherited identical to EX13-027. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_028.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt). The pick now spans both battle areas (Q7288), was own-only. 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[2]: the payer pick also offers a [Sukamon] that can't be deleted (as DCGO); picking it deletes nothing, the carrier leaves, the use is spent."
     },
     "EX13-038": {
       "card_name": "Salamon",
@@ -13096,7 +12981,7 @@
         "A3",
         "F3"
       ],
-      "notes": "On Play reveal_search two hand buckets ([Knightmon] in text, [Knightmon] in name; cross-bucket de-dup) + inherited OPT leave-prevention by deleting another own [Knightmon]-text Digimon, not vs own-effect removal. No DCGO file."
+      "notes": "On Play reveal_search two hand buckets ([Knightmon] in text, [Knightmon] in name; cross-bucket de-dup) + inherited OPT leave-prevention by deleting another own [Knightmon]-text Digimon, not vs own-effect removal. No DCGO file. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_048.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt). 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[1]: the payer pick also offers a [Knightmon]-text Digimon that can't be deleted (as DCGO); picking it deletes nothing, the carrier leaves, the use is spent."
     },
     "EX13-068": {
       "card_name": "Takato Matsuki",
@@ -13386,7 +13271,7 @@
         "F4",
         "G4"
       ],
-      "notes": "<Guard>; OP/OD De-Digivolve 1 (Guard self-deletion fires OD); inherited OPT replacement by deleting another [Knightmon]-text Digimon. No DCGO script."
+      "notes": "<Guard>; OP/OD De-Digivolve 1 (Guard self-deletion fires OD); inherited OPT replacement by deleting another [Knightmon]-text Digimon. No DCGO script. 2026-11-23 (owner ruling, parity with DCGO; qa/rules/mechanics-gaps-2026-10.md W14 row (f)): the inherited deletion pick may now be declined after the accept (DCGO EX13_052.cs canNoSelect); declining keeps the [Once Per Turn] (refund_opt). 2026-11-24 (owner ruling \"Generally let's look to match dcgo\", branch claude/mf3-opt; verdict unchanged): effects[2]: the payer pick also offers a [Knightmon]-text Digimon that can't be deleted (as DCGO); picking it deletes nothing, the carrier leaves, the use is spent."
     },
     "EX13-012": {
       "card_name": "SaviorHuckmon",
@@ -17256,6 +17141,206 @@
       "notes": "inherited [When Attacking][OPT] may digivolve into a [Dinosaur]/[Tyrannomon]-named hand card with the printed cost; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
       "integration_verification": "limited"
     },
+    "AD1-006": {
+      "card_name": "Shoutmon X7",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_006.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [All Turns] When this Digimon would leave the battle area other than by DigiXros, from this Digimon's digivolution cards, you may place up to 4 [Xros Heart] or [Blue Flare] trait Digimon cards under 1 of your Tamers and play 1 such card without paying the cost. Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT10-009": {
+      "card_name": "Shoutmon X4",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt10/BT10-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt10/bt10_009.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [End of Attack] By placing all digivolution cards from under this Digimon under 1 of your Tamers, unsuspend 1 of your Tamers, and delete this Digimon. Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT20-076": {
+      "card_name": "Imperialdramon: Dragon Mode",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_076.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 11000 DP or less. Then, if DNA digivolving, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand ... (the whole clause; the YAML authors only <Blast Digivolve>). Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT20-081": {
+      "card_name": "Fenriloogamon: Takemikazuchi",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-081.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_081.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [On Play] [When Digivolving] 2 of your opponent's Digimon get -10000 DP for the turn. Then, if a Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's 10000 DP or lower Digimon. AND [When Attacking] By trashing your top security card, activate 1 of this Digimon's [When Digivolving] effects. (The YAML authors only <Blast DNA Digivolve>.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT21-095": {
+      "card_name": "Wind Guardians",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_095.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): While you have no face-up security cards, you can ignore this card's color requirements. AND [Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card. AND [Security] You may play 1 level 5 or lower Digimon card with the [WG] trait from your hand without paying the cost. (Only the {Security} [Your Turn] <Vortex> aura is authored.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT24-062": {
+      "card_name": "MasterBlimpmon",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-062.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_062.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): <Blocker>, <Armor Purge>, [End of Attack] [End of Opponent's Turn] [Once per Turn] You may play 1 play cost 5 or lower card with the [Machine], [Cyborg] or [TS] trait from this Digimon's digivolution cards without paying the cost. (Only a flood_gate is authored; the inherited [Your Turn] attack-target clause was not verified either.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "EX11-074": {
+      "card_name": "Vortexdramon",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_074.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [When Digivolving] [When Attacking] You may suspend 1 Digimon. If this effect suspended your Digimon, until your opponent's turn ends, their Digimon's effects don't affect this Digimon and it gets +6000 DP. (The [All Turns][OPT] on-suspend clause is authored only as a 'readiness slice' battle; its 'this Digimon may unsuspend' half was not verified.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "EX6-029": {
+      "card_name": "Mastemon",
+      "validated_date": "2026-11-22",
+      "report": "printed-clause-authoring-audit-2026-11-22",
+      "status": "PARTIAL",
+      "gap_kind": "missing-printed-clause",
+      "yaml_path": "code/digimon-engine/cards/ex6/EX6-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_029.rs",
+      "notes": "Printed clause(s) with no authored YAML counterpart (official bundle + card face): [On Play] [When Digivolving] You may play 1 level 5 or lower [Angel], [Archangel] or [Fallen Angel] trait Digimon card from your hand or trash without paying the cost. Then, if DNA digivolving, place 1 other Digimon as the bottom security card, and trash the top cards of your opponent's security stack so that it has 4 cards left. (The YAML authors only <Blast DNA Digivolve>.) Found by the printed-vs-authored clause audit (code/tests/test_printed_clause_authoring.py); PARTIAL keeps the card out of training until the clause is implemented."
+    },
+    "BT27-006": {
+      "card_name": "Gemmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_006.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0
+    },
+    "BT27-011": {
+      "card_name": "Liskmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-011.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_011.rs",
+      "test_count": 3,
+      "tests_passing": 3,
+      "tests_ignored": 0
+    },
+    "BT27-014": {
+      "card_name": "Reptilimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_014.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0
+    },
+    "BT27-018": {
+      "card_name": "Rubeusdramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_018.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0
+    },
+    "BT27-022": {
+      "card_name": "Renamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_022.rs",
+      "test_count": 3,
+      "tests_passing": 3,
+      "tests_ignored": 0
+    },
+    "BT27-027": {
+      "card_name": "Tenkomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_027.rs",
+      "test_count": 3,
+      "tests_passing": 3,
+      "tests_ignored": 0
+    },
+    "BT27-029": {
+      "card_name": "Sekkamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_029.rs",
+      "test_count": 3,
+      "tests_passing": 3,
+      "tests_ignored": 0
+    },
+    "BT27-033": {
+      "card_name": "Yukinamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_033.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0
+    },
+    "BT27-086": {
+      "card_name": "Kanata Hondo",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-086.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_086.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0
+    },
+    "BT27-088": {
+      "card_name": "Valner Dragnogh",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "archetype": "Gemmon / ALYSION",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-088.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_088.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0
+    },
     "LM-063": {
       "card_name": "Endurance Training",
       "validated_date": "2026-11-23",
@@ -17309,6 +17394,234 @@
         "effect-digivolve-reduce"
       ],
       "notes": "Shared Training-option shape (black/green), twin of LM-062 per DCGO LM_065.cs: name-gated color bypass, [Main] reveal 2 add 1 black/green + bottom + place as Delay, <Delay> optional cost -2 digivolve into black/green Digimon in hand (legal-target gated), [Security] mirror + placement."
+    },
+    "BT27-001": {
+      "card_name": "Gurimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-001.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_001.rs",
+      "test_count": 2,
+      "integration_verification": "limited"
+    },
+    "BT27-003": {
+      "card_name": "Frimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_003.rs",
+      "test_count": 1,
+      "integration_verification": "limited"
+    },
+    "BT27-005": {
+      "card_name": "Motimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_005.rs",
+      "test_count": 2,
+      "integration_verification": "limited"
+    },
+    "BT27-007": {
+      "card_name": "Solarmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_007.rs",
+      "test_count": 3,
+      "integration_verification": "limited"
+    },
+    "BT27-010": {
+      "card_name": "Meramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-010.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_010.rs",
+      "test_count": 4,
+      "integration_verification": "limited"
+    },
+    "BT27-012": {
+      "card_name": "SkullMeramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-012.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_012.rs",
+      "test_count": 4,
+      "integration_verification": "limited"
+    },
+    "BT27-023": {
+      "card_name": "KausGammamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_023.rs",
+      "test_count": 4,
+      "integration_verification": "limited"
+    },
+    "BT27-037": {
+      "card_name": "Guardromon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_037.rs",
+      "test_count": 2,
+      "integration_verification": "limited"
+    },
+    "BT27-040": {
+      "card_name": "Etemon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_040.rs",
+      "test_count": 4,
+      "integration_verification": "limited"
+    },
+    "BT27-045": {
+      "card_name": "Liollmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-045.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_045.rs",
+      "test_count": 3,
+      "integration_verification": "limited"
+    },
+    "BT27-047": {
+      "card_name": "WezenGammamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_047.rs",
+      "test_count": 3,
+      "integration_verification": "limited"
+    },
+    "BT27-049": {
+      "card_name": "Liamon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_049.rs",
+      "test_count": 3,
+      "integration_verification": "limited"
+    },
+    "BT27-051": {
+      "card_name": "LoaderLeomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-051.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_051.rs",
+      "test_count": 3,
+      "integration_verification": "limited"
+    },
+    "BT27-054": {
+      "card_name": "Lotosmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_054.rs",
+      "test_count": 2,
+      "integration_verification": "limited"
+    },
+    "BT27-059": {
+      "card_name": "Clockmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_059.rs",
+      "test_count": 2,
+      "integration_verification": "limited"
+    },
+    "BT27-062": {
+      "card_name": "Maildramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-062.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_062.rs",
+      "test_count": 4,
+      "integration_verification": "limited"
+    },
+    "BT27-063": {
+      "card_name": "Andromon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_063.rs",
+      "test_count": 3,
+      "integration_verification": "limited"
+    },
+    "BT27-087": {
+      "card_name": "Yuji Musya",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_087.rs",
+      "test_count": 3,
+      "integration_verification": "limited"
+    },
+    "BT27-104": {
+      "card_name": "King Drasil",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "archetype": "BT27 staples and unclustered",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_104.rs",
+      "test_count": 6,
+      "integration_verification": "limited"
     },
     "LM-066": {
       "card_name": "Zephagamon",

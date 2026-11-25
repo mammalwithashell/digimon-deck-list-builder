@@ -1222,3 +1222,72 @@ fn mandatory_sync_reducer_removed_or_replayed_host_abandons_declared_evolution()
         assert!(r.game.pending_selection.is_none());
     }
 }
+
+// ─── The colour filter reads current colours (scan finding F04 class) ────────
+//
+// "when one of your green Digimon would next digivolve" (Hidden Potential
+// Discovered! (BT3-103)) asks about the Digimon's colour as effects currently
+// leave it -- DCGO BT3_103.cs tests `TopCard.CardColors`, which folds every
+// colour-change effect (CardSource.cs:446-476). The reducer used to read the
+// top card's printed colours.
+
+fn add_color_modifier(r: &mut DebugRunner, base: usize, kind: digimon_engine::enums::ModifierType, color: CardColor) {
+    use digimon_engine::enums::Expiry;
+    use digimon_engine::modifiers::{ModifierEntry, ModifierPayload};
+    let handle = digimon_engine::permanent::PermanentHandle { player: 0, index: base as u8 };
+    r.game.modifiers.add(
+        handle,
+        ModifierEntry::simple(kind, 0, Expiry::Permanent, 0).with_payload(ModifierPayload::Colors {
+            value: vec![color],
+            base: matches!(kind, digimon_engine::enums::ModifierType::ChangeBaseCardColor),
+        }),
+    );
+}
+
+/// A printed-red base that has GAINED green is one of your green Digimon.
+#[test]
+fn a_gained_green_qualifies_for_the_green_digivolve_reducer() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("ARM", "Arm"))
+        .add_card(lvl3_base("RBASE", CardColor::Red))
+        .add_card(lvl4_evo3("GEVO", CardColor::Green, EVO_GREEN, 4))
+        .hand(0, &["ARM", "GEVO"])
+        .deck(0, &["RBASE"; 5])
+        .memory(10)
+        .start();
+    r.register_effect("ARM", std::sync::Arc::new(ArmsGreenDigivolveReducer));
+    let base = r.place_on_field(0, "RBASE", Some(0)).index as usize;
+    add_color_modifier(&mut r, base, digimon_engine::enums::ModifierType::AddColor, CardColor::Green);
+    r.play(0, 0); // play ARM
+    let ok = r.game.digivolve_from_hand(0, 0, base, PlaySource::ByDigivolve);
+    assert!(!ok, "the reducer prompt must park the digivolution");
+    let pending = r.game.pending_selection.as_ref().expect(
+        "a red Digimon that gained green is green: the green reducer must prompt",
+    );
+    assert!(matches!(pending.kind, SelectionKind::EffectChoice));
+}
+
+/// A printed-green base whose colour was changed to red is no longer green.
+#[test]
+fn a_green_lost_to_a_color_change_does_not_qualify_for_the_green_reducer() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("ARM", "Arm"))
+        .add_card(lvl3_base("GBASE", CardColor::Green))
+        .add_card(lvl4_evo3("REVO", CardColor::Red, EVO_RED, 4))
+        .hand(0, &["ARM", "REVO"])
+        .deck(0, &["GBASE"; 5])
+        .memory(10)
+        .start();
+    r.register_effect("ARM", std::sync::Arc::new(ArmsGreenDigivolveReducer));
+    let base = r.place_on_field(0, "GBASE", Some(0)).index as usize;
+    add_color_modifier(&mut r, base, digimon_engine::enums::ModifierType::ChangeBaseCardColor, CardColor::Red);
+    r.play(0, 0); // play ARM
+    let memory_before = r.memory();
+    let ok = r.game.digivolve_from_hand(0, 0, base, PlaySource::ByDigivolve);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "a green Digimon changed to red is not green: no reducer prompt"
+    );
+    assert!(ok, "the red-circle digivolution onto a now-red base resolves");
+    assert_eq!(r.memory(), memory_before - 4, "full printed cost, no reduction");
+}

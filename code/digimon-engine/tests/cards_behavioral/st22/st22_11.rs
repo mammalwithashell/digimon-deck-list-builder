@@ -222,9 +222,10 @@ fn st22_11_has_link_requirement_inherited() {
     );
 }
 
-/// All four clauses compile (flood_gate + security + main + link_requirement).
+/// All six clauses compile (flood_gate + security + main + link_requirement +
+/// the link box's <Blocker> and +2000 DP). Was 4: the link box was missing.
 #[test]
-fn st22_11_has_four_compiled_clauses() {
+fn st22_11_has_six_compiled_clauses() {
     let runner = DebugRunner::builder()
         .dsl_card("ST22-11")
         .expect("parses")
@@ -232,8 +233,8 @@ fn st22_11_has_four_compiled_clauses() {
     let card = runner.compiled_card("ST22-11").expect("compiled");
     assert_eq!(
         card.effects.len(),
-        4,
-        "expected 4 clauses (flood_gate, on_security, main_from_hand, link_requirement); got {}",
+        6,
+        "expected 6 clauses (flood_gate, on_security, main_from_hand, link_requirement, linked Blocker, linked +2000 DP); got {}",
         card.effects.len()
     );
 }
@@ -589,4 +590,50 @@ fn st22_11_main_buff_expires_after_opponents_turn() {
         !runner.game.has_keyword(digi, Keyword::Reboot),
         "Reboot must expire at end of opponent's (P1's) turn"
     );
+}
+
+// ─── Link box: <Blocker> and +2000 DP (card face) ────────────────────────────
+
+fn st22_11_play(link: bool) -> (DebugRunner, digimon_engine::permanent::PermanentHandle, i32) {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST22-11")
+        .expect("parses")
+        .add_card(make_black_digimon("DIGI"))
+        .hand(0, &["ST22-11"])
+        .memory(10)
+        .start();
+    let digi = runner.place_on_field(0, "DIGI", Some(0));
+    let dp0 = runner.effective_dp(digi).expect("dp");
+    assert_eq!(runner.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    let view = runner.pending_selection_view().expect("link prompt");
+    let a = if link {
+        view.valid_action_ids.iter().copied().find(|&a| a != PASS).expect("host")
+    } else {
+        PASS
+    };
+    runner.execute_action(view.selecting_player, a).expect("link choice");
+    let view2 = runner.pending_selection_view().expect("buff target");
+    runner
+        .execute_action(view2.selecting_player, view2.valid_action_ids[0])
+        .expect("buff target");
+    assert!(runner.pending_selection().is_none(), "no decision is left");
+    runner.game.tick_declarative_effects();
+    (runner, digi, dp0)
+}
+
+/// Linked, Defense Plug-In F (ST22-11) gives its host <Blocker> and +2000 DP
+/// on top of the [Main] +3000 DP.
+#[test]
+fn st22_11_link_box_gives_host_blocker_and_plus_2000_dp() {
+    let (r, digi, dp0) = st22_11_play(true);
+    assert!(r.game.has_keyword(digi, Keyword::Blocker), "link box <Blocker>");
+    assert_eq!(r.effective_dp(digi).expect("dp"), dp0 + 3000 + 2000);
+}
+
+/// Not linked: only the [Main] buff, no <Blocker>, no link DP.
+#[test]
+fn st22_11_unlinked_gives_no_blocker_and_no_link_dp() {
+    let (r, digi, dp0) = st22_11_play(false);
+    assert!(!r.game.has_keyword(digi, Keyword::Blocker));
+    assert_eq!(r.effective_dp(digi).expect("dp"), dp0 + 3000);
 }

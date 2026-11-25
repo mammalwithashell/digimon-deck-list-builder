@@ -32,6 +32,11 @@
       "card_color": 0,
       "level": 6,
       "memory_cost": 6
+    },
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
     }
   ],
   "xros_req": "[Digivolve] [Siriusmon] w/[Arcturusmon] digivolution card: Cost 3"

@@ -305,7 +305,7 @@ fn ex13_027_when_moving_from_breeding_fires_reveal() {
 // Section 3/5 — Inherited [All Turns][OPT] leave prevention
 // ════════════════════════════════════════════════════════════════════════════
 
-fn inherited_setup() -> (DebugRunner, PermanentHandle) {
+fn ex13_027_inherited_setup() -> (DebugRunner, PermanentHandle) {
     let mut r = builder().deck(0, &["FILL"; 6]).deck(1, &["FILL"; 6]).start();
     r.skip_mulligan();
     let carrier = r.place_stack(0, &[CARD_ID, "CARRIER"]);
@@ -314,7 +314,7 @@ fn inherited_setup() -> (DebugRunner, PermanentHandle) {
 
 #[test]
 fn ex13_027_inherited_deletes_other_sukamon_and_carrier_stays() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_027_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.place_on_field(0, "OTHER-PLAIN", Some(0));
     r.game
@@ -327,7 +327,9 @@ fn ex13_027_inherited_deletes_other_sukamon_and_carrier_stays() {
         .expect("accept replacement");
 
     let cost = r.pending_selection_view().expect("select cost Digimon");
-    assert_eq!(cost.kind, SelectionKind::OwnField);
+    // "1 other Digimon" (no "your"): either player's Digimon (Q7287), so the
+    // pick spans both battle areas.
+    assert_eq!(cost.kind, SelectionKind::AnyField);
     let offered: Vec<_> = cost
         .valid_action_ids
         .iter()
@@ -345,7 +347,7 @@ fn ex13_027_inherited_deletes_other_sukamon_and_carrier_stays() {
 
 #[test]
 fn ex13_027_inherited_not_offered_without_other_sukamon() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_027_inherited_setup();
     r.place_on_field(0, "OTHER-PLAIN", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -370,7 +372,7 @@ fn ex13_027_inherited_carrier_itself_named_sukamon_is_not_other() {
 
 #[test]
 fn ex13_027_inherited_not_offered_for_own_effect_removal() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_027_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OwnEffect);
@@ -383,7 +385,7 @@ fn ex13_027_inherited_not_offered_for_own_effect_removal() {
 
 #[test]
 fn ex13_027_inherited_decline_lets_carrier_leave() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_027_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
@@ -399,7 +401,7 @@ fn ex13_027_inherited_decline_lets_carrier_leave() {
 #[test]
 fn ex13_027_inherited_protects_only_this_digimon() {
     // Another of your Digimon leaving is not protected by Chuumon's inherited.
-    let (mut r, _carrier) = inherited_setup();
+    let (mut r, _carrier) = ex13_027_inherited_setup();
     let suka = r.place_on_field(0, "OTHER-SUKA", Some(0));
     let plain = r.place_on_field(0, "OTHER-PLAIN", Some(0));
     let _ = suka;
@@ -411,7 +413,7 @@ fn ex13_027_inherited_protects_only_this_digimon() {
 
 #[test]
 fn ex13_027_inherited_once_per_turn_and_resets() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_027_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.place_on_field(0, "SUKA", Some(0));
     r.game
@@ -441,7 +443,7 @@ fn ex13_027_inherited_once_per_turn_and_resets() {
 
 #[test]
 fn ex13_027_inherited_lockout_clears_next_turn() {
-    let (mut r, carrier) = inherited_setup();
+    let (mut r, carrier) = ex13_027_inherited_setup();
     r.place_on_field(0, "OTHER-SUKA", Some(0));
     r.place_on_field(0, "SUKA", Some(0));
     r.game
@@ -466,4 +468,288 @@ fn ex13_027_inherited_lockout_clears_next_turn() {
         r.pending_selection_view().is_some(),
         "OPT resets on the next turn"
     );
+}
+
+// ─── Inherited [OPT]: DCGO parity (owner ruling 2026-11-23) ──────────────────
+//
+// DCGO EX13_027.cs: offered only while another [Sukamon]-named Digimon exists
+// on EITHER battle area (`IsPermanentExistsOnBattleArea`, Q7287); after the
+// accept, a `SelectPermanentEffect` with canNoSelect true. None chosen ->
+// `RemoveUse()` and the carrier leaves. One chosen -> `isUsed` (spent); the
+// carrier stays only if that Digimon was deleted. qa/rules/mechanics-gaps-
+// 2026-10.md W14 row (f).
+//
+// <Evade> on the carrier keeps it after the would-leave window, so the use
+// can be observed on a later removal the same turn (it is then suspended, so
+// <Evade> is not offered again).
+
+fn grant_evade(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.modifiers.grant_keyword(
+        h,
+        digimon_engine::enums::Keyword::Evade,
+        digimon_engine::enums::Expiry::Permanent,
+        0,
+    );
+}
+
+/// While <Evade> can also answer the deletion, the engine first asks which
+/// immediate replacement effect applies next (CR 4.3 15-8-5); pick <Evade>
+/// (`evade`) or the carrier's inherited clause. With one candidate left, its
+/// own accept prompt is already pending.
+fn pick_replacement(r: &mut DebugRunner, evade: bool) {
+    let v = r.pending_selection_view().expect("replacement prompt");
+    if v.kind == SelectionKind::EffectChoice && v.prompt.contains("immediate replacement") {
+        let row = v
+            .effect_choices
+            .as_ref()
+            .and_then(|rows| rows.iter().find(|c| c.label.contains("Evade") == evade))
+            .unwrap_or_else(|| panic!("replacement order rows: {:?}", v.effect_choices))
+            .action_id;
+        r.execute_action(v.selecting_player, row).expect("order pick");
+    }
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Replacement));
+}
+
+/// PASS is legal at the pending prompt (the action mask, not the raw ids).
+fn pass_legal(r: &DebugRunner) -> bool {
+    let p = r.pending_selection().expect("prompt").selecting_player;
+    digimon_engine::action::build_action_mask(&r.game, p)[PASS as usize] == 1.0
+}
+
+fn ex13_027_accept_evade(r: &mut DebugRunner) {
+    pick_replacement(r, true);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept <Evade>");
+    assert!(
+        r.pending_selection().is_none(),
+        "the same removal does not offer the declined clause again"
+    );
+}
+
+#[test]
+fn ex13_027_inherited_outer_decline_keeps_opt() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    r.place_on_field(0, "OTHER-SUKA", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, PASS).expect("decline the replacement");
+    ex13_027_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "declined at the accept prompt: offered again this turn"
+    );
+}
+
+#[test]
+fn ex13_027_inherited_accept_then_decline_cost_keeps_opt() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    r.place_on_field(0, "OTHER-SUKA", Some(0));
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(
+        pass_legal(&r),
+        "DCGO EX13_027.cs canNoSelect: the deletion may be declined after the accept"
+    );
+    r.execute_action(0, PASS).expect("decline the cost");
+    assert!(field_ids(&r).contains(&"OTHER-SUKA".to_string()), "nothing deleted");
+    ex13_027_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: the declined cost keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex13_027_inherited_declined_cost_lets_carrier_leave() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    r.place_on_field(0, "OTHER-SUKA", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(pass_legal(&r), "the cost may be declined");
+    r.execute_action(0, PASS).expect("decline the cost");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    let field = field_ids(&r);
+    assert!(!field.contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
+    assert!(field.contains(&"OTHER-SUKA".to_string()));
+}
+
+/// Q7287: "1 other Digimon with [Sukamon] in its name" may be the opponent's.
+#[test]
+fn ex13_027_inherited_opponent_sukamon_is_a_legal_cost() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    let opp = r.place_on_field(1, "OTHER-SUKA", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "an opponent's [Sukamon]-named Digimon can pay the cost (Q7287)"
+    );
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let id = digimon_engine::action::space::encode_attack(1, opp.index as u16);
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(cost.valid_action_ids.contains(&id), "{cost:?}");
+    r.execute_action(0, id).expect("delete the opponent's Sukamon");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(field_ids(&r).contains(&"CARRIER".to_string()), "the carrier stays");
+    assert!(r.game.players[1].battle_area.is_empty(), "the opponent's Sukamon was deleted");
+}
+
+// ─── Inherited: an undeletable payer is still offered (owner ruling 2026-11-24) ─
+//
+// DCGO EX13_027.cs offers the clause whenever a printed match exists
+// (`CanActivateCondition` = `HasMatchConditionPermanent(CanSelectPermanentCondition)`,
+// no deletability check) and its pick lists every printed match. Picking one
+// that can't be deleted sets `isUsed` (spent), `DestroyPermanentsClass` deletes
+// nothing, so `SuccessProcess` never runs and the carrier leaves. Owner,
+// 2026-11-24: "You can pick a target that is immune from the removal, and it
+// will fizzle. Nothing is deleted, right? That is a valid choice."
+//
+// The payer here is the OPPONENT's [Sukamon]-named Digimon under "can't be
+// deleted by your opponent's effects" (to its owner, Chuumon's effect is an
+// opponent's effect), e.g. the grant of Gladimon (BT18-062).
+
+fn protect_from_opponent_effects(r: &mut DebugRunner, h: PermanentHandle) {
+    r.game.modifiers.add(
+        h,
+        digimon_engine::modifiers::ModifierEntry::passive_replacement(
+            digimon_engine::enums::ModifierType::CannotBeDestroyedByEffect,
+            digimon_engine::enums::Expiry::Permanent,
+            h.player,
+        )
+        .opponent_only(),
+    );
+}
+
+fn opp_sukamon_protected(r: &mut DebugRunner) -> PermanentHandle {
+    let h = r.place_on_field(1, "OTHER-SUKA", Some(0));
+    protect_from_opponent_effects(r, h);
+    h
+}
+
+fn any_field_id(h: PermanentHandle) -> u16 {
+    digimon_engine::action::space::encode_attack(h.player as u16, h.index as u16)
+}
+
+#[test]
+fn ex13_027_inherited_offered_when_the_only_match_is_undeletable() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO offers the clause while a printed match exists, deletable or not"
+    );
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(
+        cost.valid_action_ids.contains(&any_field_id(opp)),
+        "the undeletable [Sukamon] is listed: {cost:?}"
+    );
+}
+
+#[test]
+fn ex13_027_inherited_picking_an_undeletable_payer_spends_opt_and_deletes_nothing() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    r.execute_action(0, any_field_id(opp)).expect("pick the undeletable Sukamon");
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "nothing was deleted");
+    ex13_027_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert!(
+        r.pending_selection().is_none(),
+        "DCGO isUsed: a Digimon was chosen, so the [Once Per Turn] is spent"
+    );
+    assert!(!field_ids(&r).contains(&"CARRIER".to_string()));
+}
+
+#[test]
+fn ex13_027_inherited_picking_an_undeletable_payer_lets_the_carrier_leave() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    r.execute_action(0, any_field_id(opp)).expect("pick the undeletable Sukamon");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    assert!(!field_ids(&r).contains(&"CARRIER".to_string()), "not paid: the carrier leaves");
+    assert_eq!(r.game.players[1].battle_area.len(), 1, "the Sukamon was not deleted");
+}
+
+#[test]
+fn ex13_027_inherited_undeletable_only_pass_keeps_opt() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    grant_evade(&mut r, carrier);
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    pick_replacement(&mut r, false);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    assert!(pass_legal(&r), "canNoSelect");
+    r.execute_action(0, PASS).expect("select nothing");
+    assert_eq!(r.game.players[1].battle_area.len(), 1);
+    let _ = opp;
+    ex13_027_accept_evade(&mut r);
+    let carrier = handle_of(&r, "CARRIER");
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "DCGO RemoveUse: nothing chosen keeps the [Once Per Turn]"
+    );
+}
+
+#[test]
+fn ex13_027_inherited_deletable_payer_still_protects_beside_an_undeletable_one() {
+    let (mut r, carrier) = ex13_027_inherited_setup();
+    let opp = opp_sukamon_protected(&mut r);
+    let own = r.place_on_field(0, "OTHER-SUKA", Some(0));
+    r.game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    r.execute_action(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let cost = r.pending_selection_view().expect("cost pick");
+    assert!(cost.valid_action_ids.contains(&any_field_id(opp)), "{cost:?}");
+    assert!(cost.valid_action_ids.contains(&any_field_id(own)), "{cost:?}");
+    r.execute_action(0, any_field_id(own)).expect("pay with the deletable Sukamon");
+    assert!(r.pending_selection().is_none(), "no decision is left");
+    let field = field_ids(&r);
+    assert!(field.contains(&"CARRIER".to_string()), "paid: the carrier doesn't leave");
+    assert!(!field.contains(&"OTHER-SUKA".to_string()), "the payer was deleted");
+    assert_eq!(r.game.players[1].battle_area.len(), 1);
 }
