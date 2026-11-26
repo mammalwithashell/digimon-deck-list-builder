@@ -198,7 +198,7 @@ impl Game {
             // effect-resolution rebuild ticks, so it doesn't inflate peak
             // stack depth.
             #[cfg(debug_assertions)]
-            {
+            if super::verify_caches_enabled() {
                 let skipped = self.modifiers.materialized_snapshot();
                 self.materialize_declaratives_full();
                 let rebuilt = self.modifiers.materialized_snapshot();

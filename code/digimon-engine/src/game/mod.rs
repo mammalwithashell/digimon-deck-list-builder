@@ -66,6 +66,26 @@ impl TerminalOutcomeReason {
     }
 }
 
+/// `true` when `DIGIMON_VERIFY_CACHES=1` (or `"true"`) is set in a debug
+/// build, enabling the differential cache oracles in `effects_entry_by_index_inner`
+/// and `tick_declarative_effects_inner`. Always `false` in release builds.
+#[inline]
+pub(crate) fn verify_caches_enabled() -> bool {
+    #[cfg(debug_assertions)]
+    {
+        static ENABLED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *ENABLED.get_or_init(|| {
+            std::env::var("DIGIMON_VERIFY_CACHES")
+                .map(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "yes" | "YES"))
+                .unwrap_or(false)
+        })
+    }
+    #[cfg(not(debug_assertions))]
+    {
+        false
+    }
+}
+
 pub(crate) fn face_keywords(card_data: &CardData) -> Vec<crate::enums::Keyword> {
     if card_data.effect_text.is_empty()
         && card_data.inherited_text.is_empty()
@@ -760,8 +780,7 @@ pub struct Game {
     /// Compiled DSL alternate digivolution paths keyed by result card id.
     /// Shared via `Arc` (built once with the card store).
     #[cfg(feature = "dsl-yaml-loader")]
-    pub(crate) alt_path_registry:
-        std::sync::Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>,
+    pub(crate) alt_path_registry: crate::card_store::AltPathRegistry,
     /// Active modifiers (DP buffs, granted keywords, etc.) attached to permanents.
     pub modifiers: ModifierRegistry,
     /// Source-independent continuous mass modifiers (e.g. "all opponent Digimon
@@ -4372,10 +4391,13 @@ impl Game {
         let key = (data_index, handle);
 
         if let Some(cached) = self.effects_cache.get(&key) {
-            // Debug consistency check within the current registry generation.
+            // Opt-in differential oracle (`DIGIMON_VERIFY_CACHES=1` in debug builds).
+            // Rebuilding every effect and formatting `{e:?}` on every cache hit
+            // defeats `effects_cache` (~5-15x slowdown on multi-step tests), so
+            // CI enables it on dedicated fuzz/oracle gates rather than every test.
             // Debug output equality does not prove callback purity or safety.
             #[cfg(debug_assertions)]
-            {
+            if verify_caches_enabled() {
                 let fresh = self.build_effects_for_card(card_id, handle);
                 let proj = |v: &[crate::effect::Effect]| -> Vec<String> {
                     v.iter().map(|e| format!("{e:?}")).collect()

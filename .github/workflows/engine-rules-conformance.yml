@@ -58,12 +58,16 @@ jobs:
     timeout-minutes: 90
     env:
       CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install lld linker
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends lld
 
       - name: Setup Python
         uses: actions/setup-python@v6
@@ -80,7 +84,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-engine-rules-core-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-engine-rules-core-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
 
       # Cheap and first: fails in seconds, before any Rust compile.
       # build_obligations --check: the committed qa/rules obligations JSON is
@@ -99,6 +103,28 @@ jobs:
         env:
           PYTHONPATH: code
         run: python -m tools.rules.coverage_report --check
+
+      # Compile all 31 binaries in a single Cargo invocation so rustc + lld
+      # stay saturated across every runner core without serial group gaps.
+      - name: Compile rules-conformance and core test binaries
+        if: ${{ !cancelled() }}
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: >
+          cargo test -p digimon-engine --no-run
+          --test rules_conformance --test rules_faq --test keyword_semantics_matrix
+          --test timing_dispatch --test cost_hooks
+          --test blocker_current_defender --test force_attack_effect_tail_order
+          --test combat --test mask_and_tensor
+          --test keyword_phase_d --test keyword_phase_e --test keyword_phase_f
+          --test effect_context --test replacements
+          --test phase_flow --test effects --test effect_source_kind
+          --test event_emission --test deletion_batching --test option_flow
+          --test token_departure_rules --test token_source_destination
+          --test flood_gates --test dual_cards --test policies --test infra
+          --test deck_tools --test ffi_parity --test onnx_parity
+          --test determinization --test search --test selfplay
+          --test invariant_fuzz
 
       # --- The rules-conformance deliverable --------------------------------
       # rules_conformance: chapter-indexed (ch11..ch17) conformance suite for

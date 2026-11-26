@@ -44,6 +44,55 @@ impl ParsedCardKeywords {
     }
 }
 
+/// Two-layer copy-on-write registry of compiled DSL alternate digivolution
+/// paths keyed by result card id.
+///
+/// The immutable embedded-pack map (~2,000 entries) lives in `base` behind a
+/// single process-global `Arc`, while per-game test overrides (`DebugRunner`)
+/// land in the tiny `overrides` map. This makes `DebugRunner::start()` O(1)
+/// instead of cloning ~2,000 `Vec<CompiledAltPath>` trees on every test.
+#[cfg(feature = "dsl-yaml-loader")]
+#[derive(Debug, Default, Clone)]
+pub(crate) struct AltPathRegistry {
+    base: Option<Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>>,
+    overrides: Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>,
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+impl AltPathRegistry {
+    pub(crate) fn from_base(
+        base: Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>,
+    ) -> Self {
+        Self {
+            base: Some(base),
+            overrides: Arc::default(),
+        }
+    }
+
+    #[inline]
+    pub(crate) fn get(&self, card_id: &str) -> Option<&Vec<digimon_dsl::compiled::CompiledAltPath>> {
+        if !self.overrides.is_empty() {
+            if let Some(paths) = self.overrides.get(card_id) {
+                return Some(paths);
+            }
+        }
+        self.base.as_deref().and_then(|base| base.get(card_id))
+    }
+
+    pub(crate) fn extend_overrides<I>(&mut self, iter: I)
+    where
+        I: IntoIterator<Item = (String, Vec<digimon_dsl::compiled::CompiledAltPath>)>,
+    {
+        let mut iter = iter.into_iter();
+        let Some((first_k, first_v)) = iter.next() else {
+            return;
+        };
+        let map = Arc::make_mut(&mut self.overrides);
+        map.insert(first_k, first_v);
+        map.extend(iter);
+    }
+}
+
 /// The immutable, enriched card store derived from `all_card_data`. Memoized and
 /// shared; reused only for identical original metadata inputs.
 pub struct SharedCardStore {
@@ -56,7 +105,7 @@ pub struct SharedCardStore {
     pub index: Arc<HashMap<String, usize>>,
     /// Compiled DSL alt-paths keyed by card_id (only the DSL-loader build has it).
     #[cfg(feature = "dsl-yaml-loader")]
-    pub alt_paths: Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>,
+    pub(crate) alt_paths: AltPathRegistry,
 }
 
 #[derive(Clone)]
@@ -323,6 +372,61 @@ fn evict_unused(cache: &mut StoreCache) {
     });
 }
 
+/// Process-cached embedded DSL alt-path map. Independent of `all_card_data`, so
+/// building it once avoids cloning ~2,000 `Vec<CompiledAltPath>` entries on
+/// every `shared_card_store` cache miss in test suites.
+#[cfg(feature = "dsl-yaml-loader")]
+fn embedded_alt_paths() -> AltPathRegistry {
+    static BASE: OnceLock<
+        Option<Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>>,
+    > = OnceLock::new();
+    let base = BASE.get_or_init(|| {
+        let dsl_registry = crate::dsl_registry::from_embedded_cached().ok()?;
+        let map: HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>> =
+            if let Some(enrichments) = dsl_registry.enrichments() {
+                enrichments
+                    .iter()
+                    .filter(|e| !e.alt_paths.is_empty())
+                    .map(|e| (e.card_id.clone(), e.alt_paths.clone()))
+                    .collect()
+            } else {
+                dsl_registry
+                    .iter()
+                    .filter_map(|(card_id, compiled)| {
+                        if compiled.alt_paths.is_empty() {
+                            None
+                        } else {
+                            Some((card_id.clone(), compiled.alt_paths.clone()))
+                        }
+                    })
+                    .collect()
+            };
+        Some(Arc::new(map))
+    });
+    match base {
+        Some(arc) => AltPathRegistry::from_base(Arc::clone(arc)),
+        None => AltPathRegistry::default(),
+    }
+}
+
+/// Process-cached sorted global token rows `(card_id, CardData, ParsedCardKeywords)`.
+fn cached_token_rows() -> &'static [(String, CardData, ParsedCardKeywords)] {
+    static ROWS: OnceLock<Vec<(String, CardData, ParsedCardKeywords)>> = OnceLock::new();
+    ROWS.get_or_init(|| {
+        let token_registry = crate::token_registry::build_registry_cached();
+        let mut token_defs: Vec<_> = token_registry.iter().collect();
+        token_defs.sort_by(|a, b| a.card_id.cmp(&b.card_id));
+        token_defs
+            .into_iter()
+            .map(|def| {
+                let cd = def.to_card_data();
+                let kw = ParsedCardKeywords::from_card_data(&cd);
+                (def.card_id.clone(), cd, kw)
+            })
+            .collect()
+    })
+}
+
 /// The reference build — the exact clone+enrich+index+token-absorb sequence
 /// previously inline in `Game::new`. The cache-miss path; also the oracle baseline.
 pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> SharedCardStore {
@@ -330,32 +434,11 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
     let mut effective_card_data = all_card_data.clone();
 
     #[cfg(feature = "dsl-yaml-loader")]
-    let mut alt_path_registry: HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>> =
-        HashMap::new();
-    #[cfg(feature = "dsl-yaml-loader")]
     if let Ok(dsl_registry) = crate::dsl_registry::from_embedded_cached() {
         crate::dsl_bridge::enrich_card_data_with_dsl_alt_paths(
             &mut effective_card_data,
             dsl_registry,
         );
-        alt_path_registry = if let Some(enrichments) = dsl_registry.enrichments() {
-            enrichments
-                .iter()
-                .filter(|e| !e.alt_paths.is_empty())
-                .map(|e| (e.card_id.clone(), e.alt_paths.clone()))
-                .collect()
-        } else {
-            dsl_registry
-                .iter()
-                .filter_map(|(card_id, compiled)| {
-                    if compiled.alt_paths.is_empty() {
-                        None
-                    } else {
-                        Some((card_id.clone(), compiled.alt_paths.clone()))
-                    }
-                })
-                .collect()
-        };
     }
 
     // Assign `data_index` in a DETERMINISTIC order (sorted by card_id), NOT
@@ -365,42 +448,37 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
     // independently re-derives one (e.g. `DebugRunner`, which sorts identically).
     // `data_index` is internal (the obs tensor keys on the stable registry index),
     // so this is behavior-neutral.
-    let mut sorted_ids: Vec<&String> = effective_card_data.keys().collect();
-    sorted_ids.sort();
-    let mut data: Vec<CardData> = Vec::with_capacity(effective_card_data.len());
-    let mut index: HashMap<String, usize> = HashMap::with_capacity(effective_card_data.len());
-    for card_id in sorted_ids {
+    let token_rows = cached_token_rows();
+    let total_len = effective_card_data.len() + token_rows.len();
+    let mut sorted_entries: Vec<(String, CardData)> = effective_card_data.into_iter().collect();
+    sorted_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut data: Vec<CardData> = Vec::with_capacity(total_len);
+    let mut keywords: Vec<ParsedCardKeywords> = Vec::with_capacity(total_len);
+    let mut index: HashMap<String, usize> = HashMap::with_capacity(total_len);
+    for (card_id, cd) in sorted_entries {
         let idx = data.len();
-        index.insert(card_id.clone(), idx);
-        data.push(effective_card_data[card_id].clone());
+        keywords.push(ParsedCardKeywords::from_card_data(&cd));
+        index.insert(card_id, idx);
+        data.push(cd);
     }
 
     // Absorb the global (deck-independent) token rows. They also need index
     // entries so `card_data_by_id` and printed-keyword auto-effect synthesis
     // can resolve token card IDs.
-    // Sorted by card_id, like the DB cards above: the registry is a `HashMap`, and
-    // its iteration order differs per instance, which would make two builds of the
-    // same fingerprint (e.g. after `evict_unused`) disagree on token indices.
-    let token_registry = crate::token_registry::build_registry();
-    let mut token_defs: Vec<_> = token_registry.iter().collect();
-    token_defs.sort_by(|a, b| a.card_id.cmp(&b.card_id));
-    for def in token_defs {
+    for (card_id, cd, kw) in token_rows {
         let idx = data.len();
-        index.insert(def.card_id.clone(), idx);
-        data.push(def.to_card_data());
+        index.insert(card_id.clone(), idx);
+        data.push(cd.clone());
+        keywords.push(kw.clone());
     }
-
-    let keywords: Vec<ParsedCardKeywords> = data
-        .iter()
-        .map(ParsedCardKeywords::from_card_data)
-        .collect();
 
     SharedCardStore {
         data: Arc::new(data),
         keywords: Arc::new(keywords),
         index: Arc::new(index),
         #[cfg(feature = "dsl-yaml-loader")]
-        alt_paths: Arc::new(alt_path_registry),
+        alt_paths: embedded_alt_paths(),
     }
 }
 
@@ -414,7 +492,7 @@ mod tests {
             keywords: Arc::new(Vec::new()),
             index: Arc::new(HashMap::new()),
             #[cfg(feature = "dsl-yaml-loader")]
-            alt_paths: Arc::new(HashMap::new()),
+            alt_paths: AltPathRegistry::default(),
         })
     }
 
@@ -499,5 +577,25 @@ mod tests {
         let fresh = CardStore::from_shared(&shared);
         assert!(fresh.face_keywords(idx).contains(&crate::enums::Keyword::Blocker));
         assert!(!fresh.inherited_keywords(idx).contains(&crate::enums::Keyword::Jamming));
+    }
+
+    #[cfg(feature = "dsl-yaml-loader")]
+    #[test]
+    fn alt_path_registry_overlay_does_not_clone_base() {
+        let base_reg = embedded_alt_paths();
+        let mut copy = base_reg.clone();
+        // Empty extend must leave both base and overrides Arc pointers shared.
+        copy.extend_overrides(std::iter::empty());
+        assert!(Arc::ptr_eq(&base_reg.overrides, &copy.overrides));
+        if let (Some(a), Some(b)) = (&base_reg.base, &copy.base) {
+            assert!(Arc::ptr_eq(a, b));
+        }
+        // Non-empty override shadows without cloning base.
+        copy.extend_overrides([("SYNTHETIC-ALT-CARD".to_string(), Vec::new())]);
+        if let (Some(a), Some(b)) = (&base_reg.base, &copy.base) {
+            assert!(Arc::ptr_eq(a, b));
+        }
+        assert!(copy.get("SYNTHETIC-ALT-CARD").is_some());
+        assert!(base_reg.get("SYNTHETIC-ALT-CARD").is_none());
     }
 }

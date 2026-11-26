@@ -183,6 +183,23 @@ impl KnowledgeLedger {
     pub(crate) fn concealed_positions(&self) -> &[ConcealedPosition] {
         &self.concealed_positions
     }
+    /// All card instance keys currently remembered by this ledger.
+    pub fn known_instances(&self) -> impl Iterator<Item = u16> + '_ {
+        self.cards.iter().map(|c| c.instance)
+    }
+    /// All positioned facts `(owner, instance, zone, position)` tracked by this
+    /// ledger across both identified cards and concealed physical positions.
+    pub fn positioned_facts(&self) -> impl Iterator<Item = (PlayerId, u16, KnowledgeZone, usize)> + '_ {
+        let known = self
+            .cards
+            .iter()
+            .filter_map(|c| c.position.map(|pos| (c.owner, c.instance, c.zone, pos)));
+        let concealed = self
+            .concealed_positions
+            .iter()
+            .filter_map(|c| c.position.map(|pos| (c.owner, c.instance, c.zone, pos)));
+        known.chain(concealed)
+    }
     pub(crate) fn known_identity(&self, owner: PlayerId, instance: u16) -> Option<String> {
         self.cards
             .iter()

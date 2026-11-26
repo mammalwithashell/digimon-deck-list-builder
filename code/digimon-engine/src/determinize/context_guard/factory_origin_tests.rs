@@ -128,9 +128,9 @@ fn exercise(route: Route) {
                             let phase = game.current_phase;
                             verify(reject, || lookup(&game, route, id, card), expected);
                             let cached = known && warm && !matches!(route, Route::Owned);
-                            // Debug builds intentionally rebuild Full cache entries as an oracle.
-                            let debug_rebuild =
-                                cfg!(debug_assertions) && matches!(route, Route::Full);
+                            // Opt-in cache oracle rebuilds Full cache entries when enabled.
+                            let debug_rebuild = crate::game::verify_caches_enabled()
+                                && matches!(route, Route::Full);
                             let wanted = usize::from(!reject && (!cached || debug_rebuild));
                             assert_eq!(
                                 calls.load(Ordering::SeqCst) - before,
@@ -224,7 +224,8 @@ fn compiled_dsl_label_does_not_authorize_raw_factory_execution() {
                     expected,
                 );
                 let cached = warm && !matches!(route, Route::Owned);
-                let debug_rebuild = cfg!(debug_assertions) && matches!(route, Route::Full);
+                let debug_rebuild =
+                    crate::game::verify_caches_enabled() && matches!(route, Route::Full);
                 assert_eq!(
                     calls.load(Ordering::SeqCst) - before,
                     usize::from(!reject && (!cached || debug_rebuild))

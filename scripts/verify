@@ -16,7 +16,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 STACK_ENV = {"RUST_MIN_STACK": "268435456"}
-SERIAL_ENV = {"RUST_MIN_STACK": "268435456", "RUST_TEST_THREADS": "1"}
+PARALLEL_ENV = {"RUST_MIN_STACK": "268435456", "RUST_TEST_THREADS": "8"}
 
 
 @dataclass
@@ -260,7 +260,7 @@ def tier2_suites(scope: dict[str, Any]) -> list[Suite]:
     suites: list[Suite] = []
     cards = scope.get("cards", [])
     if scope.get("full_suite_required"):
-        suites.append(cargo_suite(2, "cards_behavioral_full_required", "cards_behavioral", env=SERIAL_ENV))
+        suites.append(cargo_suite(2, "cards_behavioral_full_required", "cards_behavioral", env=PARALLEL_ENV))
     elif cards:
         if len(cards) <= 8:
             for card in cards:
@@ -270,7 +270,7 @@ def tier2_suites(scope: dict[str, Any]) -> list[Suite]:
                         f"cards_behavioral_{card_filter(card)}",
                         "cards_behavioral",
                         card_filter(card),
-                        env=SERIAL_ENV,
+                        env=PARALLEL_ENV,
                     )
                 )
         else:
@@ -292,7 +292,7 @@ def tier2_suites(scope: dict[str, Any]) -> list[Suite]:
             )
 
     for binary in scope.get("side_binaries", []):
-        suites.append(cargo_suite(2, f"side_{binary}", binary, env=SERIAL_ENV))
+        suites.append(cargo_suite(2, f"side_{binary}", binary, env=PARALLEL_ENV))
 
     suites.extend(
         [
@@ -300,7 +300,7 @@ def tier2_suites(scope: dict[str, Any]) -> list[Suite]:
                 tier=2,
                 name="replay_goldens_verify",
                 kind="cargo",
-                env=SERIAL_ENV,
+                env=PARALLEL_ENV,
                 command=[
                     "cargo",
                     "run",
@@ -316,7 +316,7 @@ def tier2_suites(scope: dict[str, Any]) -> list[Suite]:
                     "data/cards.json",
                 ],
             ),
-            cargo_suite(2, "invariant_fuzz", "invariant_fuzz", env=SERIAL_ENV),
+            cargo_suite(2, "invariant_fuzz", "invariant_fuzz", env=PARALLEL_ENV),
         ]
     )
     return suites
@@ -324,16 +324,16 @@ def tier2_suites(scope: dict[str, Any]) -> list[Suite]:
 
 def tier3_suites() -> list[Suite]:
     return [
-        cargo_suite(3, "cards_behavioral_full_cargo", "cards_behavioral", env=SERIAL_ENV),
+        cargo_suite(3, "cards_behavioral_full_cargo", "cards_behavioral", env=PARALLEL_ENV),
         nextest_suite(3, "cards_behavioral_full_nextest", "cards_behavioral"),
-        cargo_suite(3, "dsl_dual_harness_cargo", "dsl", env=SERIAL_ENV),
+        cargo_suite(3, "dsl_dual_harness_cargo", "dsl", env=PARALLEL_ENV),
         nextest_suite(3, "dsl_dual_harness_nextest", "dsl"),
-        cargo_suite(3, "archetypes", "archetypes", env=SERIAL_ENV),
+        cargo_suite(3, "archetypes", "archetypes", env=PARALLEL_ENV),
         Suite(
             tier=3,
             name="dcgo_replay_corpus",
             kind="cargo",
-            env=SERIAL_ENV,
+            env=PARALLEL_ENV,
             command=["cargo", "test", "-p", "dcgo-replay"],
         ),
     ]
@@ -414,7 +414,7 @@ def nextest_suite(tier: int, name: str, test_binary: str) -> Suite:
         tier=tier,
         name=name,
         kind="cargo",
-        env=SERIAL_ENV,
+        env=PARALLEL_ENV,
         command=[
             "cargo",
             "nextest",
@@ -435,7 +435,11 @@ def card_filter(card_id: str) -> str:
 
 def run_suite(suite: Suite) -> Result:
     env = os.environ.copy()
-    env.update(suite.env)
+    for key, value in suite.env.items():
+        if key == "RUST_TEST_THREADS":
+            env.setdefault(key, value)
+        else:
+            env[key] = value
     print(f"==> tier {suite.tier}: {suite.name}")
     print(f"    {format_command(suite.command)}")
     start = time.monotonic()

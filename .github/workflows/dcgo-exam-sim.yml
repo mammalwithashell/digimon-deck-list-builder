@@ -69,6 +69,8 @@ jobs:
   exam-sim:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -78,6 +80,9 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install lld linker
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends lld
 
       - name: Cache cargo registry + target
         uses: Swatinem/rust-cache@v2
@@ -102,7 +107,8 @@ jobs:
       # the drafter are pure Rust over fixtures — the only thing that needs
       # Unity to test is Unity. Runs even when the exam step above is red (it
       # is independent of the scenario corpus), so a red exam never hides the
-      # harness's own tests.
+      # harness's own tests. Reuses the `--release` artifacts compiled above to
+      # avoid a redundant full `dev`-profile rebuild of `digimon-engine`.
       - name: Differ unit + golden tests
         if: ${{ !cancelled() }}
-        run: cargo test -p dcgo-harness
+        run: cargo test -p dcgo-harness --release

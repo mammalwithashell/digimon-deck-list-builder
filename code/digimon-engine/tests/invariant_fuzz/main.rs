@@ -417,47 +417,86 @@ fn fuzz_one_game(
 
 #[test]
 fn seeded_random_games_preserve_engine_invariants() {
-    std::thread::Builder::new()
-        .stack_size(256 * 1024 * 1024)
-        .spawn(|| {
-            let config = FuzzConfig::from_env();
-            let card_data = load_card_data();
-            let implemented: HashSet<String> = build_registry_cached()
-                .registered_card_ids()
-                .into_iter()
-                .collect();
-            let decks = load_implemented_decks(&card_data, &implemented);
-            assert!(
-                decks.len() >= 2,
-                "invariant_fuzz needs at least two fully implemented deck_library decks, found {}",
-                decks.len()
-            );
+    let config = FuzzConfig::from_env();
+    let card_data = load_card_data();
+    let implemented: HashSet<String> = build_registry_cached()
+        .registered_card_ids()
+        .into_iter()
+        .collect();
+    let decks = load_implemented_decks(&card_data, &implemented);
+    assert!(
+        decks.len() >= 2,
+        "invariant_fuzz needs at least two fully implemented deck_library decks, found {}",
+        decks.len()
+    );
 
-            let mut total_steps = 0;
-            for game_idx in 0..config.games {
-                let seed = config.seed_for_game(game_idx);
-                let (player1, player2, game_seed) = choose_decks(seed, &decks);
-                let steps = fuzz_one_game(seed, player1, player2, game_seed, &card_data, config);
-                total_steps += steps;
-                eprintln!(
-                    "invariant_fuzz game {game_idx}: seed={seed} game_seed={game_seed} steps={steps} decks={} vs {}",
-                    player1.label, player2.label
-                );
-            }
+    let workers = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(4)
+        .clamp(1, 8)
+        .min((config.games as usize).max(1));
+    let next_game = std::sync::atomic::AtomicU64::new(0);
+    let results = std::sync::Mutex::new(Vec::<(u64, u64, u64, u32, &str, &str)>::with_capacity(
+        config.games as usize,
+    ));
 
-            assert!(
-                total_steps >= config.games as u32,
-                "invariant_fuzz made no meaningful progress across {} games",
-                config.games
+    std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(workers);
+        for _ in 0..workers {
+            let next_ref = &next_game;
+            let results_ref = &results;
+            let decks_ref = &decks;
+            let card_data_ref = &card_data;
+            handles.push(
+                std::thread::Builder::new()
+                    .stack_size(256 * 1024 * 1024)
+                    .spawn_scoped(scope, move || {
+                        loop {
+                            let game_idx = next_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            if game_idx >= config.games {
+                                break;
+                            }
+                            let seed = config.seed_for_game(game_idx);
+                            let (player1, player2, game_seed) = choose_decks(seed, decks_ref);
+                            let steps =
+                                fuzz_one_game(seed, player1, player2, game_seed, card_data_ref, config);
+                            results_ref.lock().unwrap().push((
+                                game_idx,
+                                seed,
+                                game_seed,
+                                steps,
+                                player1.label.as_str(),
+                                player2.label.as_str(),
+                            ));
+                        }
+                    })
+                    .expect("spawn invariant fuzz worker"),
             );
-            eprintln!(
-                "invariant_fuzz: {} game(s), {total_steps} random legal step(s), max_steps={}",
-                config.games, config.max_steps
-            );
-        })
-        .expect("spawn invariant fuzz thread")
-        .join()
-        .expect("invariant fuzz thread panicked");
+        }
+        for h in handles {
+            h.join().expect("invariant fuzz worker panicked");
+        }
+    });
+
+    let mut results = results.into_inner().unwrap();
+    results.sort_by_key(|(idx, _, _, _, _, _)| *idx);
+    let mut total_steps = 0u32;
+    for (game_idx, seed, game_seed, steps, p1, p2) in results {
+        total_steps += steps;
+        eprintln!(
+            "invariant_fuzz game {game_idx}: seed={seed} game_seed={game_seed} steps={steps} decks={p1} vs {p2}"
+        );
+    }
+
+    assert!(
+        total_steps >= config.games as u32,
+        "invariant_fuzz made no meaningful progress across {} games",
+        config.games
+    );
+    eprintln!(
+        "invariant_fuzz: {} game(s), {total_steps} random legal step(s), max_steps={}",
+        config.games, config.max_steps
+    );
 }
 
 // Test the same contract against explicit masks, including a masked-out PASS.

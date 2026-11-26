@@ -67,9 +67,14 @@ jobs:
     name: Tier 1 fast semantic canaries
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install lld linker
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends lld
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
@@ -82,7 +87,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-verification-ladder-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+          key: ${{ runner.os }}-verification-ladder-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
       - name: Run tier 1
         env:
           RUST_MIN_STACK: "268435456"
@@ -92,11 +97,16 @@ jobs:
     name: Tier 2 scoped behavior
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install lld linker
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends lld
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
@@ -109,7 +119,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-verification-ladder-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+          key: ${{ runner.os }}-verification-ladder-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
       - name: Run tier 2
         env:
           RUST_MIN_STACK: "268435456"
@@ -120,11 +130,16 @@ jobs:
     name: Tier 3 nightly seal
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
+    env:
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install lld linker
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends lld
       - uses: taiki-e/install-action@nextest
       - uses: actions/setup-python@v6
         with:
@@ -138,9 +153,10 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-verification-ladder-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+          key: ${{ runner.os }}-verification-ladder-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
       - name: Run tier 3
         env:
           RUST_MIN_STACK: "268435456"
           RUST_TEST_THREADS: "1"
+          DIGIMON_VERIFY_CACHES: "1"
         run: python scripts/verify --tier 3 --continue-on-failure

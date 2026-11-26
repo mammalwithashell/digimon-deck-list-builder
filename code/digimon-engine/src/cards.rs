@@ -22,13 +22,15 @@ mod context_dispatch_tests;
 /// Registry of card_id -> CardEffect implementation.
 ///
 /// Cheaply `Clone`: entries are `Arc<dyn CardEffect>` (stateless, shared), so a
-/// clone duplicates only an `Arc` handle — not the HashMap or the ~4000-card
-/// DSL parse/lowering that `build_registry()` performs. Mutations copy-on-write
-/// via `Arc::make_mut`. This makes `Game::clone()` O(1) for the registry and
-/// avoids duplicating ~1,300+ String keys per MCTS node.
+/// clone duplicates only `Arc` handles — not the HashMap or the ~5000-card
+/// DSL pack. Mutations go into the small `overrides` overlay rather than
+/// copy-on-write cloning the entire `base` map, so `DebugRunner` inserting 1
+/// test card into a `build_registry_cached()` clone is O(1) with zero atomic
+/// refcount churn across threads.
 #[derive(Default, Clone)]
 pub struct CardEffectRegistry {
-    effects: Arc<HashMap<String, RegisteredCardEffect>>,
+    base: Option<Arc<HashMap<String, RegisteredCardEffect>>>,
+    overrides: Arc<HashMap<String, RegisteredCardEffect>>,
     // Identity only, never authority to execute. Clones share it until insertion.
     generation: Arc<()>,
 }
@@ -135,7 +137,7 @@ mod compiler_origin_tests;
 impl std::fmt::Debug for CardEffectRegistry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CardEffectRegistry")
-            .field("len", &self.effects.len())
+            .field("len", &self.len())
             .finish()
     }
 }
@@ -145,13 +147,32 @@ impl CardEffectRegistry {
         Self::default()
     }
 
+    #[inline]
+    fn get_entry(&self, card_id: &str) -> Option<&RegisteredCardEffect> {
+        if !self.overrides.is_empty() {
+            if let Some(entry) = self.overrides.get(card_id) {
+                return Some(entry);
+            }
+        }
+        self.base.as_deref().and_then(|base| base.get(card_id))
+    }
+
+    /// Promote the accumulated `overrides` map into the shared read-only `base`
+    /// layer so subsequent clones + `insert` calls stay O(1) without cloning
+    /// the base map.
+    fn freeze_into_base(&mut self) {
+        if self.base.is_none() && !self.overrides.is_empty() {
+            self.base = Some(std::mem::take(&mut self.overrides));
+        }
+    }
+
     pub(crate) fn generation(&self) -> &Arc<()> {
         &self.generation
     }
 
     /// Register a card's effect implementation.
     pub fn insert(&mut self, card_id: &str, effect: Arc<dyn CardEffect>) {
-        Arc::make_mut(&mut self.effects).insert(card_id.to_string(), RegisteredCardEffect {
+        Arc::make_mut(&mut self.overrides).insert(card_id.to_string(), RegisteredCardEffect {
             factory: Arc::new(GuardedCardEffect(effect, false)),
             compiled_origin: None,
             read_fence_constructible: false,
@@ -174,7 +195,7 @@ impl CardEffectRegistry {
         };
         let read_fence_constructible = origin.direct_raw_factory_requests().is_empty();
         let factory = Arc::new(crate::dsl_cards::DslCardEffect::new_with_raw(compiled, raw));
-        Arc::make_mut(&mut self.effects).insert(card_id.to_string(), RegisteredCardEffect {
+        Arc::make_mut(&mut self.overrides).insert(card_id.to_string(), RegisteredCardEffect {
             factory: Arc::new(GuardedCardEffect(factory, read_fence_constructible)),
             compiled_origin: Some(LazyFactoryOrigin::Eager(origin)),
             read_fence_constructible,
@@ -198,7 +219,7 @@ impl CardEffectRegistry {
             cell: Arc::new(std::sync::OnceLock::new()),
         };
         let factory = Arc::new(crate::dsl_cards::DslCardEffect::new_slot_with_raw(slot, raw));
-        Arc::make_mut(&mut self.effects).insert(card_id.to_string(), RegisteredCardEffect {
+        Arc::make_mut(&mut self.overrides).insert(card_id.to_string(), RegisteredCardEffect {
             factory: Arc::new(GuardedCardEffect(factory, read_fence_constructible)),
             compiled_origin: Some(origin),
             read_fence_constructible,
@@ -211,14 +232,14 @@ impl CardEffectRegistry {
     /// read fence. Runtime reads still remain guarded.
     /// An absent entry executes no factory; keyword synthesis is separate.
     pub(crate) fn read_fence_constructible(&self, card_id: &str) -> bool {
-        self.effects.get(card_id).is_none_or(|entry| entry.read_fence_constructible)
+        self.get_entry(card_id)
+            .is_none_or(|entry| entry.read_fence_constructible)
     }
 
     /// Current-key construction facts only; do not use this to label a retained
     /// factory. Use the identity-checked query below for an existing factory Arc.
     pub(crate) fn compiled_origin(&self, card_id: &str) -> Option<&CompiledFactoryOrigin> {
-        self.effects
-            .get(card_id)
+        self.get_entry(card_id)
             .and_then(|entry| entry.compiled_origin.as_ref().map(LazyFactoryOrigin::get))
     }
 
@@ -232,7 +253,7 @@ impl CardEffectRegistry {
         card_id: &str,
         factory: &Arc<dyn CardEffect>,
     ) -> Option<&CompiledFactoryOrigin> {
-        let entry = self.effects.get(card_id)?;
+        let entry = self.get_entry(card_id)?;
         if !Arc::ptr_eq(&entry.factory, factory) {
             return None;
         }
@@ -247,7 +268,7 @@ impl CardEffectRegistry {
         card_id: &str,
         handle: crate::card_source::CardHandle,
     ) -> Option<RegistryEffects> {
-        let entry = self.effects.get(card_id)?;
+        let entry = self.get_entry(card_id)?;
         let effects = Arc::new(entry.factory.effects(handle));
         Some(RegistryEffects {
             effects,
@@ -284,7 +305,7 @@ impl CardEffectRegistry {
 
     /// Look up a card's effect implementation.
     pub fn get(&self, card_id: &str) -> Option<Arc<dyn CardEffect>> {
-        self.effects.get(card_id).map(|entry| entry.factory.clone())
+        self.get_entry(card_id).map(|entry| entry.factory.clone())
     }
 
     /// Return all card IDs that have a registered effect implementation.
@@ -292,16 +313,49 @@ impl CardEffectRegistry {
     /// `_frozen_manifest.json`; the Rust source of truth is the registry
     /// itself rather than an external manifest.
     pub fn registered_card_ids(&self) -> Vec<String> {
-        self.effects.keys().cloned().collect()
+        match &self.base {
+            None => self.overrides.keys().cloned().collect(),
+            Some(base) if self.overrides.is_empty() => base.keys().cloned().collect(),
+            Some(base) => {
+                let mut ids: Vec<String> = base.keys().cloned().collect();
+                for key in self.overrides.keys() {
+                    if !base.contains_key(key) {
+                        ids.push(key.clone());
+                    }
+                }
+                ids
+            }
+        }
     }
 
     pub fn len(&self) -> usize {
-        self.effects.len()
+        match &self.base {
+            None => self.overrides.len(),
+            Some(base) if self.overrides.is_empty() => base.len(),
+            Some(base) => {
+                let extra = self
+                    .overrides
+                    .keys()
+                    .filter(|k| !base.contains_key(*k))
+                    .count();
+                base.len() + extra
+            }
+        }
     }
 
     pub fn is_empty(&self) -> bool {
-        self.effects.is_empty()
+        self.overrides.is_empty() && self.base.as_deref().is_none_or(HashMap::is_empty)
     }
+}
+
+/// Process-cached default raw-Rust escape-hatch registry.
+#[cfg(feature = "dsl-yaml-loader")]
+pub(crate) fn raw_rust_registry_cached() -> Arc<crate::dsl_cards::raw_rust::EngineRawRustRegistry> {
+    static CACHE: std::sync::OnceLock<Arc<crate::dsl_cards::raw_rust::EngineRawRustRegistry>> =
+        std::sync::OnceLock::new();
+    CACHE
+        .get_or_init(|| Arc::new(raw_rust::build_registry()))
+        .clone()
 }
 
 /// Build the default registry with all built-in card effects.
@@ -316,7 +370,7 @@ pub fn build_registry() -> CardEffectRegistry {
     // Registered AFTER hand-written sets so DSL overrides on collision.
     #[cfg(feature = "dsl-yaml-loader")]
     {
-        let raw = Arc::new(raw_rust::build_registry());
+        let raw = raw_rust_registry_cached();
         // dsl-substrate-integrity: validate every raw_rust reference in the
         // embedded pack (step, declarative, OR formula `amount_fn: { raw_rust }`)
         // against `EngineRawRustRegistry`. An unregistered ref is a silent
@@ -346,6 +400,7 @@ pub fn build_registry() -> CardEffectRegistry {
         crate::dsl_cards::register_dsl_cards_with_raw(&mut registry, pack, raw);
     }
 
+    registry.freeze_into_base();
     registry
 }
 
@@ -391,6 +446,39 @@ mod cache_tests {
             "build_registry_cached must reuse the cached registry (shared Arc), \
              not re-lower the pack per call"
         );
+    }
+
+    #[test]
+    fn overlay_insert_shadows_base_without_cloning_base() {
+        struct DummyEffect;
+        impl CardEffect for DummyEffect {
+            fn effects(&self, _card: crate::card_source::CardHandle) -> Vec<crate::effect::Effect> {
+                Vec::new()
+            }
+        }
+
+        let base_reg = build_registry_cached();
+        let base_len = base_reg.len();
+        let existing_id = base_reg.registered_card_ids()[0].clone();
+        let original_effect = base_reg.get(&existing_id).unwrap();
+
+        let mut overlay = base_reg.clone();
+        overlay.insert(&existing_id, Arc::new(DummyEffect));
+        overlay.insert("SYNTHETIC-OVERLAY-ONLY", Arc::new(DummyEffect));
+
+        // Base HashMap Arc is never cloned on override inserts.
+        assert!(Arc::ptr_eq(
+            base_reg.base.as_ref().unwrap(),
+            overlay.base.as_ref().unwrap()
+        ));
+        // Shadowing an existing key does not double-count; new key adds 1.
+        assert_eq!(overlay.len(), base_len + 1);
+        assert_eq!(overlay.registered_card_ids().len(), base_len + 1);
+        // Shadowed lookup returns the new factory; base registry stays untouched.
+        assert!(!Arc::ptr_eq(&overlay.get(&existing_id).unwrap(), &original_effect));
+        assert!(Arc::ptr_eq(&base_reg.get(&existing_id).unwrap(), &original_effect));
+        assert!(overlay.get("SYNTHETIC-OVERLAY-ONLY").is_some());
+        assert!(base_reg.get("SYNTHETIC-OVERLAY-ONLY").is_none());
     }
 }
 
