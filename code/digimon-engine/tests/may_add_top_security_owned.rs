@@ -8,7 +8,7 @@ fn fixture(actor:u8,owner:u8,length:usize,override_actor:Option<u8>)->DebugRunne
     r.skip_mulligan();r.game.enter_main_phase();r.game.turn_player_idx=actor as usize;
     let source=r.game.players[actor as usize].hand[0].handle();
     let of=if owner==actor {CompiledPlayerRef::You}else{CompiledPlayerRef::Opponent};
-    run_steps(&[CompiledStep::MayAddTopSecurityToHand{of},CompiledStep::GainMemory(3)],
+    run_steps(&[CompiledStep::MayAddTopSecurityToHand{of,cost:false},CompiledStep::GainMemory(3)],
         &mut EffectContext::new_with_source_kind_and_override(&mut r.game,source,None,EffectSourceKind::Digimon,actor,override_actor),&mut Bindings::new());
     r
 }

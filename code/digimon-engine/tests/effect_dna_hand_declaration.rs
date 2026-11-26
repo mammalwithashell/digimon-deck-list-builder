@@ -133,7 +133,7 @@ fn hand_partner_dna_surfaces_optional_reducer_then_clone_safe_suspend_payment() 
     r.game.memory = -9;
     let source = r.game.players[0].battle_area[field.index as usize].top_card().handle();
     EffectContext::new(&mut r.game, source, Some(field), 0)
-        .arm_player_digivolve_cost_reducer(5, true, Some(CardColor::Green), true);
+        .arm_player_digivolve_cost_reducer(5, true, Some(CardColor::Green), true, None, None);
     assert!(declare(&mut r.game, field, partner, result, 3).is_none(), "payment can park");
     let pending = r.game.pending_selection.as_ref().expect("DNA must expose eligible optional reducer");
     let accept = pending.valid_action_ids[0];

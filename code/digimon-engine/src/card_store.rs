@@ -108,6 +108,29 @@ pub struct SharedCardStore {
     pub(crate) alt_paths: AltPathRegistry,
 }
 
+#[cfg(feature = "dsl-yaml-loader")]
+impl SharedCardStore {
+    /// Materialized snapshot of compiled DSL alternate digivolution paths
+    /// (base + overrides) for inspection and witness tests.
+    pub fn alt_paths_snapshot(
+        &self,
+    ) -> HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>> {
+        let mut out = self
+            .alt_paths
+            .base
+            .as_deref()
+            .cloned()
+            .unwrap_or_default();
+        out.extend(
+            self.alt_paths
+                .overrides
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone())),
+        );
+        out
+    }
+}
+
 #[derive(Clone)]
 pub(crate) struct CachedCardKeywords {
     /// Retains an `Arc` to the exact `Vec<CardData>` these keywords were parsed

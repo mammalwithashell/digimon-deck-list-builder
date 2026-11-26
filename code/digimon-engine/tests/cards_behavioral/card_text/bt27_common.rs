@@ -241,7 +241,7 @@ pub(super) fn tamer_evolution(card: &str, cost: i16, keywords: &[Keyword]) {
     // self-delete and trigger <Armor Purge>) and drain any mandatory prompts.
     while let Some((player, pick)) = r.pending_selection().map(|p| {
         let pass = digimon_engine::action::space::PASS;
-        let pick = if p.valid_action_ids.contains(&pass) {
+        let pick = if p.is_optional || p.valid_action_ids.contains(&pass) {
             pass
         } else {
             p.valid_action_ids[0]

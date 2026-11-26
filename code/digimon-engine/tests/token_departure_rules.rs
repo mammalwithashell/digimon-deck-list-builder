@@ -2,11 +2,9 @@
 //! inhabit off-field areas or count as actual additions to those areas.
 use digimon_engine::{
     action::build_action_mask,
-    card_data::CardData,
     debug_runner::{make_test_card, DebugRunner},
     effect_context::EffectContext,
     enums::{GamePhase, StackPosition},
-    runners::replay::ReplayRunner,
 };
 
 fn board(token: bool) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
@@ -331,74 +329,77 @@ fn single_and_grouped_deck_returns_count_token_return_without_a_deck_add() {
 
 #[test]
 fn recorded_interrupted_token_return_removes_token_and_clones_identically() {
-    let recording: serde_json::Value = serde_json::from_str(include_str!(
-        "fixtures/training/sw-toho-token-return-hand.json"
-    ))
-    .unwrap();
-    let cards = CardData::load_from_str(
-        &std::fs::read_to_string(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../data/cards.json"
-        ))
-        .unwrap(),
-    )
-    .unwrap();
-    let mut replay = ReplayRunner::new(recording.clone(), &cards, true).unwrap();
-    // Recorded row 91 resumes MarineBullmon's return after Erlangmon's
-    // would-leave play and Sagomon's material selection. Two mulligans are
-    // excluded by the native replay adapter, so the pre-step cursor was 88.
-    //
-    // Migrated 2026-11-12 for effect-digivolve candidates that must be able to
-    // digivolve (0de06211d for EX12-074, generalised by c6eda5678; DCGO
-    // `DigivolveIntoHandOrTrashCard` filters with `CanPlayCardTargetFrame` and
-    // opens no pick when nothing qualifies). The original game made four picks
-    // that could not digivolve and did nothing: step 23 (EX12-002 inherited,
-    // Lv.6 SeitenGokuumon EX12-048 onto Lv.6 Takutoumon), step 44 (EX12-074
-    // [Security], Lv.7 Susanoomon EX12-076 onto attacking Lv.3 Gasamon),
-    // step 59 (EX12-074, Lv.3 Hanimon EX12-061 onto attacking Lv.4
-    // Kokeshimon) and step 77 (EX12-074 for attacking MarineBullmon EX12-031,
-    // no hand card can digivolve onto it). Steps 23, 44 and 77 now have no prompt and are dropped
-    // (each dropped row's memory_after moves to the previous row: step 22's
-    // turn now ends there). Step 59 now offers a real Lv.5 card, so it is
-    // replaced by a decline (62). Because declining the folded "may" keeps
-    // EX12-074's [Once Per Turn] (Q1818), which the original no-op pick had
-    // spent, EX12-074 is re-offered on the later attacks: each re-offer gets
-    // a trigger-order pick that resolves the recorded trigger first (30) and,
-    // where it has candidates, a decline (62). Inserted rows carry fractional
-    // `step` values and a `migration_note`. Every other recorded action is
-    // unchanged.
-    //
-    // Migrated 2026-11-21 for d76249e94 (no "Select DigiXros material" prompt
-    // once no candidate remains; DCGO `SelectDigiXrosClass.Select` asks nothing
-    // when only End is left). Both DigiXros plays of this game use a
-    // one-element recipe and now commit on the material pick:
-    // - the hand play at recorded step 38: the stop PASS recorded as step 40
-    //   is dropped and its memory_after moved to the pick (step 39);
-    // - Sagomon (EX12-029), played by Erlangmon (EX12-034) inside the
-    //   interrupted return: the decision made on the clone below is the
-    //   material pick itself (recorded step 90, cursor 91 after restoring step
-    //   23 below). The stop PASS recorded as step 91 has no prompt any more;
-    //   that row and the ones after it are never replayed (see the continuation
-    //   below).
-    //
-    // Migrated 2026-11-26 for EX12-002 `outer_prompt: true` (DCGO
-    // EX12_002.cs:18,35-51; BT21-001 idiom): step 23 (declining EX12-002's
-    // outer Yes/No gate before Turn 4 ends) is restored with `action_id: 62`,
-    // shifting the pre-clone cursor from 90 to 91.
-    for _ in 0..91 {
-        let result = replay.step();
-        assert!(result.divergences.is_empty(), "{:?}", result.divergences);
-    }
-    let mut cloned = replay.game.clone();
-    assert_eq!(build_action_mask(&cloned, 0)[30], 1.0);
-    cloned.decode_action(30, 0);
-    let result = replay.step();
-    assert!(result.divergences.is_empty(), "{:?}", result.divergences);
+    use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+
+    // Stages the exact scenario originally captured in sw-toho-token-return-hand.json
+    // (whose early trace relied on EX12-057 Takutoumon erroneously parsing `<Guard>`
+    // from its `[Paishu] Token` parenthetical before 262228452 fixed
+    // `parse_printed_keywords`): MarineBullmon (EX12-031) returns a Token to hand,
+    // interrupted by Erlangmon (EX12-034)'s would-leave replacement playing
+    // Sagomon (EX12-029) with a one-element DigiXros material selection.
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX12-031")
+        .unwrap()
+        .dsl_card("EX12-034")
+        .unwrap()
+        .dsl_card("EX12-029")
+        .unwrap()
+        .dsl_card("EX12-043")
+        .unwrap()
+        .dsl_card("EX12-020")
+        .unwrap()
+        .add_card(make_test_card("TOKEN_KOTENKEN", "Kotenken Token"))
+        .hand(0, &["EX12-029", "EX12-043"])
+        .hand(1, &["EX12-020"])
+        .deck(0, &["EX12-043"; 20])
+        .deck(1, &["EX12-020"; 20])
+        .security(0, &["EX12-043"; 5])
+        .security(1, &["EX12-020"; 5])
+        .memory(3)
+        .start();
+    r.skip_mulligan();
+    r.game.turn_player_idx = 1;
+    r.game.enter_main_phase();
+
+    let _erlang = r.place_on_field(0, "EX12-034", Some(0));
+    let tok = r.place_on_field(0, "TOKEN_KOTENKEN", Some(0));
+    r.game.players[0].battle_area[tok.index as usize]
+        .top_card_mut()
+        .is_token = true;
+    let bull = r.place_on_field(1, "EX12-031", Some(0));
+
+    // Fire MarineBullmon [On Play]: place EX12-020 under it, bounce P0's Token.
+    r.game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(bull));
+    r.game.drain_effect_queue();
+    // 1. Place EX12-020 (hand index 0) as MarineBullmon's bottom source.
+    r.game.decode_action(0, 1);
+    // 2. Target P0's Token (opponent slot 1 -> action 101) for return-to-hand.
+    let bounce_mask = build_action_mask(&r.game, 1);
+    assert_eq!(bounce_mask[101], 1.0, "Token at slot 1 must be targetable");
+    r.game.decode_action(101, 1);
+    // 3. Erlangmon interrupts the Token's would-leave: accept replacement (59).
     assert_eq!(
-        replay.game.verification_digest(),
-        cloned.verification_digest()
+        build_action_mask(&r.game, 0)[REPLACEMENT_ACCEPT as usize],
+        1.0
     );
-    for game in [&replay.game, &cloned] {
+    r.game.decode_action(REPLACEMENT_ACCEPT, 0);
+    // 4. Choose "Hand" (action 30).
+    assert_eq!(build_action_mask(&r.game, 0)[30], 1.0);
+    r.game.decode_action(30, 0);
+    // 5. Pick EX12-029 Sagomon (hand index 0) -> opens DigiXros material pick.
+    assert_eq!(build_action_mask(&r.game, 0)[0], 1.0);
+    r.game.decode_action(0, 0);
+
+    // Clone right at Sagomon's DigiXros material selection and resolve identically.
+    let mut cloned = r.game.clone();
+    assert_eq!(build_action_mask(&cloned, 0)[30], 1.0);
+    r.game.decode_action(30, 0);
+    cloned.decode_action(30, 0);
+    assert_eq!(r.game.verification_digest(), cloned.verification_digest());
+    for game in [&r.game, &cloned] {
         assert!(game.players[0].hand.iter().all(|c| !c.is_token));
         assert!(game.players[0]
             .battle_area
@@ -413,41 +414,31 @@ fn recorded_interrupted_token_return_removes_token_and_clones_identically() {
             "on-play trigger ordering preserved"
         );
     }
-    // The old recording's later hand indices describe the corrupt hand, so
-    // continue with legal decisions from the fixed state instead of replaying
-    // those obsolete indices. Both clones must progress identically to a win.
+    // Both clones must progress identically to a win with zero tokens in any
+    // non-battle zone.
     for decision in 0..2000 {
-        if replay.game.game_over {
-            eprintln!("fixed seed 44524569 completed after {decision} continuation decisions");
+        if r.game.game_over {
+            eprintln!("interrupted token return completed after {decision} continuation decisions");
             break;
         }
-        if decision % 100 == 0 {
-            eprintln!(
-                "fixed seed 44524569: continuation decision {decision}, turn {}",
-                replay.game.turn_count
-            );
-        }
-        let player = replay
+        let player = r
             .game
             .pending_selection
             .as_ref()
-            .map_or_else(|| replay.game.turn_player(), |s| s.selecting_player);
-        let mask = build_action_mask(&replay.game, player);
-        let action = digimon_engine::policies::greedy::greedy_action(&replay.game, &mask);
+            .map_or_else(|| r.game.turn_player(), |s| s.selecting_player);
+        let mask = build_action_mask(&r.game, player);
+        let action = digimon_engine::policies::greedy::greedy_action(&r.game, &mask);
         assert!(mask[action as usize] > 0.0);
-        let before = replay.game.verification_digest();
-        replay.game.decode_action(action, player);
+        let before = r.game.verification_digest();
+        r.game.decode_action(action, player);
         cloned.decode_action(action, player);
         assert_ne!(
-            replay.game.verification_digest(),
+            r.game.verification_digest(),
             before,
             "action {action} must progress"
         );
-        assert_eq!(
-            replay.game.verification_digest(),
-            cloned.verification_digest()
-        );
-        for p in &replay.game.players {
+        assert_eq!(r.game.verification_digest(), cloned.verification_digest());
+        for p in &r.game.players {
             assert!(p
                 .hand
                 .iter()
@@ -459,7 +450,7 @@ fn recorded_interrupted_token_return_removes_token_and_clones_identically() {
         }
     }
     assert!(
-        replay.game.game_over,
+        r.game.game_over,
         "fixed game must finish within the decision bound"
     );
 }

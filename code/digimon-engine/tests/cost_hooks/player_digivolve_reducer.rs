@@ -57,7 +57,14 @@ impl CardEffect for ArmsGreenDigivolveReducer {
         vec![Effect::on_play(card)
             .name("arm green digivolve cost reducer")
             .process(|ctx| {
-                ctx.arm_player_digivolve_cost_reducer(5, true, Some(CardColor::Green), true);
+                ctx.arm_player_digivolve_cost_reducer(
+                    5,
+                    true,
+                    Some(CardColor::Green),
+                    true,
+                    None,
+                    None,
+                );
             })
             .build()]
     }
@@ -70,7 +77,14 @@ impl CardEffect for ArmsGreenDigivolveReducerNoCost {
         vec![Effect::on_play(card)
             .name("arm green digivolve cost reducer (no cost)")
             .process(|ctx| {
-                ctx.arm_player_digivolve_cost_reducer(5, true, Some(CardColor::Green), false);
+                ctx.arm_player_digivolve_cost_reducer(
+                    5,
+                    true,
+                    Some(CardColor::Green),
+                    false,
+                    None,
+                    None,
+                );
             })
             .build()]
     }

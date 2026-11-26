@@ -145,17 +145,18 @@ steps:
   - actor: 0
     do: { select: { cards: [EX10-028], dcgo_only: true } }
     expect: { prompt: SelectCardEffect }
-  # Landramon B's grant pick (itself): DCGO asks it FIRST (after the cost), ours LAST
-  # (after the stacked inherited delete) -- split into dcgo_only / sim_only copies.
+  # Landramon B's grant pick (itself): both engines ask it FIRST (after the
+  # cost; DCGO names it by card id, our sim by field slot) and then run the
+  # stacked inherited delete SECOND.
   - actor: 0
     do: { select: { cards: [EX10-028], dcgo_only: true } }
     expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [own.field.0], sim_only: true } }
   # THE CLAUSE: Landramon A's inherited delete -- p1's Ukkomon (play cost 3).
   - actor: 0
     do: { select: { targets: [opp.field.0] } }
     expect: { prompt: SelectPermanentEffect }
-  - actor: 0
-    do: { select: { targets: [own.field.0], sim_only: true } }
   # One step past the clause.
   - actor: 0
     do: { pass: {} }

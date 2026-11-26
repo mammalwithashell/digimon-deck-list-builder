@@ -140,9 +140,10 @@ pub fn prove(bytes: &[u8], expected: &str, names: &[&str]) -> Result<Value, Stri
     }
     let cached = shared_card_store(&loaded);
     let store_json = serde_json::to_value(fresh.data.as_ref()).map_err(|e| e.to_string())?;
+    let fresh_alt_paths = fresh.alt_paths_snapshot();
     if serde_json::to_value(cached.data.as_ref()).map_err(|e| e.to_string())? != store_json
         || cached.index != fresh.index
-        || cached.alt_paths != fresh.alt_paths
+        || cached.alt_paths_snapshot() != fresh_alt_paths
     {
         return Err("cached versus fresh enriched store mismatch".into());
     }
@@ -197,6 +198,6 @@ pub fn prove(bytes: &[u8], expected: &str, names: &[&str]) -> Result<Value, Stri
         .iter()
         .any(|s| s["equal"] != true || s["zero_matches"] == true);
     Ok(
-        json!({"version":1,"runtime_sha256":expected,"original_records":original,"enriched_store":store_json,"compiled_registry":compiled,"alt_paths":fresh.alt_paths.as_ref(),"members":rows,"names":summaries,"set_correspondence_blocked":blocked,"source_authority":false,"runtime_admission":false,"executable_closure":false,"engine_behavior_proven":false,"cache_comparison":"fresh_equals_cached_and_game","subject":"ordinary_own_trash_card"}),
+        json!({"version":1,"runtime_sha256":expected,"original_records":original,"enriched_store":store_json,"compiled_registry":compiled,"alt_paths":&fresh_alt_paths,"members":rows,"names":summaries,"set_correspondence_blocked":blocked,"source_authority":false,"runtime_admission":false,"executable_closure":false,"engine_behavior_proven":false,"cache_comparison":"fresh_equals_cached_and_game","subject":"ordinary_own_trash_card"}),
     )
 }
