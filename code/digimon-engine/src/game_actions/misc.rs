@@ -38,10 +38,29 @@ impl Game {
         let controller=self.effect_source_player.unwrap_or(player);
         if self.effect_play_is_prohibited(player,physical.card_kind(&self.card_data))
             || self.card_play_is_prohibited(controller,&physical) {return;}
-        self.pending_digixros_transaction=None;
+        self.pending_digixros_transaction = self.build_digixros_transaction_for_card(player, &physical);
         let target=CostTargetContext{card,from_hand:false,is_digivolve:false,target_permanents:[None,None]};
         let _=self.continue_play_from_hand_cost_reduction_chain(player,usize::MAX,target,cost,
             PlaySource::ByEffect,origin,suppress,crate::game_actions::PlayCostAdjustments::new(cost),Vec::new());
+    }
+
+    fn card_claimed_by_prepared_source_plays(&self, card: CardHandle) -> bool {
+        self.prepared_source_plays
+            .iter()
+            .filter_map(|(_, prepared)| prepared.as_ref())
+            .any(|prepared| {
+                prepared.declaration.card == card
+                    || prepared
+                        .assembly
+                        .as_ref()
+                        .is_some_and(|(_, mats)| mats.contains(&card))
+                    || prepared.digixros.as_ref().is_some_and(|tx| {
+                        tx.pre_attached_materials
+                            .iter()
+                            .chain(tx.selected_materials.iter())
+                            .any(|m| m.origin.card() == card)
+                    })
+            })
     }
 
     /// Complete individual pre-play processing without placing a simultaneous
@@ -54,12 +73,21 @@ impl Game {
         let legal = card.is_some_and(|c| !self.card_play_is_prohibited(declaration.play_controller,&c))
             && self.player(declaration.player).battle_area.len() < self.rules.field_slots as usize;
         if !legal || !self.pay_memory_for(declaration.player,declaration.effective_cost) {
+            self.pending_digixros_transaction = None;
             return Some(false);
         }
         let assembly = if self.pending_assembly_materials.as_ref().is_some_and(|(card,_)| *card==declaration.card) {
             self.pending_assembly_materials.take()
         } else { None };
-        self.prepared_source_plays[slot].1=Some(PreparedSourcePlay{declaration,assembly,on_play_suppressor:self.on_play_suppressor.take()});
+        let digixros = if self.pending_digixros_transaction.as_ref().is_some_and(|tx| tx.played_card == declaration.card) {
+            self.pending_digixros_transaction.take()
+        } else { None };
+        self.prepared_source_plays[slot].1 = Some(PreparedSourcePlay {
+            declaration,
+            assembly,
+            digixros,
+            on_play_suppressor: self.on_play_suppressor.take(),
+        });
         Some(true)
     }
 
@@ -112,9 +140,12 @@ impl Game {
             self.effect_source_player = Some(declaration.play_controller);
             let previous_assembly = self.pending_assembly_materials.take();
             self.pending_assembly_materials = prepared.assembly;
+            let previous_digixros = self.pending_digixros_transaction.take();
+            self.pending_digixros_transaction = prepared.digixros;
             let played = self.commit_play_from_hand_card_inner(declaration.player, declaration.card,
                 declaration.effective_cost, declaration.effect_initiated, declaration.suppress_on_play,
                 declaration.origin.enters_suspended(), Some(receipt), true, true, false);
+            self.pending_digixros_transaction = previous_digixros;
             self.pending_assembly_materials = previous_assembly;
             self.effect_source_player = previous_controller;
             if let Some(index) = played {
@@ -196,7 +227,10 @@ impl Game {
         let field_slots = self.rules.field_slots;
         let source_preparation=self.is_source_preparation(origin);
         let printed_cost = if source_preparation {
-            let Some(card)=self.source_preparation_card(origin,target_card) else{return PlayFromHandCostResult::Failed;};
+            let Some(card)=self.source_preparation_card(origin,target_card) else{
+                self.pending_digixros_transaction = None;
+                return PlayFromHandCostResult::Failed;
+            };
             card.play_cost(&self.card_data)
         } else {
             let player = self.player(player_id);
@@ -227,26 +261,22 @@ impl Game {
             target_permanents: [None, None],
         };
         self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
-        let transaction_cost = self
+        // Combine the effect's `cost_delta` (already resolved into `base_cost`)
+        // with any selected DigiXros/cast-time-assembly material reductions —
+        // do NOT call `transaction.final_cost()`, which starts from the raw
+        // printed cost and would clobber `CostDelta::Reduce(n)` / `Fixed(n)`
+        // (e.g. EX12-045 Sanzomon playing EX12-015 Gokuumon cost 7 with -2 AND
+        // DigiXros -2 must pay 3, not 5).
+        let material_delta = self
             .pending_digixros_transaction
             .as_ref()
-            .map(|transaction| transaction.final_cost() as i32)
-            .unwrap_or(base_cost);
-        let effective_cost = total_reduction.final_cost(
-            transaction_cost,
-            self.pending_digixros_transaction
-                .as_ref()
-                .map(|t| t.selected_cost_delta() as i32)
-                .unwrap_or(0),
-        );
-        // "Play ... without paying the cost" pays nothing, DigiXros or not: the
-        // DigiXros transaction's cost starts from the printed cost and would
-        // otherwise replace the free base (DCGO payCost: false). Game audit
-        // 2026-11-11: Erlangmon EX12-034 free-played Sagomon EX12-029 for 5.
+            .map(|t| t.selected_cost_delta() as i32)
+            .unwrap_or(0);
+        // "Play ... without paying the cost" pays nothing, DigiXros or not.
         let effective_cost = if matches!(cost_delta, crate::enums::CostDelta::Free) {
             0
         } else {
-            effective_cost
+            total_reduction.final_cost((base_cost + material_delta).max(0), material_delta)
         };
 
         self.pending_would_play_resume = Some(PendingWouldPlayResume {
@@ -317,7 +347,7 @@ impl Game {
         // recomputed, and an unpayable play returns to hand for 0 memory
         // (judge-quiz Q25/Q26/Q27, G-DIGIXROS-DEPARTURE-LEAVE-TRIGGER +
         // G-DIGIXROS-UNPAYABLE-RETURN-TO-HAND).
-        if self.pending_digixros_transaction.is_some() {
+        if !source_preparation && self.pending_digixros_transaction.is_some() {
             return self.run_digixros_leave_windows_then_commit(
                 player_id,
                 target_card,
@@ -337,6 +367,7 @@ impl Game {
             suppress_on_play,
         };
         if let Some(prepared) = self.prepare_source_play_if_registered(declaration) {
+            self.pending_digixros_transaction = None;
             return if prepared { PlayFromHandCostResult::Pending } else { PlayFromHandCostResult::Failed };
         }
         let committed = self.commit_play_from_hand_card_no_replace(
@@ -597,31 +628,31 @@ impl Game {
         };
 
         // Recompute the reduced cost from the materials that actually remain,
-        // mirroring `commit_play_from_hand_after_reductions`:
-        // `(transaction.final_cost() - total_reduction).max(0)`. The
-        // (now-pruned) transaction's `final_cost()` reflects the materials that
-        // truly survived the leave windows.
-        let transaction_cost = self
+        // mirroring `commit_play_from_hand_after_reductions`: apply the effect's
+        // `cost_delta` (`total_reduction.effect_cost`) to the printed cost
+        // BEFORE adding the surviving materials' `selected_cost_delta()`.
+        let printed_cost = self
             .pending_digixros_transaction
             .as_ref()
-            .map(|tx| tx.final_cost() as i32)
+            .map(|tx| tx.base_cost)
             .unwrap_or(0);
-        let effective_cost = total_reduction.final_cost(
-            transaction_cost,
-            self.pending_digixros_transaction
-                .as_ref()
-                .map(|t| t.selected_cost_delta() as i32)
-                .unwrap_or(0),
-        );
+        let base_cost = i32::from(self.resolve_effect_play_cost(
+            self.effect_source_player.unwrap_or(player_id),
+            printed_cost,
+            total_reduction.effect_cost,
+        ));
+        let material_delta = self
+            .pending_digixros_transaction
+            .as_ref()
+            .map(|t| t.selected_cost_delta() as i32)
+            .unwrap_or(0);
         // "Play ... without paying the cost" pays nothing, DigiXros or not, on
-        // this commit path too (DCGO `PlayPermanentCards(payCost: false)`;
-        // the same rule `commit_play_from_hand_after_reductions` applies before
-        // the leave windows). Without it a free effect play of a DigiXros card
-        // was re-priced at its printed cost here (paid, or refused as unpayable).
-        let effective_cost = if matches!(total_reduction.effect_cost, crate::enums::CostDelta::Free) {
+        // this commit path too (DCGO `PlayPermanentCards(payCost: false)`).
+        let effective_cost = if matches!(total_reduction.effect_cost, crate::enums::CostDelta::Free)
+        {
             0
         } else {
-            effective_cost
+            total_reduction.final_cost((base_cost + material_delta).max(0), material_delta)
         };
 
         // Declare-then-pay re-check (judge Q26/Q27): the play is unpayable — and
@@ -940,7 +971,10 @@ impl Game {
             return false;
         }
 
-        let candidates = self.pending_digixros_material_candidates(player_id);
+        let mut candidates = self.pending_digixros_material_candidates(player_id);
+        if !self.prepared_source_plays.is_empty() {
+            candidates.retain(|origin| !self.card_claimed_by_prepared_source_plays(origin.card()));
+        }
         // No eligible material left: there is nothing to choose, so no prompt.
         // DCGO's `SelectDigiXrosClass.Select` walks the recipe's elements and
         // asks only for an element that has at least one candidate
@@ -964,11 +998,18 @@ impl Game {
         // exceeds the payable range (BT15-102's 15). With no candidates left
         // no prompt is installed at all (above); an unpayable commit then
         // routes through the declare-then-pay return-to-hand flow.
-        let stop_cost = total_reduction.final_cost(
-            transaction.final_cost() as i32,
-            transaction.selected_cost_delta() as i32,
-        ) as i32;
-        let can_stop = (self.memory as i32 - stop_cost) >= self.rules.memory_range.0 as i32;
+        let stop_cost = if matches!(cost_delta, crate::enums::CostDelta::Free) {
+            0
+        } else {
+            let base_cost = i32::from(self.resolve_effect_play_cost(
+                self.effect_source_player.unwrap_or(player_id),
+                transaction.base_cost,
+                cost_delta,
+            ));
+            let material_delta = transaction.selected_cost_delta() as i32;
+            total_reduction.final_cost((base_cost + material_delta).max(0), material_delta)
+        };
+        let can_stop = self.can_pay_memory_for(player_id, stop_cost);
 
         let selected_origins: Vec<_> = transaction
             .selected_materials
@@ -1514,9 +1555,16 @@ impl Game {
                             .position(|candidate| candidate.top_card().handle() == card)
                     })?;
                 let mut removed = self.player_mut(player).battle_area.remove(idx);
-                if self.security_resolution.is_some() {
-                    self.shift_effect_queue_after_battle_area_remove(player, idx as u8);
-                }
+                // Re-key modifiers, in-flight attack handles, queued field
+                // triggers, and parked replacement/selection source handles
+                // unconditionally so surviving permanents past `idx` stay live
+                // after battle-area compaction (e.g. DigiXrosing a lower-slot
+                // ally during an <Engage> attack).
+                self.modifiers
+                    .shift_after_battle_area_remove(player, idx as u8);
+                self.shift_pending_attack_after_battle_area_remove(player, idx as u8);
+                self.shift_effect_queue_after_battle_area_remove(player, idx as u8);
+                self.fixup_source_handles_after_battle_removal(player, idx as u8);
                 let top = removed.card_sources.pop()?;
                 if !removed.card_sources.is_empty() {
                     self.player_mut(player).put_all_in_trash(removed.card_sources);

@@ -10,6 +10,16 @@ effects:
   - scope: inherited
     when: on_ally_played
     once_per_turn: true
+    # Whole effect is optional ("this Digimon may digivolve", DCGO
+    # EX12_002.cs:18 `isOptional: true`). DCGO's `CanActivateCondition`
+    # (:35-51) checks only `HasMatchConditionOwnersHand(card, EqualsTraits("SW"))`
+    # — not whether a hand card can digivolve onto the carrier — so DCGO always
+    # shows its Yes/No prompt whenever the hand holds any [SW] card (even under
+    # a Lv.6 carrier like EX12-034). `outer_prompt: true` (BT21-001 idiom)
+    # preserves that outer Yes/No gate and Q1818 / CR 4.3 §15-14-1-4 OPT
+    # semantics: declining keeps the [Once Per Turn]; accepting spends it.
+    optional: true
+    outer_prompt: true
     active_when: { your_turn: true }
     trigger_if:
       all_of:
@@ -17,6 +27,13 @@ effects:
         - event_target_kind: digimon
         - event_target_trait_has: SW
         - event_target_is_source: false
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: SW
+        n: 1
     summary: "[Your Turn][OPT] When another [SW] Digimon is played, this Digimon may digivolve into an [SW] hand card with cost reduced by 2"
     process:
       - select_hand:

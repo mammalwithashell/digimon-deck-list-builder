@@ -3,7 +3,9 @@
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_attack, PASS, PLAY_HAND_START};
+use digimon_engine::action::space::{
+    encode_attack, encode_breeding_select, PASS, PLAY_HAND_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -95,21 +97,9 @@ fn ex11_053_on_play_places_royal_knight_from_hand_under_fielded_king_drasil() {
     runner
         .accept_optional_trigger()
         .expect("printed \"By placing\" cost is optional");
-    let king_prompt = runner
-        .pending_selection_view()
-        .expect("King Drasil selection opens");
-    assert_eq!(king_prompt.kind, SelectionKind::OwnField);
-    assert_eq!(
-        king_prompt.valid_action_ids,
-        vec![encode_attack(0, king.index as u16)]
-    );
-    runner
-        .execute_action(0, encode_attack(0, king.index as u16))
-        .expect("choose King Drasil");
-
     let hand_prompt = runner
         .pending_selection_view()
-        .expect("Royal Knight hand selection opens");
+        .expect("Royal Knight hand selection opens first");
     assert_eq!(hand_prompt.kind, SelectionKind::Hand);
     assert_eq!(
         hand_prompt.valid_action_ids,
@@ -119,6 +109,18 @@ fn ex11_053_on_play_places_royal_knight_from_hand_under_fielded_king_drasil() {
     runner
         .execute_action(0, PLAY_HAND_START)
         .expect("choose Magnamon");
+
+    let king_prompt = runner
+        .pending_selection_view()
+        .expect("King Drasil selection opens second");
+    assert_eq!(king_prompt.kind, SelectionKind::OwnField);
+    assert_eq!(
+        king_prompt.valid_action_ids,
+        vec![encode_attack(0, king.index as u16)]
+    );
+    runner
+        .execute_action(0, encode_attack(0, king.index as u16))
+        .expect("choose King Drasil");
     runner.auto_resolve().expect("place source and draw");
 
     let king_perm = &runner.game.players[0].battle_area[king.index as usize];
@@ -129,6 +131,64 @@ fn ex11_053_on_play_places_royal_knight_from_hand_under_fielded_king_drasil() {
             .iter()
             .any(|card| card.card_id(&runner.game.card_data) == "DRAW"),
         "Omekamon draws after the Royal Knight card is placed"
+    );
+}
+
+#[test]
+fn ex11_053_on_play_places_royal_knight_from_hand_under_breeding_king_drasil() {
+    let mut king_egg = make_test_card("KING-EGG", "King Drasil_7D6");
+    king_egg.card_kind = CardKind::DigiEgg;
+    king_egg.colors = vec![CardColor::White];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-053")
+        .expect("EX11-053 YAML loads")
+        .add_card(king_egg)
+        .add_card(digimon("ROYAL", "Magnamon", &["Royal Knight"]))
+        .add_card(digimon("NON-RK", "Plain Digimon", &[]))
+        .add_card(make_test_card("DRAW", "Draw Filler"))
+        .hand(0, &["EX11-053", "ROYAL", "NON-RK"])
+        .deck(0, &["DRAW"])
+        .memory(20)
+        .start();
+    runner.place_in_breeding(0, "KING-EGG");
+    let royal_handle = runner.game.players[0].hand[1].handle();
+
+    runner.play(0, 0).expect("play Omekamon");
+    runner
+        .accept_optional_trigger()
+        .expect("EX11-053 On Play triggers when King Drasil_7D6 is in the breeding area");
+
+    let hand_prompt = runner
+        .pending_selection_view()
+        .expect("Royal Knight hand selection opens first");
+    assert_eq!(hand_prompt.kind, SelectionKind::Hand);
+    assert_eq!(hand_prompt.valid_action_ids, vec![PLAY_HAND_START]);
+    runner
+        .execute_action(0, PLAY_HAND_START)
+        .expect("choose Magnamon");
+
+    let breeding_action = encode_breeding_select(0).expect("breeding select id");
+    let king_prompt = runner
+        .pending_selection_view()
+        .expect("breeding King Drasil selection opens second");
+    assert_eq!(king_prompt.valid_action_ids, vec![breeding_action]);
+    runner
+        .execute_action(0, breeding_action)
+        .expect("choose breeding King Drasil");
+    runner.auto_resolve().expect("place source under breeding King Drasil and draw");
+
+    let breeding = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("King Drasil_7D6 remains in breeding area");
+    assert_eq!(breeding.card_sources[0].handle(), royal_handle);
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "DRAW"),
+        "Omekamon draws after placing the Royal Knight under breeding King Drasil_7D6"
     );
 }
 
@@ -333,6 +393,85 @@ fn ex11_053_on_deletion_plays_omnimon_x_from_king_drasil_source_and_attaches_sel
         .iter()
         .find(|p| p.top_card().handle() == omni_source_handle)
         .expect("the King Drasil Omnimon X source enters the battle area");
+    assert_eq!(
+        omni_perm.card_sources[0].handle(),
+        omekamon_handle,
+        "Omekamon is placed as the played Omnimon X's bottom digivolution source"
+    );
+}
+
+/// (b2) Play an Omnimon X from UNDER a [King Drasil_7D6] in the BREEDING AREA
+/// ("on the field" = battle area + breeding area, CR §3-4-7-4; DCGO EX11_053.cs),
+/// then attach this Omekamon as the played card's bottom digivolution source.
+#[test]
+fn ex11_053_on_deletion_plays_omnimon_x_from_breeding_king_drasil_source_and_attaches_self() {
+    let mut king_egg = make_test_card("KING-EGG", "King Drasil_7D6");
+    king_egg.card_kind = CardKind::DigiEgg;
+    king_egg.colors = vec![CardColor::White];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-053")
+        .expect("EX11-053 YAML loads")
+        .add_card(king_egg)
+        .add_card(omnimon_x("OMNI-X"))
+        .security(0, &[])
+        .memory(10)
+        .start();
+
+    runner.place_in_breeding(0, "KING-EGG");
+    let omni_data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "OMNI-X")
+        .expect("OMNI-X in card_data");
+    let omni_card_index = runner.game.next_card_index();
+    let omni_source =
+        digimon_engine::card_source::CardSource::new(omni_data_idx, 0, omni_card_index);
+    let omni_source_handle = omni_source.handle();
+    runner.game.players[0]
+        .breeding_area
+        .as_mut()
+        .expect("breeding King Drasil_7D6")
+        .card_sources
+        .insert(0, omni_source);
+
+    let omekamon = runner.place_on_field(0, "EX11-053", Some(0));
+    let omekamon_handle = runner.game.player(0).battle_area[omekamon.index as usize]
+        .top_card()
+        .handle();
+
+    delete_omekamon(&mut runner, omekamon.index as usize);
+
+    let pending = runner
+        .pending_selection()
+        .expect("On Deletion union-zone selection opens for breeding King Drasil source");
+    assert!(pending.is_optional);
+    let commits = physical_choice::commits(&runner.game);
+    assert_eq!(commits.len(), 1, "only breeding King Drasil's Omnimon X source is offered");
+    let pick_action = commits[0].action_id;
+
+    runner
+        .execute_action(0, pick_action)
+        .expect("play Omnimon X from breeding King Drasil's sources");
+    runner.auto_resolve().ok();
+
+    let breeding = runner.game.player(0)
+        .breeding_area
+        .as_ref()
+        .expect("King Drasil_7D6 remains in breeding area");
+    assert_eq!(
+        breeding.card_sources.len(),
+        1,
+        "Omnimon X left breeding King Drasil's digivolution stack"
+    );
+    let omni_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().handle() == omni_source_handle)
+        .expect("Omnimon X entered the battle area from breeding sources");
     assert_eq!(
         omni_perm.card_sources[0].handle(),
         omekamon_handle,

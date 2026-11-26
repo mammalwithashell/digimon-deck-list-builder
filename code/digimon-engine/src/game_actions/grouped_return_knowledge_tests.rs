@@ -198,3 +198,87 @@ fn grouped_top_random_and_whole_stack_keep_conservative_position_contract() {
         }
     } }
 }
+
+/// Regression (`raw-20261124T071011Z#g27` step 155, CR 4.3 §4-21-5): Tokens
+/// never enter a deck when returned from the battle area, so they must neither
+/// trigger nor appear in the deck-bottom ordering prompt, while still leaving
+/// the battle area cleanly with the batch.
+#[test]
+fn grouped_deck_return_excludes_tokens_from_ordering_prompt() {
+    // Case A: 1 Token + 1 real Digimon -> no ordering prompt at all.
+    let mut f = fixture(0, false, false);
+    f.game.players[0].battle_area[0].card_sources[0].is_token = true;
+    let token_card = f.cards[0].1;
+    let real_card = f.cards[1].1;
+    f.game.return_receipts.push((901, Vec::new()));
+    crate::replacement::start_departure_batch(
+        &mut f.game,
+        vec![f.handles[0], f.handles[1]],
+        901,
+        Some(StackPosition::Bottom),
+        false,
+    );
+    assert!(
+        f.game.pending_selection.is_none(),
+        "1 Token + 1 real Digimon must not open a deck-ordering prompt"
+    );
+    assert_eq!(
+        f.game.players[0].battle_area.len(),
+        1,
+        "both the Token and real Digimon must have left the battle area"
+    );
+    assert_eq!(
+        f.game.players[0].deck.first().map(|c| c.handle()),
+        Some(real_card),
+        "only the real Digimon enters the bottom of the deck"
+    );
+    assert!(
+        !f.game.players[0].deck.iter().any(|c| c.handle() == token_card),
+        "Token must never enter the deck"
+    );
+
+    // Case B: 1 Token + 2 real Digimon -> ordering prompt offers only the 2 real Digimon.
+    let mut f = fixture(0, false, false);
+    f.game.players[0].battle_area[0].card_sources[0].is_token = true;
+    let token_card = f.cards[0].1;
+    let chosen_bottom = f.cards[2].1;
+    let token_action = crate::action::space::encode_attack(0, 0);
+    let pick_slot_2 = crate::action::space::encode_attack(0, 2);
+    f.game.return_receipts.push((902, Vec::new()));
+    crate::replacement::start_departure_batch(
+        &mut f.game,
+        f.handles.clone(),
+        902,
+        Some(StackPosition::Bottom),
+        false,
+    );
+    let actor = {
+        let sel = f
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("2 real Digimon + 1 Token must still order the 2 real Digimon");
+        assert_eq!(sel.valid_action_ids.len(), 2, "got {:?}", sel.valid_action_ids);
+        assert!(
+            !sel.valid_action_ids.contains(&token_action),
+            "Token must not be offered in the deck-ordering prompt"
+        );
+        assert!(sel.valid_action_ids.contains(&pick_slot_2));
+        sel.selecting_player
+    };
+    f.game.resolve_selection(actor, pick_slot_2).unwrap();
+    assert!(f.game.pending_selection.is_none());
+    assert!(
+        f.game.players[0].battle_area.is_empty(),
+        "Token and both real Digimon must all leave the battle area"
+    );
+    assert_eq!(
+        f.game.players[0].deck.first().map(|c| c.handle()),
+        Some(chosen_bottom),
+        "chosen real Digimon must be bottommost in deck"
+    );
+    assert!(
+        !f.game.players[0].deck.iter().any(|c| c.handle() == token_card),
+        "Token must never enter the deck"
+    );
+}

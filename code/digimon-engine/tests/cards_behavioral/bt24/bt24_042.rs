@@ -129,6 +129,24 @@ fn bt24_042_inherited_structure() {
     let t = triggered(inherited_idx());
     assert_eq!(t.when, vec![CompiledTiming::OnDiscardHand]);
     assert!(t.once_per_turn);
+    assert!(t.optional, "DCGO BT24_042.cs:73 isOptional: true");
+}
+
+#[test]
+fn bt24_042_inherited_does_not_queue_without_legal_trash_digivolve_candidate() {
+    // DCGO BT24_042.cs:102 `HasMatchConditionOwnersCardInTrash`: if trash has
+    // no legal [Titamon]/[Titan] card that can digivolve onto the host (e.g.
+    // only PLAIN4 / DEMON4, or wrong level), BT24-042 must not even queue.
+    let mut r = setup();
+    let host = r.place_stack(0, &[CARD_ID, "DEMON3"]);
+    push_trash(&mut r, 0, "PLAIN4");
+    push_trash(&mut r, 0, "DEMON4");
+    trash_my_hand(&mut r, 0);
+    assert!(
+        r.pending_selection_view().is_none(),
+        "must not queue without a legal [Titamon]/[Titan] digivolve target in trash"
+    );
+    assert_eq!(top_id(&r, host), "DEMON3");
 }
 
 fn trash_my_hand(r: &mut DebugRunner, owner: u8) {

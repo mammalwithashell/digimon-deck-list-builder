@@ -30,9 +30,13 @@ effects:
   - kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
+    # Printed: "When this card would be played, if there are 3 or more Digimon,
+    # reduce the play cost by 5." — counts BOTH players' battle-area Digimon
+    # (DCGO BT24_051.cs:38 `Owner.GetBattleAreaDigimons().Count +
+    # Enemy.GetBattleAreaDigimons().Count >= 3`).
     condition:
       count_gte:
-        filter: { zone: [battle_area], kind: digimon }
+        filter: { of: any, zone: [battle_area], kind: digimon }
         n: 3
     amount: 5
     summary: "When played while there are 3 or more Digimon, reduce play cost by 5"

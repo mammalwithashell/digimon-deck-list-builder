@@ -105,53 +105,59 @@ effects:
   #        it is the return target. Non-optional, silently no-ops when the
   #        opponent has no surviving Digimon.
   #
-  # PRINTED-TEXT NUANCE: step 4 ("Then, return …") is grammatically part of
-  # the same conditional sentence as the board-wipe in the printed text
-  # ("If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards,
-  # choose … and delete … . Then, return …"). DCGO places its step 5 outside
-  # the source check, but the printed "Then," chains it to the conditional
-  # clause — so gating the whole clause on the stack condition (the
-  # `condition:` below) is faithful to the printed text. (If a divergence is
-  # ever observed, printed text wins per the source-priority policy.)
+  # PRINTED-TEXT & DCGO RULE (period-scoped `Then,`):
+  #   "If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards,
+  #   choose 1 of each player's Digimon and delete all other Digimon. Then,
+  #   return 1 of your opponent's Digimon to the bottom of the deck."
+  #   The `If` clause ends at the period after "delete all other Digimon.";
+  #   "Then, return 1 of your opponent's Digimon to the bottom of the deck." is
+  #   a separate unconditional sentence that executes even without [Omnimon] or
+  #   [X Antibody] in digivolution cards (confirmed by DCGO BT20_102.cs:90-177,
+  #   226-313 putting step 5 outside `if (IsOmniOrXAntiSource())` and live DCGO
+  #   replay Nov24#g25).
   #
   # Same shape as AD1-025 Omnimon clause (d): `for_each` board mutation
   # followed by sequential `select_opponent_permanent` + body steps.
   - text: "[On Play] [When Digivolving] If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards, choose 1 of each player's Digimon and delete all other Digimon. Then, return 1 of your opponent's Digimon to the bottom of the deck."
     when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] If Omnimon/X Antibody in digivolution cards → choose 1 to protect per player, delete rest; return 1 opp Digimon to bottom of deck"
-    condition:
-      any_of:
-        - self_digivolution_sources_contain_name: "Omnimon"
-        - self_digivolution_sources_contain_name: "X Antibody"
+    summary: "[On Play][When Digivolving] If Omnimon/X Antibody in digivolution cards → choose 1 to protect per player, delete rest; then return 1 opp Digimon to bottom of deck"
     process:
-      # Step 1: choose 1 of the opponent's Digimon to protect.
-      - select_opponent_permanent:
-          optional: false
-          bind_as: saved_opp
-          filter: { kind: digimon }
-          prompt: "Choose 1 of your opponent's Digimon to protect from deletion"
-      # Step 2: choose 1 of your Digimon to protect.
-      - select_own_permanent:
-          optional: false
-          bind_as: saved_own
-          filter: { kind: digimon }
-          prompt: "Choose 1 of your Digimon to protect from deletion"
-      # Step 3: delete every battle-area Digimon that is not protected.
-      - for_each:
-          over:
-            all_of:
-              - kind: digimon
-              - of: any
-              - any_of:
-                  - binding_absent: saved_opp
-                  - not_in_binding: saved_opp
-              - any_of:
-                  - binding_absent: saved_own
-                  - not_in_binding: saved_own
-          bind_as: wipe_target
-          body:
-            - delete_permanent: { target: wipe_target }
-      # Step 4: return 1 of the opponent's (surviving) Digimon to deck bottom.
+      # Steps 1-3: conditional on [Omnimon] or [X Antibody] in digivolution cards.
+      - if:
+          condition:
+            any_of:
+              - self_digivolution_sources_contain_name: "Omnimon"
+              - self_digivolution_sources_contain_name: "X Antibody"
+          then:
+            # Step 1: choose 1 of the opponent's Digimon to protect.
+            - select_opponent_permanent:
+                optional: false
+                bind_as: saved_opp
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to protect from deletion"
+            # Step 2: choose 1 of your Digimon to protect.
+            - select_own_permanent:
+                optional: false
+                bind_as: saved_own
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to protect from deletion"
+            # Step 3: simultaneously delete every battle-area Digimon that is
+            # not protected (DCGO BT20_102.cs:152 `DestroyPermanentsClass`
+            # deletes all unprotected Digimon in one batch so plural leave
+            # replacements like EX13-024 can protect all matching targets at
+            # once).
+            - delete_all_permanents:
+                over:
+                  all_of:
+                    - kind: digimon
+                    - of: any
+                    - any_of:
+                        - binding_absent: saved_opp
+                        - not_in_binding: saved_opp
+                    - any_of:
+                        - binding_absent: saved_own
+                        - not_in_binding: saved_own
+      # Step 4 (unconditional): return 1 of the opponent's Digimon to deck bottom.
       - select_opponent_permanent:
           optional: false
           bind_as: return_target

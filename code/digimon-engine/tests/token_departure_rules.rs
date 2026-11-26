@@ -376,10 +376,16 @@ fn recorded_interrupted_token_return_removes_token_and_clones_identically() {
     //   is dropped and its memory_after moved to the pick (step 39);
     // - Sagomon (EX12-029), played by Erlangmon (EX12-034) inside the
     //   interrupted return: the decision made on the clone below is the
-    //   material pick itself (recorded step 90, cursor 90). The stop PASS
-    //   recorded as step 91 has no prompt any more; that row and the ones
-    //   after it are never replayed (see the continuation below).
-    for _ in 0..90 {
+    //   material pick itself (recorded step 90, cursor 91 after restoring step
+    //   23 below). The stop PASS recorded as step 91 has no prompt any more;
+    //   that row and the ones after it are never replayed (see the continuation
+    //   below).
+    //
+    // Migrated 2026-11-26 for EX12-002 `outer_prompt: true` (DCGO
+    // EX12_002.cs:18,35-51; BT21-001 idiom): step 23 (declining EX12-002's
+    // outer Yes/No gate before Turn 4 ends) is restored with `action_id: 62`,
+    // shifting the pre-clone cursor from 90 to 91.
+    for _ in 0..91 {
         let result = replay.step();
         assert!(result.divergences.is_empty(), "{:?}", result.divergences);
     }

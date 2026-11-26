@@ -17,8 +17,15 @@
 #   Official Q&A: the battle starts immediately and follows the standard
 #   battle rules.
 #
-# DCGO C# reference: none at the submodule (no EX13_077.cs). Printed text +
-# general_rule.pdf govern; DCGO precedents named per clause below.
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX13/White/EX13_077.cs
+#   - Shared [On Play]/[When Digivolving]: optional attack without suspending,
+#     then `effectLoops = OwnerColorCount() / 2`; each loop checks `canBattle`
+#     (`IsExistOnBattleAreaDigimon && opp has Digimon`) and `canRecover`
+#     (`opp trash >= 5`), breaks immediately when `!canBattle && !canRecover`,
+#     and offers a `SetIntSelection` menu over playable modes (`1 = Battle`,
+#     `2 = Return 5`, `3 = Don't activate`, breaking on `3`). Return-5 goes
+#     directly to `SelectCardEffect(maxCount: 5, canEndNotMax: false,
+#     canNoSelect: true)` with no extra yes/no prompt.
 #
 # DSL notes:
 #   - Assembly "w/different colors": `distinct_by: color`
@@ -34,18 +41,17 @@
 #     the complete effect (including the "Then" choices) finishes. Q7474 fixes
 #     the repeat count when the effect activates.
 #   - "for every 2 of your Digimon and Tamers' colors, activate 1 effect":
-#     `repeat_effect_choice` (EX12-037 / DCGO EX12_037.cs idiom: count read
-#     once, the same effect may be chosen again), count =
-#     floor(distinct rules-colors across own Digimon + Tamers / 2) — the
-#     AD1-014 `distinct_colors_count` formula; it reads synthesized colors, so
-#     this Digimon's gained source colors count.
+#     `repeat_effect_choice` with `labels: []` (so count is read once) wrapping
+#     a gated `select_effect_choice` with `legal_when` mirroring DCGO's
+#     `canBattle` / `canRecover` / `Don't activate` (indices 0, 1, 2 → DCGO
+#     1-based values 1, 2, 3); skips remaining loops once neither mode is
+#     payable or `"Don't activate"` (2) was picked.
 #   - Battle mode: optional opp-Digimon pick + `battle: { attacker: this }`
 #     (BT25-058 idiom — an effect battle, not an attack; Q&A: standard rules).
-#   - Return mode: "By returning 5 cards …, <Recovery +1>" — the return is the
-#     optional cost (DCGO BT17_070.cs `canNoSelect: true`, `maxCount` exact):
-#     yes/no, then exactly 5 cards of the opponent's trash to the bottom of
-#     their deck (`return_trash_list_to_deck_bottom`, BT17-070 idiom), then
-#     Recovery +1. Unpayable (< 5 cards) ⇒ nothing.
+#   - Return mode: "By returning 5 cards …, <Recovery +1>" — direct
+#     `select_count_capped_multi` (`min: 5, max: 5, optional_zero: true`:
+#     declinable at 0 picks, all-or-nothing once started) →
+#     `return_trash_list_to_deck_bottom` + `<Recovery +1>` when all 5 picked.
 #   - [All Turns]: self-aura `modifier: AddColor` with no payload = "gains the
 #     colors of its digivolution cards" (BT8-084 idiom, read live), plus a
 #     `dp_modifier_fn` of +1000 per distinct color across own Digimon + Tamers
@@ -117,53 +123,74 @@ effects:
                         - kind: tamer
                 delta: 1
               - 2
-          labels:
-            - "This Digimon may battle 1 of your opponent's Digimon"
-            - "Return 5 cards from your opponent's trash to the bottom of the deck: <Recovery +1>"
+          labels: []
           bind_as: mode
-          prompt: "Activate 1 effect (1 per 2 of your Digimon and Tamers' colors)"
           body:
             - if:
-                condition: { equals: [mode, 0] }
+                condition:
+                  all_of:
+                    - none_of:
+                        - equals: [mode, 2]
+                    - any_of:
+                        - all_of:
+                            - on_field: true
+                            - any_permanent:
+                                of: opponent
+                                zone: [battle_area]
+                                kind: digimon
+                        - count_gte:
+                            filter:
+                              of: opponent
+                              zone: [trash]
+                            n: 5
                 then:
-                  - select_opponent_permanent:
-                      bind_as: battle_target
-                      optional: true
-                      continue_on_decline: true
-                      filter: { kind: digimon }
-                      prompt: "This Digimon may battle 1 of your opponent's Digimon"
-                  - battle:
-                      attacker: this
-                      defender: battle_target
-            - if:
-                condition: { equals: [mode, 1] }
-                then:
+                  - select_effect_choice:
+                      labels:
+                        - "This Digimon may battle 1 of your opponent's Digimon"
+                        - "Return 5 cards from your opponent's trash to the bottom of the deck: <Recovery +1>"
+                        - "Don't activate"
+                      legal_when:
+                        - all_of:
+                            - on_field: true
+                            - any_permanent:
+                                of: opponent
+                                zone: [battle_area]
+                                kind: digimon
+                        - count_gte:
+                            filter:
+                              of: opponent
+                              zone: [trash]
+                            n: 5
+                        - {}
+                      bind_as: mode
+                      prompt: "Activate 1 effect (1 per 2 of your Digimon and Tamers' colors)"
                   - if:
-                      condition:
-                        count_gte:
-                          filter:
-                            of: opponent
-                            zone: [trash]
-                          n: 5
+                      condition: { equals: [mode, 0] }
                       then:
-                        - select_effect_choice:
-                            labels:
-                              - "Return 5 cards from your opponent's trash to the bottom of the deck for <Recovery +1>"
-                              - "Don't return"
-                            bind_as: pay_return
-                            prompt: "Return 5 cards from your opponent's trash to the bottom of the deck?"
+                        - select_opponent_permanent:
+                            bind_as: battle_target
+                            optional: true
+                            continue_on_decline: true
+                            filter: { kind: digimon }
+                            prompt: "This Digimon may battle 1 of your opponent's Digimon"
+                        - battle:
+                            attacker: this
+                            defender: battle_target
+                  - if:
+                      condition: { equals: [mode, 1] }
+                      then:
+                        - select_count_capped_multi:
+                            of: opponent
+                            zone: trash
+                            min: 5
+                            max: 5
+                            filter: {}
+                            bind_as: returned
+                            optional_zero: true
+                            prompt: "Return 5 cards from your opponent's trash to the bottom of their deck"
                         - if:
-                            condition: { equals: [pay_return, 0] }
+                            condition: { binding_count_eq: { binding: returned, n: 5 } }
                             then:
-                              - select_count_capped_multi:
-                                  of: opponent
-                                  zone: trash
-                                  min: 5
-                                  max: 5
-                                  filter: {}
-                                  bind_as: returned
-                                  optional_zero: false
-                                  prompt: "Return 5 cards from your opponent's trash to the bottom of their deck"
                               - return_trash_list_to_deck_bottom:
                                   of: opponent
                                   cards: returned

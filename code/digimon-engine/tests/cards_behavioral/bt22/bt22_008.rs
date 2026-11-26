@@ -333,11 +333,10 @@ fn bt22_008_on_play_no_fire_when_trash_has_no_matching_card() {
     let perm = runner.place_on_field(0, CARD_ID, None);
     runner.fire_on_play(0, perm.index as usize);
 
-    // Whether the engine installs an empty/auto-passed selection or skips
-    // the trigger entirely is implementation-detail — what we care about
-    // is that no card moves out of trash and that no selection is left
-    // hanging that requires an out-of-band PASS.
-    let _ = runner.auto_resolve();
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no matching trash card must suppress BT22-008 [On Play] at trigger time (DCGO CanActivateCondition)"
+    );
     assert_eq!(
         hand_ids(&runner, 0),
         Vec::<String>::new(),
@@ -347,6 +346,44 @@ fn bt22_008_on_play_no_fire_when_trash_has_no_matching_card() {
         trash_ids(&runner, 0),
         vec!["TRASH-OTHER".to_string()],
         "non-matching trash card stays put"
+    );
+}
+
+/// Regression for `Nov24#g7` step 19: playing BT22-008 alongside BT22-005
+/// (Tsumemon) when trash holds only non-matching cards (e.g. Gabumon) must NOT
+/// enqueue BT22-008 or open a spurious `TriggerOrder [BT22-008 | BT22-005]`;
+/// BT22-005's mandatory Draw 1 resolves immediately with no prompt.
+#[test]
+fn bt22_008_on_play_does_not_open_trigger_order_alongside_bt22_005_without_matching_trash() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT22-008 YAML loads")
+        .dsl_card("BT22-005")
+        .expect("BT22-005 YAML loads")
+        .add_card(make_test_card("DECK-PAD", "Filler"))
+        .add_card(make_trash_target("TRASH-OTHER", "Gabumon"))
+        .add_card(make_trash_target("CARRIER", "Carrier"))
+        .deck(0, &["DECK-PAD"; 5])
+        .deck(1, &["DECK-PAD"; 5])
+        .hand(0, &[CARD_ID])
+        .memory(5)
+        .start();
+
+    runner.place_stack(0, &["BT22-005", "CARRIER"]);
+    push_to_trash(&mut runner, 0, "TRASH-OTHER");
+
+    runner.play(0, 0);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "BT22-008 must not enqueue alongside BT22-005 when trash has no Greymon/Garurumon/Omnimon \
+         (got: {:?})",
+        runner.pending_selection_view()
+    );
+    assert_eq!(
+        hand_ids(&runner, 0),
+        vec!["DECK-PAD".to_string()],
+        "BT22-005 mandatory Draw 1 should resolve immediately with no TriggerOrder prompt"
     );
 }
 

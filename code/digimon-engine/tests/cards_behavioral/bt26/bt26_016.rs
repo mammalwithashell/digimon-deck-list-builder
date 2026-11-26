@@ -318,3 +318,46 @@ fn bt26_016_once_per_turn_holds_after_one_own_two_opponent_return() {
 fn bt26_016_once_per_turn_holds_after_three_opponent_return() {
     split_return_then_second_trigger(0, 3);
 }
+
+/// Regression (`raw-20261124T071011Z#g29` step 53): even when your own trash is
+/// non-empty, `BT26-016`'s own-trash share must expose PASS (`optional_zero: true`)
+/// so the player can choose 0 cards from their own trash and all 3 cards from
+/// their opponent's trash for `<Recovery +1>`.
+#[test]
+fn bt26_016_zero_own_three_opponent_when_own_trash_non_empty() {
+    let mut r = setup();
+    for _ in 0..4 {
+        push_trash(&mut r, 0, "TR");
+        push_trash(&mut r, 1, "TR");
+    }
+    let h = chrono(&mut r);
+    fire(&mut r, EffectTiming::WhenDigivolving, h);
+
+    let own_prompt = r
+        .pending_selection_view()
+        .expect("own-trash share prompt should open when own trash is non-empty");
+    assert!(
+        own_prompt.is_optional,
+        "own-trash share must allow PASS (0 cards) to take all 3 from opponent's trash"
+    );
+    pass(&mut r, 0);
+
+    let opp_prompt = r
+        .pending_selection_view()
+        .expect("passing own trash must open the 3-card opponent-trash prompt");
+    assert!(opp_prompt.is_optional, "opponent share is 0 or 3");
+    pick_n_then_finish(&mut r, 3);
+
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(trash_ids(&r, 0).len(), 4, "own trash untouched");
+    assert_eq!(trash_ids(&r, 1).len(), 1, "3 returned from opponent trash");
+    assert_eq!(deck_ids(&r, 1).len(), 9, "3 returned to opponent deck bottom");
+    assert_eq!(r.security_count(0), 4, "<Recovery +1>");
+
+    // OPT must be spent after the 0-own + 3-opponent return.
+    fire(&mut r, EffectTiming::WhenAttacking, h);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "[Once Per Turn] must stay spent after 0-own + 3-opponent return"
+    );
+}

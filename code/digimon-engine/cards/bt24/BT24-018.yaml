@@ -50,47 +50,47 @@ effects:
   # "You may trash any 1 of your opponent's security cards.
   #  Then, this Digimon may unsuspend."
   #
-  # The printed clause has two independent "may" sub-actions, modelled as two
-  # separate `when_digivolving` clauses so each keeps its own optionality
-  # (they fire in clause order — trash first, then unsuspend):
-  #
-  #   e1: "You may trash any 1 of your opponent's security cards" —
-  #       select_security (of: opponent, optional) → trash_selected_security.
-  #       G-TRASH-SELECTED-SECURITY resolved 2026-05-21: the
-  #       `trash_selected_security` verb consumes a `select_security` binding
-  #       and `EffectContext::trash_security_card` trashes that exact card
-  #       (addressed by a stable handle, so any security position works — not
-  #       just the top). When the opponent has no security cards
-  #       `select_security` installs no prompt and the clause silently no-ops.
-  #       The filter `any_of: [digimon, tamer, option]` matches every card
-  #       that can be in a security stack ("any 1").
-  #
-  #   e2: "Then, this Digimon may unsuspend" — `optional: true` clause whose
-  #       accept/decline gate is the printed "may". `target: source` resolves
-  #       to the Styracomon permanent (`self`/SelfRef would resolve to the
-  #       Card, not the Permanent — see dsl_cards/binding_ref.rs).
-  - when: when_digivolving
-    optional: true
-    summary: "[When Digivolving] You may trash any 1 of your opponent's security cards"
+  # Single non-optional [When Digivolving] clause matching printed text & DCGO
+  # BT24_018.cs:73-173 (no spurious TriggerOrder between sub-actions):
+  #   1. optional `select_security` (`continue_on_decline: true`) → if bound,
+  #      `trash_selected_security` (DCGO SelectCardEffect canNoSelect: true).
+  #   2. if suspended (`not: { source_is_unsuspended: true }`), prompt
+  #      `select_effect_choice ["Yes", "No"]` → `unsuspend: { target: source }`
+  #      (DCGO SetBoolSelection Yes=true/No=false, BT24_018.cs:147-169).
+  - text: "[When Digivolving] You may trash any 1 of your opponent's security cards. Then, this Digimon may unsuspend."
+    when: when_digivolving
+    summary: "[When Digivolving] You may trash any 1 of your opponent's security cards. Then, this Digimon may unsuspend"
     process:
       - select_security:
           of: opponent
           bind_as: sec_to_trash
           optional: true
+          continue_on_decline: true
           filter:
             any_of:
               - kind: digimon
               - kind: tamer
               - kind: option
           prompt: "You may trash any 1 of your opponent's security cards"
-      - trash_selected_security:
-          of: opponent
-          card: sec_to_trash
-  - when: when_digivolving
-    optional: true
-    summary: "[When Digivolving] This Digimon may unsuspend"
-    process:
-      - unsuspend: { target: source }
+      - if:
+          condition: { binding_present: sec_to_trash }
+          then:
+            - trash_selected_security:
+                of: opponent
+                card: sec_to_trash
+      - if:
+          condition:
+            not:
+              source_is_unsuspended: true
+          then:
+            - select_effect_choice:
+                bind_as: do_unsuspend
+                labels: ["Yes", "No"]
+                prompt: "Will you unsuspend this Digimon?"
+            - if:
+                condition: { equals: [do_unsuspend, 0] }
+                then:
+                  - unsuspend: { target: source }
 
   # Clause (f) — [All Turns][Once Per Turn]
   # "When your opponent's security stack is removed from, you may delete 1 of

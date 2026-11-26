@@ -28,28 +28,12 @@ alt_paths:
 
 effects:
   # <Scapegoat>
-  # Native Scapegoat exists in the engine, but DSL `grant_keyword` does not
-  # currently accept/lookup Scapegoat. Model the exact replacement shape
-  # directly: optional accept, choose another own Digimon, substitute it as
-  # the deletion subject, and suppress own-effect deletions.
-  - kind: replacement
-    timing: when_would_be_deleted
-    optional: true
-    active_when:
-      none_of:
-        - replacement_cause: own_effect
+  # Native Keyword::Scapegoat (G-DSL-SCAPEGOAT-GRANT-KEYWORD): deduplicates
+  # cleanly with the printed keyword parsed from data/cards.json while still
+  # synthesizing the native replacement in standalone DSL fixtures.
+  - kind: grant_keyword
+    keyword: Scapegoat
     summary: "<Scapegoat>"
-    process:
-      - select_own_permanent:
-          optional: false
-          bind_as: scapegoat_cost
-          filter:
-            all_of:
-              - other: true
-              - kind: digimon
-          prompt: "Delete 1 of your other Digimon to prevent this deletion"
-      - substitute_replacement:
-          subject: scapegoat_cost
 
   # [On Play] [When Digivolving] You may play 1 [Puppet] trait Digimon card
   # with 4000 DP or less from your hand or trash without paying the cost.

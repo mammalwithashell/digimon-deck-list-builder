@@ -25,11 +25,12 @@
 #   Region "Inherit" (None, inherited): ChangeSelfDPStaticEffect(+2000, owner
 #   turn).
 #
-# Modelling note: the DNA-into-hand clause uses `may_dna_digivolve_now`. The
-# first material is a free-selected own Digimon bound as `anchor`; the second
-# (`partner_filter`) is another own Digimon; the result (`target_filter`) is a
-# [Silphymon] Digimon card pulled from the owner's hand. The whole DNA is
-# optional ("may"), gated on your_turn ("if it's your turn").
+# Modelling note: the DNA-into-hand clause follows the EX12-017 / AD1-012
+# `dna_field_pair` idiom: `select_hand` offers only a [Silphymon] (exact name,
+# DCGO `EqualsCardName("Silphymon")`) that can DNA digivolve right now
+# (`CanPlayJogress(true)`), so no dead prompt opens when no legal Silphymon or
+# field pair exists; `select_dna_pair` offers only matching materials. Gated on
+# `your_turn` ("if it's your turn").
 
 card: BT25-011
 name: Aquilamon
@@ -76,29 +77,43 @@ effects:
       - if:
           condition: { your_turn: true }
           then:
-            - select_own_permanent:
-                bind_as: dna_anchor
+            - select_hand:
+                of: you
+                bind_as: dna_card
                 optional: true
                 filter:
                   all_of:
                     - kind: digimon
-                    - zone: [battle_area]
-                prompt: "Choose the first of 2 of your Digimon to DNA digivolve into [Silphymon]"
-            - may_dna_digivolve_now:
-                anchor: { binding: dna_anchor }
-                partner_filter:
-                  all_of:
-                    - of: you
-                    - kind: digimon
-                target_filter:
-                  all_of:
-                    - of: you
-                    - kind: digimon
-                    - name_contains: "Silphymon"
-                cost: 0
-                ignore_requirements: false
-                optional: true
-                prompt: "DNA digivolve 2 of your Digimon into [Silphymon] in the hand?"
+                    - name_is: "Silphymon"
+                    - dna_field_pair: { role: result }
+                prompt: "Select [Silphymon] in hand to DNA digivolve into"
+            - if:
+                condition: { binding_present: dna_card }
+                then:
+                  - select_dna_pair:
+                      left_filter:
+                        all_of:
+                          - kind: digimon
+                          - of: you
+                          - dna_field_pair: { role: first, result: dna_card }
+                      right_filter:
+                        all_of:
+                          - kind: digimon
+                          - of: you
+                          - dna_field_pair: { role: second, result: dna_card, first: dna_a }
+                      bind_left_as: dna_a
+                      bind_right_as: dna_b
+                      prompt: "Select 2 of your Digimon to DNA digivolve into [Silphymon]"
+                      optional: true
+                  - if:
+                      condition: { binding_present: dna_a }
+                      then:
+                        - effect_initiated_dna_digivolve:
+                            target_a: dna_a
+                            target_b: dna_b
+                            from_hand: dna_card
+                            cost: printed
+                            ignore_requirements: false
 
   - text: "[Your Turn] This Digimon gets +2000 DP."
     kind: aura

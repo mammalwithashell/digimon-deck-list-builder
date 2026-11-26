@@ -5975,7 +5975,7 @@ fn card_cost_affordable(
             .game
             .card_source_for_handle(card)
             .map(|source| {
-                rctx.game.declarable_cost_reduction(
+                let mut total = rctx.game.declarable_cost_reduction(
                     source.owner,
                     card,
                     if is_use {
@@ -5983,7 +5983,44 @@ fn card_cost_affordable(
                     } else {
                         crate::game_actions::CostReductionKind::Play
                     },
-                )
+                );
+                // Credit fulfillable [Assembly], cast-time assembly, and
+                // [DigiXros] reductions for hand plays when play-cost reduction
+                // is not locked (DCGO `CardSource.GetPayingCostWithBaseCost`
+                // `checkAvailability: true`, CardSource.cs:674-729; CR 4.3
+                // 1-3-11-1..3).
+                if !is_use {
+                    let reduction_blocked = rctx.game.modifiers.player_has(
+                        rctx.player,
+                        crate::enums::ModifierType::CannotReduceCost,
+                    ) || rctx
+                        .game
+                        .modifiers
+                        .any_player_has(crate::enums::ModifierType::CannotReducePlayCost);
+                    if !reduction_blocked {
+                        if let Some(hand_index) = rctx
+                            .game
+                            .player(source.owner)
+                            .hand
+                            .iter()
+                            .position(|c| c.handle() == card)
+                        {
+                            total += rctx
+                                .game
+                                .assembly_play_reduction_for_hand_card(source.owner, hand_index);
+                            total += rctx
+                                .game
+                                .cast_time_assembly_play_reduction_for_hand_card(
+                                    source.owner,
+                                    hand_index,
+                                );
+                            total += rctx
+                                .game
+                                .digixros_play_reduction_for_hand_card(source.owner, hand_index);
+                        }
+                    }
+                }
+                total
             })
             .unwrap_or(0),
     };

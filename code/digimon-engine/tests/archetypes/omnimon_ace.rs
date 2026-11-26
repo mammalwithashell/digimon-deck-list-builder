@@ -986,9 +986,9 @@ fn combo5_x_antibody_with_omnimon_source_wipes_to_single_survivor_and_bottoms() 
 
 /// Combo 5 unhappy path (G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY): a
 /// BARE BT20-102 with NO Omnimon/X-Antibody in its digivolution SOURCES (its
-/// own top-card name is excluded from the sources-only scan) does NOT fire the
-/// body — no wipe, no bottom-deck. The system-level fact that the payoff is
-/// gated on a named source in the stack.
+/// own top-card name is excluded from the sources-only scan) skips the
+/// board-wipe and runs only the period-separated unconditional sentence
+/// ("Then, return 1 of your opponent's Digimon to the bottom of the deck.").
 #[test]
 fn combo5_x_antibody_without_omnimon_source_does_not_fire_body() {
     let mut runner = DebugRunner::builder()
@@ -1014,17 +1014,38 @@ fn combo5_x_antibody_without_omnimon_source_does_not_fire_body() {
     let before = snapshot(&runner);
     runner.fire_on_play(0, xanti.index as usize);
 
+    // Only the unconditional return-to-deck-bottom prompt installs (no wipe).
+    let pending = runner
+        .pending_selection()
+        .expect("unconditional return-to-deck-bottom prompt installs");
+    assert!(
+        pending.prompt.contains("bottom of their deck"),
+        "bare BT20-102 must skip the wipe protect prompt and open only return-to-deck, got: {}",
+        pending.prompt
+    );
+    let action = pending.valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(0, action)
+        .expect("resolve return-to-deck");
+
+    let after = snapshot(&runner);
     assert!(
         runner.pending_selection().is_none(),
-        "bare BT20-102 (no Omnimon/X-Antibody source) must NOT install the wipe selection"
+        "no wipe prompts after return-to-deck resolves"
     );
-    let after = snapshot(&runner);
     assert_eq!(
-        after.field[1], before.field[1],
+        after.field[1],
+        before.field[1] - 1,
+        "only the 1 returned opponent Digimon leaves the field (no board-wipe)"
+    );
+    assert_eq!(
+        after.trash[1], before.trash[1],
         "no opponent Digimon may be deleted when the digivolution-cards condition fails"
     );
     assert_eq!(
-        after.deck[1], before.deck[1],
-        "no opponent Digimon may be bottom-decked when the condition fails"
+        after.deck[1],
+        before.deck[1] + 1,
+        "1 opponent Digimon is bottom-decked unconditionally"
     );
 }

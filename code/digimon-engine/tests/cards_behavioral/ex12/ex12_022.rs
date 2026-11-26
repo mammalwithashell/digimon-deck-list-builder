@@ -94,3 +94,50 @@ fn ex12_022_inherited_when_attacking_draws_if_hand_has_7_or_fewer_cards() {
     assert_eq!(runner.hand_size(0), hand_before + 1);
     assert_eq!(runner.deck_size(0), deck_before - 1);
 }
+
+#[test]
+fn ex12_022_inherited_attack_hand_test_is_a_processing_condition_and_stays_orderable() {
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-022 YAML loads")
+        .dsl_card("EX12-024")
+        .expect("EX12-024 YAML loads")
+        .add_card(blue_digimon("CARRIER", &[]))
+        .add_card(blue_digimon("DRAW", &[]))
+        .add_card(blue_digimon("SEC", &[]))
+        .add_card(blue_digimon("FILL", &[]))
+        .hand(0, &["FILL"; 8])
+        .deck(0, &["DRAW"; 4])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+
+    let carrier = runner.place_stack(0, &[CARD_ID, "EX12-024", "CARRIER"]);
+    runner.attack_player(carrier, 1, false);
+
+    let pending = runner
+        .pending_selection()
+        .expect("both inherited [When Attacking] effects are orderable");
+    assert_eq!(pending.kind, SelectionKind::TriggerOrder);
+    let ex12_022_action = pending
+        .effect_choices
+        .as_ref()
+        .and_then(|choices| choices.iter().find(|c| c.label.starts_with(CARD_ID)))
+        .map(|c| c.action_id)
+        .expect("EX12-022 entry must be in TriggerOrder at 8 hand cards");
+    let hand_before = runner.hand_size(0);
+    runner
+        .execute_action(0, ex12_022_action)
+        .expect("choose EX12-022");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before + 1,
+        "8 cards in hand: EX12-022 draws nothing (only sibling EX12-024 draws)"
+    );
+    assert_eq!(
+        runner.game.opt_used(carrier),
+        1,
+        "EX12-022's OPT stays unspent after unmet hand count"
+    );
+}

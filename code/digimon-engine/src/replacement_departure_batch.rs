@@ -104,21 +104,35 @@ fn finish_departure_window(game: &mut crate::game::Game, mut window: Replacement
     }
     let b = window.deletion_batch.as_ref().unwrap();
     let d = window.departure.as_ref().unwrap();
-    let remaining: Vec<_> = b
-        .members
-        .iter()
-        .enumerate()
-        .filter(|(i, m)| !m.prevented && !m.terminal && !d.ordered.contains(i))
-        .filter_map(|(i, m)| {
-            deletion_member_handle(game, m).map(|h| {
-                (
-                    crate::action::space::encode_attack(h.player as u16, h.index as u16),
-                    i,
-                )
-            })
-        })
-        .collect();
-    if d.position.is_some() && remaining.len() > 1 {
+    // CR 4.3 §4-21-5: Tokens cease to exist upon leaving the battle area and
+    // never enter a deck (`commit_simultaneous_returns` skips deck insertion
+    // when `top.is_token`). Exclude tokens from the deck-ordering prompt while
+    // keeping them in `ordered` so they still leave the battle area and emit
+    // leave events.
+    let mut orderable_remaining = Vec::new();
+    let mut unorderable_remaining = Vec::new();
+    for (i, m) in b.members.iter().enumerate() {
+        if m.prevented || m.terminal || d.ordered.contains(&i) {
+            continue;
+        }
+        let Some(h) = deletion_member_handle(game, m) else {
+            continue;
+        };
+        let is_token = game
+            .player(h.player)
+            .battle_area
+            .get(h.index as usize)
+            .is_some_and(|p| p.top_card().is_token);
+        if is_token {
+            unorderable_remaining.push(i);
+        } else {
+            orderable_remaining.push((
+                crate::action::space::encode_attack(h.player as u16, h.index as u16),
+                i,
+            ));
+        }
+    }
+    if d.position.is_some() && orderable_remaining.len() > 1 {
         let actor = window.cause_player.unwrap_or(window.turn_player);
         let source_card = window
             .initiating_source_card
@@ -155,7 +169,7 @@ fn finish_departure_window(game: &mut crate::game::Game, mut window: Replacement
             kind: SelectionKind::AnyField,
             selecting_player: actor,
             previous_phase,
-            valid_action_ids: remaining.iter().map(|(a, _)| *a).collect(),
+            valid_action_ids: orderable_remaining.iter().map(|(a, _)| *a).collect(),
             is_optional: false,
             prompt,
             effect_choices: None,
@@ -168,7 +182,7 @@ fn finish_departure_window(game: &mut crate::game::Game, mut window: Replacement
         game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::OptionalReplacement(state)],
         });
-        window.departure.as_mut().unwrap().pending_order = remaining;
+        window.departure.as_mut().unwrap().pending_order = orderable_remaining;
         if let Some(crate::resume::ResumeFrame::OptionalReplacement(state)) = game
             .pending_selection_resume
             .as_mut()
@@ -178,12 +192,11 @@ fn finish_departure_window(game: &mut crate::game::Game, mut window: Replacement
         }
         return;
     }
-    window
-        .departure
-        .as_mut()
-        .unwrap()
+    let d_mut = window.departure.as_mut().unwrap();
+    d_mut
         .ordered
-        .extend(remaining.into_iter().map(|(_, i)| i));
+        .extend(orderable_remaining.into_iter().map(|(_, i)| i));
+    d_mut.ordered.extend(unorderable_remaining);
     let d = window.departure.as_ref().unwrap();
     let b = window.deletion_batch.as_ref().unwrap();
     let handles = d

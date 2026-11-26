@@ -139,6 +139,21 @@ effects:
   - text: "[On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand."
     when: on_play
     optional: true
+    # DCGO BT22_008.cs:54-65 `CanActivateCondition`: gate on having >= 1
+    # matching Digimon in your trash so the trigger does not enqueue (nor open
+    # a spurious TriggerOrder alongside sibling play observers like BT22-005)
+    # when no legal trash target exists.
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: digimon
+          any_of:
+            - name_contains: "Greymon"
+            - name_contains: "Garurumon"
+            - name_contains: "Omnimon"
+        n: 1
     summary: "[On Play] May return 1 Greymon/Garurumon/Omnimon-named Digimon from trash to hand"
     process:
       - select_trash:

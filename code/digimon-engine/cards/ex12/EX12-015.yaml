@@ -74,6 +74,14 @@ effects:
     once_per_turn: true
     optional: true
     summary: "[Inherited][When Attacking][OPT] You may delete 1 opponent Digimon with 6000 DP or less"
+    # DCGO EX12_015.cs:192-208: CanActivateCondition gates activation on
+    # HasMatchConditionPermanent(opp battle-area Digimon with DP <= 6000).
+    condition:
+      any_field_permanent:
+        of: opponent
+        all_of:
+          - kind: digimon
+          - dp_lte: 6000
     process:
       - select_opponent_permanent:
           optional: false

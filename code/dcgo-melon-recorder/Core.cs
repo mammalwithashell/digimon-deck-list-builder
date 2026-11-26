@@ -26,8 +26,9 @@ namespace DcgoRecorder
     {
         // Raw-stream format version, written into every Snapshot row as "recorder" (and the MelonInfo version).
         // 0.2.0: `board_indexes` beside every `boards`; `card_indexes` + `root` on PlayCardClass.PlayCard rows.
+        // 0.2.1: `deck_name` from `ContinuousController.instance.BattleDeckData.DeckName` on Snapshot rows.
         // Rows of an older recorder simply lack these fields (and the stamp): every addition is optional.
-        public const string RecorderVersion = "0.2.0";
+        public const string RecorderVersion = "0.2.1";
 
         // Types the Unity-project recorder hooks or reads (CLAUDE.md rule 27, docs/DCGO_RECORDING_SCHEMA.md).
         static readonly string[] DumpTypes =
@@ -1100,8 +1101,10 @@ namespace DcgoRecorder
                 // order (both seats) so the replay can map them onto engine slots (remap_board_slots)
                 if ((key == "TurnStateMachine.QueueMainPhaseAction_Internal" && args != null && args.Length >= 3
                      && (Convert.ToInt32(args[1]) == 0 || Convert.ToInt32(args[1]) == 2))
-                    // a permanent pick's UnitIndex is a GetFieldPermanents() position too (DCGO's own order)
-                    || key == "SelectPermanentEffect.SetTargetFrames")
+                    // a permanent pick's UnitIndex is a GetFieldPermanents() position too (DCGO's own order),
+                    // as is SelectAttackEffect.SetAttackTarget's permanentIndex (SelectAttackEffect.cs:506-508)
+                    || key == "SelectPermanentEffect.SetTargetFrames"
+                    || key == "SelectAttackEffect.SetAttackTarget")
                     return BoardsJson(true);
             }
             catch { }
@@ -2516,6 +2519,13 @@ namespace DcgoRecorder
                   .Append("\",\"method\":\"Snapshot.").Append(tag).Append("\",\"recorder\":").Append(Quote(RecorderVersion))
                   .Append(",\"is_ai\":").Append(gm.IsAI ? "true" : "false")
                   .Append(",\"you\":").Append(gm.You.PlayerID).Append(",\"turn_count\":").Append(gm.turnStateMachine != null ? gm.turnStateMachine.TurnCount : -1);
+                try
+                {
+                    var deckName = Il2Cpp.ContinuousController.instance?.BattleDeckData?.DeckName;
+                    if (!string.IsNullOrWhiteSpace(deckName))
+                        sb.Append(",\"deck_name\":").Append(Quote(deckName.Trim()));
+                }
+                catch { }
                 try
                 {
                     var tsm = gm.turnStateMachine;

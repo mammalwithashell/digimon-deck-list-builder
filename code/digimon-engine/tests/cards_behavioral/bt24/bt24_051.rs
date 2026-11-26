@@ -209,6 +209,75 @@ fn bt24_051_opt_unsuspends_one_own_digimon_and_auras_grant_rush_piercing() {
     assert!(!runner.game.players[0].battle_area[ally.index as usize].is_suspended);
 }
 
+/// Printed: "When this card would be played, if there are 3 or more Digimon,
+/// reduce the play cost by 5." Both players' battle-area Digimon count toward
+/// the 3-Digimon threshold (DCGO BT24_051.cs:38), and the -5 stacks with
+/// effect-granted play-cost reductions (e.g. BT24-094's -3 -> 12 - 3 - 5 = 4).
+#[test]
+fn bt24_051_play_cost_reduction_counts_both_players_digimon_and_stacks_with_effect_reduction() {
+    let mut runner = merukimon_runner()
+        .add_card(own_iliad("ALLY", CardColor::Blue))
+        .add_card(opponent_digimon("OPP-A", 5000))
+        .add_card(opponent_digimon("OPP-B", 5000))
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+
+    // 1 own Digimon + 2 opponent Digimon = 3 total Digimon (< 3 own alone).
+    runner.place_on_field(0, "ALLY", Some(0));
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.place_on_field(1, "OPP-B", Some(0));
+
+    // Normal play from hand: 12 - 5 = 7 memory (10 -> 3).
+    runner.play(0, 0).expect("Merukimon plays with -5 cost reduction");
+    assert_eq!(
+        runner.memory(),
+        3,
+        "1 own + 2 opponent Digimon = 3 total -> BT24-051 costs 12 - 5 = 7 (10 -> 3)"
+    );
+
+    // Effect-reduced play (cost_delta Reduce(3), as from BT24-094): 12 - 3 - 5 = 4 (6 -> 2).
+    let mut runner2 = merukimon_runner()
+        .add_card(own_iliad("ALLY", CardColor::Blue))
+        .add_card(opponent_digimon("OPP-A", 5000))
+        .add_card(opponent_digimon("OPP-B", 5000))
+        .hand(0, &[CARD_ID])
+        .memory(6)
+        .start();
+    runner2.place_on_field(0, "ALLY", Some(0));
+    runner2.place_on_field(1, "OPP-A", Some(0));
+    runner2.place_on_field(1, "OPP-B", Some(0));
+
+    let played = runner2.game.play_from_hand_with_cost(
+        0,
+        0,
+        digimon_engine::enums::CostDelta::Reduce(3),
+        digimon_engine::enums::PlaySource::ByEffect,
+    );
+    assert!(played.is_some(), "BT24-051 must play via Reduce(3) effect");
+    assert_eq!(
+        runner2.memory(),
+        2,
+        "Reduce(3) + BT24-051 self -5 = 4 memory (6 -> 2)"
+    );
+
+    // Negative control: only 2 total Digimon -> full cost 12 (10 -> -2).
+    let mut runner3 = merukimon_runner()
+        .add_card(own_iliad("ALLY", CardColor::Blue))
+        .add_card(opponent_digimon("OPP-A", 5000))
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    runner3.place_on_field(0, "ALLY", Some(0));
+    runner3.place_on_field(1, "OPP-A", Some(0));
+    runner3.play(0, 0).expect("Merukimon plays at full cost");
+    assert_eq!(
+        runner3.memory(),
+        -2,
+        "only 2 total Digimon -> no reduction, full cost 12 (10 -> -2)"
+    );
+}
+
 fn merukimon_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card(CARD_ID)

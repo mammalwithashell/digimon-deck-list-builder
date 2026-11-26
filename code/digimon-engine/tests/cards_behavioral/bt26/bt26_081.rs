@@ -338,3 +338,159 @@ fn bt26_081_full_battle_area_offers_nothing() {
     assert!(!v.contains(&trash_action(&r, "IL5")), "valid {v:?}");
     assert_dp_step_still_runs(&mut r, opp, before);
 }
+
+fn setup_assembly_free_play() -> DebugRunner {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-081")
+        .dsl_card("BT26-073")
+        .expect("BT26-073")
+        .dsl_card("BT24-034")
+        .expect("BT24-034")
+        .add_card(filler("FILLER"))
+        .add_card(digimon("OPP", "Opp", CardColor::Red, 10, 10, &[]))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+    r.game.players[0].hand.clear();
+    r
+}
+
+/// CR 4.3 7-3-2-10 + DCGO `CardController.cs:926-933`: playing an Assembly
+/// Digimon (`BT26-073`, cost 8, `[Iliad]`) free via `BT26-081`'s
+/// `play_cards_free` must still offer `<Assembly>` (optional because cost 0 is
+/// already affordable), tuck the chosen trash material under `BT26-073`, run
+/// `BT26-081`'s trailing `-4000 DP` pick BEFORE `BT26-073`'s `[On Play]` fires,
+/// and also permit declining Assembly via `PASS`.
+#[test]
+fn bt26_081_free_play_of_bt26_073_from_hand_offers_assembly_and_runs_dp_before_on_play() {
+    // 1. Accept Assembly from trash.
+    {
+        let mut r = setup_assembly_free_play();
+        push_hand(&mut r, 0, "BT26-073");
+        push_trash(&mut r, 0, "BT24-034");
+        let me = r.place_on_field(0, CARD_ID, Some(0));
+        let opp = r.place_on_field(1, "OPP", Some(0));
+        let opp_before = r.effective_dp(opp).unwrap();
+        fire(&mut r, EffectTiming::OnPlay, me);
+
+        assert_eq!(budget_remaining(&r), Some(8));
+        r.execute_action(0, hand_action(&r, "BT26-073")).unwrap();
+
+        // Budget exhausted → BT26-073 free play parks its optional Assembly pick.
+        let v = r.pending_selection_view().expect("assembly pick for BT26-073");
+        assert!(v.prompt.contains("Assembly"), "{}", v.prompt);
+        assert!(v.is_optional, "free play is affordable without Assembly");
+        let mat_action = trash_action(&r, "BT24-034");
+        assert!(v.valid_action_ids.contains(&mat_action), "{:?}", v.valid_action_ids);
+
+        r.execute_action(0, mat_action).unwrap();
+
+        // BT26-073 is on field with BT24-034 tucked under it, and BT26-081's
+        // trailing -4000 DP pick runs BEFORE BT26-073's [On Play].
+        let aegio = r.game.players[0]
+            .battle_area
+            .iter()
+            .find(|p| p.top_card().card_id(&r.game.card_data) == "BT26-073")
+            .expect("BT26-073 entered field");
+        let stack: Vec<&str> = aegio
+            .card_sources
+            .iter()
+            .map(|c| c.card_id(&r.game.card_data))
+            .collect();
+        assert_eq!(stack, vec!["BT24-034", "BT26-073"]);
+        assert!(trash_ids(&r, 0).is_empty(), "BT24-034 moved from trash under BT26-073");
+
+        let dp_pick = r.pending_selection_view().expect("BT26-081 trailing DP pick");
+        assert!(
+            matches!(dp_pick.kind, SelectionKind::OppField),
+            "expected BT26-081 OppField DP pick before BT26-073 On Play, got {:?}",
+            dp_pick.kind
+        );
+        pick_first(&mut r, 0);
+        // BT26-081 + BT26-073 = 2 [Iliad]/[TS] Digimon → -8000 DP.
+        assert_eq!(r.effective_dp(opp).unwrap(), opp_before - 8000);
+
+        // Now BT26-073's [On Play] activates.
+        let op = r.pending_selection_view().expect("BT26-073 [On Play] cost choice");
+        assert!(
+            matches!(op.kind, SelectionKind::EffectChoice),
+            "expected BT26-073 [On Play] EffectChoice, got {:?}",
+            op.kind
+        );
+    }
+
+    // 2. Decline Assembly via PASS: BT26-073 still plays with 0 sources,
+    //    BT24-034 stays in trash, and BT26-081's DP pick still precedes [On Play].
+    {
+        let mut r = setup_assembly_free_play();
+        push_hand(&mut r, 0, "BT26-073");
+        push_trash(&mut r, 0, "BT24-034");
+        let me = r.place_on_field(0, CARD_ID, Some(0));
+        let opp = r.place_on_field(1, "OPP", Some(0));
+        let opp_before = r.effective_dp(opp).unwrap();
+        fire(&mut r, EffectTiming::OnPlay, me);
+
+        r.execute_action(0, hand_action(&r, "BT26-073")).unwrap();
+        let v = r.pending_selection_view().expect("assembly pick for BT26-073");
+        assert!(v.prompt.contains("Assembly"), "{}", v.prompt);
+        r.execute_action(0, PASS).unwrap();
+
+        let aegio = r.game.players[0]
+            .battle_area
+            .iter()
+            .find(|p| p.top_card().card_id(&r.game.card_data) == "BT26-073")
+            .expect("BT26-073 entered field without Assembly");
+        assert_eq!(aegio.card_sources.len(), 1);
+        assert_eq!(trash_ids(&r, 0), vec!["BT24-034".to_string()]);
+
+        let dp_pick = r.pending_selection_view().expect("BT26-081 trailing DP pick");
+        assert!(matches!(dp_pick.kind, SelectionKind::OppField));
+        pick_first(&mut r, 0);
+        assert_eq!(r.effective_dp(opp).unwrap(), opp_before - 8000);
+        let op = r.pending_selection_view().expect("BT26-073 [On Play] cost choice");
+        assert!(matches!(op.kind, SelectionKind::EffectChoice));
+    }
+}
+
+/// Same as above when `BT26-073` is played from trash via `BT26-081`: it parks
+/// in provisional hand before Assembly resolves, so `BT24-034` in trash is
+/// offered (and `BT26-073` itself is not).
+#[test]
+fn bt26_081_free_play_of_bt26_073_from_trash_offers_assembly() {
+    let mut r = setup_assembly_free_play();
+    push_trash(&mut r, 0, "BT26-073");
+    push_trash(&mut r, 0, "BT24-034");
+    let me = r.place_on_field(0, CARD_ID, Some(0));
+    let opp = r.place_on_field(1, "OPP", Some(0));
+    let opp_before = r.effective_dp(opp).unwrap();
+    fire(&mut r, EffectTiming::OnPlay, me);
+
+    r.execute_action(0, trash_action(&r, "BT26-073")).unwrap();
+    let v = r.pending_selection_view().expect("assembly pick for trash BT26-073");
+    assert!(v.prompt.contains("Assembly"), "{}", v.prompt);
+    assert!(v.is_optional);
+    let mat_action = trash_action(&r, "BT24-034");
+    assert!(v.valid_action_ids.contains(&mat_action));
+    r.execute_action(0, mat_action).unwrap();
+
+    let aegio = r.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == "BT26-073")
+        .expect("BT26-073 entered field from trash");
+    let stack: Vec<&str> = aegio
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data))
+        .collect();
+    assert_eq!(stack, vec!["BT24-034", "BT26-073"]);
+    assert!(trash_ids(&r, 0).is_empty());
+
+    let dp_pick = r.pending_selection_view().expect("BT26-081 trailing DP pick");
+    assert!(matches!(dp_pick.kind, SelectionKind::OppField));
+    drain_first(&mut r);
+    assert_eq!(r.effective_dp(opp).unwrap(), opp_before - 8000);
+}

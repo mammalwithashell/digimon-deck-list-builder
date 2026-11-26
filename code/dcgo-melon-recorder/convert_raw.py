@@ -100,6 +100,82 @@ def is_tamer(cards, card_id):
     return k == 1 or "tamer" in str(k).lower()
 
 
+def is_permanent_card(cards, card_id):
+    """Whether cards.json positively knows `card_id` as a Digimon or Tamer (enters battle area on play)."""
+    k = (cards.get(card_id) or {}).get("card_kind")
+    if k in (0, 1):
+        return True
+    s = str(k).lower()
+    return ("digimon" in s or "tamer" in s) and "egg" not in s
+
+
+def aborted_play_cancel_end(rows, ridx, actor, turn, card, played_index, cards):
+    """End index (exclusive) of cancelled `<Assembly>`/`<DigiXros>` material picks after an aborted hand play, or None.
+
+    DCGO's `PlayCardClass.PlayCard()` runs `SelectDigiXrosClass.Select` / `SelectAssemblyClass.Select`
+    BEFORE checking `if (Cost > card.Owner.MaxMemoryCost)` (`CardController.cs:916-1095`). When the player
+    cancels that material selection (`SelectCardEffect.SetTargetCardAndIndicies` with `card_ids == []`) and
+    the unreduced cost exceeds `MaxMemoryCost`, DCGO aborts the play (`endPlayCard = true; playFailed = true`)
+    and returns the card to hand as a pure no-op (`Nov24#g4` `raw[176..177]`: EX12-076 cost 16 with only 7 of 8
+    `<Assembly>` names in trash).
+
+    Returns `j > ridx + 1` ONLY when:
+      1. `rows[ridx + 1 : j]` are consecutive cancelled `SelectCardEffect` rows by `actor` (`card_ids == []`);
+      2. `rows[j]` is a same-turn main-phase action (`QueueMainPhaseAction_Internal`, `SetAttackingPermaent`,
+         or `PassTurn`), proving zero effects or permanent creations ran after the cancel; AND
+      3. Positive proof shows `played_index` never entered play: either `card` is a known Digimon/Tamer and
+         `rows[j]` carries `board_indexes[actor]` lacking `played_index`, OR a subsequent same-turn hand listing
+         / queued hand play (before any bounce/effect selection) still carries `played_index` in `actor`'s hand.
+    """
+    j = ridx + 1
+    while j < len(rows):
+        nxt = rows[j]
+        if (nxt.get("method") == "SelectCardEffect.SetTargetCardAndIndicies"
+                and not nxt.get("stray")
+                and isinstance(nxt.get("args"), list) and nxt["args"] and nxt["args"][0] == actor
+                and nxt.get("card_ids") == []):
+            j += 1
+        else:
+            break
+    if j == ridx + 1 or j >= len(rows):
+        return None
+    after = rows[j]
+    if after.get("turn", after.get("turn_count", -1)) != turn:
+        return None
+    if after.get("method") not in (
+            "TurnStateMachine.QueueMainPhaseAction_Internal",
+            "TurnStateMachine.SetAttackingPermaent",
+            "TurnStateMachine.PassTurn"):
+        return None
+    # Proof 1: known Digimon/Tamer absent from actor's board_indexes immediately after the cancel.
+    bi = after.get("board_indexes")
+    if (card and is_permanent_card(cards, card)
+            and isinstance(bi, list) and len(bi) == 2 and isinstance(bi[actor], list)
+            and played_index not in bi[actor]):
+        return j
+    # Proof 2: exact same `played_index` is still in actor's hand (or re-queued from hand) on the same turn
+    # before any permanent-targeting/trigger effect could have bounced it back to hand.
+    for later in rows[j:]:
+        if later.get("turn", later.get("turn_count", turn)) != turn:
+            break
+        lm = later.get("method", "")
+        if lm in ("PlayCardClass.ctor", "PlayCardClass.PlayCard"):
+            hand = later.get("hand") or {}
+            if hand.get("player") == actor and any(
+                    c.get("card_index") == played_index for c in (hand.get("cards") or [])):
+                return j
+        elif lm == "TurnStateMachine.QueueMainPhaseAction_Internal":
+            play = later.get("play")
+            la = later.get("args") or []
+            if (len(la) >= 2 and la[0] == actor and la[1] == PLAY_PACKET_ID
+                    and isinstance(play, dict) and play.get("card_index") == played_index):
+                return j
+        elif lm.startswith(("SelectPermanentEffect.", "MultipleSkills.", "OptionalSkill.")) \
+                or lm == "TurnStateMachine.SetAttackingPermaent":
+            break
+    return None
+
+
 def jogress_root_slots(roots, anchor_frame, anchor_slot, n_battle):
     """Compact battle-area positions of a DNA play's two root frames, or None when they are not certain.
 
@@ -273,6 +349,8 @@ def convert(rows, cards, allow_truncated=False):
     }]
     if not is_ai:
         out[0]["opp_decklist_composition"] = deck_of(players[bot])
+    if snap.get("deck_name"):
+        out[0]["my_deck_name"] = str(snap["deck_name"])
 
     post = next((r for r in rows if r["method"] == "Snapshot.PostMulligan"), None)
     if post is not None:
@@ -318,13 +396,28 @@ def convert(rows, cards, allow_truncated=False):
             return None
         return k
 
+    def valid_board_indexes(boards, board_indexes):
+        """Return (p0_indexes, p1_indexes) when `board_indexes` lines up 1:1 with `boards` and holds ints only."""
+        if not (isinstance(boards, list) and len(boards) == 2
+                and isinstance(board_indexes, list) and len(board_indexes) == 2):
+            return None
+        for p in (0, 1):
+            if not (isinstance(boards[p], list) and isinstance(board_indexes[p], list)
+                    and len(board_indexes[p]) == len(boards[p])
+                    and all(isinstance(k, int) and not isinstance(k, bool) for k in board_indexes[p])):
+                return None
+        return board_indexes[0], board_indexes[1]
+
     def action(actor, action_id, phase, source, card_id=None, inferred_row=False, boards=None, card_index=None,
-               operand_card_index=None, operand_source="recorder", attack_target_card_index=None):
+               operand_card_index=None, operand_source="recorder", attack_target_card_index=None, board_indexes=None):
         nonlocal step
         row = {"type": "action", "step": step, "actor": actor, "action_id": action_id,
                "phase": phase, "source": source}
         if boards:
             row["board_p0"], row["board_p1"] = boards[0], boards[1]
+            bi = valid_board_indexes(boards, board_indexes)
+            if bi is not None:
+                row["board_indexes_p0"], row["board_indexes_p1"] = bi[0], bi[1]
         if inferred_row:
             row["inferred"] = True  # synthesised by this converter, not observed by the recorder
         if card_id:
@@ -681,7 +774,10 @@ def convert(rows, cards, allow_truncated=False):
     # frame placement followed from the logged plays and checked against every recorded board, or nothing.
     frame_names = frame_model.pick_identities(rows, cards, you)
     burst_names = frame_model.burst_tamers(rows, cards, you)
+    skip_raw_indexes = set()
     for ridx, r in enumerate(rows):
+        if ridx in skip_raw_indexes:
+            continue
         tag_sources(ridx - 1)
         m, a = r["method"], r.get("args", [])
         tp, turn = r.get("tp", -1), r.get("turn", r.get("turn_count", -1))
@@ -792,6 +888,16 @@ def convert(rows, cards, allow_truncated=False):
                 break
             slot = hand.get("slot", -1)
             is_dna = played_index is not None and played_index in dna_play_indexes
+            if r.get("target") is None and not is_dna and r.get("pay_cost") is True and played_index is not None:
+                aborted_end = aborted_play_cancel_end(rows, ridx, actor, turn, card, played_index, cards)
+                if aborted_end is not None:
+                    skip_raw_indexes.update(range(ridx + 1, aborted_end))
+                    dna_bytes_absent.pop(played_index, None)
+                    inferred.append(
+                        "P%d aborted play of %s (CardIndex %d, seq %s) + %d cancelled material selection(s) dropped: "
+                        "Cost > MaxMemoryCost returned the card to hand (CardController.cs:1008-1095)"
+                        % (actor, card, played_index, r.get("seq"), aborted_end - ridx - 1))
+                    continue
             digivolve_field = None
             if r.get("target") is not None and not is_dna:
                 # A play onto an occupied frame is a digivolution: DIGIVOLVE_START + hand * 15 + field, where field is
@@ -875,14 +981,18 @@ def convert(rows, cards, allow_truncated=False):
                         move_last_before(len(out) - 1 - at)
                         at += 1
                 action(actor, DNA_DIGIVOLVE_START + slot, "Main", "main_phase", card_id=card, boards=boards,
-                       card_index=played_index)
+                       card_index=played_index, board_indexes=r.get("board_indexes"))
                 if at is not None:
                     move_last_before(len(out) - 1 - at)  # ahead of its picks (and of rows logged after them)
                 if not picks:
+                    bi = valid_board_indexes(boards, r.get("board_indexes"))
                     for frame in placed:
-                        out.append({"type": "selection", "step": step, "actor": actor, "prompt": "SelectPermanentEffect",
-                                    "phase": "Main", "board_p0": boards[0], "board_p1": boards[1],
-                                    "targets": [{"player": actor, "frame": frame}], "synthesized": "jogress_roots"})
+                        syn = {"type": "selection", "step": step, "actor": actor, "prompt": "SelectPermanentEffect",
+                               "phase": "Main", "board_p0": boards[0], "board_p1": boards[1],
+                               "targets": [{"player": actor, "frame": frame}], "synthesized": "jogress_roots"}
+                        if bi is not None:
+                            syn["board_indexes_p0"], syn["board_indexes_p1"] = bi[0], bi[1]
+                        out.append(syn)
                         step += 1
                     inferred.append("P%d DNA %s materials from its jogress roots %s -> slots %s" % (
                         actor, card, roots, placed))
@@ -941,7 +1051,7 @@ def convert(rows, cards, allow_truncated=False):
                                  and len(exact[actor]) == len(board) and exact[actor][digivolve_field] != tk)):
                     operand_k = tk
             action(actor, action_id, "Main", "main_phase", card_id=card, boards=r.get("boards"), card_index=played_index,
-                   operand_card_index=operand_k)
+                   operand_card_index=operand_k, board_indexes=r.get("board_indexes"))
             if burst is not None and burst_named is not None:
                 # A REMOTE seat's pick ran on its own client and left no row: write it from the frame model's certain
                 # naming of the packet's BurstTamerFrameID, right after the digivolve action (where the engine asks it).
@@ -1090,7 +1200,8 @@ def convert(rows, cards, allow_truncated=False):
                 if "activate_link" in r:
                     skill = 3 if r["activate_link"] else 2
                 action(a[0], FIELD_EFFECT_START + perm * EFFECTS_PER_PERMANENT + skill, "Main", "main_phase",
-                       boards=r.get("boards"), operand_card_index=board_operand_index(r, a[0], perm))
+                       boards=r.get("boards"), operand_card_index=board_operand_index(r, a[0], perm),
+                       board_indexes=r.get("board_indexes"))
                 continue
             if a[1] == ACTIVATE_CARD_PACKET_ID and len(a) >= 3 and isinstance(a[2], list) and len(a[2]) >= 8:
                 # ActivateCardAction(card index, skill index): a HAND card's [Main] ("[Hand] [Main] ..."). The engine's
@@ -1123,7 +1234,8 @@ def convert(rows, cards, allow_truncated=False):
             target = SECURITY_TARGET if a[1] < 0 else a[1]
             action(actor, ATTACK_START + a[0] * TARGETS_PER_ATTACKER + target, "Main", "main_phase", boards=r.get("boards"),
                    operand_card_index=board_operand_index(r, actor, a[0]),
-                   attack_target_card_index=board_operand_index(r, 1 - actor, a[1]))
+                   attack_target_card_index=board_operand_index(r, 1 - actor, a[1]),
+                   board_indexes=r.get("board_indexes"))
             continue
         if m in ("TurnStateMachine.QueueMainPhaseAction", "TurnStateMachine.PassTurn"):
             continue  # the Internal row above already carries the decision
@@ -1275,6 +1387,9 @@ def convert(rows, cards, allow_truncated=False):
             if r.get("boards") and len(r["boards"]) == 2:
                 # DCGO's own field order at the pick (GetFieldPermanents); the replay maps it onto engine slots
                 row["board_p0"], row["board_p1"] = r["boards"][0], r["boards"][1]
+                bi = valid_board_indexes(r["boards"], r.get("board_indexes"))
+                if bi is not None:
+                    row["board_indexes_p0"], row["board_indexes_p1"] = bi[0], bi[1]
             for t in targets:
                 # A board can hold several copies of the picked card; DCGO's CardIndex names the copy. A recorder
                 # 0.2.0 row logs it per board entry (`board_indexes`, Core.cs BoardsJson); older rows get it from the
@@ -1307,8 +1422,9 @@ def convert(rows, cards, allow_truncated=False):
         if m == "SelectAttackEffect.SetAttackTarget":
             # (attackOwnerID, targetIsTurnPlayer, permanentIndex): the boolean identifies the TARGET owner,
             # as set from selectedPermanent.TopCard.Owner in DCGO SelectAttackEffect.cs. -2 (NopIndex) =
-            # "Not Attack"; -1 (SecurityIndex) = the player; otherwise the defender's compact battle-area index,
-            # turn-relative like SetTargetFrames. Same row the Unity recorder writes (DCGO_RECORDING_SCHEMA.md).
+            # "Not Attack"; -1 (SecurityIndex) = the player; otherwise the defender's GetFieldPermanents()
+            # index (SelectAttackEffect.cs:506-508), turn-relative like SetTargetFrames. Same row the Unity
+            # recorder writes (DCGO_RECORDING_SCHEMA.md).
             if tp not in (0, 1) or len(a) < 3:
                 truncated_at = truncated_at or ("SelectAttackEffect without a turn player at step %d" % step)
                 break
@@ -1318,9 +1434,81 @@ def convert(rows, cards, allow_truncated=False):
             elif a[2] < 0:
                 row["targets"] = [{"player": 1 - tp, "frame": -1}]
             else:
-                row["targets"] = [{"player": tp if a[1] else 1 - tp, "frame": a[2]}]
+                target = {"player": tp if a[1] else 1 - tp, "frame": a[2]}
+                # Use the row's own GetFieldPermanents() snapshot when logged (Core.cs >= 0.2.1); for older
+                # recordings without `boards` on SelectAttackEffect, only borrow when both the nearest preceding
+                # and nearest following GetFieldPermanents() board snapshots in the same turn (with no play or
+                # permanent-change row between) agree identically.
+                boards = r.get("boards") if (r.get("boards") and len(r["boards"]) == 2) else None
+                exact = r.get("board_indexes") if boards is not None else None
+                if boards is None:
+                    FIELD_BOARD_METHODS = ("SelectPermanentEffect.SetTargetFrames", "SelectAttackEffect.SetAttackTarget")
+                    STOP_METHODS = (
+                        "Snapshot.PassTurn", "TurnStateMachine.PassTurn", "TurnStateMachine.SetBreedingPhase",
+                        "PlayCardClass.PlayCard", "Permanent.AddCardSource",
+                        "TurnStateMachine.EndGame", "TurnStateMachine.Surrender",
+                    )
+
+                    def _is_field_board_row(cand):
+                        cm = cand.get("method")
+                        ca = cand.get("args") or []
+                        if not (cand.get("boards") and len(cand["boards"]) == 2):
+                            return False
+                        if cm in FIELD_BOARD_METHODS:
+                            return True
+                        return cm == "TurnStateMachine.QueueMainPhaseAction_Internal" and len(ca) >= 2 and ca[1] in (0, 2)
+
+                    prev_b, next_b = None, None
+                    for back in range(ridx - 1, -1, -1):
+                        cand = rows[back]
+                        if cand.get("method") in STOP_METHODS:
+                            break
+                        if _is_field_board_row(cand):
+                            prev_b = cand
+                            break
+                    for fwd in range(ridx + 1, len(rows)):
+                        cand = rows[fwd]
+                        if cand.get("method") in STOP_METHODS:
+                            break
+                        if _is_field_board_row(cand):
+                            next_b = cand
+                            break
+                    if prev_b is not None and next_b is not None and prev_b["boards"] == next_b["boards"]:
+                        boards = prev_b["boards"]
+                        pbi = valid_board_indexes(boards, prev_b.get("board_indexes"))
+                        nbi = valid_board_indexes(boards, next_b.get("board_indexes"))
+                        if pbi is not None and pbi == nbi:
+                            exact = prev_b.get("board_indexes")
+                if boards is not None:
+                    row["board_p0"], row["board_p1"] = boards[0], boards[1]
+                    bi = valid_board_indexes(boards, exact)
+                    if bi is not None:
+                        row["board_indexes_p0"], row["board_indexes_p1"] = bi[0], bi[1]
+                    board = boards[target["player"]]
+                    if isinstance(board, list) and 0 <= target["frame"] < len(board) and board.count(board[target["frame"]]) >= 2:
+                        k, source = None, None
+                        if bi is not None:
+                            k = bi[target["player"]][target["frame"]]
+                            source = "recorder"
+                        if not isinstance(k, int) or isinstance(k, bool):
+                            k = frame_names.get(ridx, {}).get((target["player"], target["frame"]))
+                            source = "frame_model"
+                        if k is not None:
+                            target["card_index"] = k
+                            target["card_index_source"] = source
+                row["targets"] = [target]
             out.append(row)
             step += 1
+            continue
+        if m == "SelectDigiXrosClass.SetTargetDigiXrossIndex":
+            # SelectDigiXrosClass.cs:428-434: actions = { _SelectHandCard (0), _SelectBattleAreaDigimon (1),
+            # _SelectTrashCard (2), _SelectTamerDigivolutionCard (3), _EndSelectDigiXros (4) }.
+            # Indexes 0..3 open a follow-up SelectHandEffect / SelectPermanentEffect / SelectCardEffect row;
+            # index 4 ends DigiXros immediately with no follow-up row, so emit a cancel selection for it.
+            if len(a) >= 2 and a[1] == 4:
+                out.append({"type": "selection", "step": step, "actor": a[0], "prompt": "SelectDigiXrosClass",
+                            "phase": "Main", "mechanic": "digixros", "cancel": True})
+                step += 1
             continue
         if m == "SelectHandEffect.SetTargetHandCards" and "card_ids" in r:
             row = {"type": "selection", "step": step, "actor": a[0], "prompt": "SelectHandEffect", "phase": "Main",

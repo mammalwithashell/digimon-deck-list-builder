@@ -351,6 +351,12 @@ pub(crate) struct InteractiveOptionUseCostReductionPromptState {
     pub(crate) mode: OptionPlayMode,
     pub(crate) cost_policy: OptionCostPolicy,
     pub(crate) key: CostReductionKey,
+    /// When non-empty, this prompt is a simultaneous-trigger ordering menu over
+    /// multiple qualifying interactive Option-use cost reducers
+    /// (`HAND_EFFECT_START + i` selects `choices[i]`; PASS declines all
+    /// remaining optional reducers when `is_optional` is true). Empty for the
+    /// single-reducer accept/decline gate (`key` is the lone reducer).
+    pub(crate) choices: Vec<CostReductionKey>,
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
@@ -363,6 +369,7 @@ impl InteractiveOptionUseCostReductionPromptState {
         self.player_id == viewer
             && allowed.contains(&self.cost_target.card)
             && allowed.contains(&self.key.source_card)
+            && self.choices.iter().all(|k| allowed.contains(&k.source_card))
     }
 }
 
@@ -874,6 +881,58 @@ impl Game {
             return 0;
         };
         if transaction.is_digixros {
+            return 0;
+        }
+        let base = transaction.final_cost() as i32;
+        loop {
+            let candidates = self.digixros_material_candidates_for(&transaction, player_id);
+            let Some(origin) = candidates.first().copied() else {
+                break;
+            };
+            let Some(card_data) = self.card_data_for_handle(origin.card()) else {
+                break;
+            };
+            let card_data = card_data.clone();
+            if transaction.try_select_material(origin, &card_data).is_err() {
+                break;
+            }
+        }
+        (base - transaction.final_cost() as i32).max(0)
+    }
+
+    /// The maximum cost reduction a printed `[DigiXros]` alt-path could realize
+    /// for hand card `hand_index` right now, or `0` when the card has no printed
+    /// DigiXros path or no eligible materials. Used by effect-play affordability
+    /// predicates (`card_cost_affordable`, DCGO
+    /// `CardSource.GetPayingCostWithBaseCost` `checkAvailability: true`).
+    pub(crate) fn digixros_play_reduction_for_hand_card(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> i32 {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            use digimon_dsl::compiled::CompiledAltPathKind as K;
+            let Some(card) = self.player(player_id).hand.get(hand_index) else {
+                return 0;
+            };
+            let card_id = card.card_id(&self.card_data);
+            let is_digixros = self.alt_path_registry.get(card_id).is_some_and(|paths| {
+                paths
+                    .iter()
+                    .find(|path| matches!(path.kind, K::DigiXros | K::CastTimeAssembly))
+                    .is_some_and(|path| matches!(path.kind, K::DigiXros))
+            });
+            if !is_digixros {
+                return 0;
+            }
+        }
+        let Some(mut transaction) =
+            self.build_digixros_transaction_for_hand_card(player_id, hand_index)
+        else {
+            return 0;
+        };
+        if !transaction.is_digixros {
             return 0;
         }
         let base = transaction.final_cost() as i32;
@@ -1818,21 +1877,13 @@ impl Game {
                 })
                 .collect();
             kill_list.sort_by_key(|h| (h.player, h.index));
-            // A ≤0-DP deletion is a STATE-BASED RULE action, not an effect.
-            // `infer_deletion_cause` would otherwise attribute it to
-            // OwnEffect/OpponentEffect (no battle/security/effect-source is
-            // live between top-level effects), which is wrong for observers
-            // that distinguish "deleted by having 0 DP" from "deleted by an
-            // effect" (e.g. BT16-101's [All Turns] gain-2-memory clause keys
-            // on battle OR 0-DP, NOT effect deletion). Refine the OnDeletion /
-            // OnAnyDeletion observer payload to `EventCause::Rule` via the
-            // same override slot Overclock uses (game_phases.rs); it only
-            // refines the observer cause (captured into each trigger's
-            // snapshot at enqueue, so it survives the deferred flush) —
-            // replacement-window filtering still reads `current_deletion_cause`
-            // — and the deferred-replacement path (e.g. an Armor Purge window
-            // opened by this deletion) threads it through ParkedReplacement.
-            let cause = self.infer_deletion_cause(kill_list[0]);
+            // A ≤0-DP deletion is a STATE-BASED RULE action (CR 4.3 §17-1-3-2-2),
+            // not an effect. Passing `ReplacementCause::Rule` keeps both the
+            // replacement window (so "other than by your effects" replacements
+            // like BT18-063 fire, while "by opponent's effect" replacements do
+            // not) and the OnDeletion / OnAnyDeletion observer cause
+            // (`EventCause::Rule`) consistent.
+            let cause = crate::replacement::ReplacementCause::Rule;
             let previous = self.current_deletion_event_cause_override;
             self.current_deletion_event_cause_override =
                 Some(crate::trigger_context::EventCause::Rule);

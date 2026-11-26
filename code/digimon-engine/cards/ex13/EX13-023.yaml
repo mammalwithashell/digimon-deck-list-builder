@@ -23,8 +23,9 @@
 #       continue_on_decline) + refund_opt on decline + suspend/unsuspend by
 #       the pick's current orientation.
 #   - Deck bounce: optional; all opponent Digimon with `IsMinDigivolutionCards`
-#     → DeckBottomBounceClass. → BT24-030 idiom (`materials_count_matches_
-#       aggregate: fewest_materials` + return_to_deck bottom, sources included).
+#     → DeckBottomBounceClass. Only the top Digimon card returns to the bottom
+#     of the deck; its digivolution cards are trashed (§4-7-8, DCGO
+#     `DeckBottomBounceClass` — `include_sources: false`).
 #   - All Turns: ImmuneFromDPMinusStaticEffect + CanNotBeTrashedBySkill +
 #     CanNotBeReturnedToLibraryBySkill, each `IsOpponentEffect` and gated
 #     `!IsSuspended`. → three self-auras `modifier: ImmuneFromDPMinus` /
@@ -147,7 +148,10 @@ effects:
             - return_to_deck:
                 target: fewest_target
                 position: bottom
-                include_sources: true
+                # Printed text has no "and all of their digivolution cards":
+                # top card goes to deck bottom, digivolution cards are trashed
+                # (§4-7-8, DCGO EX13_023.cs:138 `DeckBottomBounceClass`).
+                include_sources: false
 
   # ─── [All Turns] opponent-effect protections while unsuspended ─────────────
   - kind: aura

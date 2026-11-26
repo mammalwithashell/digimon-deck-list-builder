@@ -41,10 +41,17 @@ effects:
     when: when_attacking
     once_per_turn: true
     active_when: { your_turn: true }
-    condition:
-      count_lte:
-        filter: { of: you, zone: [hand] }
-        n: 7
+    # Hand count is a processing condition, not a trigger qualifier (CR 4.3
+    # 15-8-3-9; DCGO EX12_025.cs tests `HandCards.Count <= 7` inside
+    # `ActivateCoroutine` and calls `RemoveUse()` when unmet). Matches EX12-021.
     summary: "[Inherited][When Attacking][OPT] If your hand has 7 or fewer cards, draw 1"
     process:
-      - draw: { of: you, count: 1 }
+      - if:
+          condition:
+            count_lte:
+              filter: { of: you, zone: [hand] }
+              n: 7
+          then:
+            - draw: { of: you, count: 1 }
+          else:
+            - refund_opt: {}

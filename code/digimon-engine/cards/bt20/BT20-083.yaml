@@ -17,20 +17,35 @@ effects:
     kind: grant_keyword
     keyword: Blocker
 
+  # DCGO BT20_083.cs:58-105: `isOptional: false` on ActivateClass, gated in
+  # `CanActivateCondition` on `security <= 1` AND an [Omnimon (X Antibody)]
+  # Digimon in hand; the printed "may" is `canNoSelect: true` on the hand pick
+  # (`DigivolveIntoHandOrTrashCard`), so no separate outer OptionalSkill gate
+  # opens before the hand selection.
   - text: "[On Play] If you have 1 or fewer security cards, this Digimon may digivolve into [Omnimon (X Antibody)] in the hand, ignoring digivolution requirements and without paying the cost."
     when: on_play
-    optional: true
-    condition: { security_count_lte: 1 }
+    condition:
+      all_of:
+        - security_count_lte: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: digimon
+              name_is: "Omnimon (X Antibody)"
+            n: 1
     summary: "[On Play] At 1 or fewer security, may free digivolve into Omnimon (X Antibody)"
     process:
       - select_hand:
-          optional: false
+          optional: true
           of: you
           bind_as: omni_x
-          filter: { name_is: "Omnimon (X Antibody)" }
+          filter:
+            kind: digimon
+            name_is: "Omnimon (X Antibody)"
           prompt: "Choose [Omnimon (X Antibody)] in hand"
       - effect_initiated_digivolve:
-          target: self
+          target: source
           from_hand: omni_x
           cost: 0
           ignore_requirements: true
