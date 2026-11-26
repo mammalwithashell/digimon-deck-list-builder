@@ -118,7 +118,9 @@ fn canceled_middle_security_play_restores_origin_and_clone_branches_are_independ
         assert_eq!(build_action_mask(&r.game,actor)[action as usize],1.0);
         let mut blocked = r.game.clone();
         blocked.modifiers.add_player_modifier(actor,PlayerModifierEntry::simple(ModifierType::CannotPlayTamerByEffect,0,Expiry::Permanent,None,actor));
-        blocked.resolve_selection(actor,action).unwrap();
+        assert_eq!(build_action_mask(&blocked,actor)[action as usize],0.0);
+        assert_eq!(build_action_mask(&blocked,actor)[PASS as usize],1.0);
+        blocked.resolve_selection(actor,PASS).unwrap();
         assert_eq!(blocked.player(actor).security.iter().map(|c|c.handle()).collect::<Vec<_>>(),original);
         assert!(blocked.player(actor).face_up_security.contains(&marked_index));
         assert_eq!(blocked.memory,3);assert!(blocked.pending_selection.is_none());

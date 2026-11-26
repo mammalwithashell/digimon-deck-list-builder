@@ -368,6 +368,7 @@ fn explicit_source_cost_requires_actual_payment_but_ordinary_effect_continues() 
             CompiledStep::TrashSelectedSourcesAsCost {
                 source_refs: "chosen".into(),
                 min_count: None,
+                is_digi_burst: false,
             }
         } else {
             CompiledStep::TrashSelectedSources {
@@ -456,6 +457,7 @@ fn optional_zero_source_payment_grants_zero_counted_benefits_on_clone() {
             CompiledStep::TrashSelectedSourcesAsCost {
                 source_refs: "paid".into(),
                 min_count: Some(0),
+                is_digi_burst: false,
             },
             CompiledStep::PerSelected {
                 selection: "paid".into(),
@@ -546,6 +548,7 @@ fn up_to_source_cost_counts_actual_removals_after_late_protection_on_clone() {
             CompiledStep::TrashSelectedSourcesAsCost {
                 source_refs: "paid".into(),
                 min_count: Some(0),
+                is_digi_burst: false,
             },
             CompiledStep::PerSelected {
                 selection: "paid".into(),
@@ -604,6 +607,7 @@ fn optional_exact_cost_can_decline_zero_or_one_without_trashing_on_clone() {
                 CompiledStep::TrashSelectedSourcesAsCost {
                     source_refs: "paid".into(),
                     min_count: Some(2),
+                    is_digi_burst: false,
                 },
                 CompiledStep::GainMemory(3),
             ],

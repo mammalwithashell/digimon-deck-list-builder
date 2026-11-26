@@ -177,7 +177,7 @@ fn generation3_game340_search_continuation_does_not_panic() {
     // 110 decisions since the 2026-11-12 migration (one dead EX12-002 pick
     // removed; see the fixture's `migrations`): the same search state as the
     // original decision 111.
-    let (r, c) = replay(340, 110);
+    let (r, c) = replay(340, 114);
     let registry = CardRegistry::from_cards(
         &CardData::load_from_str(
             &std::fs::read_to_string(concat!(
@@ -210,7 +210,7 @@ fn generation3_game340_explicit_checkpoint_search() {
     // 110 decisions since the 2026-11-12 migration (one dead EX12-002 pick
     // removed; see the fixture's `migrations`): the same search state as the
     // original decision 111.
-    let (r, c) = replay(340, 110);
+    let (r, c) = replay(340, 114);
     let registry = CardRegistry::from_cards(
         &CardData::load_from_str(
             &std::fs::read_to_string(concat!(

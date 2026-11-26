@@ -4106,7 +4106,12 @@ impl ReplayDriver {
         if dcgo_folds && !stamped_order_action && payload.prompt == "MultipleSkills"
             && payload.int_value.is_some_and(|v| v >= 0)
             && payload.chosen_effect_card.is_none()
-            && game.pending_selection.as_ref().is_some_and(|p| p.selecting_player == actor)
+            && game.pending_selection.as_ref().is_some_and(|p| {
+                p.selecting_player == actor
+                    && (matches!(p.kind, crate::selection::SelectionKind::TriggerOrder)
+                        || (matches!(p.kind, crate::selection::SelectionKind::EffectChoice)
+                            && p.prompt == REPLACEMENT_ORDER_PROMPT))
+            })
         {
             if let Some(next) = self.source.steps().get(self.cursor as usize + 1)
                 .and_then(|step| step.selection.as_ref())
@@ -10584,6 +10589,7 @@ impl ReplayDriver {
         let is_trigger_order = matches!(pending.kind, SelectionKind::TriggerOrder)
             && payload.prompt != "MultipleSkills";
         if !(matches!(pending.kind, SelectionKind::EffectChoice) || is_trigger_order)
+            || (!is_trigger_order && game.pending_selection_resume.is_none())
             || pending.selecting_player != actor
             || super::selection_resolve::yes_no_branches(pending).is_some()
             || payload.bool_value.is_some()
@@ -14378,10 +14384,10 @@ effects:
                 // EffectChoice immediately).
                 r.place_on_field(1, "EX12-045", None);
                 let c_a = r.game.players[1].battle_area.pop().unwrap().card_sources.pop().unwrap();
-                r.game.players[1].trash.push(c_a);
+                r.game.players[1].put_in_trash(c_a);
                 r.place_on_field(1, "EX12-022", None);
                 let c_b = r.game.players[1].battle_area.pop().unwrap().card_sources.pop().unwrap();
-                r.game.players[1].trash.push(c_b);
+                r.game.players[1].put_in_trash(c_b);
 
                 r.game.enqueue_triggered(
                     EffectTiming::WhenDigivolving,
@@ -14630,7 +14636,7 @@ effects:
             }],
         });
         let trashed = r.game.players[1].battle_area[0].card_sources.pop().unwrap();
-        r.game.players[1].trash.push(trashed);
+        r.game.players[1].put_in_trash(trashed);
 
         let source = r.game.players[0].battle_area[0].top_card().handle();
         EffectContext::new(&mut r.game, source, None, 0).select_effect_choice(
@@ -14718,7 +14724,7 @@ effects:
         });
         let removed = r.game.players[0].battle_area.pop().unwrap();
         for c in removed.card_sources {
-            r.game.players[0].trash.push(c);
+            r.game.players[0].put_in_trash(c);
         }
 
         let jsonl = concat!(
@@ -14887,7 +14893,7 @@ effects:
         r.game.enter_main_phase();
         r.place_on_field(0, "TEST-ILIAD-A", None);
         let trash_card = r.game.players[0].battle_area.pop().unwrap().card_sources.pop().unwrap();
-        r.game.players[0].trash.push(trash_card);
+        r.game.players[0].put_in_trash(trash_card);
         let merva = r.place_on_field(0, "BT26-081", None);
 
         r.game.enqueue_triggered(

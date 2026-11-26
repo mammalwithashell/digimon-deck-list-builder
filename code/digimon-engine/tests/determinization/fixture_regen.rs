@@ -37,8 +37,9 @@ use digimon_engine::Game;
 /// 2026-11-11 the CR 11-1-2 / DUAL / play-gate fixes; 2026-11-12 this branch's DCGO-playback fixes
 /// (0de06211d, c6eda5678; per-entry reasons are in each regenerated `source`); 2026-11-15 the select_hand
 /// playability filters; 2026-11-21 d76249e94 (no DigiXros stop prompt once no candidate remains);
-/// 2026-11-23 f3224fb0d (Erlangmon (EX12-034): an accepted leave replacement spends its [Once Per Turn]).
-const REGEN_NOTE: &str = "regenerated 2026-11-23 after f3224fb0d: Erlangmon (EX12-034)'s accepted would-leave replacement now spends its [Once Per Turn] even when nothing is played (CR 4.3 15-14-1-4; it used to refund), so a later would-leave that turn no longer offers the replacement and the recorded PASS that declined it met no prompt";
+/// 2026-11-23 f3224fb0d (Erlangmon (EX12-034): an accepted leave replacement spends its [Once Per Turn]);
+/// 2026-11-26 262228452 (PR #808 live DCGO parity fixes for EX12 triggers/conditions).
+const REGEN_NOTE: &str = "regenerated 2026-11-26 after 262228452: PR #808 EX12 trigger/condition parity fixes (EX12-002 outer_prompt, EX12-015 condition, EX12-020/022/025/026 processing-condition hand check, EX12-048 select_materials)";
 
 /// The same for `chronomon-security-history.json`.
 const CHRONOMON_REGEN_NOTE: &str = "regenerated 2026-11-21 after the {Trash} liveness gate (CR 4.3 15-4-4-3, bug scan 2026-11): recorded decisions 58 and 159 accepted a Cherubimon BT26-078 trigger whose card had already been returned to the deck; decision 58 is dropped, the 158 decisions before the second one are the original trace, the rest is a seeded continuation";

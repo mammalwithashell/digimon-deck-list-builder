@@ -21,17 +21,17 @@ fn test_card_db() -> HashMap<String, CardData> {
             "effect_description_eng": "", "inherited_effect_description_eng": "",
             "security_effect_description_eng": "", "evo_costs": []
         },
-        "BT1-010": {
-            "card_id": "BT1-010", "card_name_eng": "Agumon",
-            "card_effect_class_name": "BT1_010", "play_cost": 3, "dp": 2000,
+        "TEST-010": {
+            "card_id": "TEST-010", "card_name_eng": "Agumon",
+            "card_effect_class_name": "TEST_010", "play_cost": 3, "dp": 2000,
             "level": 3, "card_kind": 0, "rarity": 0, "card_colors": [0],
             "type_eng": ["Reptile"], "form_eng": ["Rookie"], "attribute_eng": ["Vaccine"],
             "effect_description_eng": "", "inherited_effect_description_eng": "",
             "security_effect_description_eng": "", "evo_costs": []
         },
-        "BT1-025": {
-            "card_id": "BT1-025", "card_name_eng": "Greymon",
-            "card_effect_class_name": "BT1_025", "play_cost": 5, "dp": 5000,
+        "TEST-025": {
+            "card_id": "TEST-025", "card_name_eng": "Greymon",
+            "card_effect_class_name": "TEST_025", "play_cost": 5, "dp": 5000,
             "level": 4, "card_kind": 0, "rarity": 0, "card_colors": [0],
             "type_eng": ["Dinosaur"], "form_eng": ["Champion"], "attribute_eng": ["Vaccine"],
             "effect_description_eng": "", "inherited_effect_description_eng": "",
@@ -48,10 +48,10 @@ fn test_deck() -> Vec<String> {
         deck.push("BT1-001".to_string());
     }
     for _ in 0..25 {
-        deck.push("BT1-010".to_string());
+        deck.push("TEST-010".to_string());
     }
     for _ in 0..25 {
-        deck.push("BT1-025".to_string());
+        deck.push("TEST-025".to_string());
     }
     deck
 }

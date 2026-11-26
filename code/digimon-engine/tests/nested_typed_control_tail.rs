@@ -1,7 +1,7 @@
 use digimon_dsl::compiled::{CompiledStep as S,CompiledPredicate as P,CompiledPlayerRef};
 use digimon_engine::{debug_runner::{DebugRunner,make_test_card},dsl_cards::{bindings::Bindings,step::run_steps},effect_context::EffectContext,action::{build_action_mask,space::PASS}};
 fn draw(n:u8)->S{S::Draw{of:CompiledPlayerRef::You,count:n}}
-fn pick(name:&str)->S {S::SelectOpponentPermanent {then:vec![],filter:P::default(),bind_as:Some(name.into()),selector:None,prompt:name.into(),prompt_key:None,optional:true,continue_on_decline:true}}
+fn pick(name:&str)->S {S::SelectOpponentPermanent {then:vec![],filter:P::default(),bind_as:Some(name.into()),selector:None,prompt:name.into(),prompt_key:None,optional:true,continue_on_decline:true,offer_unpayable_deletion_payers:false}}
 fn check(name:&str,yes:u8,no:u8)->S {S::If{condition:P{binding_exists:Some(name.into()),..P::default()},then:vec![draw(yes)],else_branch:vec![draw(no)]}}
 #[test]
 fn nested_if_optional_binding_accept_decline_and_repark_clone() {

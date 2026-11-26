@@ -108,11 +108,13 @@ steps:
   - actor: 0
     do: { play: { card: EX12-039, from: hand } }
     expect: { prompt: main_phase }
-  # THE CLAUSE: take the offered digivolve into the [SW] card in hand.
-  # (`expect: OptionalSkill` = the fold marker -- see the header note.)
+  # THE CLAUSE: accept the outer optional gate, then pick the [SW] card in hand.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
   - actor: 0
     do: { select: { cards: [EX12-012] } }
-    expect: { prompt: OptionalSkill }
+    expect: { prompt: SelectHandEffect }
   # One step after the clause.
   - actor: 0
     do: { pass: {} }
@@ -123,7 +125,7 @@ assert:
   # reduced by 2), so memory is still 0. Apemon now caps the Mococomon stack;
   # Takinmon stands beside it, freshly played and unsuspended. `p0.hand` is
   # left unasserted on purpose -- see the PREDICTED DIVERGENCE note above.
-  - at: 12
+  - at: 13
     that:
       p0.memory: 0
       p0.field:
