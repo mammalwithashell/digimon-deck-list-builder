@@ -1,0 +1,25 @@
+{
+  "completed_stages": [
+    "stage0_bootstrap",
+    "stage1_search_base",
+    "stage2_lstm_distill",
+    "stage3_lstm_ppo",
+    "stage4_hybrid_and_control",
+    "stage5_evaluation"
+  ],
+  "artifacts": {
+    "gen0_zip": "runs/ex13-small3-hybrid/stage0_bootstrap/seed.zip",
+    "gen0_onnx": "runs/ex13-small3-hybrid/stage0_bootstrap/seed.onnx",
+    "gen3_zip": "runs/ex13-small3-hybrid/stage1_search/gen2/model.zip",
+    "gen3_onnx": "runs/ex13-small3-hybrid/stage1_search/gen2/model.onnx",
+    "lstm_distilled_zip": "runs/ex13-small3-hybrid/stage2_distill/lstm_distilled_r1.zip",
+    "lstm_distilled_onnx": "runs/ex13-small3-hybrid/stage2_distill/lstm_distilled_r1.onnx",
+    "lstm_ppo_zip": "runs/ex13-small3-hybrid/stage3_ppo/lstm_ppo_r1.zip",
+    "lstm_ppo_onnx": "runs/ex13-small3-hybrid/stage3_ppo/lstm_ppo_r1.onnx",
+    "gen6_hybrid_zip": "runs/ex13-small3-hybrid/stage4_hybrid/gen5/model.zip",
+    "gen6_hybrid_onnx": "runs/ex13-small3-hybrid/stage4_hybrid/gen5/model.onnx",
+    "gen6_control_zip": "runs/ex13-small3-hybrid/stage4_control/gen5/model.zip",
+    "gen6_control_onnx": "runs/ex13-small3-hybrid/stage4_control/gen5/model.onnx",
+    "final_evaluation": "runs/ex13-small3-hybrid/stage5_eval/final_evaluation.json"
+  }
+}

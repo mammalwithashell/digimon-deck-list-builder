@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EX13 Hybrid Model — Match Replay Theater</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 m-0 select-none">
+  <div class="max-w-7xl mx-auto space-y-3">
+    <!-- Header & Match Tabs -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2.5">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 class="text-base font-semibold tracking-tight">EX13 Held-Out Match Replay Theater — How <code class="text-xs px-1.5 py-0.5 rounded bg-[var(--secondary)]">lstm_ppo_r1</code> Plays</h1>
+          <p id="matchMeta" class="text-xs text-[var(--muted-foreground)] mt-0.5">Loading compressed replay data...</p>
+        </div>
+        <label class="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)] cursor-pointer bg-[var(--secondary)] px-2.5 py-1 rounded border border-[var(--card-border)]">
+          <input id="p1OnlyToggle" type="checkbox" class="accent-[var(--primary)]" />
+          <span>Seat 1 (<code class="text-xs">lstm_ppo_r1</code>) decisions only</span>
+        </label>
+      </div>
+      <div id="gameTabs" class="grid grid-cols-1 md:grid-cols-3 gap-2"></div>
+      <div id="bookmarksBar" class="flex flex-wrap items-center gap-1.5 pt-1 border-t border-[var(--card-border)] text-xs"></div>
+    </div>
+
+    <!-- Transport & Memory Gauge -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-1.5">
+          <button id="btnFirst" class="px-2 py-1 text-xs rounded bg-[var(--secondary)] border border-[var(--card-border)] hover:opacity-80" title="First step">⏮</button>
+          <button id="btnPrev" class="px-2.5 py-1 text-xs rounded bg-[var(--secondary)] border border-[var(--card-border)] hover:opacity-80" title="Previous (←)">◀ Prev</button>
+          <button id="btnPlay" class="px-3 py-1 text-xs font-medium rounded bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90" title="Auto-play (Space)">▶ Play</button>
+          <button id="btnNext" class="px-2.5 py-1 text-xs rounded bg-[var(--secondary)] border border-[var(--card-border)] hover:opacity-80" title="Next (→)">Next ▶</button>
+          <button id="btnLast" class="px-2 py-1 text-xs rounded bg-[var(--secondary)] border border-[var(--card-border)] hover:opacity-80" title="Final state">⏭</button>
+        </div>
+        <div id="stepBadge" class="text-xs font-mono tabular-nums text-[var(--muted-foreground)]">Step 0 / 0</div>
+        <div id="turnPhaseBadge" class="text-xs font-medium px-2.5 py-1 rounded bg-[var(--secondary)] border border-[var(--card-border)]">Turn 1 · Mulligan</div>
+      </div>
+
+      <input id="scrubber" type="range" min="0" max="1" value="0" class="w-full accent-[var(--primary)] cursor-pointer" />
+
+      <!-- Digimon Memory Gauge (-10 Opponent .. 0 .. +10 Seat 1) -->
+      <div class="space-y-1 pt-0.5">
+        <div class="flex justify-between text-xs text-[var(--muted-foreground)] font-mono">
+          <span>Seat 2 Memory (+10)</span>
+          <span id="memoryReadout" class="font-semibold text-[var(--foreground)]">Memory: 0</span>
+          <span>Seat 1 Memory (+10)</span>
+        </div>
+        <div id="memoryScale" class="grid grid-cols-21 gap-0.5 text-center font-mono text-xs"></div>
+      </div>
+    </div>
+
+    <!-- Main Grid: Tabletop (Left 8 cols) + Agent Brain Inspector (Right 4 cols) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+      <!-- Tabletop -->
+      <div class="lg:col-span-8 space-y-3">
+        <!-- Seat 2 Board -->
+        <div id="seat2Panel" class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2"></div>
+        <!-- Seat 1 Board -->
+        <div id="seat1Panel" class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2"></div>
+      </div>
+
+      <!-- Agent Brain Inspector -->
+      <div class="lg:col-span-4 space-y-3">
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Active Decision & Policy Distribution</h2>
+            <span id="valuePill" class="text-xs font-mono px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)]">V = +0.00</span>
+          </div>
+          <div id="chosenBox" class="p-2 rounded bg-[var(--secondary)] border border-[var(--card-border)] text-xs font-medium break-words"></div>
+          <div id="candidatesList" class="space-y-1.5 pt-1"></div>
+        </div>
+
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Seat 1 Critic Value Trajectory V(s)</h2>
+            <span class="text-xs text-[var(--muted-foreground)]">Click chart to jump</span>
+          </div>
+          <canvas id="valueCanvas" width="380" height="150" class="w-full rounded border border-[var(--card-border)] cursor-pointer"></canvas>
+        </div>
+
+        <div class="bg-[var(--card)] border border-[var(--border)] rounded-lg p-3 space-y-2">
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">Seat 1 Hand & Recent Trash</h2>
+          <div>
+            <div id="handHeader" class="text-xs text-[var(--muted-foreground)] mb-1">Hand (0)</div>
+            <div id="handPills" class="flex flex-wrap gap-1"></div>
+          </div>
+          <div class="pt-2 border-t border-[var(--card-border)]">
+            <div id="trashHeader" class="text-xs text-[var(--muted-foreground)] mb-1">Recent Trash (0)</div>
+            <div id="trashPills" class="flex flex-wrap gap-1"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .grid-cols-21 { grid-template-columns: repeat(21, minmax(0, 1fr)); }
+  </style>
+
+  <script>
+    const PAYLOAD_B64 = "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";
+
+    const HIGHLIGHTS = [
+      [
+        { label: "T1: Play Davis & Ken Setter", turn: 1, match: "Davis Motomiya" },
+        { label: "T3: Sheltered Breeding Climb", turn: 3, match: "breeding area" },
+        { label: "T7: DNA Examon + Raid Wipe", turn: 7, match: "DNA digivolve" },
+        { label: "T8: Blocker Stabilize", turn: 8, match: "blocker" }
+      ],
+      [
+        { label: "T2: Free Musketeer Option", turn: 2, match: "Option card" },
+        { label: "T4: Tuck Option Source", turn: 4, match: "bottom digivolution" },
+        { label: "T6: Cast Option from Trash (-3)", turn: 6, match: "from your trash" },
+        { label: "T8: Free Trash Reanimate + Delete", turn: 8, match: "Asuna Shiroki" },
+        { label: "T9: Strip Bottom 2 Sources", turn: 9, match: "bottom 2" }
+      ],
+      [
+        { label: "T1: Double Breeding Evo", turn: 1, match: "breeding area" },
+        { label: "T3: Free Tamer + Shaman Chain", turn: 3, match: "Shaman" },
+        { label: "T7: Build 2nd Stack in Breeding", turn: 7, match: "breeding area" },
+        { label: "T9: Kosuke + Boss Protection", turn: 9, match: "Kosuke Misono" },
+        { label: "T11: Unsuspend Boss Lethal", turn: 11, match: "unsuspends" }
+      ]
+    ];
+
+    let DB = null;
+    let gameIdx = 0;
+    let visibleIndices = [];
+    let pos = 0;
+    let timer = null;
+
+    function esc(s) {
+      return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    async function decodePayload(b64) {
+      const bin = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+      for (const fmt of ["deflate", "deflate-raw"]) {
+        try {
+          const ds = new DecompressionStream(fmt);
+          const writer = ds.writable.getWriter();
+          writer.write(bin);
+          writer.close();
+          const txt = await new Response(ds.readable).text();
+          return JSON.parse(txt);
+        } catch (_) {}
+      }
+      throw new Error("DecompressionStream failed");
+    }
+
+    function str(idx) {
+      return DB.S[idx] ?? "";
+    }
+
+    function rebuildVisibleIndices() {
+      const g = DB.G[gameIdx];
+      const p1Only = document.getElementById("p1OnlyToggle").checked;
+      visibleIndices = [];
+      g.frames.forEach((f, idx) => {
+        if (!p1Only || f[1] === 1 || idx === g.frames.length - 1) {
+          visibleIndices.push(idx);
+        }
+      });
+      if (visibleIndices.length === 0) visibleIndices = [0];
+      pos = Math.min(pos, visibleIndices.length - 1);
+      const scrub = document.getElementById("scrubber");
+      scrub.max = Math.max(0, visibleIndices.length - 1);
+      scrub.value = pos;
+    }
+
+    function renderTabs() {
+      const tabs = document.getElementById("gameTabs");
+      tabs.innerHTML = DB.G.map((g, idx) => {
+        const active = idx === gameIdx;
+        return `<button onclick="selectGame(${idx})" class="text-left p-2 rounded border transition ${
+          active
+            ? "bg-[var(--secondary)] border-[var(--primary)]"
+            : "bg-transparent border-[var(--card-border)] hover:bg-[var(--secondary)]"
+        }">
+          <div class="text-xs font-semibold truncate">${esc(g.title)}</div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">
+            Seed ${g.seed} · ${g.turns} turns · P1 digi ${g.p1Digi}${g.p1Dna ? ` (${g.p1Dna} DNA)` : ""} vs P2 digi ${g.p2Digi}
+          </div>
+        </button>`;
+      }).join("");
+
+      const bBar = document.getElementById("bookmarksBar");
+      const marks = HIGHLIGHTS[gameIdx] || [];
+      bBar.innerHTML = `<span class="text-[var(--muted-foreground)] font-medium">Key Moments:</span>` +
+        marks.map((m, mi) =>
+          `<button onclick="jumpHighlight(${mi})" class="px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">${esc(m.label)}</button>`
+        ).join("");
+    }
+
+    window.selectGame = function(idx) {
+      stopAuto();
+      gameIdx = idx;
+      pos = 0;
+      rebuildVisibleIndices();
+      renderTabs();
+      renderFrame();
+    };
+
+    window.jumpHighlight = function(mi) {
+      stopAuto();
+      const g = DB.G[gameIdx];
+      const mark = HIGHLIGHTS[gameIdx][mi];
+      let rawTarget = g.frames.findIndex(f => f[0] >= mark.turn && str(f[5]).toLowerCase().includes(mark.match.toLowerCase()));
+      if (rawTarget < 0) rawTarget = g.frames.findIndex(f => f[0] >= mark.turn);
+      if (rawTarget >= 0) {
+        let bestPos = visibleIndices.findIndex(vi => vi >= rawTarget);
+        pos = bestPos >= 0 ? bestPos : visibleIndices.length - 1;
+        document.getElementById("scrubber").value = pos;
+        renderFrame();
+      }
+    };
+
+    function renderPermCard(p, isBreeding) {
+      if (!p) {
+        return `<div class="p-2 rounded border border-dashed border-[var(--card-border)] text-xs text-[var(--muted-foreground)]">${isBreeding ? "Breeding Empty" : "Empty"}</div>`;
+      }
+      const name = str(p[0]);
+      const cid = str(p[1]);
+      const lv = p[2];
+      const dp = p[3];
+      const susp = p[4] === 1;
+      const sa = p[5];
+      const kws = (p[6] || []).map(str);
+      const stack = (p[7] || []).map(str);
+      const under = stack.slice(0, -1).reverse();
+
+      return `<div class="p-2 rounded border ${susp ? "border-[var(--warning)] opacity-90" : "border-[var(--card-border)]"} bg-[var(--secondary)] space-y-1">
+        <div class="flex items-center justify-between gap-1">
+          <span class="text-xs font-semibold truncate">${esc(name)}</span>
+          <span class="text-xs font-mono text-[var(--muted-foreground)] shrink-0">${esc(cid)}</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-1 text-xs font-mono">
+          ${lv ? `<span class="px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--card-border)]">Lv.${lv}</span>` : `<span class="px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--card-border)]">Tamer/Card</span>`}
+          ${dp ? `<span class="px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--card-border)]">${dp.toLocaleString()} DP</span>` : ""}
+          ${sa !== 0 ? `<span class="px-1.5 py-0.2 rounded bg-[var(--card)] border border-[var(--primary)]">Sec ${sa > 0 ? "+" + sa : sa}</span>` : ""}
+          ${susp ? `<span class="px-1.5 py-0.2 rounded text-[var(--warning)] border border-[var(--warning)]">Suspended</span>` : ""}
+        </div>
+        ${kws.length ? `<div class="text-xs text-[var(--primary)] truncate">${kws.map(esc).join(" · ")}</div>` : ""}
+        ${under.length ? `<div class="text-xs text-[var(--muted-foreground)] pt-1 border-t border-[var(--card-border)] leading-snug">Stack (${under.length}): ${under.map(esc).join(" ← ")}</div>` : ""}
+      </div>`;
+    }
+
+    function renderSeat(elId, seatNum, archName, agentName, seatData, isActiveMover) {
+      const [sec, dk, eg, hc, tc, handArr, trashArr, breeding, battleArr] = seatData;
+      const el = document.getElementById(elId);
+      el.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)]">
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold px-2 py-0.5 rounded ${isActiveMover ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "bg-[var(--secondary)] text-[var(--muted-foreground)]"}">Seat ${seatNum}${isActiveMover ? " · Acting" : ""}</span>
+            <span class="text-xs font-semibold">${esc(archName)}</span>
+            <span class="text-xs text-[var(--muted-foreground)]">(${esc(agentName)})</span>
+          </div>
+          <div class="flex items-center gap-2 text-xs font-mono">
+            <span class="px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)]">🛡 Sec: <strong>${sec}</strong></span>
+            <span class="px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)]">✋ Hand: ${hc}</span>
+            <span class="px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)]">📚 Deck: ${dk}</span>
+            <span class="px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)]">🥚 Egg: ${eg}</span>
+            <span class="px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)]">🗑 Trash: ${tc}</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2 pt-1">
+          <div class="md:col-span-1 space-y-1">
+            <div class="text-xs font-medium text-[var(--muted-foreground)]">Breeding Area</div>
+            ${renderPermCard(breeding, true)}
+          </div>
+          <div class="md:col-span-3 space-y-1">
+            <div class="text-xs font-medium text-[var(--muted-foreground)]">Battle Area (${battleArr.length})</div>
+            ${battleArr.length
+              ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">${battleArr.map(p => renderPermCard(p, false)).join("")}</div>`
+              : `<div class="p-2 rounded border border-dashed border-[var(--card-border)] text-xs text-[var(--muted-foreground)]">No permanents in Battle Area</div>`
+            }
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMemory(memP1) {
+      const clamped = Math.max(-10, Math.min(10, memP1));
+      const owner = memP1 > 0 ? `Seat 1 (+${memP1})` : memP1 < 0 ? `Seat 2 (+${-memP1})` : "0 (Neutral)";
+      document.getElementById("memoryReadout").textContent = `Memory: ${owner}`;
+      const cells = [];
+      for (let v = -10; v <= 10; v++) {
+        const active = v === clamped;
+        const label = v === 0 ? "0" : Math.abs(v);
+        cells.push(`<div class="py-0.5 rounded border ${
+          active
+            ? "bg-[var(--primary)] text-[var(--primary-foreground)] border-[var(--primary)] font-bold"
+            : "bg-[var(--secondary)] text-[var(--muted-foreground)] border-[var(--card-border)]"
+        }">${label}</div>`);
+      }
+      document.getElementById("memoryScale").innerHTML = cells.join("");
+    }
+
+    function drawValueChart() {
+      if (!DB) return;
+      const canvas = document.getElementById("valueCanvas");
+      const ctx = canvas.getContext("2d");
+      const styles = getComputedStyle(document.documentElement);
+      const fg = styles.getPropertyValue("--foreground").trim() || "#888";
+      const muted = styles.getPropertyValue("--muted-foreground").trim() || "#777";
+      const border = styles.getPropertyValue("--card-border").trim() || "#444";
+      const primary = styles.getPropertyValue("--primary").trim() || "#3b82f6";
+
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      const padL = 34, padR = 10, padT = 12, padB = 20;
+      const pw = w - padL - padR;
+      const ph = h - padT - padB;
+      const yOf = v => padT + ((1 - Math.max(-1, Math.min(1, v))) * 0.5) * ph;
+
+      // Grid lines +1, 0, -1
+      ctx.strokeStyle = border;
+      ctx.lineWidth = 1;
+      ctx.font = "10px monospace";
+      ctx.fillStyle = muted;
+      for (const lv of [1, 0, -1]) {
+        const y = yOf(lv);
+        ctx.beginPath();
+        ctx.setLineDash(lv === 0 ? [4, 3] : []);
+        ctx.moveTo(padL, y);
+        ctx.lineTo(w - padR, y);
+        ctx.stroke();
+        ctx.fillText(lv > 0 ? "+1.0" : lv < 0 ? "-1.0" : " 0.0", 4, y + 3);
+      }
+      ctx.setLineDash([]);
+
+      const g = DB.G[gameIdx];
+      // Carry forward Seat 1's latest V(s) across frames
+      let curV = 0;
+      const pts = g.frames.map((f, idx) => {
+        if (f[1] === 1 || idx === g.frames.length - 1) curV = f[6];
+        const x = padL + (idx / Math.max(1, g.frames.length - 1)) * pw;
+        return { x, y: yOf(curV), v: curV };
+      });
+
+      ctx.strokeStyle = primary;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      pts.forEach((pt, i) => i === 0 ? ctx.moveTo(pt.x, pt.y) : ctx.lineTo(pt.x, pt.y));
+      ctx.stroke();
+
+      const rawIdx = visibleIndices[pos] ?? 0;
+      const cur = pts[rawIdx];
+      if (cur) {
+        ctx.strokeStyle = fg;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cur.x, padT);
+        ctx.lineTo(cur.x, h - padB);
+        ctx.stroke();
+
+        ctx.fillStyle = primary;
+        ctx.beginPath();
+        ctx.arc(cur.x, cur.y, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = muted;
+      ctx.fillText("Start", padL, h - 5);
+      ctx.fillText(`Turn ${g.turns} Win`, w - padR - 58, h - 5);
+    }
+
+    function renderFrame() {
+      const g = DB.G[gameIdx];
+      const rawIdx = visibleIndices[pos] ?? 0;
+      const f = g.frames[rawIdx];
+      const [turn, mover, actorIdx, phaseIdx, memP1, chosenIdx, val, topArr, p1Seat, p2Seat] = f;
+
+      document.getElementById("matchMeta").textContent =
+        `Unseen Held-Out Match · Seat 1: ${g.arch1} (${g.agent1}) vs Seat 2: ${g.arch2} (${g.agent2}) · Winner: Seat ${g.winner} in ${g.turns} turns`;
+      document.getElementById("stepBadge").textContent =
+        `Decision ${pos + 1} / ${visibleIndices.length} (frame ${rawIdx + 1}/${g.frames.length})`;
+      document.getElementById("turnPhaseBadge").textContent =
+        `Turn ${turn} · ${str(phaseIdx)} · ${mover === 1 ? "Seat 1" : mover === 2 ? "Seat 2" : "Complete"}`;
+
+      renderMemory(memP1);
+      renderSeat("seat2Panel", 2, g.arch2, g.agent2, p2Seat, mover === 2);
+      renderSeat("seat1Panel", 1, g.arch1, g.agent1, p1Seat, mover === 1);
+
+      const vFmt = (val >= 0 ? "+" : "") + val.toFixed(2);
+      document.getElementById("valuePill").textContent = `V = ${vFmt} (${Math.round((val + 1) * 50)}% est.)`;
+      document.getElementById("chosenBox").innerHTML =
+        `<span class="text-[var(--muted-foreground)]">${esc(str(actorIdx))} chose:</span><br/><span>${esc(str(chosenIdx))}</span>`;
+
+      const candsEl = document.getElementById("candidatesList");
+      candsEl.innerHTML = topArr.length
+        ? topArr.map(([lblIdx, prob], ci) => {
+            const pct = Math.round(prob * 100);
+            return `<div class="space-y-0.5">
+              <div class="flex justify-between gap-2 text-xs">
+                <span class="${ci === 0 ? "font-semibold" : "text-[var(--muted-foreground)]"} truncate" title="${esc(str(lblIdx))}">${esc(str(lblIdx))}</span>
+                <span class="font-mono tabular-nums shrink-0">${pct}%</span>
+              </div>
+              <div class="w-full h-1.5 rounded bg-[var(--secondary)] overflow-hidden">
+                <div class="h-full bg-[var(--primary)]" style="width:${Math.max(2, pct)}%"></div>
+              </div>
+            </div>`;
+          }).join("")
+        : `<div class="text-xs text-[var(--muted-foreground)]">Terminal state reached.</div>`;
+
+      // Seat 1 Hand & Recent Trash
+      const p1Hand = (p1Seat[5] || []).map(str);
+      const p1Trash = (p1Seat[6] || []).map(str);
+      document.getElementById("handHeader").textContent = `Seat 1 Hand (${p1Seat[3]})`;
+      document.getElementById("handPills").innerHTML = p1Hand.length
+        ? p1Hand.map(c => `<span class="text-xs px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)]">${esc(c)}</span>`).join("")
+        : `<span class="text-xs text-[var(--muted-foreground)]">Empty hand</span>`;
+      document.getElementById("trashHeader").textContent = `Seat 1 Recent Trash (${p1Seat[4]} total)`;
+      document.getElementById("trashPills").innerHTML = p1Trash.length
+        ? p1Trash.map(c => `<span class="text-xs px-2 py-0.5 rounded bg-[var(--secondary)] border border-[var(--card-border)] text-[var(--muted-foreground)]">${esc(c)}</span>`).join("")
+        : `<span class="text-xs text-[var(--muted-foreground)]">Empty trash</span>`;
+
+      drawValueChart();
+    }
+
+    function stepBy(delta) {
+      pos = Math.max(0, Math.min(visibleIndices.length - 1, pos + delta));
+      document.getElementById("scrubber").value = pos;
+      renderFrame();
+    }
+
+    function stopAuto() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      document.getElementById("btnPlay").textContent = "▶ Play";
+    }
+
+    document.getElementById("btnFirst").onclick = () => { stopAuto(); pos = 0; document.getElementById("scrubber").value = 0; renderFrame(); };
+    document.getElementById("btnLast").onclick = () => { stopAuto(); pos = visibleIndices.length - 1; document.getElementById("scrubber").value = pos; renderFrame(); };
+    document.getElementById("btnPrev").onclick = () => { stopAuto(); stepBy(-1); };
+    document.getElementById("btnNext").onclick = () => { stopAuto(); stepBy(1); };
+    document.getElementById("btnPlay").onclick = () => {
+      if (timer) {
+        stopAuto();
+      } else {
+        if (pos >= visibleIndices.length - 1) pos = 0;
+        document.getElementById("btnPlay").textContent = "⏸ Pause";
+        timer = setInterval(() => {
+          if (pos >= visibleIndices.length - 1) {
+            stopAuto();
+          } else {
+            stepBy(1);
+          }
+        }, 900);
+      }
+    };
+    document.getElementById("scrubber").oninput = e => {
+      stopAuto();
+      pos = Number(e.target.value);
+      renderFrame();
+    };
+    document.getElementById("p1OnlyToggle").onchange = () => {
+      stopAuto();
+      rebuildVisibleIndices();
+      renderFrame();
+    };
+    document.getElementById("valueCanvas").onclick = e => {
+      stopAuto();
+      const rect = e.target.getBoundingClientRect();
+      const frac = Math.max(0, Math.min(1, (e.clientX - rect.left - 34) / Math.max(1, rect.width - 44)));
+      const rawTarget = Math.round(frac * (DB.G[gameIdx].frames.length - 1));
+      let best = 0;
+      visibleIndices.forEach((vi, idx) => {
+        if (Math.abs(vi - rawTarget) < Math.abs(visibleIndices[best] - rawTarget)) best = idx;
+      });
+      pos = best;
+      document.getElementById("scrubber").value = pos;
+      renderFrame();
+    };
+    window.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft") { e.preventDefault(); stopAuto(); stepBy(-1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); stopAuto(); stepBy(1); }
+      else if (e.key === " ") { e.preventDefault(); document.getElementById("btnPlay").click(); }
+    });
+    window.addEventListener("themechange", drawValueChart);
+    window.addEventListener("resize", drawValueChart);
+
+    decodePayload(PAYLOAD_B64).then(data => {
+      DB = data;
+      rebuildVisibleIndices();
+      renderTabs();
+      renderFrame();
+    }).catch(err => {
+      document.getElementById("matchMeta").textContent = "Replay load error: " + err.message;
+    });
+  </script>
+</body>
+</html>

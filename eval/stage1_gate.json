@@ -1,0 +1,2280 @@
+{
+  "vs_greedy": {
+    "games": 60,
+    "wins": 59,
+    "losses": 1,
+    "draws": 0,
+    "win_rate": 0.9833333333333333,
+    "score_rate_with_half_draws": 0.9833333333333333,
+    "paired_bootstrap_ci95": [
+      0.95,
+      1.0
+    ],
+    "by_archetype": {
+      "Examon": {
+        "wins": 20,
+        "losses": 0,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon": {
+        "wins": 20,
+        "losses": 0,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 1.0
+      },
+      "Three Musketeers": {
+        "wins": 19,
+        "losses": 1,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.95
+      }
+    },
+    "by_matchup": {
+      "Examon vs Examon": {
+        "wins": 8,
+        "losses": 0,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 1.0
+      },
+      "Examon vs TS Jupitermon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "Examon vs Three Musketeers": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon vs TS Jupitermon": {
+        "wins": 8,
+        "losses": 0,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon vs Three Musketeers": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon vs Examon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "Three Musketeers vs Three Musketeers": {
+        "wins": 7,
+        "losses": 1,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.875
+      },
+      "Three Musketeers vs Examon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "Three Musketeers vs TS Jupitermon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      }
+    },
+    "telemetry": {
+      "mean_turn_count": 10.116666666666667,
+      "median_turn_count": 10.0,
+      "p90_turn_count": 13.0,
+      "mean_agent_digivolves": 5.283333333333333,
+      "mean_agent_dna_digivolves": 0.1,
+      "mean_opponent_digivolves": 0.0
+    }
+  },
+  "vs_development_v1": {
+    "games": 60,
+    "wins": 46,
+    "losses": 14,
+    "draws": 0,
+    "win_rate": 0.7666666666666667,
+    "score_rate_with_half_draws": 0.7666666666666667,
+    "paired_bootstrap_ci95": [
+      0.6166666666666667,
+      0.9
+    ],
+    "by_archetype": {
+      "Examon": {
+        "wins": 18,
+        "losses": 2,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.9
+      },
+      "TS Jupitermon": {
+        "wins": 17,
+        "losses": 3,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.85
+      },
+      "Three Musketeers": {
+        "wins": 11,
+        "losses": 9,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.55
+      }
+    },
+    "by_matchup": {
+      "Examon vs Examon": {
+        "wins": 6,
+        "losses": 2,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.75
+      },
+      "Examon vs TS Jupitermon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "Examon vs Three Musketeers": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon vs TS Jupitermon": {
+        "wins": 6,
+        "losses": 2,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.75
+      },
+      "TS Jupitermon vs Three Musketeers": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon vs Examon": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "Three Musketeers vs Three Musketeers": {
+        "wins": 6,
+        "losses": 2,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.75
+      },
+      "Three Musketeers vs Examon": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "Three Musketeers vs TS Jupitermon": {
+        "wins": 0,
+        "losses": 6,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.0
+      }
+    },
+    "telemetry": {
+      "mean_turn_count": 9.233333333333333,
+      "median_turn_count": 9.0,
+      "p90_turn_count": 12.100000000000001,
+      "mean_agent_digivolves": 4.233333333333333,
+      "mean_agent_dna_digivolves": 0.03333333333333333,
+      "mean_opponent_digivolves": 3.4833333333333334
+    }
+  },
+  "vs_gen0": {
+    "games": 60,
+    "wins": 46,
+    "losses": 14,
+    "draws": 0,
+    "win_rate": 0.7666666666666667,
+    "score_rate_with_half_draws": 0.7666666666666667,
+    "paired_bootstrap_ci95": [
+      0.6333333333333333,
+      0.8833333333333333
+    ],
+    "by_archetype": {
+      "Examon": {
+        "wins": 15,
+        "losses": 5,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.75
+      },
+      "TS Jupitermon": {
+        "wins": 17,
+        "losses": 3,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.85
+      },
+      "Three Musketeers": {
+        "wins": 14,
+        "losses": 6,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.7
+      }
+    },
+    "by_matchup": {
+      "Examon vs Three Musketeers": {
+        "wins": 8,
+        "losses": 0,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 1.0
+      },
+      "Examon vs TS Jupitermon": {
+        "wins": 2,
+        "losses": 4,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.3333333333333333
+      },
+      "Examon vs Examon": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "TS Jupitermon vs TS Jupitermon": {
+        "wins": 6,
+        "losses": 2,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.75
+      },
+      "TS Jupitermon vs Examon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon vs Three Musketeers": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "Three Musketeers vs Examon": {
+        "wins": 5,
+        "losses": 3,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.625
+      },
+      "Three Musketeers vs Three Musketeers": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "Three Musketeers vs TS Jupitermon": {
+        "wins": 4,
+        "losses": 2,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.6666666666666666
+      }
+    },
+    "telemetry": {
+      "mean_turn_count": 9.366666666666667,
+      "median_turn_count": 9.0,
+      "p90_turn_count": 12.0,
+      "mean_agent_digivolves": 4.916666666666667,
+      "mean_agent_dna_digivolves": 0.05,
+      "mean_opponent_digivolves": 3.283333333333333
+    }
+  },
+  "examon_exam_macro0": {
+    "exam": "ex13-examon-training-before-wingdramon",
+    "lines": {
+      "training_line": [
+        0.44933757185935974,
+        0.6749267578125,
+        0.6386553645133972,
+        0.4964066743850708,
+        0.7396576404571533,
+        0.9527296423912048,
+        0.9546425938606262,
+        0.9317882061004639,
+        0.15342280268669128
+      ],
+      "wingdramon_from_hand": [
+        0.44933757185935974,
+        0.8639511466026306,
+        0.02958926372230053
+      ]
+    },
+    "model_sha256": "59e03591cfc74caa4597ad71740510600c65f0e7785219dd0e881d8c96b813f2",
+    "passes": [
+      8,
+      8
+    ],
+    "runs": [
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.7036346197128296,
+            "visits": 118
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.5755369067192078,
+            "visits": 115
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.306179016828537,
+            "visits": 24
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.2237531989812851,
+            "visits": 19
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.3800879120826721,
+            "visits": 16
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.26441654562950134,
+            "visits": 13
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": 0.013583633117377758,
+            "visits": 11
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": 0.02828405797481537,
+            "visits": 4
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.5331144332885742,
+        "seed_offset": 0,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.5986180901527405,
+            "visits": 134
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.4817156493663788,
+            "visits": 94
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.23096734285354614,
+            "visits": 18
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.17274761199951172,
+            "visits": 18
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.26221346855163574,
+            "visits": 17
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.24083751440048218,
+            "visits": 13
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": 0.06656816601753235,
+            "visits": 10
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.23066891729831696,
+            "visits": 5
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.21286265552043915,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.127781480550766,
+            "visits": 2
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.1777229756116867,
+            "visits": 2
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.5745611786842346,
+            "visits": 1
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.5745611786842346,
+            "visits": 1
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.12594738602638245,
+            "visits": 1
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.444058358669281,
+        "seed_offset": 1,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          1002
+        ],
+        "plans": [
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.4989708960056305,
+            "visits": 134
+          },
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.5992517471313477,
+            "visits": 96
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.3201824128627777,
+            "visits": 18
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.22389192879199982,
+            "visits": 17
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.2860744893550873,
+            "visits": 16
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.16894769668579102,
+            "visits": 16
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.003165687434375286,
+            "visits": 11
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.2632456123828888,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.09453766793012619,
+            "visits": 3
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.2213604599237442,
+            "visits": 2
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.2213604599237442,
+            "visits": 2
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.9262658953666687,
+            "visits": 1
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.4437982738018036,
+        "seed_offset": 2,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          1002
+        ],
+        "plans": [
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.5671923756599426,
+            "visits": 197
+          },
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.285195529460907,
+            "visits": 29
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.31059253215789795,
+            "visits": 27
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.2827513813972473,
+            "visits": 17
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.28766098618507385,
+            "visits": 16
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.10157850384712219,
+            "visits": 16
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.04859016463160515,
+            "visits": 12
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.19580577313899994,
+            "visits": 3
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.2632456123828888,
+            "visits": 2
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.5368280410766602,
+            "visits": 1
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.4320228695869446,
+        "seed_offset": 3,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          1002
+        ],
+        "plans": [
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.5934282541275024,
+            "visits": 145
+          },
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.6235389113426208,
+            "visits": 86
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.354337215423584,
+            "visits": 23
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.31326964497566223,
+            "visits": 17
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.31001830101013184,
+            "visits": 16
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.21323175728321075,
+            "visits": 15
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": 0.04194677993655205,
+            "visits": 11
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.2632456123828888,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": 0.016679290682077408,
+            "visits": 2
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.250180184841156,
+            "visits": 1
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.5081347823143005,
+        "seed_offset": 4,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          1002
+        ],
+        "plans": [
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.5357182621955872,
+            "visits": 147
+          },
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.6395803093910217,
+            "visits": 87
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.22908982634544373,
+            "visits": 19
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.37136873602867126,
+            "visits": 16
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.3909457325935364,
+            "visits": 16
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.2240402102470398,
+            "visits": 14
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": 0.014878805726766586,
+            "visits": 11
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.2632456123828888,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.0999046340584755,
+            "visits": 3
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.17246133089065552,
+            "visits": 2
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.04477168619632721,
+            "visits": 1
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.4831487834453583,
+        "seed_offset": 5,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          1002
+        ],
+        "plans": [
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.5664235353469849,
+            "visits": 134
+          },
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.5088719725608826,
+            "visits": 76
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.3560313284397125,
+            "visits": 35
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.361035019159317,
+            "visits": 21
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.28224700689315796,
+            "visits": 17
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.22377744317054749,
+            "visits": 17
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": 0.0025107888504862785,
+            "visits": 12
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": 0.02994079515337944,
+            "visits": 4
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.2632456123828888,
+            "visits": 2
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.31844282150268555,
+            "visits": 1
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.31844282150268555,
+            "visits": 1
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.4476867914199829,
+        "seed_offset": 6,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          1002
+        ],
+        "plans": [
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.5921860933303833,
+            "visits": 122
+          },
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.4922637343406677,
+            "visits": 92
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.3995858132839203,
+            "visits": 25
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.3289312422275543,
+            "visits": 24
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.2540096938610077,
+            "visits": 20
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": 0.32075783610343933,
+            "visits": 17
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": 0.03957295045256615,
+            "visits": 12
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.2632456123828888,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": 0.10335475206375122,
+            "visits": 2
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": 0.011620516888797283,
+            "visits": 2
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.46159327030181885,
+        "seed_offset": 7,
+        "verdicts": [
+          true,
+          true
+        ]
+      }
+    ],
+    "seeds": 8,
+    "simulations": 320,
+    "worlds": 4,
+    "macro_substeps": 0,
+    "stdout": "ex13-examon-training-before-wingdramon \u2014 Examon: use Sprint Dash Training instead of playing Wingdramon from hand\n320 simulations, 4 worlds, closed-list regime, 8 seeds (seed 0 = the recorded search)\n  seed 0: chose [477]  top [477] 37% q+0.70, [1002] 36% q+0.58, [129] 8% q+0.31\n  seed 1: chose [477]  top [477] 42% q+0.60, [1002] 29% q+0.48, [144] 6% q+0.23\n  seed 2: chose [1002]  top [1002] 42% q+0.50, [477] 30% q+0.60, [476] 6% q+0.32\n  seed 3: chose [1002]  top [1002] 62% q+0.57, [477] 9% q+0.29, [129] 8% q+0.31\n  seed 4: chose [1002]  top [1002] 45% q+0.59, [477] 27% q+0.62, [129] 7% q+0.35\n  seed 5: chose [1002]  top [1002] 46% q+0.54, [477] 27% q+0.64, [491] 6% q+0.23\n  seed 6: chose [1002]  top [1002] 42% q+0.57, [477] 24% q+0.51, [129] 11% q+0.36\n  seed 7: chose [1002]  top [1002] 38% q+0.59, [477] 29% q+0.49, [476] 8% q+0.40\nexpectations:\n   8/8 seeds  Activate field effect 2 on slot 0 ([1002]) gets \u226510% of visits\n   8/8 seeds  Play Wingdramon from hand 4 ([4]) is not chosen\n  value along training_line: +0.45 \u2192 +0.67 \u2192 +0.64 \u2192 +0.50 \u2192 +0.74 \u2192 +0.95 \u2192 +0.95 \u2192 +0.93 \u2192 +0.15\n  value along wingdramon_from_hand: +0.45 \u2192 +0.86 \u2192 +0.03\n"
+  },
+  "examon_exam_macro16": {
+    "exam": "ex13-examon-training-before-wingdramon",
+    "lines": {
+      "training_line": [
+        0.44933757185935974,
+        0.6749267578125,
+        0.6386553645133972,
+        0.4964066743850708,
+        0.7396576404571533,
+        0.9527296423912048,
+        0.9546425938606262,
+        0.9317882061004639,
+        0.15342280268669128
+      ],
+      "wingdramon_from_hand": [
+        0.44933757185935974,
+        0.8639511466026306,
+        0.02958926372230053
+      ]
+    },
+    "model_sha256": "59e03591cfc74caa4597ad71740510600c65f0e7785219dd0e881d8c96b813f2",
+    "passes": [
+      4,
+      8
+    ],
+    "runs": [
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.6970690488815308,
+            "visits": 209
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.6228985786437988,
+            "visits": 62
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.765087366104126,
+            "visits": 20
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.2989817261695862,
+            "visits": 10
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.07424580305814743,
+            "visits": 8
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.41275927424430847,
+            "visits": 4
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.5034342408180237,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.4522649347782135,
+            "visits": 1
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.4580519497394562,
+            "visits": 1
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": -0.7982239127159119,
+            "visits": 1
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.6181855201721191,
+        "seed_offset": 0,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.521066427230835,
+            "visits": 216
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.6898690462112427,
+            "visits": 57
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.21858514845371246,
+            "visits": 12
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.21266284584999084,
+            "visits": 11
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": -0.01036001555621624,
+            "visits": 7
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.2496498078107834,
+            "visits": 5
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.49017345905303955,
+            "visits": 4
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": -0.41556811332702637,
+            "visits": 1
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.42795035243034363,
+            "visits": 1
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.5745611786842346,
+            "visits": 1
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.5745611786842346,
+            "visits": 1
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": -0.28992900252342224,
+            "visits": 1
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": -0.5852665305137634,
+            "visits": 1
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": -0.8563340306282043,
+            "visits": 1
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": -0.6299955248832703,
+            "visits": 1
+          }
+        ],
+        "root_value": 0.46624866127967834,
+        "seed_offset": 1,
+        "verdicts": [
+          false,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.5914650559425354,
+            "visits": 259
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.5066646337509155,
+            "visits": 20
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": -0.04543360322713852,
+            "visits": 9
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": -0.12382055819034576,
+            "visits": 8
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.35903796553611755,
+            "visits": 8
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.4882229268550873,
+            "visits": 4
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.5896698832511902,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.09453766793012619,
+            "visits": 3
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.2213604599237442,
+            "visits": 2
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": -0.721322238445282,
+            "visits": 2
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.27505290508270264,
+            "visits": 1
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.4938749372959137,
+        "seed_offset": 2,
+        "verdicts": [
+          false,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.706364095211029,
+            "visits": 195
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.666308581829071,
+            "visits": 81
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.6127609610557556,
+            "visits": 24
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.07557995617389679,
+            "visits": 8
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.48187699913978577,
+            "visits": 4
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": -0.041635747998952866,
+            "visits": 4
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.6620696783065796,
+            "visits": 4
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.6321267485618591,
+        "seed_offset": 3,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.5765907764434814,
+            "visits": 125
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.5157777667045593,
+            "visits": 59
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.49689003825187683,
+            "visits": 58
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.83662348985672,
+            "visits": 33
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.29247403144836426,
+            "visits": 17
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.10344915837049484,
+            "visits": 11
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.39244765043258667,
+            "visits": 4
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.4647921323776245,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": 0.017758382484316826,
+            "visits": 2
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.14515160024166107,
+            "visits": 2
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": -0.6455345749855042,
+            "visits": 2
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.07060142606496811,
+            "visits": 1
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.250180184841156,
+            "visits": 1
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": -0.24462303519248962,
+            "visits": 1
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.49888724088668823,
+        "seed_offset": 4,
+        "verdicts": [
+          false,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.6227973103523254,
+            "visits": 139
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.7528612017631531,
+            "visits": 60
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.3836429715156555,
+            "visits": 59
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.7643835544586182,
+            "visits": 19
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.1769515573978424,
+            "visits": 15
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.14022092521190643,
+            "visits": 9
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.09548784792423248,
+            "visits": 5
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.472251296043396,
+            "visits": 4
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.0999046340584755,
+            "visits": 3
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.17246133089065552,
+            "visits": 2
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": -0.7048822045326233,
+            "visits": 2
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.004950924776494503,
+            "visits": 1
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.300150990486145,
+            "visits": 1
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": -0.4386880397796631,
+            "visits": 1
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.5239382386207581,
+        "seed_offset": 5,
+        "verdicts": [
+          false,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.6446210145950317,
+            "visits": 194
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.6305536031723022,
+            "visits": 86
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.24121853709220886,
+            "visits": 9
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.04155677556991577,
+            "visits": 9
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.04106716811656952,
+            "visits": 8
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.4898650348186493,
+            "visits": 4
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.5295384526252747,
+            "visits": 4
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": -0.08592654764652252,
+            "visits": 1
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": -0.13620758056640625,
+            "visits": 1
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": -0.31844282150268555,
+            "visits": 1
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": -0.31844282150268555,
+            "visits": 1
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": -0.4851148724555969,
+            "visits": 1
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": -0.7847498059272766,
+            "visits": 1
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.5498471260070801,
+        "seed_offset": 6,
+        "verdicts": [
+          true,
+          true
+        ]
+      },
+      {
+        "chosen": [
+          477
+        ],
+        "plans": [
+          {
+            "plan": [
+              477
+            ],
+            "q": 0.8067981004714966,
+            "visits": 244
+          },
+          {
+            "plan": [
+              1002
+            ],
+            "q": 0.7272304892539978,
+            "visits": 46
+          },
+          {
+            "plan": [
+              491
+            ],
+            "q": 0.23424065113067627,
+            "visits": 9
+          },
+          {
+            "plan": [
+              129
+            ],
+            "q": 0.12491882592439651,
+            "visits": 8
+          },
+          {
+            "plan": [
+              476
+            ],
+            "q": 0.3089848458766937,
+            "visits": 5
+          },
+          {
+            "plan": [
+              144
+            ],
+            "q": -0.21084479987621307,
+            "visits": 4
+          },
+          {
+            "plan": [
+              492
+            ],
+            "q": -0.3937063217163086,
+            "visits": 4
+          },
+          {
+            "plan": [
+              1
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              2
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              3
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              4
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              5
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              6
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              7
+            ],
+            "q": 0.0,
+            "visits": 0
+          },
+          {
+            "plan": [
+              62
+            ],
+            "q": 0.0,
+            "visits": 0
+          }
+        ],
+        "root_value": 0.7267048954963684,
+        "seed_offset": 7,
+        "verdicts": [
+          true,
+          true
+        ]
+      }
+    ],
+    "seeds": 8,
+    "simulations": 320,
+    "worlds": 4,
+    "macro_substeps": 16,
+    "stdout": "ex13-examon-training-before-wingdramon \u2014 Examon: use Sprint Dash Training instead of playing Wingdramon from hand\n320 simulations, 4 worlds, closed-list regime, 8 seeds (seed 0 = the recorded search)\n  seed 0: chose [477]  top [477] 65% q+0.70, [1002] 19% q+0.62, [476] 6% q+0.77\n  seed 1: chose [477]  top [477] 68% q+0.52, [491] 18% q+0.69, [1002] 4% q+0.22\n  seed 2: chose [477]  top [477] 81% q+0.59, [1002] 6% q+0.51, [491] 3% q-0.05\n  seed 3: chose [477]  top [477] 61% q+0.71, [1002] 25% q+0.67, [491] 8% q+0.61\n  seed 4: chose [477]  top [477] 39% q+0.58, [5] 18% q+0.52, [491] 18% q+0.50\n  seed 5: chose [477]  top [477] 43% q+0.62, [491] 19% q+0.75, [5] 18% q+0.38\n  seed 6: chose [477]  top [477] 61% q+0.64, [1002] 27% q+0.63, [476] 3% q+0.24\n  seed 7: chose [477]  top [477] 76% q+0.81, [1002] 14% q+0.73, [491] 3% q+0.23\nexpectations:\n   4/8 seeds  Activate field effect 2 on slot 0 ([1002]) gets \u226510% of visits\n   8/8 seeds  Play Wingdramon from hand 4 ([4]) is not chosen\n  value along training_line: +0.45 \u2192 +0.67 \u2192 +0.64 \u2192 +0.50 \u2192 +0.74 \u2192 +0.95 \u2192 +0.95 \u2192 +0.93 \u2192 +0.15\n  value along wingdramon_from_hand: +0.45 \u2192 +0.86 \u2192 +0.03\n"
+  }
+}

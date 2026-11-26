@@ -1,0 +1,32 @@
+{
+  "action_schema_version": 2,
+  "action_space_size": 2192,
+  "action_space_structure": [
+    2168,
+    2168,
+    2191
+  ],
+  "algorithm": "lstm",
+  "card_registry_capacity": 20000,
+  "embedding_dim": 8,
+  "feature_schema_version": "standard_lite_v2.4",
+  "features_dim": 256,
+  "information": {
+    "knowledge_schema": 2,
+    "legality_hash": null,
+    "prior_hash": null,
+    "prior_provenance": null,
+    "regime": "open_decklist"
+  },
+  "lstm_hidden_size": 256,
+  "net_arch": [
+    256,
+    256
+  ],
+  "observation_profile": "standard_lite_v2",
+  "skip_forced_steps": true,
+  "tensor_layout_hash": "sha256:b7916a3c03487daa53a7dffe87ce2ce44f8c43fa79e208726102f0f3811eee1a",
+  "tensor_size": 9434,
+  "tensor_version": 2,
+  "value_semantics": "terminal_outcome"
+}

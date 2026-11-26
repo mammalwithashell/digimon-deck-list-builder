@@ -1,0 +1,326 @@
+{
+  "vs_greedy": {
+    "games": 60,
+    "wins": 54,
+    "losses": 6,
+    "draws": 0,
+    "win_rate": 0.9,
+    "score_rate_with_half_draws": 0.9,
+    "paired_bootstrap_ci95": [
+      0.8333333333333334,
+      0.9666666666666667
+    ],
+    "by_archetype": {
+      "Examon": {
+        "wins": 20,
+        "losses": 0,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon": {
+        "wins": 17,
+        "losses": 3,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.85
+      },
+      "Three Musketeers": {
+        "wins": 17,
+        "losses": 3,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.85
+      }
+    },
+    "by_matchup": {
+      "Examon vs TS Jupitermon": {
+        "wins": 8,
+        "losses": 0,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 1.0
+      },
+      "Examon vs Examon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "Examon vs Three Musketeers": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "TS Jupitermon vs Examon": {
+        "wins": 7,
+        "losses": 1,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.875
+      },
+      "TS Jupitermon vs Three Musketeers": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "TS Jupitermon vs TS Jupitermon": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "Three Musketeers vs Three Musketeers": {
+        "wins": 7,
+        "losses": 1,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.875
+      },
+      "Three Musketeers vs TS Jupitermon": {
+        "wins": 4,
+        "losses": 2,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.6666666666666666
+      },
+      "Three Musketeers vs Examon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      }
+    },
+    "telemetry": {
+      "mean_turn_count": 10.366666666666667,
+      "median_turn_count": 10.0,
+      "p90_turn_count": 13.100000000000001,
+      "mean_agent_digivolves": 4.95,
+      "mean_agent_dna_digivolves": 0.06666666666666667,
+      "mean_opponent_digivolves": 0.0
+    }
+  },
+  "vs_development_v1": {
+    "games": 60,
+    "wins": 41,
+    "losses": 19,
+    "draws": 0,
+    "win_rate": 0.6833333333333333,
+    "score_rate_with_half_draws": 0.6833333333333333,
+    "paired_bootstrap_ci95": [
+      0.5666666666666667,
+      0.8
+    ],
+    "by_archetype": {
+      "Examon": {
+        "wins": 17,
+        "losses": 3,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.85
+      },
+      "TS Jupitermon": {
+        "wins": 15,
+        "losses": 5,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.75
+      },
+      "Three Musketeers": {
+        "wins": 9,
+        "losses": 11,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.45
+      }
+    },
+    "by_matchup": {
+      "Examon vs TS Jupitermon": {
+        "wins": 8,
+        "losses": 0,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 1.0
+      },
+      "Examon vs Examon": {
+        "wins": 4,
+        "losses": 2,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.6666666666666666
+      },
+      "Examon vs Three Musketeers": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "TS Jupitermon vs Examon": {
+        "wins": 6,
+        "losses": 2,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.75
+      },
+      "TS Jupitermon vs Three Musketeers": {
+        "wins": 4,
+        "losses": 2,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.6666666666666666
+      },
+      "TS Jupitermon vs TS Jupitermon": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "Three Musketeers vs Three Musketeers": {
+        "wins": 5,
+        "losses": 3,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.625
+      },
+      "Three Musketeers vs TS Jupitermon": {
+        "wins": 2,
+        "losses": 4,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.3333333333333333
+      },
+      "Three Musketeers vs Examon": {
+        "wins": 2,
+        "losses": 4,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.3333333333333333
+      }
+    },
+    "telemetry": {
+      "mean_turn_count": 8.883333333333333,
+      "median_turn_count": 9.0,
+      "p90_turn_count": 13.0,
+      "mean_agent_digivolves": 4.4,
+      "mean_agent_dna_digivolves": 0.11666666666666667,
+      "mean_opponent_digivolves": 3.283333333333333
+    }
+  },
+  "vs_gen3": {
+    "games": 60,
+    "wins": 34,
+    "losses": 26,
+    "draws": 0,
+    "win_rate": 0.5666666666666667,
+    "score_rate_with_half_draws": 0.5666666666666667,
+    "paired_bootstrap_ci95": [
+      0.43333333333333335,
+      0.7
+    ],
+    "by_archetype": {
+      "Examon": {
+        "wins": 11,
+        "losses": 9,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.55
+      },
+      "TS Jupitermon": {
+        "wins": 14,
+        "losses": 6,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.7
+      },
+      "Three Musketeers": {
+        "wins": 9,
+        "losses": 11,
+        "draws": 0,
+        "games": 20,
+        "win_rate": 0.45
+      }
+    },
+    "by_matchup": {
+      "Examon vs Examon": {
+        "wins": 4,
+        "losses": 4,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.5
+      },
+      "Examon vs Three Musketeers": {
+        "wins": 5,
+        "losses": 1,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.8333333333333334
+      },
+      "Examon vs TS Jupitermon": {
+        "wins": 2,
+        "losses": 4,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.3333333333333333
+      },
+      "TS Jupitermon vs Three Musketeers": {
+        "wins": 4,
+        "losses": 4,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.5
+      },
+      "TS Jupitermon vs TS Jupitermon": {
+        "wins": 4,
+        "losses": 2,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.6666666666666666
+      },
+      "TS Jupitermon vs Examon": {
+        "wins": 6,
+        "losses": 0,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 1.0
+      },
+      "Three Musketeers vs TS Jupitermon": {
+        "wins": 4,
+        "losses": 4,
+        "draws": 0,
+        "games": 8,
+        "win_rate": 0.5
+      },
+      "Three Musketeers vs Examon": {
+        "wins": 3,
+        "losses": 3,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.5
+      },
+      "Three Musketeers vs Three Musketeers": {
+        "wins": 2,
+        "losses": 4,
+        "draws": 0,
+        "games": 6,
+        "win_rate": 0.3333333333333333
+      }
+    },
+    "telemetry": {
+      "mean_turn_count": 9.066666666666666,
+      "median_turn_count": 9.0,
+      "p90_turn_count": 12.0,
+      "mean_agent_digivolves": 4.266666666666667,
+      "mean_agent_dna_digivolves": 0.03333333333333333,
+      "mean_opponent_digivolves": 5.116666666666666
+    }
+  }
+}
