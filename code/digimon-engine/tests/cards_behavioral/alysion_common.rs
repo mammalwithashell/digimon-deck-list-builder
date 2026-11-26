@@ -114,7 +114,18 @@ pub fn delete_perm(r: &mut DebugRunner, h: digimon_engine::permanent::PermanentH
         vec![h],
         digimon_engine::replacement::ReplacementCause::OpponentEffect,
     );
-    r.auto_resolve().unwrap();
+    while let Some((player, act)) = r.pending_selection().map(|p| {
+        (
+            p.selecting_player,
+            p.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != PASS)
+                .unwrap_or(PASS),
+        )
+    }) {
+        action(r, player, act);
+    }
 }
 
 pub fn assert_memory_setter(card: &str) {
@@ -158,8 +169,17 @@ pub fn assert_gemmon_text_digivolve(card: &str, level: u8, cost: i16) {
         assert_eq!(build_action_mask(&r.game, 0)[evolve as usize] > 0.5, matches);
         if matches {
             action(&mut r, 0, evolve);
-            if r.pending_selection().is_some() {
-                r.auto_resolve().unwrap();
+            while let Some((player, act)) = r.pending_selection().map(|p| {
+                (
+                    p.selecting_player,
+                    p.valid_action_ids
+                        .iter()
+                        .copied()
+                        .find(|&a| a != PASS)
+                        .unwrap_or(PASS),
+                )
+            }) {
+                action(&mut r, player, act);
             }
             assert_eq!(r.memory(), 10 - cost);
         }
