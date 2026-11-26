@@ -1,0 +1,37 @@
+card: BT2-099
+name: Glorious Burst
+kind: option
+color: [yellow]
+cost: 9
+
+effects:
+  - text: "Reduce the memory cost of this card in your hand by 1 for each yellow Tamer you have in play."
+    kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: you
+          zone: battle_area
+          filter:
+            all_of:
+              - kind: tamer
+              - color_is: yellow
+      delta: 1
+    summary: "Reduce cost in hand by 1 for each yellow Tamer you have in play"
+
+  - text: "[Main] 1 of your opponent's Digimon gets -12000 DP for the turn."
+    when: main
+    summary: "[Main] 1 of your opponent's Digimon gets -12000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -12000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: -12000
+          expiry: end_of_turn

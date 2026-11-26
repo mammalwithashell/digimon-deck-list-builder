@@ -593,6 +593,42 @@ fn eval_predicate_ref_known(
             return false;
         }
     }
+    if let Some(player_ref) = pred.digivolved_this_turn {
+        let digivolved = resolve_predicate_players(player_ref, rctx)
+            .into_iter()
+            .any(|player| {
+                rctx.game
+                    .digivolutions_this_turn
+                    .get(player as usize)
+                    .copied()
+                    .unwrap_or(0)
+                    > 0
+            });
+        if !digivolved {
+            return false;
+        }
+    }
+    if let Some(phase) = pred.in_phase {
+        use digimon_dsl::compiled::CompiledTurnPhase as CTP;
+        let want = match phase {
+            CTP::Unsuspend => crate::enums::GamePhase::Unsuspend,
+            CTP::Draw => crate::enums::GamePhase::Draw,
+            CTP::Breeding => crate::enums::GamePhase::Breeding,
+            CTP::Main => crate::enums::GamePhase::Main,
+            CTP::EndTurn => crate::enums::GamePhase::EndTurn,
+        };
+        if rctx.game.effective_turn_phase() != want {
+            return false;
+        }
+    }
+    if let Some(ref sub) = pred.attack_target_matches {
+        let Some(AttackTarget::Digimon(defender)) = rctx.attack_target() else {
+            return false;
+        };
+        if !eval_predicate(sub, rctx, PredicateSubject::Permanent(defender)) {
+            return false;
+        }
+    }
     if let Some(want) = pred.dna_origin {
         if rctx.dna_origin() != want {
             return false;
@@ -1805,6 +1841,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_only.is_none()
         && pred.color_matches_any_field_digimon.is_none()
         && pred.color_matches_binding.is_none()
+        && pred.name_matches_binding.is_none()
         && pred.color_matches_returned_card.is_none()
         && pred.name_matches_returned_card.is_none()
         && pred.name_matches_source.is_none()
@@ -1941,6 +1978,40 @@ fn eval_event_fields(
             (AttackTarget::Digimon(old_target), Some(source)) if old_target == source
         );
         if was_self != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_target_name_matches_source {
+        let event_names: Vec<String> = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| {
+                if let Some(handle) = trigger.resolve_event_permanent(rctx.game) {
+                    if let Some(perm) = permanent_for_handle(rctx, handle) {
+                        return perm
+                            .synth_identity(rctx.card_data(), &rctx.game.modifiers, handle)
+                            .card_names;
+                    }
+                }
+                if let Some(ref snap) = trigger.deleted_object {
+                    if let Some(data) = rctx.game.card_data_for_handle(snap.top_card) {
+                        let mut names = vec![data.card_name.clone()];
+                        names.extend(data.also_treated_as.iter().cloned());
+                        return names;
+                    }
+                }
+                if let Some(card) = *trigger.event_card {
+                    if let Some(data) = rctx.game.card_data_for_handle(card) {
+                        let mut names = vec![data.card_name.clone()];
+                        names.extend(data.also_treated_as.iter().cloned());
+                        return names;
+                    }
+                }
+                Vec::new()
+            })
+            .unwrap_or_default();
+        if card_shares_name_with_source(rctx, &event_names) != want {
             return false;
         }
     }
@@ -2106,6 +2177,15 @@ fn eval_event_fields(
             return false;
         };
         if stack_size < usize::from(min) {
+            return false;
+        }
+    }
+    if let Some(max) = &pred.event_target_materials_count_lte {
+        let Some(stack_size) = event_target_stack_size(rctx) else {
+            return false;
+        };
+        let materials = stack_size.saturating_sub(1) as i32;
+        if materials > eval_int_constraint(max, rctx, None, None) {
             return false;
         }
     }
@@ -2872,6 +2952,16 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_played_from_trash {
+        let actual = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .is_some_and(|trigger| trigger.played_from_trash);
+        if actual != want {
+            return false;
+        }
+    }
     if let Some(ref trait_name) = pred.host_permanent_trait_has {
         // "a [X] trait Digimon's digivolution cards": the host's traits are
         // its top card's (with trait-changing effects), never another
@@ -3128,6 +3218,7 @@ fn event_cause_matches(
             | (CompiledEventCause::SecurityRemoval, A::SecurityRemoval)
             | (CompiledEventCause::Cost, A::Cost)
             | (CompiledEventCause::Rule, A::Rule)
+            | (CompiledEventCause::DigiBurst, A::DigiBurst)
     )
 }
 
@@ -3236,12 +3327,23 @@ fn source_deleted_battle_opponent(rctx: &EffectReadContext<'_>) -> bool {
     let Some(source_perm) = permanent_for_handle(rctx, source) else {
         return false;
     };
-    if !source_perm
+    let source_in_stack = source_perm
         .card_sources
         .iter()
-        .any(|card| card.handle() == rctx.source_card)
-    {
-        return false;
+        .any(|card| card.handle() == rctx.source_card);
+    if !source_in_stack {
+        let is_granted_on_source = rctx
+            .game
+            .modifiers
+            .granted_triggered_for_timing_with_ids(
+                source,
+                crate::enums::EffectTiming::OnAnyDeletion,
+            )
+            .iter()
+            .any(|(_, sc, _)| *sc == rctx.source_card);
+        if !is_granted_on_source {
+            return false;
+        }
     }
     let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
         return false;
@@ -3957,6 +4059,16 @@ fn eval_card_fields(
     }
     if let Some(ref binding) = pred.color_matches_binding {
         if !card_shares_color_with_bound_permanent(rctx, bindings, binding, ref_colors) {
+            return false;
+        }
+    }
+    if let Some(ref binding) = pred.name_matches_binding {
+        let mut names = vec![data.card_name.clone()];
+        names.extend(data.also_treated_as.iter().cloned());
+        if let Some(source) = rctx.game.card_source_for_handle(card) {
+            names.extend(source.also_treated_as.iter().cloned());
+        }
+        if !card_shares_name_with_bound_permanent(rctx, bindings, binding, &names) {
             return false;
         }
     }
@@ -4866,6 +4978,41 @@ fn card_shares_color_with_bound_permanent(
         .any(|candidate| bound_colors.iter().any(|bound| candidate == bound))
 }
 
+fn card_shares_name_with_bound_permanent(
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    binding: &str,
+    candidate_names: &[String],
+) -> bool {
+    let Some(bindings) = bindings else {
+        return false;
+    };
+    if let Some(bound) = bindings.get_permanent(binding) {
+        let Some(permanent) = permanent_for_handle(rctx, bound) else {
+            return false;
+        };
+        let bound_identity =
+            permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, bound);
+        return candidate_names
+            .iter()
+            .any(|candidate| bound_identity.card_names.iter().any(|b| candidate == b));
+    }
+    if let Some(card_handle) = bindings.get_card(binding) {
+        let Some(bound_data) = rctx.game.card_data_for_handle(card_handle) else {
+            return false;
+        };
+        let mut bound_names = vec![bound_data.card_name.clone()];
+        bound_names.extend(bound_data.also_treated_as.iter().cloned());
+        if let Some(source) = rctx.game.card_source_for_handle(card_handle) {
+            bound_names.extend(source.also_treated_as.iter().cloned());
+        }
+        return candidate_names
+            .iter()
+            .any(|candidate| bound_names.iter().any(|b| candidate == b));
+    }
+    false
+}
+
 /// G-RETURNED-CARD-COLOR-BINDING â€” true when the candidate card `data` shares
 /// â‰¥1 color with ANY card recorded in this effect's `returned_to_deck` result
 /// log. Unlike `color_matches_binding`, the returned card is never a permanent
@@ -5118,6 +5265,17 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    let has_name_binding_comparison = pred.name_matches_binding.is_some();
+    if let Some(ref binding) = pred.name_matches_binding {
+        if !card_shares_name_with_bound_permanent(
+            rctx,
+            bindings,
+            binding,
+            &synth_identity.card_names,
+        ) {
+            return false;
+        }
+    }
     let has_dp_constraint = pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
     // `kind` for a field permanent is authoritatively checked below against
     // `synth_identity.kind` via `kind_matches_field` (which treats a battle-area
@@ -5145,6 +5303,7 @@ fn eval_permanent_fields(
     let delegated_pred = if has_color_comparison
         || has_name_returned_comparison
         || has_name_source_comparison
+        || has_name_binding_comparison
         || has_kind_constraint
         || level_eq_dna_match
         || trait_overlay_match
@@ -5163,6 +5322,7 @@ fn eval_permanent_fields(
         let mut p = pred.clone();
         p.color_matches_any_field_digimon = None;
         p.color_matches_binding = None;
+        p.name_matches_binding = None;
         p.color_matches_returned_card = None;
         p.name_matches_returned_card = None;
         p.name_matches_source = None;
@@ -5302,12 +5462,16 @@ fn eval_permanent_fields(
             digimon_dsl::compiled::CompiledAttackTargetSpec::Digimon => {
                 crate::effect_context::AttackTargetRestriction::DigimonOnly
             }
+            digimon_dsl::compiled::CompiledAttackTargetSpec::DigimonFewerSources => {
+                crate::effect_context::AttackTargetRestriction::DigimonFewerSources
+            }
         };
-        let can = !crate::action::mask::effect_attack_target_action_ids_with_options(
+        let can = !crate::action::mask::effect_attack_target_action_ids_with_all_options(
             rctx.game,
             handle,
             restriction,
             spec.without_suspending,
+            spec.can_attack_unsuspended,
             spec.ignore_summoning_sickness,
         )
         .is_empty();

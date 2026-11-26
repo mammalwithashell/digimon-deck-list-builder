@@ -1,0 +1,27 @@
+{
+  "index": 4614,
+  "norm_id": 0.2307,
+  "card_id": "SD01-07",
+  "card_index": 7,
+  "card_name_eng": "Crimson Impale",
+  "card_name_jpn": "",
+  "card_effect_class_name": "SD01_07",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon with the [ALYSION] trait can also attack your opponent's unsuspended Digimon for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Add this card to the hand.",
+  "evo_costs": [],
+  "xros_req": ""
+}

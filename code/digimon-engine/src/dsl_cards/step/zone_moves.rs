@@ -38,9 +38,16 @@ fn resolved_cards(resolved: ResolvedBinding) -> Vec<crate::card_source::CardHand
     }
 }
 
-fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_player: PlayerId) {
+fn install_may_add_top_security_to_hand(
+    ctx: &mut EffectContext<'_>,
+    target_player: PlayerId,
+    cost: bool,
+) {
     let security_len = ctx.game.player(target_player).security.len();
     if security_len == 0 {
+        if cost {
+            ctx.game.dsl_clause_aborted = true;
+        }
         return;
     }
 
@@ -90,16 +97,16 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
             );
             cb_ctx.add_top_security_to_hand(target_player);
         }),
-        on_decline: Some(Box::new(|_game| {})),
+        on_decline: Some(Box::new(move |game| {
+            if cost {
+                game.dsl_clause_aborted = true;
+            }
+        })),
     });
     // Park the data frame alongside the closure (coexistence): driven by
     // run_resume's Security{post:Some(AddTopToHand)} arm. `inner_tail` is empty —
     // this step has no tail of its own; the clause's following steps are composed
     // onto the frame's `outer_conts` by the dispatcher's park_pending_selection_tail.
-    // The "may" decline is a NO-OP that CONTINUES the clause (matches the no-op
-    // on_decline above), so `ResumeDecline::RunTail{ empty, aborts_clause:false }`
-    // runs an empty decline tail then the outer conts (`ResumeDecline::None` would
-    // wrongly DROP the outer conts on decline).
     if ctx.game.pending_selection.is_some() {
         ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::RunTail {
@@ -122,7 +129,7 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
                 trigger_context,
                 decline: crate::resume::ResumeDecline::RunTail {
                     tail: Arc::new(Vec::new()),
-                    aborts_clause: false,
+                    aborts_clause: cost,
                 },
             }],
         });
@@ -260,9 +267,9 @@ pub fn try_run(
             ctx.add_bottom_security_to_hand(p);
             true
         }
-        CompiledStep::MayAddTopSecurityToHand { of } => {
+        CompiledStep::MayAddTopSecurityToHand { of, cost } => {
             let p = resolve_player(ctx, *of);
-            install_may_add_top_security_to_hand(ctx, p);
+            install_may_add_top_security_to_hand(ctx, p, *cost);
             true
         }
         CompiledStep::AddToHandFromDeck { of, card } => {
@@ -322,6 +329,7 @@ pub fn try_run(
         CompiledStep::TrashSelectedSourcesAsCost {
             source_refs,
             min_count,
+            is_digi_burst,
         } => {
             let Some(selected) = bindings.get_source_refs(source_refs) else {
                 ctx.cost_unpayable = true;
@@ -344,10 +352,13 @@ pub fn try_run(
             // The selected cards are trashed at the same time: one event
             // (§15-5-2).
             let event = ctx.game.begin_source_move_event();
+            let prev_digi_burst = ctx.game.pending_digi_burst_source_trash;
+            ctx.game.pending_digi_burst_source_trash = *is_digi_burst;
             let paid: Vec<_> = selected
                 .into_iter()
                 .filter(|source| ctx.trash_card_source(source.permanent, source.card))
                 .collect();
+            ctx.game.pending_digi_burst_source_trash = prev_digi_burst;
             ctx.game.end_source_move_event(event);
             ctx.cost_unpayable = paid.len() < required;
             // Publish actual removals for per-card effects, formulas, and

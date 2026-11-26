@@ -1,0 +1,19 @@
+card: BT3-068
+name: Giromon
+kind: digimon
+level: 5
+color: [black]
+cost: 6
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Mine]
+
+effects:
+  - text: "[Opponent's Turn] This Digimon gets +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when: { opponents_turn: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][Opponent's Turn] This Digimon gets +1000 DP"

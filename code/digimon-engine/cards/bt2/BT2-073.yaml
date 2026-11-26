@@ -1,0 +1,25 @@
+card: BT2-073
+name: Garurumon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 4000
+form: Champion
+attribute: Vaccine
+traits: [Beast]
+
+effects:
+  - text: "[Your Turn] [Once Per Turn] When one of your other Digimon is deleted, gain 1 memory."
+    scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+    summary: "[Inherited][Your Turn][OPT] When one of your other Digimon is deleted, gain 1 memory"
+    process:
+      - gain_memory: 1

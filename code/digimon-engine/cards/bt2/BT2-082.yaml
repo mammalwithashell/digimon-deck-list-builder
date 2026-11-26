@@ -1,0 +1,43 @@
+card: BT2-082
+name: Diaboromon
+kind: digimon
+level: 6
+color: [white]
+cost: 14
+dp: 10000
+form: Mega
+attribute: Unknown
+traits: [Unidentified]
+
+effects:
+  - text: "[When Attacking] You may play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)"
+    when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may play 1 [Diaboromon] Token without paying the cost"
+    process:
+      - play_token:
+          controller: you
+          token_name: diaboromon
+
+  - text: "[All Turns] When this Digimon would be deleted in battle, you may delete one of your other [Diaboromon] to prevent this Digimon from being deleted."
+    kind: replacement
+    trigger: when_would_be_deleted
+    optional: true
+    active_when:
+      all_of:
+        - is_source: true
+        - all_turns: true
+        - replacement_cause: battle
+    summary: "[All Turns] When this Digimon would be deleted in battle, you may delete 1 of your other [Diaboromon] to prevent it from being deleted"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+              - name_is: Diaboromon
+          prompt: "Delete 1 of your other [Diaboromon] to prevent this Digimon from being deleted"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

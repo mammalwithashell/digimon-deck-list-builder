@@ -1,0 +1,17 @@
+card: BT3-080
+name: Saberdramon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 3000
+form: Champion
+attribute: Vaccine
+traits: [Giant Bird]
+
+effects:
+  - text: "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
+    scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "[Inherited] <Retaliation>"

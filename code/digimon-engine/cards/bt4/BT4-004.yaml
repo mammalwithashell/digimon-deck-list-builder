@@ -1,0 +1,20 @@
+card: BT4-004
+name: Budmon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+form: In-Training
+traits: [Vegetation]
+
+effects:
+  - text: "[Your Turn] While this Digimon has ＜Digi-Burst＞, it gets +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - has_keyword: DigiBurst
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][Your Turn] While this Digimon has <Digi-Burst>, it gets +1000 DP"

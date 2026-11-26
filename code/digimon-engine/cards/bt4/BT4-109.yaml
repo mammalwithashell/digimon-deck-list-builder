@@ -1,0 +1,47 @@
+card: BT4-109
+name: Final Zubagon Punch
+kind: option
+color: [black]
+cost: 2
+
+effects:
+  - text: "[Main] 1 of your Digimon gets +3000 DP until the end of your opponent's next turn. Then, if that Digimon has 16000 DP or more, that Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.), ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.), and ＜Security A. +1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's next turn."
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gets +3000 DP until end of opponent's next turn; if 16000+ DP, it also gains <Blocker>, <Reboot>, and <Security A. +1> until end of opponent's next turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +3000 DP until the end of your opponent's next turn"
+      - add_dp_modifier:
+          target: boosted
+          value: 3000
+          expiry: end_of_opponents_next_turn
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              of_permanent: boosted
+              dp_gte: 16000
+          then:
+            - grant_keyword:
+                target: boosted
+                keyword: Blocker
+                expiry: end_of_opponents_next_turn
+            - grant_keyword:
+                target: boosted
+                keyword: Reboot
+                expiry: end_of_opponents_next_turn
+            - add_modifier:
+                target: boosted
+                modifier: SecurityAttackChange
+                value: 1
+                expiry: end_of_opponents_next_turn
+
+  - text: "[Security] Add this card to its owner's hand."
+    when: on_security
+    summary: "[Security] Add this card to its owner's hand"
+    process:
+      - add_this_option_to_hand: {}

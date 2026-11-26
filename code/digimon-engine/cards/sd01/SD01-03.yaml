@@ -1,0 +1,31 @@
+card: SD01-03
+name: Liskmon
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 5000
+traits: [Bird Dragon, ALYSION]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  - when: when_digivolving
+    text: "[When Digivolving] This Digimon gets +2000 DP for the turn."
+    summary: "[When Digivolving] This Digimon gets +2000 DP for the turn"
+    process:
+      - add_dp_modifier: { target: source, value: 2000, expiry: end_of_turn }
+
+  - scope: inherited
+    text: "[Your Turn] Add 1000 to this [ALYSION] trait Digimon's DP deletion effect's maximum."
+    kind: aura
+    target: {}
+    active_when: { your_turn: true, trait_has: ALYSION }
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 1000
+    summary: "Inherited [Your Turn] Add 1000 to this [ALYSION] Digimon's DP deletion effect's maximum"

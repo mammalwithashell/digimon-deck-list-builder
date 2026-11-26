@@ -1,0 +1,25 @@
+card: BT2-031
+name: Vikemon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: [Beastkin]
+attribute: Free
+
+effects:
+  - text: "[Your Turn] While your opponent has a Digimon with no digivolution cards in play, this Digimon gets +1000 DP and ＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            materials_count_lte: 0
+    target: {}
+    dp_modifier: 1000
+    security_attack: 1
+    summary: "[Your Turn] While opponent has a Digimon with no digivolution cards, this Digimon gets +1000 DP and <Security A. +1>"

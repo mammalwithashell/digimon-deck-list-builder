@@ -1,0 +1,32 @@
+card: BT4-020
+name: ShineGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: [Light Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+
+effects:
+  - text: "[Your Turn] When one of your red or yellow Tamers is suspended, this Digimon gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)"
+    when: on_suspend
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [red, yellow]
+    summary: "[Your Turn] When one of your red or yellow Tamers is suspended, this Digimon gains <Security A. +1> for the turn"
+    process:
+      - grant_keyword:
+          target: source
+          keyword: SecurityAttackPlus
+          value: 1
+          expiry: end_of_turn

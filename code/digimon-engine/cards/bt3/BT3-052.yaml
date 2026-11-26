@@ -1,0 +1,29 @@
+card: BT3-052
+name: Rapidmon
+kind: digimon
+level: 5
+color: [green]
+cost: 6
+dp: 6000
+form: Ultimate
+attribute: Vaccine
+traits: [Cyborg]
+
+effects:
+  - text: "[Your Turn] This card gets +1000 DP for each of your opponent's suspended Digimon."
+    scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: opponent
+          zone: battle_area
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+      delta: 1000
+    summary: "[Your Turn] This Digimon gets +1000 DP for each of your opponent's suspended Digimon"

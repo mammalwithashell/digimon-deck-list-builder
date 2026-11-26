@@ -1,0 +1,26 @@
+card: BT2-100
+name: Puppet Pummel
+kind: option
+color: [green]
+cost: 3
+
+effects:
+  - text: "[Main] Suspend 1 of your opponent's Digimon. Then 1 of your Digimon gets +2000 DP for the turn."
+    when: main
+    summary: "[Main] Suspend 1 opponent Digimon, then 1 of your Digimon gets +2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: opp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to suspend"
+      - suspend: { target: opp_target }
+      - select_own_permanent:
+          optional: false
+          bind_as: own_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +2000 DP for the turn"
+      - add_dp_modifier:
+          target: own_target
+          value: 2000
+          expiry: end_of_turn

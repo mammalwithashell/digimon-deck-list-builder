@@ -1,0 +1,10 @@
+card: BT4-029
+name: Gusokumon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 10000
+form: Ultimate
+attribute: Vaccine
+traits: [Crustacean]

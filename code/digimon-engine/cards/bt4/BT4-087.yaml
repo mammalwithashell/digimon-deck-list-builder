@@ -1,0 +1,52 @@
+card: BT4-087
+name: Anubismon
+kind: digimon
+level: 6
+color: [purple]
+cost: 11
+dp: 10000
+form: Mega
+attribute: Vaccine
+traits: [Shaman]
+
+effects:
+  - text: "[When Digivolving] You may play 1 level 3 Digimon card from your trash without paying its memory cost."
+    when: when_digivolving
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: digimon
+          level_eq: 3
+          can_play_from_effect_without_cost: true
+        n: 1
+    summary: "[When Digivolving] Play 1 level 3 Digimon from your trash free"
+    process:
+      - select_trash:
+          of: you
+          optional: true
+          bind_as: trash_pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - can_play_from_effect_without_cost: true
+          prompt: "Choose 1 level 3 Digimon card from your trash to play"
+      - play_from_trash_free: { of: you, hand_index: trash_pick }
+
+  - text: "[Your Turn] When you play Digimon from your trash, those Digimon gain ＜Rush＞ for the turn."
+    when: on_ally_played
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_played_from_trash: true
+    summary: "[Your Turn] Digimon played from your trash gain <Rush> for the turn"
+    process:
+      - grant_keyword:
+          target: event_target
+          keyword: Rush
+          expiry: end_of_turn

@@ -1,0 +1,10 @@
+card: BT1-013
+name: Muchomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 5000
+form: Rookie
+attribute: Data
+traits: [Avian]

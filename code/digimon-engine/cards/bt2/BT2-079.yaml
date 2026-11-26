@@ -1,0 +1,28 @@
+card: BT2-079
+name: VenomMyotismon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Dark Animal]
+
+effects:
+  - text: "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - text: "[Opponent's Turn] When one of your opponent's Digimon becomes suspended, gain 1 memory."
+    when: on_suspend
+    active_when: { opponents_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[Opponent's Turn] When one of your opponent's Digimon becomes suspended, gain 1 memory"
+    process:
+      - gain_memory: 1

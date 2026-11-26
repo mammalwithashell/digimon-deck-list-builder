@@ -1,0 +1,20 @@
+card: BT2-003
+name: Nyaromon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+form: In-Training
+traits: [Lesser]
+
+effects:
+  - text: "[Opponent's Turn] While this Digimon is suspended, all of your Security Digimon get +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - not: { source_is_unsuspended: true }
+    dp_modifier: 1000
+    applies_to_own_security_dp: true
+    summary: "[Inherited][Opponent's Turn] While this Digimon is suspended, all of your Security Digimon get +1000 DP"

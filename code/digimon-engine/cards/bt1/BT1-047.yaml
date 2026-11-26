@@ -1,0 +1,10 @@
+card: BT1-047
+name: Tinkermon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 3000
+form: Rookie
+attribute: Virus
+traits: [Fairy]

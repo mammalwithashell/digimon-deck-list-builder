@@ -1,0 +1,38 @@
+card: BT4-115
+name: Lucemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 13
+dp: 10000
+form: Rookie
+attribute: Vaccine
+traits: [Angel]
+
+effects:
+  - text: "When you would play this card from your hand, if you have 10 or more cards in your trash, reduce the play cost by 8."
+    kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      all_of:
+        - cost_target_from_hand: true
+        - count_gte:
+            filter: { of: you, zone: [trash] }
+            n: 10
+    amount: 8
+    summary: "If 10+ cards in trash, reduce play cost from hand by 8"
+
+  - text: "[On Play] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)"
+    when: on_play
+    summary: "[On Play] <Recovery +1 (Deck)>"
+    process:
+      - recover: { of: you, count: 1 }
+
+  - text: "[All Turns] This Digimon can only digivolve into Digimon cards with [Lucemon] in their name."
+    kind: aura
+    active_when: { all_turns: true }
+    target: { is_source_permanent: true }
+    modifier: CanOnlyDigivolveIntoNameContaining
+    modifier_name: "Lucemon"
+    summary: "[All Turns] Can only digivolve into [Lucemon] in name"

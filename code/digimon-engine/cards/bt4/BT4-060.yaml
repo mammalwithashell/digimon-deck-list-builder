@@ -1,0 +1,27 @@
+card: BT4-060
+name: Lotosmon
+kind: digimon
+level: 6
+color: [green]
+cost: 11
+dp: 12000
+traits: [Fairy]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+
+effects:
+  - text: "[All Turns] When a level 4 or lower Digimon is played, suspend it."
+    when: on_any_digimon_played
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_kind: digimon
+        - event_target_level_lte: 4
+    summary: "[All Turns] When a level 4 or lower Digimon is played, suspend it"
+    process:
+      - suspend: { target: event_target }

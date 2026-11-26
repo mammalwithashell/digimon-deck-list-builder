@@ -859,17 +859,46 @@ impl Game {
         let Some(amount) = current.suspend_reduction() else {
             return;
         };
-        let index = (action_id.saturating_sub(ATTACK_START) % TARGETS_PER_ATTACKER) as usize;
-        if self
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let side = offset / TARGETS_PER_ATTACKER;
+        let index = (offset % TARGETS_PER_ATTACKER) as usize;
+        if side == 1 && matches!(current, DigivolveReducerChoice::Digisorption { .. }) {
+            let opp = self.next_clockwise(state.acting_player);
+            if self
+                .suspendable_opponent_digimon_for_digisorption(
+                    state.acting_player,
+                    current.source_card(),
+                )
+                .contains(&index)
+            {
+                if let Some(redirect_card) =
+                    self.unused_digisorption_opponent_redirect_card(state.acting_player)
+                {
+                    if self.suspend_with_cause(
+                        PermanentHandle {
+                            player: opp,
+                            index: index as u8,
+                        },
+                        false,
+                    ) {
+                        self.digisorption_opponent_used_cards.push(redirect_card);
+                        state.reduction += amount;
+                    }
+                }
+            }
+        } else if self
             .suspendable_own_digimon(state.acting_player, current.source_card())
             .contains(&index)
         {
             // §16-10-3: once the Digimon is suspended, the reduction is
             // mandatory (likewise for the player-scoped suspend reducers).
-            if self.suspend_with_cause(PermanentHandle {
-                player: state.acting_player,
-                index: index as u8,
-            }, false) {
+            if self.suspend_with_cause(
+                PermanentHandle {
+                    player: state.acting_player,
+                    index: index as u8,
+                },
+                false,
+            ) {
                 state.reduction += amount;
             }
         }
@@ -1699,7 +1728,15 @@ impl Game {
                 // to pay its condition; a prohibited reduction offers nothing.
                 DigivolveReducerChoice::Digisorption { source_card, .. } => {
                     if !prohibited
-                        && !self.suspendable_own_digimon(state.acting_player, source_card).is_empty()
+                        && (!self
+                            .suspendable_own_digimon(state.acting_player, source_card)
+                            .is_empty()
+                            || !self
+                                .suspendable_opponent_digimon_for_digisorption(
+                                    state.acting_player,
+                                    source_card,
+                                )
+                                .is_empty())
                     {
                         state.remaining.push(choice);
                     }
@@ -2235,29 +2272,47 @@ impl Game {
         // will become a digivolution card is a candidate (§16-10-5).
         let source_card = current.source_card();
         let suspendable = self.suspendable_own_digimon(state.acting_player, source_card);
-        if suspendable.is_empty() {
+        let opp_suspendable = if matches!(current, DigivolveReducerChoice::Digisorption { .. }) {
+            self.suspendable_opponent_digimon_for_digisorption(state.acting_player, source_card)
+        } else {
+            Vec::new()
+        };
+        if suspendable.is_empty() && opp_suspendable.is_empty() {
             if let DigivolveReducerChoice::Player { index, reducer } = &current {
                 self.consume_player_digivolve_reducer(*index, reducer, reducer.single_fire);
             }
             self.resume_player_digivolve_reducers(state);
             return;
         }
+        let mut valid_action_ids: Vec<u16> = suspendable
+            .iter()
+            .map(|index| encode_attack(0, *index as u16))
+            .collect();
+        for index in &opp_suspendable {
+            valid_action_ids.push(encode_attack(1, *index as u16));
+        }
+        let selection_kind = if opp_suspendable.is_empty() {
+            SelectionKind::OwnField
+        } else {
+            SelectionKind::AnyField
+        };
         let source_kind = self.effect_source_kind_for_handle(source_card);
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectTarget;
         let resumed = state.clone();
         self.pending_selection = Some(PendingSelection {
             card_choice: None,
-            zone_owner: Some(state.acting_player),
-            kind: SelectionKind::OwnField,
+            zone_owner: if opp_suspendable.is_empty() {
+                Some(state.acting_player)
+            } else {
+                None
+            },
+            kind: selection_kind,
             selecting_player: state.acting_player,
             previous_phase,
-            valid_action_ids: suspendable
-                .iter()
-                .map(|index| encode_attack(0, *index as u16))
-                .collect(),
+            valid_action_ids,
             is_optional: false,
-            prompt: "Suspend 1 of your Digimon (digivolution cost reduction)".to_string(),
+            prompt: "Suspend 1 Digimon (digivolution cost reduction)".to_string(),
             effect_choices: None,
             source_card,
             source_permanent: None,
@@ -2270,6 +2325,66 @@ impl Game {
         self.pending_selection_resume = Some(crate::resume::ResumeStack {
             frames: vec![crate::resume::ResumeFrame::DigivolveReducerSuspend(state)],
         });
+    }
+
+    pub(crate) fn unused_digisorption_opponent_redirect_card(
+        &self,
+        acting_player: PlayerId,
+    ) -> Option<crate::card_source::CardHandle> {
+        for (i, perm) in self.player(acting_player).battle_area.iter().enumerate() {
+            let h = PermanentHandle {
+                player: acting_player,
+                index: i as u8,
+            };
+            let top = perm.top_card().handle();
+            if self
+                .modifiers
+                .has(h, ModifierType::DigisorptionMaySuspendOpponent)
+                && !self.digisorption_opponent_used_cards.contains(&top)
+            {
+                return Some(top);
+            }
+        }
+        None
+    }
+
+    pub(crate) fn suspendable_opponent_digimon_for_digisorption(
+        &self,
+        acting_player: PlayerId,
+        source: crate::card_source::CardHandle,
+    ) -> Vec<usize> {
+        if self
+            .unused_digisorption_opponent_redirect_card(acting_player)
+            .is_none()
+        {
+            return Vec::new();
+        }
+        let opp = self.next_clockwise(acting_player);
+        let source_kind = self.effect_source_kind_for_handle(source);
+        let source_identity = self
+            .permanent_with_top_card(source)
+            .and_then(|carrier| self.permanent_effect_identity(carrier));
+        self.player(opp)
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter(|(i, perm)| {
+                let target = PermanentHandle {
+                    player: opp,
+                    index: *i as u8,
+                };
+                !perm.is_suspended
+                    && perm.is_digimon(&self.card_data)
+                    && !self.modifiers.has(target, ModifierType::CannotSuspend)
+                    && self.effect_can_affect_from(
+                        target,
+                        acting_player,
+                        source_kind,
+                        source_identity,
+                    )
+            })
+            .map(|(i, _)| i)
+            .collect()
     }
 
     /// Consume a next-event reducer by identity; earlier resolutions may have

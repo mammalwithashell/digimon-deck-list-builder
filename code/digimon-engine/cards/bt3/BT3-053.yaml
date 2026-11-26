@@ -1,0 +1,10 @@
+card: BT3-053
+name: JewelBeemon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 10000
+form: Ultimate
+attribute: Vaccine
+traits: [Insectoid]

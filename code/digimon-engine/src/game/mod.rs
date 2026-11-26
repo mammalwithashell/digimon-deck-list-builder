@@ -762,6 +762,12 @@ pub struct Game {
     /// that player begins a new turn, after prior end-of-turn observers have
     /// had a chance to inspect the ending turn's history.
     pub digimon_attacks_this_turn: [u32; 2],
+    /// Count of battle-area digivolutions each player has performed during
+    /// the current turn (reset at turn start; excludes breeding area per Q870).
+    pub digivolutions_this_turn: [u32; 2],
+    /// Cards with `DigisorptionMaySuspendOpponent` (BT3-056 Ceresmon) whose
+    /// once-per-turn opponent-suspend redirect has already been used this turn.
+    pub digisorption_opponent_used_cards: Vec<CardHandle>,
     pub current_phase: GamePhase,
     /// Memory seesaw value. Positive = favor of memory_pair.0, negative = favor of memory_pair.1.
     pub memory: i16,
@@ -1721,6 +1727,8 @@ pub struct Game {
     /// around `fire_on_play`, cleared immediately after. `false` for normal
     /// hand plays and digivolutions. Mirrors DCGO `CardEffectCommons.IsByEffect`.
     pub(crate) pending_play_effect_initiated: bool,
+    pub(crate) pending_play_from_trash: bool,
+    pub(crate) pending_digi_burst_source_trash: bool,
 
     /// Transient: `true` while the self `[When Digivolving]` triggers of a
     /// digivolution performed BY AN EFFECT are being enqueued
@@ -3701,13 +3709,27 @@ impl Game {
         let entries = self
             .modifiers
             .get(base_handle, ModifierType::CanOnlyDigivolveInto);
-        if entries.is_empty() {
+        let contains_entries = self
+            .modifiers
+            .get(base_handle, ModifierType::CanOnlyDigivolveIntoNameContaining);
+        if entries.is_empty() && contains_entries.is_empty() {
             return false;
         }
         let names = card.card_names(&self.card_data);
         for entry in entries {
             if let crate::modifiers::ModifierPayload::Name { value, .. } = &entry.payload {
                 let allowed = names.iter().any(|n| *n == value.as_str());
+                if !allowed {
+                    return true;
+                }
+            }
+        }
+        for entry in contains_entries {
+            if let crate::modifiers::ModifierPayload::Name { value, .. } = &entry.payload {
+                let needle = value.to_ascii_lowercase();
+                let allowed = names
+                    .iter()
+                    .any(|n| n.to_ascii_lowercase().contains(&needle));
                 if !allowed {
                     return true;
                 }

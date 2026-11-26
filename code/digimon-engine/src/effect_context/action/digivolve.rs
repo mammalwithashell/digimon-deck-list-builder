@@ -157,6 +157,8 @@ impl<'a> EffectContext<'a> {
         single_fire: bool,
         target_color: Option<crate::enums::CardColor>,
         suspend_cost: bool,
+        from_level: Option<u8>,
+        to_level: Option<u8>,
     ) {
         let reducer = crate::player_cost_reducer::PlayerDigivolveCostReducer {
             player: self.player,
@@ -167,6 +169,8 @@ impl<'a> EffectContext<'a> {
             single_fire,
             target_color,
             suspend_cost,
+            from_level,
+            to_level,
         };
         self.game.player_digivolve_cost_reducers.push(reducer);
     }

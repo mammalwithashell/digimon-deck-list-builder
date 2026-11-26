@@ -15,6 +15,9 @@ fn lower_attack_target_restriction(targets: CompiledAttackTargetSpec) -> AttackT
         CompiledAttackTargetSpec::Any => AttackTargetRestriction::Any,
         CompiledAttackTargetSpec::Player => AttackTargetRestriction::PlayerOnly,
         CompiledAttackTargetSpec::Digimon => AttackTargetRestriction::DigimonOnly,
+        CompiledAttackTargetSpec::DigimonFewerSources => {
+            AttackTargetRestriction::DigimonFewerSources
+        }
     }
 }
 
@@ -126,6 +129,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             attacker,
             targets,
             without_suspending,
+            can_attack_unsuspended,
             ignore_summoning_sickness,
             optional,
             prompt,
@@ -148,25 +152,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             // Monarchlizamon (BT25-057), scan finding F02. Removed.
             let prompt = prompt.as_deref().unwrap_or("Attack with this Digimon?");
             let lowered_upgrade = lower_attack_cost_upgrade(*cost_upgrade);
-            let _ = if *ignore_summoning_sickness {
-                ctx.may_attack_now_ignoring_summoning_sickness_with_upgrade(
-                    attacker,
-                    lower_attack_target_restriction(*targets),
-                    *without_suspending,
-                    *optional,
-                    prompt,
-                    lowered_upgrade,
-                )
-            } else {
-                ctx.may_attack_now_optional_with_upgrade(
-                    attacker,
-                    lower_attack_target_restriction(*targets),
-                    *without_suspending,
-                    *optional,
-                    prompt,
-                    lowered_upgrade,
-                )
-            };
+            let _ = ctx.may_attack_now_with_all_options(
+                attacker,
+                lower_attack_target_restriction(*targets),
+                *without_suspending,
+                *can_attack_unsuspended,
+                *optional,
+                prompt,
+                lowered_upgrade,
+                *ignore_summoning_sickness,
+            );
             // Park the data frame alongside the closure (coexistence): driven by
             // run_resume's BeginAttack arm (decode → begin_attack_open).
             park_begin_attack_resume_frame(
@@ -184,6 +179,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             affects_player,
             targets,
             without_suspending,
+            can_attack_unsuspended,
             prompt,
             cost_upgrade,
         } => {
@@ -198,11 +194,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             }
             let prompt = prompt.as_deref().unwrap_or("Attack with this Digimon");
             let lowered_upgrade = lower_attack_cost_upgrade(*cost_upgrade);
-            let _ = ctx.force_attack_with_scope(
+            let _ = ctx.force_attack_with_scope_and_unsuspended(
                 attacker,
                 *affects_player,
                 lower_attack_target_restriction(*targets),
                 *without_suspending,
+                *can_attack_unsuspended,
                 prompt,
                 lowered_upgrade,
             );

@@ -1,0 +1,21 @@
+card: BT2-065
+name: WarGreymon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: [Dragonkin]
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"

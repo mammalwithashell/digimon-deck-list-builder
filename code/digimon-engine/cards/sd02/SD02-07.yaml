@@ -1,0 +1,29 @@
+card: SD02-07
+name: "Pale Death"
+kind: option
+color: [blue]
+cost: 3
+traits: [ALYSION]
+
+effects:
+  - when: main_from_hand
+    text: "[Main] Return 1 of your opponent's level 4 or lower Digimon to the hand."
+    summary: "[Main] Return 1 of your opponent's level 4 or lower Digimon to the hand"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: bounced
+          filter: { kind: digimon, level_lte: 4 }
+          prompt: "Return 1 of your opponent's level 4 or lower Digimon to the hand"
+      - return_to_hand: { target: bounced }
+
+  - when: on_security
+    text: "[Security] Activate this card's [Main] effect."
+    summary: "[Security] Activate this card's [Main] effect"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: sec_bounced
+          filter: { kind: digimon, level_lte: 4 }
+          prompt: "Return 1 of your opponent's level 4 or lower Digimon to the hand"
+      - return_to_hand: { target: sec_bounced }

@@ -2332,6 +2332,9 @@ impl Game {
         effect_initiated: bool,
         dna_origin: bool,
     ) {
+        if let Some(count) = self.digivolutions_this_turn.get_mut(permanent.player as usize) {
+            *count = count.saturating_add(1);
+        }
         let previous_dna_origin = self.current_dna_origin;
         // A non-DNA evolution caused by a DNA effect still has non-DNA
         // self triggers; do not inherit its caller's origin while collecting.
@@ -2540,6 +2543,7 @@ impl Game {
                 event_card: (Some(card)).into(),
                 source_player: Some(player),
                 effect_initiated,
+                played_from_trash: self.pending_play_from_trash,
                 ..TriggerContext::default()
             },
             TriggerSource::Linked { player, host, card } => TriggerContext {

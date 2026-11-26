@@ -1,0 +1,42 @@
+card: BT4-016
+name: Aldamon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 7000
+form: Hybrid
+attribute: Variable
+traits: [Wizard]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  - text: "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - text: "[Your Turn] While this Digimon's digivolution cards include a Digimon card with the [Hybrid] trait or a red Tamer card, it gets +4000 DP."
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - self_source_count:
+            filter:
+              any_of:
+                - all_of:
+                    - kind: digimon
+                    - trait_has: Hybrid
+                - all_of:
+                    - kind: tamer
+                    - color_is: red
+            op: gte
+            value: 1
+    target: {}
+    dp_modifier: 4000
+    summary: "[Your Turn] While this Digimon's digivolution cards include a [Hybrid] Digimon or red Tamer, it gets +4000 DP"

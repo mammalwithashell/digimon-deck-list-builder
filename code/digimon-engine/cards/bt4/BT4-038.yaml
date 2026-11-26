@@ -1,0 +1,20 @@
+card: BT4-038
+name: BushiAgumon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 5
+dp: 3000
+form: Rookie
+attribute: Vaccine
+traits: [Dinosaur]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - text: "＜Rush＞ (This Digimon can attack the turn it comes into play.)"
+    kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"

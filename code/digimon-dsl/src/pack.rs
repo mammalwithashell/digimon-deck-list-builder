@@ -76,7 +76,10 @@ use std::collections::BTreeSet;
 // 0.42.0 adds optional fixed credit to deletion cost reducers, `PlaceDeckTopUnder`,
 // `PayBreedingDeletion`, `TrashFieldOption`, and `SuspendAsCost`. Rebuild packs;
 // bincode layouts differ.
-pub const PACK_FORMAT_VERSION: &str = "0.42.0";
+// 0.43.0 adds `event_target_materials_count_lte`, `CompiledAttackTargetSpec::DigimonFewerSources`,
+// and `can_attack_unsuspended` on `MayAttackNow`/`ForceAttack`. Rebuild packs;
+// bincode layouts differ.
+pub const PACK_FORMAT_VERSION: &str = "0.47.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {

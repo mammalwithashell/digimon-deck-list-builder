@@ -1,0 +1,27 @@
+card: BT1-096
+name: Mad Dog Fire
+kind: option
+color: [blue]
+cost: 1
+
+effects:
+  - text: "[Main] 1 of your Digimon gets +3000 DP for the turn."
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gets +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +3000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 3000
+          expiry: end_of_turn
+
+  - text: "[Security] ＜Draw 1＞ (Draw 1 card from your deck.) Then add this card to its owner's hand."
+    when: on_security
+    summary: "[Security] Draw 1, then add this card to its owner's hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - add_this_option_to_hand: {}

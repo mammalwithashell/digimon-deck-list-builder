@@ -1,0 +1,47 @@
+card: BT1-084
+name: Omnimon
+kind: digimon
+level: 7
+color: [white]
+cost: 15
+dp: 15000
+attribute: Vaccine
+traits: [Holy Warrior, Royal Knight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 6
+
+effects:
+  - text: "[When Digivolving] Choose 1 of your opponent's Digimon. Delete all of your opponent's Digimon that share a name with it."
+    when: when_digivolving
+    summary: "[When Digivolving] Choose 1 opponent Digimon; delete all opponent Digimon sharing its name"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          filter: { kind: digimon }
+          bind_as: chosen
+          prompt: "Choose 1 of your opponent's Digimon"
+      - delete_all_permanents:
+          over: { of: opponent, zone: [battle_area], kind: digimon, name_matches_binding: chosen }
+
+  - text: "[When Attacking] You can unsuspend this Digimon by returning 1 of this Digimon's level 6 digivolution cards to your hand."
+    when: when_attacking
+    optional: true
+    summary: "[When Attacking] Return 1 Lv.6 digivolution card to hand to unsuspend this Digimon"
+    condition:
+      self_source_count:
+        filter: { level_eq: 6 }
+        op: gte
+        value: 1
+    process:
+      - select_own_sources:
+          target: source
+          min: 1
+          max: 1
+          filter: { level_eq: 6 }
+          bind_as: returned_lv6
+          prompt: "Return 1 of this Digimon's level 6 digivolution cards to your hand"
+      - return_selected_sources_to_hand: { source_refs: returned_lv6 }
+      - unsuspend: { target: source }

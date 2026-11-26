@@ -23,6 +23,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             color_only,
             color_matches_any_field_digimon,
             color_matches_binding,
+            name_matches_binding,
             color_matches_returned_card,
             name_matches_returned_card,
             name_matches_source,
@@ -132,6 +133,9 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             all_turns,
             can_hatch,
             digimon_attacked_this_turn,
+            digivolved_this_turn,
+            in_phase,
+            attack_target_matches,
             during_attack,
             can_gain_memory,
             in_breeding,
@@ -142,6 +146,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_target_trait_contains,
             event_target_has_digivolution_cards,
             event_target_stack_size_gte,
+            event_target_materials_count_lte,
             event_target_level_eq,
             event_target_level_lte,
             event_target_level_gte,
@@ -174,6 +179,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_target_is_player,
             event_target_is_source,
             event_target_was_self,
+            event_target_name_matches_source,
             attack_target_change_reason,
             attacker_trait_has,
             event_card_trait_has,
@@ -188,6 +194,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             event_card_color_has,
             event_card_color_count,
             event_cause,
+            event_played_from_trash,
             event_target_same_level_as_previous,
             event_target_has_same_level_source,
             event_target_digivolved_from_kind,
@@ -293,6 +300,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         color_matches_binding.walk(
             c,
             &format!("{}.color_matches_binding", path),
+            "EXISTING_INSTANCE_BINDING",
+        );
+        name_matches_binding.walk(
+            c,
+            &format!("{}.name_matches_binding", path),
             "EXISTING_INSTANCE_BINDING",
         );
         color_matches_returned_card.walk(
@@ -680,6 +692,21 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.digimon_attacked_this_turn", path),
             "UNCLASSIFIED_STRING",
         );
+        digivolved_this_turn.walk(
+            c,
+            &format!("{}.digivolved_this_turn", path),
+            "UNCLASSIFIED_STRING",
+        );
+        in_phase.walk(
+            c,
+            &format!("{}.in_phase", path),
+            "UNCLASSIFIED_STRING",
+        );
+        attack_target_matches.walk(
+            c,
+            &format!("{}.attack_target_matches", path),
+            "UNCLASSIFIED_STRING",
+        );
         during_attack.walk(c, &format!("{}.during_attack", path), "UNCLASSIFIED_STRING");
         can_gain_memory.walk(c, &format!("{}.can_gain_memory", path), "UNCLASSIFIED_STRING");
         in_breeding.walk(c, &format!("{}.in_breeding", path), "UNCLASSIFIED_STRING");
@@ -708,6 +735,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
         event_target_stack_size_gte.walk(
             c,
             &format!("{}.event_target_stack_size_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_materials_count_lte.walk(
+            c,
+            &format!("{}.event_target_materials_count_lte", path),
             "UNCLASSIFIED_STRING",
         );
         event_target_level_eq.walk(
@@ -866,6 +898,11 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             &format!("{}.event_target_was_self", path),
             "UNCLASSIFIED_STRING",
         );
+        event_target_name_matches_source.walk(
+            c,
+            &format!("{}.event_target_name_matches_source", path),
+            "UNCLASSIFIED_STRING",
+        );
         attack_target_change_reason.walk(
             c,
             &format!("{}.attack_target_change_reason", path),
@@ -932,6 +969,7 @@ impl Walk for digimon_dsl::predicate::PredicateSpec {
             "UNCLASSIFIED_STRING",
         );
         event_cause.walk(c, &format!("{}.event_cause", path), "UNCLASSIFIED_STRING");
+        event_played_from_trash.walk(c, &format!("{}.event_played_from_trash", path), "UNCLASSIFIED_STRING");
         event_target_same_level_as_previous.walk(
             c,
             &format!("{}.event_target_same_level_as_previous", path),
@@ -1444,6 +1482,12 @@ impl Walk for digimon_dsl::predicate::EventCauseSpec {
                 "ENUM_SCALAR",
                 serde_json::json!("Rule"),
             ),
+            digimon_dsl::predicate::EventCauseSpec::DigiBurst => c.node(
+                path,
+                "digimon_dsl::predicate::EventCauseSpec",
+                "ENUM_SCALAR",
+                serde_json::json!("DigiBurst"),
+            ),
         }
     }
 }
@@ -1629,12 +1673,18 @@ impl Walk for digimon_dsl::predicate::CanAttackPredicate {
         let digimon_dsl::predicate::CanAttackPredicate {
             targets,
             without_suspending,
+            can_attack_unsuspended,
             ignore_summoning_sickness,
         } = self;
         targets.walk(c, &format!("{}.targets", path), "UNCLASSIFIED_STRING");
         without_suspending.walk(
             c,
             &format!("{}.without_suspending", path),
+            "UNCLASSIFIED_STRING",
+        );
+        can_attack_unsuspended.walk(
+            c,
+            &format!("{}.can_attack_unsuspended", path),
             "UNCLASSIFIED_STRING",
         );
         ignore_summoning_sickness.walk(
@@ -1803,6 +1853,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             color_only,
             color_matches_any_field_digimon,
             color_matches_binding,
+            name_matches_binding,
             color_matches_returned_card,
             name_matches_returned_card,
             name_matches_source,
@@ -1914,6 +1965,9 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             all_turns,
             can_hatch,
             digimon_attacked_this_turn,
+            digivolved_this_turn,
+            in_phase,
+            attack_target_matches,
             during_attack,
             can_gain_memory,
             in_breeding,
@@ -1924,6 +1978,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             event_target_trait_contains,
             event_target_has_digivolution_cards,
             event_target_stack_size_gte,
+            event_target_materials_count_lte,
             event_target_level_eq,
             event_target_level_lte,
             event_target_level_gte,
@@ -1936,6 +1991,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             event_target_is_player,
             event_target_is_source,
             event_target_was_self,
+            event_target_name_matches_source,
             attack_target_change_reason,
             attacker_trait_has,
             event_card_trait_has,
@@ -1960,6 +2016,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             event_target_has_same_level_source,
             event_target_digivolved_from_kind,
             event_cause,
+            event_played_from_trash,
             replacement_cause,
             replacement_source_is_opponent,
             replacement_subject_is_mine,
@@ -2060,6 +2117,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         color_matches_binding.walk(
             c,
             &format!("{}.color_matches_binding", path),
+            "EXISTING_INSTANCE_BINDING",
+        );
+        name_matches_binding.walk(
+            c,
+            &format!("{}.name_matches_binding", path),
             "EXISTING_INSTANCE_BINDING",
         );
         color_matches_returned_card.walk(
@@ -2468,6 +2530,21 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             &format!("{}.digimon_attacked_this_turn", path),
             "UNCLASSIFIED_STRING",
         );
+        digivolved_this_turn.walk(
+            c,
+            &format!("{}.digivolved_this_turn", path),
+            "UNCLASSIFIED_STRING",
+        );
+        in_phase.walk(
+            c,
+            &format!("{}.in_phase", path),
+            "UNCLASSIFIED_STRING",
+        );
+        attack_target_matches.walk(
+            c,
+            &format!("{}.attack_target_matches", path),
+            "UNCLASSIFIED_STRING",
+        );
         during_attack.walk(c, &format!("{}.during_attack", path), "UNCLASSIFIED_STRING");
         can_gain_memory.walk(c, &format!("{}.can_gain_memory", path), "UNCLASSIFIED_STRING");
         in_breeding.walk(c, &format!("{}.in_breeding", path), "UNCLASSIFIED_STRING");
@@ -2496,6 +2573,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         event_target_stack_size_gte.walk(
             c,
             &format!("{}.event_target_stack_size_gte", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_materials_count_lte.walk(
+            c,
+            &format!("{}.event_target_materials_count_lte", path),
             "UNCLASSIFIED_STRING",
         );
         event_target_level_eq.walk(
@@ -2556,6 +2638,11 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
         event_target_was_self.walk(
             c,
             &format!("{}.event_target_was_self", path),
+            "UNCLASSIFIED_STRING",
+        );
+        event_target_name_matches_source.walk(
+            c,
+            &format!("{}.event_target_name_matches_source", path),
             "UNCLASSIFIED_STRING",
         );
         attack_target_change_reason.walk(
@@ -2670,6 +2757,7 @@ impl Walk for digimon_dsl::compiled::CompiledPredicate {
             "UNCLASSIFIED_STRING",
         );
         event_cause.walk(c, &format!("{}.event_cause", path), "UNCLASSIFIED_STRING");
+        event_played_from_trash.walk(c, &format!("{}.event_played_from_trash", path), "UNCLASSIFIED_STRING");
         replacement_cause.walk(
             c,
             &format!("{}.replacement_cause", path),

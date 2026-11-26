@@ -1,0 +1,34 @@
+card: BT3-070
+name: Etemon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 6000
+form: Ultimate
+attribute: Virus
+traits: [Puppet]
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[On Deletion] Reveal 5 cards from the top of your deck. You may play 1 level 6 Digimon card with [Etemon] in its name among them without paying its memory cost. Place the remaining cards at the bottom of your deck in any order."
+    when: on_deletion
+    summary: "[On Deletion] Reveal top 5; may play 1 Lv.6 [Etemon]-name Digimon free; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 5, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 6
+              - name_contains: Etemon
+          prompt: "You may play 1 level 6 Digimon card with [Etemon] in its name without paying its memory cost"
+      - play_from_revealed_free: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

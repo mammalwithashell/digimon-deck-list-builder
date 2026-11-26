@@ -1,0 +1,67 @@
+card: ED01-10
+name: "Bond of Snowflakes"
+kind: option
+color: [blue]
+cost: 3
+traits: [ALYSION]
+
+effects:
+  - when: main_from_hand
+    text: "[Main] You may play 1 blue [Renamon] or [Valner Dragnogh] from your hand without paying the cost. Then, place this card in the battle area."
+    summary: "[Main] You may play 1 blue [Renamon] or [Valner Dragnogh] from your hand without paying the cost, then place this card in the battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: played
+          optional: true
+          filter:
+            all_of:
+              - color_is: blue
+              - any_of:
+                  - name_is: Renamon
+                  - name_is: "Valner Dragnogh"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 blue [Renamon] or [Valner Dragnogh] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: played }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: end_of_your_next_turn
+    text: "[End of Your Turn] ＜Delay＞ ・Choose 1 of your blue [ALYSION] trait Digimon and it attacks 1 of your opponent's Digimon with fewer digivolution cards than it. It can also attack your opponent's unsuspended Digimon with this effect."
+    summary: "[End of Your Turn] <Delay>: choose 1 of your blue [ALYSION] Digimon to attack 1 opposing Digimon with fewer digivolution cards (including unsuspended)"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: attacker
+          filter:
+            kind: digimon
+            color_is: blue
+            trait_has: ALYSION
+            can_attack:
+              targets: digimon_fewer_sources
+              can_attack_unsuspended: true
+          prompt: "Choose 1 of your blue [ALYSION] trait Digimon to attack"
+      - force_attack:
+          attacker: attacker
+          targets: digimon_fewer_sources
+          can_attack_unsuspended: true
+          prompt: "Attack 1 of your opponent's Digimon with fewer digivolution cards"
+
+  - when: on_security
+    text: "[Security] Activate this card's [Main] effects."
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_hand:
+          of: you
+          bind_as: sec_played
+          optional: true
+          filter:
+            all_of:
+              - color_is: blue
+              - any_of:
+                  - name_is: Renamon
+                  - name_is: "Valner Dragnogh"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 blue [Renamon] or [Valner Dragnogh] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: sec_played }
+      - place_self_as_delay_option: {}

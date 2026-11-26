@@ -24,6 +24,10 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotAttackPlayer" => ModifierType::CannotAttackPlayer,
         "VortexCanAttackPlayer" => ModifierType::VortexCanAttackPlayer,
         "CanAttackUnsuspended" => ModifierType::CanAttackUnsuspended,
+        "CanAttackUnsuspendedWithFewerSources" => {
+            ModifierType::CanAttackUnsuspendedWithFewerSources
+        }
+        "BattleCompareDigivolutionCards" => ModifierType::BattleCompareDigivolutionCards,
         "CanAttackActivePlayer" => ModifierType::CanAttackActivePlayer,
         "CannotAttackTarget" => ModifierType::CannotAttackTarget,
         "CannotBeAttackedBySecurityAttackChanged" => {
@@ -57,6 +61,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotDigivolve" => ModifierType::CannotDigivolve,
         "CannotDigivolveAsTamer" => ModifierType::CannotDigivolveAsTamer,
         "CanOnlyDigivolveInto" => ModifierType::CanOnlyDigivolveInto,
+        "CanOnlyDigivolveIntoNameContaining" => ModifierType::CanOnlyDigivolveIntoNameContaining,
         "ChangeColor" => ModifierType::ChangeColor,
         "AddColor" => ModifierType::AddColor,
         "ChangeLevel" => ModifierType::ChangeLevel,
@@ -64,6 +69,8 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotTrash" => ModifierType::CannotTrash,
         "CannotBlock" => ModifierType::CannotBlock,
         "CannotBeBlocked" => ModifierType::CannotBeBlocked,
+        "CannotBeBlockedByNoSources" => ModifierType::CannotBeBlockedByNoSources,
+        "DigisorptionMaySuspendOpponent" => ModifierType::DigisorptionMaySuspendOpponent,
         "CannotCounter" => ModifierType::CannotCounter,
         "DrawBlock" => ModifierType::DrawBlock,
         "MemoryBlock" => ModifierType::MemoryBlock,
@@ -151,6 +158,8 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotAttackPlayer
         | ModifierType::VortexCanAttackPlayer
         | ModifierType::CanAttackUnsuspended
+        | ModifierType::CanAttackUnsuspendedWithFewerSources
+        | ModifierType::BattleCompareDigivolutionCards
         | ModifierType::CanAttackActivePlayer
         | ModifierType::CannotAttackTarget
         | ModifierType::CannotBeAttackedBySecurityAttackChanged
@@ -180,6 +189,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotDigivolve
         | ModifierType::CannotDigivolveAsTamer
         | ModifierType::CanOnlyDigivolveInto
+        | ModifierType::CanOnlyDigivolveIntoNameContaining
         | ModifierType::ChangeColor
         | ModifierType::AddColor
         | ModifierType::ChangeLevel
@@ -187,6 +197,8 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotTrash
         | ModifierType::CannotBlock
         | ModifierType::CannotBeBlocked
+        | ModifierType::CannotBeBlockedByNoSources
+        | ModifierType::DigisorptionMaySuspendOpponent
         | ModifierType::CannotCounter
         | ModifierType::DrawBlock
         | ModifierType::MemoryBlock
@@ -274,6 +286,8 @@ mod tests {
             ModifierType::CannotAttackPlayer,
             ModifierType::VortexCanAttackPlayer,
             ModifierType::CanAttackUnsuspended,
+            ModifierType::CanAttackUnsuspendedWithFewerSources,
+            ModifierType::BattleCompareDigivolutionCards,
             ModifierType::CanAttackActivePlayer,
             ModifierType::CannotAttackTarget,
             ModifierType::CannotBeAttackedBySecurityAttackChanged,
@@ -303,6 +317,7 @@ mod tests {
             ModifierType::CannotDigivolve,
             ModifierType::CannotDigivolveAsTamer,
             ModifierType::CanOnlyDigivolveInto,
+            ModifierType::CanOnlyDigivolveIntoNameContaining,
             ModifierType::ChangeColor,
             ModifierType::AddColor,
             ModifierType::ChangeLevel,
@@ -310,6 +325,8 @@ mod tests {
             ModifierType::CannotTrash,
             ModifierType::CannotBlock,
             ModifierType::CannotBeBlocked,
+            ModifierType::CannotBeBlockedByNoSources,
+            ModifierType::DigisorptionMaySuspendOpponent,
             ModifierType::CannotCounter,
             ModifierType::DrawBlock,
             ModifierType::MemoryBlock,

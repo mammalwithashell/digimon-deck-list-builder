@@ -1,0 +1,33 @@
+card: BT4-090
+name: Chaosmon
+kind: digimon
+level: 7
+color: [white]
+cost: 15
+dp: 14000
+traits: [Unique]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 6
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[When Digivolving] Unsuspend this Digimon. Then, it can attack your opponent's Digimon. This effect allows you to attack unsuspended Digimon as well."
+    when: when_digivolving
+    summary: "[When Digivolving] Unsuspend this Digimon, then it may attack an opponent's Digimon (including unsuspended Digimon)"
+    process:
+      - unsuspend: { target: source }
+      - may_attack_now:
+          attacker: source
+          targets: digimon
+          can_attack_unsuspended: true
+          optional: true
+          prompt: "Attack 1 of your opponent's Digimon (including unsuspended Digimon)"

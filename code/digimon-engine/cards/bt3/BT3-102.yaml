@@ -1,0 +1,38 @@
+card: BT3-102
+name: Code Cracking
+kind: option
+color: [yellow]
+cost: 4
+
+effects:
+  - text: "[Main] Your opponent may trash their top security card. If they don't, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)"
+    when: main_from_hand
+    summary: "[Main] Your opponent may trash their top security card; if they don't, <Recovery +1 (Deck)>"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_effect_choice:
+                bind_as: opp_choice
+                labels:
+                  - "Trash the top card of your security stack"
+                  - "Don't trash (opponent performs <Recovery +1 (Deck)>)"
+                legal_when:
+                  - count_gte:
+                      filter: { of: opponent, zone: [security] }
+                      n: 1
+                  - {}
+                prompt: "Trash the top card of your security stack? If you don't, your opponent performs <Recovery +1 (Deck)>."
+            - if:
+                condition: { equals: [opp_choice, 0] }
+                then:
+                  - trash_top_security:
+                      of: opponent
+                      count: 1
+                      bind_count_as: trashed_sec
+                  - if:
+                      condition: { equals: [trashed_sec, 0] }
+                      then:
+                        - recover: { of: you, count: 1 }
+                else:
+                  - recover: { of: you, count: 1 }

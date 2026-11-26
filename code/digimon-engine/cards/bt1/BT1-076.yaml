@@ -1,0 +1,26 @@
+card: BT1-076
+name: MegaKabuterimon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 6000
+form: Ultimate
+attribute: Vaccine
+traits: [Insectoid]
+
+effects:
+  - text: "[When Attacking] If your opponent has 2 or more suspended Digimon, gain 1 memory."
+    scope: inherited
+    when: when_attacking
+    condition:
+      count_gte:
+        filter:
+          of: opponent
+          zone: [battle_area]
+          kind: digimon
+          is_suspended: true
+        n: 2
+    summary: "[When Attacking] If your opponent has 2 or more suspended Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1

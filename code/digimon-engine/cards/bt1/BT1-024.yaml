@@ -1,0 +1,10 @@
+card: BT1-024
+name: MetalTyrannomon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 10000
+form: Ultimate
+attribute: Virus
+traits: [Cyborg]

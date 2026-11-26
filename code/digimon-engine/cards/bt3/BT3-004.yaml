@@ -1,0 +1,22 @@
+card: BT3-004
+name: Minomon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+form: In-Training
+traits: [Larva]
+
+effects:
+  - text: "[When Attacking] When you attack one of your opponent's Digimon, this Digimon gets +1000 DP for the turn."
+    scope: inherited
+    when: when_attacking
+    condition:
+      attack_target_matches:
+        kind: digimon
+    summary: "[Inherited][When Attacking] When attacking an opponent's Digimon, this Digimon gets +1000 DP for the turn"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 1000
+          expiry: end_of_turn

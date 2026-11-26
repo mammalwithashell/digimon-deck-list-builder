@@ -1,0 +1,40 @@
+card: SD02-02
+name: Renamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Beastkin, ALYSION]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - when: on_play
+    text: "[On Play] Trash the bottom digivolution card of 1 of your opponent's Digimon."
+    summary: "[On Play] Trash the bottom digivolution card of 1 opposing Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom digivolution card of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 1 }
+
+  - scope: inherited
+    text: "[When Attacking] [Once Per Turn] Trash the bottom digivolution card of 1 of your opponent's Digimon."
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][OPT] Trash the bottom digivolution card of 1 opposing Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom digivolution card of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 1 }

@@ -59,6 +59,11 @@ pub struct PredicateSpec {
     pub color_matches_any_field_digimon: Option<PlayerRefSelector>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_matches_binding: Option<String>,
+    /// Name sibling of `color_matches_binding`: true when the candidate shares
+    /// >=1 card name (printed name or "also treated as" alias) with the bound
+    /// permanent's top card or bound card (e.g. BT1-084 Omnimon).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_matches_binding: Option<String>,
     /// True when the candidate card shares â‰¥1 color with ANY card recorded in
     /// this effect's `returned_to_deck` result log (the cards a preceding
     /// `return_trash_list_to_deck_bottom` / `return_all_trash_to_deck_bottom`
@@ -833,6 +838,24 @@ pub struct PredicateSpec {
     /// turn".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub digimon_attacked_this_turn: Option<PlayerRef>,
+    /// True when the referenced player has digivolved in the battle area at
+    /// least once during the current turn (per Q870, breeding-area digivolutions
+    /// do not count; per Q871, effect-initiated battle-area digivolutions do).
+    /// Drives BT1-007 Tanemon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub digivolved_this_turn: Option<PlayerRef>,
+    /// Game-level phase gate: true when the game's effective turn phase
+    /// (unwrapping selection/combat interrupt sub-phases) matches the specified
+    /// turn phase (e.g. `in_phase: main` for BT2-002/021/028/032,
+    /// `in_phase: unsuspend` for BT2-004).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub in_phase: Option<TurnPhaseSpec>,
+    /// Evaluates the nested permanent predicate against the current attack's
+    /// target Digimon (`rctx.attack_target() == Some(AttackTarget::Digimon(h))`).
+    /// False when attacking a player or outside an attack. Drives BT2-112
+    /// BlackWarGreymon ("When you attack your opponent's Digimon with the highest DP").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub attack_target_matches: Option<Box<PredicateSpec>>,
     /// Game-level "if during an attack" gate: true (`during_attack: true`)
     /// while an attack is in flight (`Game::pending_attack` is set â€” DCGO
     /// `GManager.instance.attackProcess.IsAttacking`). `false` asserts no
@@ -891,6 +914,12 @@ pub struct PredicateSpec {
     /// G-DSL-EVENT-TARGET-SOURCE-COUNT.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_stack_size_gte: Option<u8>,
+    /// Match the event-target permanent's digivolution-card count (excluding top
+    /// card) against a ceiling (`<= N` or dynamic formula such as `source_materials_count`).
+    /// Reads the pre-removal count from the deletion snapshot on deletion events,
+    /// or the live `card_sources.len().saturating_sub(1)` otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_materials_count_lte: Option<DpConstraint>,
     /// Match the event-target permanent's printed level. Works for live
     /// event targets (played/digivolved/moved/suspended permanents) and
     /// deleted-object snapshots. G-EVENT-TARGET-LEVEL-LTE.
@@ -1072,6 +1101,12 @@ pub struct PredicateSpec {
     pub event_target_is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_was_self: Option<bool>,
+    /// True when the event target permanent shares >=1 card name with the
+    /// effect source (carrier) permanent's top card (e.g. BT2-053 Keramon /
+    /// BT2-059 Kurisarimon: "When you play another Digimon with the same name
+    /// as this Digimon").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_target_name_matches_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attack_target_change_reason: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1146,6 +1181,10 @@ pub struct PredicateSpec {
     pub event_card_color_count: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_cause: Option<EventCauseSpec>,
+    /// True when the played permanent entered the battle area from its
+    /// owner's trash (e.g. BT4-087 Anubismon).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_played_from_trash: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_same_level_as_previous: Option<bool>,
     /// Observer-side gate for `on_digivolve` clauses: true when the event
@@ -1691,6 +1730,7 @@ pub enum EventCauseSpec {
     SecurityRemoval,
     Cost,
     Rule,
+    DigiBurst,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1936,12 +1976,15 @@ pub struct DnaHandCandidatePredicate {
 )]
 #[serde(deny_unknown_fields)]
 pub struct CanAttackPredicate {
-    /// Which attack targets count (`any` / `player` / `digimon`).
+    /// Which attack targets count (`any` / `player` / `digimon` / `digimon_fewer_sources`).
     #[serde(default)]
     pub targets: crate::step::AttackTargetSpec,
     /// The attack will be made without suspending.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub without_suspending: bool,
+    /// The attack can also target the opponent's unsuspended Digimon.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub can_attack_unsuspended: bool,
     /// The attack ignores summoning sickness.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_summoning_sickness: bool,
@@ -2042,4 +2085,14 @@ pub enum Zone {
     #[serde(rename = "digi_egg_deck")]
     DigiEggDeck,
     Material,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum TurnPhaseSpec {
+    Unsuspend,
+    Draw,
+    Breeding,
+    Main,
+    EndTurn,
 }

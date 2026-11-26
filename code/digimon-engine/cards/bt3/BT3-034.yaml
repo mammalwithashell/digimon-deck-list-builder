@@ -1,0 +1,18 @@
+card: BT3-034
+name: Lopmon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Data
+traits: [Beast]
+
+effects:
+  - text: "[On Play] Look at the top card of your security stack. You may add that card to your hand to ＜Draw 1＞ (Draw 1 card from your deck.)"
+    when: on_play
+    summary: "[On Play] Look at top security; may add it to hand to <Draw 1>"
+    process:
+      - may_add_top_security_to_hand: { of: you, cost: true }
+      - draw: { of: you, count: 1 }

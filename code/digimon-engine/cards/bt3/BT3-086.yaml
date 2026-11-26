@@ -1,0 +1,35 @@
+card: BT3-086
+name: Arukenimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 6000
+form: Ultimate
+attribute: Virus
+traits: [Dark Animal]
+
+effects:
+  - text: "[When Attacking] You may pay 3 memory to play 1 [MaloMyotismon] from your hand without paying its memory cost. If you do, delete this Digimon."
+    when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may pay 3 memory to play 1 [MaloMyotismon] from your hand for free; if you do, delete this Digimon"
+    process:
+      - lose_memory: 3
+      - select_hand:
+          of: you
+          optional: false
+          bind_as: malo_card
+          filter:
+            all_of:
+              - name_is: "MaloMyotismon"
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 [MaloMyotismon] from your hand without paying its memory cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: malo_card
+          bind_as: played_malo
+      - if:
+          condition: { binding_present: played_malo }
+          then:
+            - delete_permanent: { target: source }

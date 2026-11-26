@@ -1,0 +1,18 @@
+card: BT1-097
+name: Boring Storm
+kind: option
+color: [blue]
+cost: 1
+
+effects:
+  - text: "[Main] ＜Draw 1＞ (Draw 1 card from your deck.)"
+    when: main_from_hand
+    summary: "[Main] Draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+
+  - text: "[Security] ＜Draw 2＞ (Draw 2 cards from your deck.)"
+    when: on_security
+    summary: "[Security] Draw 2"
+    process:
+      - draw: { of: you, count: 2 }

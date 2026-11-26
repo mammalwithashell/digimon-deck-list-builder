@@ -1,0 +1,35 @@
+card: BT2-094
+name: Arctic Blizzard
+kind: option
+color: [blue]
+cost: 2
+
+effects:
+  - text: "[Main] Choose 1 digivolution card of 1 of your opponent's Digimon and trash it. Then, 1 of your Digimon gets +2000 DP for the turn."
+    when: main
+    summary: "[Main] Trash 1 digivolution card of 1 opponent Digimon, then 1 of your Digimon gets +2000 DP for the turn"
+    process:
+      - select_opponent_sources:
+          filter: { host_kind_is: digimon }
+          min: 1
+          max: 1
+          clamp_to_available: true
+          bind_as: materials
+          prompt: "Choose 1 digivolution card of 1 of your opponent's Digimon to trash"
+          then:
+            - trash_selected_sources: { source_refs: materials }
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +2000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 2000
+          expiry: end_of_turn
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

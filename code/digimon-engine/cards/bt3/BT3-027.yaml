@@ -1,0 +1,30 @@
+card: BT3-027
+name: Paildramon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Free
+traits: [Dragonkin]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  - text: "[When Attacking] [Once Per Turn] If this Digimon has [Imperialdramon] in its name, unsuspend it."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { source_name_contains: Imperialdramon }
+    summary: "[Inherited][When Attacking][Once Per Turn] If this Digimon has [Imperialdramon] in its name, unsuspend it"
+    process:
+      - unsuspend: { target: source }

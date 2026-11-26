@@ -1,0 +1,62 @@
+card: BT2-096
+name: The Ray of Victory
+kind: option
+color: [blue]
+cost: 5
+
+effects:
+  - text: "[Main] Return 1 of your opponent's level 5 or lower Digimon to their hand. (Trash all of the digivolution cards on that Digimon.) Then, if you have a blue Tamer in play, unsuspend 1 of your Digimon."
+    when: main
+    summary: "[Main] Return 1 opponent Lv.5 or lower Digimon to hand; if you have a blue Tamer, unsuspend 1 of your Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "Choose 1 of your opponent's level 5 or lower Digimon to return to their hand"
+      - return_to_hand: { target: target }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              color_is: blue
+          then:
+            - select_own_permanent:
+                optional: false
+                bind_as: unsuspend_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to unsuspend"
+            - unsuspend: { target: unsuspend_target }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "Choose 1 of your opponent's level 5 or lower Digimon to return to their hand"
+      - return_to_hand: { target: target }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              color_is: blue
+          then:
+            - select_own_permanent:
+                optional: false
+                bind_as: unsuspend_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to unsuspend"
+            - unsuspend: { target: unsuspend_target }

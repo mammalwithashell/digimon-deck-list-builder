@@ -1,0 +1,44 @@
+card: BT3-043
+name: Kentaurosmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: ["Holy Warrior", "Royal Knight"]
+
+effects:
+  - text: "[When Digivolving] Up to 5 of your opponent's Digimon gain ＜Security A. -2＞ (This Digimon checks 2 additional security cards.) until the end of your opponent's next turn."
+    when: when_digivolving
+    summary: "[When Digivolving] Up to 5 of your opponent's Digimon gain <Security A. -2> until the end of your opponent's next turn"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 5
+          optional_zero: true
+          filter: { kind: digimon }
+          bind_as: targets
+          prompt: "Choose up to 5 of your opponent's Digimon to gain <Security A. -2> until the end of your opponent's next turn"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - grant_keyword:
+                target: target
+                keyword: SecurityAttackMinus
+                value: 2
+                expiry: end_of_opponents_next_turn
+
+  - text: "[On Deletion] 1 of your opponent's Digimon gets -11000 DP for the turn."
+    when: on_deletion
+    summary: "[On Deletion] 1 of your opponent's Digimon gets -11000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -11000 DP for the turn"
+      - add_dp_modifier: { target: target, value: -11000, expiry: end_of_turn }

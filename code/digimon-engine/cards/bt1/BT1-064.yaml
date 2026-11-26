@@ -1,0 +1,10 @@
+card: BT1-064
+name: Goblimon
+kind: digimon
+level: 3
+color: [green]
+cost: 2
+dp: 3000
+form: Rookie
+attribute: Virus
+traits: [Demon]

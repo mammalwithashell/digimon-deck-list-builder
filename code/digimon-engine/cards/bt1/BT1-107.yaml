@@ -1,0 +1,18 @@
+card: BT1-107
+name: Holy Wave
+kind: option
+color: [yellow]
+cost: 6
+
+effects:
+  - text: "[Main] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)"
+    when: main_from_hand
+    summary: "[Main] Recovery +1 (Deck)"
+    process:
+      - recover: { of: you, count: 1 }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - recover: { of: you, count: 1 }

@@ -1,0 +1,30 @@
+card: BT1-112
+name: Dimension Scissor
+kind: option
+color: [green]
+cost: 3
+
+effects:
+  - text: '[Main] 1 of your Digimon gains the following effect for the turn: "When this Digimon deletes an opponent''s Digimon in battle and survives, unsuspend it."'
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gains 'When this Digimon deletes an opponent's Digimon in battle and survives, unsuspend it' for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain the unsuspend-on-battle-deletion effect for the turn"
+      - grant_triggered_effect:
+          target: target
+          timing: on_any_deletion
+          expiry: end_of_turn
+          trigger_if:
+            source_deleted_battle_opponent: true
+          body:
+            - unsuspend: { target: carrier }
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

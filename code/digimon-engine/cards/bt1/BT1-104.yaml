@@ -1,0 +1,29 @@
+card: BT1-104
+name: Golden Ripper
+kind: option
+color: [yellow]
+cost: 3
+
+effects:
+  - text: '[Main] All of your Digimon gain the following effect for the turn: "[When Attacking] 1 of your opponent''s Digimon gets -2000 DP for the turn."'
+    when: main_from_hand
+    summary: "[Main] All of your Digimon gain '[When Attacking] 1 opponent Digimon gets -2000 DP for the turn' for the turn"
+    process:
+      - grant_triggered_effect:
+          dynamic: true
+          target:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+          timing: when_attacking
+          expiry: end_of_turn
+          body:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"
+            - add_dp_modifier:
+                target: target
+                value: -2000
+                expiry: end_of_turn

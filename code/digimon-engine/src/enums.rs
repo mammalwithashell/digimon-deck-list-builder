@@ -777,6 +777,12 @@ pub enum ModifierType {
     CannotAttackPlayer,
     VortexCanAttackPlayer,
     CanAttackUnsuspended,
+    /// Attacker may also attack opponent's unsuspended Digimon that have
+    /// strictly fewer digivolution cards than the attacker (e.g. SD02-05 Yukinamon).
+    CanAttackUnsuspendedWithFewerSources,
+    /// Compare digivolution-card count instead of DP in this Digimon's
+    /// Digimon-vs-Digimon battles (non-keyword twin of `<Iceclad>`, e.g. SD02-05 / BD02-07).
+    BattleCompareDigivolutionCards,
     CanAttackActivePlayer,
     CannotAttackTarget,
     CannotBeAttackedBySecurityAttackChanged,
@@ -849,6 +855,10 @@ pub enum ModifierType {
     /// declarative aura sourced from the battle area, so it is inactive while the
     /// source is in the breeding area.
     CanOnlyDigivolveInto,
+    /// Permanent can only digivolve into a card whose name contains the payload
+    /// substring (e.g. BT4-115 Lucemon: "can only digivolve into Digimon cards
+    /// with [Lucemon] in their name").
+    CanOnlyDigivolveIntoNameContaining,
 
     // Color
     ChangeColor,
@@ -1077,6 +1087,12 @@ pub enum ModifierType {
     /// with `defenderCondition: null`. Appended to preserve existing IDs.
     /// G-ENGINE-CANNOT-BE-BLOCKED (EX2-068).
     CannotBeBlocked,
+    /// Attacker can't be blocked by opponent Digimon with no digivolution
+    /// cards (`card_sources.len() <= 1`, e.g. BT1-034, BT2-029, BT2-030).
+    CannotBeBlockedByNoSources,
+    /// Once per turn, when controller's `<Digisorption>` would suspend one of
+    /// their Digimon, they may suspend an opponent's Digimon instead (BT3-056 Ceresmon).
+    DigisorptionMaySuspendOpponent,
     /// Permanent-scoped: Option cards checked by this attacking Digimon do
     /// not activate their [Security] effects (BT20-015 inherited). Other
     /// attackers, non-Option Security effects, and security-removal timings

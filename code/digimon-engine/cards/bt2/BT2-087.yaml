@@ -1,0 +1,19 @@
+card: BT2-087
+name: Kari Kamiya
+kind: tamer
+color: [yellow]
+cost: 3
+
+effects:
+  - text: "[Start of Your Turn] If you have 3 or fewer security cards, gain 1 memory."
+    when: start_of_your_turn
+    condition: { security_count_lte: 3 }
+    summary: "[Start of Your Turn] If you have 3 or fewer security cards, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

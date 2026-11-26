@@ -1,0 +1,31 @@
+card: BT3-047
+name: Wormmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Free
+traits: [Larva]
+
+effects:
+  - text: "[On Deletion] Reveal the top 3 cards of your deck. Add 1 level 4 or 5 Digimon card among them to your hand. Place the remaining cards on the bottom of your deck in any order."
+    when: on_deletion
+    summary: "[On Deletion] Reveal top 3; add 1 level 4 or 5 Digimon card to hand; place rest on bottom of deck"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - optional: false
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - level_eq: 4
+                      - level_eq: 5
+              to: hand
+              max: 1
+              prompt: "Add 1 level 4 or 5 Digimon card to your hand"
+          remainder: bottom

@@ -1,0 +1,32 @@
+card: BT3-107
+name: Looking Back on the Good Times
+kind: option
+color: [black]
+cost: 4
+
+effects:
+  - text: "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if that Digimon's play cost is 4 or less, delete it."
+    when: main_from_hand
+    summary: "[Main] <De-Digivolve 1> 1 of your opponent's Digimon; then if its play cost is 4 or less, delete it"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"
+      - de_digivolve: { target: target, amount: 1 }
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              of_permanent: target
+              play_cost_lte: 4
+          then:
+            - delete_permanent: { target: target }
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to your hand"
+    process:
+      - add_this_option_to_hand: {}

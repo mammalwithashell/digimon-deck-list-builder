@@ -1,0 +1,22 @@
+card: BT2-021
+name: Veemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Free
+traits: [Mini Dragon]
+
+effects:
+  - text: "[Your Turn] [Once Per Turn] When this Digimon becomes unsuspended during your main phase, ＜Draw 1＞ (Draw 1 card from your deck.)"
+    scope: inherited
+    when: on_unsuspend
+    active_when: { your_turn: true }
+    once_per_turn: true
+    trigger_if: { event_permanent_is_source: true }
+    condition: { in_phase: main }
+    summary: "[Your Turn][OPT] When unsuspended during main phase, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

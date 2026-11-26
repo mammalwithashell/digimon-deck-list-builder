@@ -1,0 +1,23 @@
+card: BT2-058
+name: Guardromon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 7000
+traits: [Machine]
+form: Champion
+attribute: Virus
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[Your Turn] This Digimon can't attack."
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    modifier: CannotAttack
+    summary: "[Your Turn] This Digimon can't attack"

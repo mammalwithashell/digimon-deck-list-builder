@@ -1,0 +1,40 @@
+card: BT3-014
+name: Silphymon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Free
+traits: [Beastkin]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - text: "[When Digivolving] Change the original DP of 1 of your opponent's level 4 or lower Digimon to 1000 for the turn."
+    when: when_digivolving
+    summary: "[When Digivolving] Change original DP of 1 opponent Lv.4- Digimon to 1000 for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          filter: { kind: digimon, level_lte: 4 }
+          bind_as: victim
+          prompt: "Choose 1 of your opponent's level 4 or lower Digimon"
+      - add_modifier:
+          target: victim
+          modifier: ChangeOriginDP
+          value: 0
+          payload: { dp: 1000 }
+          expiry: end_of_turn
+
+  - text: "[Your Turn] This Digimon is also treated as yellow."
+    kind: aura
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    modifier: AddColor
+    modifier_colors: [yellow]
+    summary: "[Your Turn] This Digimon is also treated as yellow"

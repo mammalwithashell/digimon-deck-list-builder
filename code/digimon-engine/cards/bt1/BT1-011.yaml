@@ -1,0 +1,26 @@
+card: BT1-011
+name: Agumon Expert
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Dinosaur]
+form: Rookie
+attribute: Vaccine
+
+effects:
+  - text: "[On Play] Return 1 Digimon card with [Agumon] in its name from your recycle bin to your hand."
+    when: on_play
+    summary: "[On Play] Return 1 Digimon card with [Agumon] in its name from your trash to your hand"
+    process:
+      - select_trash:
+          optional: false
+          of: you
+          bind_as: recovered
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Agumon"
+          prompt: "Return 1 Digimon card with [Agumon] in its name from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }

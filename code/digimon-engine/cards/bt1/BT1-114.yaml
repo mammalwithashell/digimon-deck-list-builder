@@ -1,0 +1,31 @@
+card: BT1-114
+name: MetalGreymon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 9000
+form: Ultimate
+attribute: Virus
+traits: [Cyborg]
+
+effects:
+  - text: "＜Security A. +2＞ (This Digimon checks 2 additional security cards.)"
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 2
+    summary: "<Security A. +2>"
+
+  - text: "[When Attacking] Lose 5 memory."
+    when: when_attacking
+    summary: "[When Attacking] Lose 5 memory"
+    process:
+      - lose_memory: 5
+
+  - text: "[Your Turn] This Digimon gets +3000 DP."
+    scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 3000
+    summary: "Inherited [Your Turn] This Digimon gets +3000 DP"

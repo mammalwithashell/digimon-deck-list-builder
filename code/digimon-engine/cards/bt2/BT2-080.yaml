@@ -1,0 +1,44 @@
+card: BT2-080
+name: Piedmon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 10000
+form: Mega
+attribute: Virus
+traits: [Wizard]
+
+effects:
+  - text: "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "<Retaliation>"
+
+  - text: "[On Play] You may play up to 2 level 4 or lower purple Digimon cards from your trash without paying their memory costs. Any [On Play] effects on Digimon played with this effect don't activate."
+    when: on_play
+    optional: true
+    summary: "[On Play] You may play up to 2 level 4 or lower purple Digimon cards from your trash free; their [On Play] effects don't activate"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 0
+          max: 2
+          optional_zero: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - color_is: purple
+              - can_play_from_effect_without_cost: true
+          bind_as: to_play
+          prompt: "Play up to 2 level 4 or lower purple Digimon cards from your trash without paying their memory costs"
+      - per_selected:
+          selection: to_play
+          bind_as: revived
+          body:
+            - play_from_trash_free:
+                of: you
+                hand_index: revived
+                suppress_on_play: true

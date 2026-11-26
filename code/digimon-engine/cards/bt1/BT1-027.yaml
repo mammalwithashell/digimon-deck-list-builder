@@ -1,0 +1,10 @@
+card: BT1-027
+name: Armadillomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 2
+dp: 4000
+form: Rookie
+attribute: Free
+traits: [Mammal]

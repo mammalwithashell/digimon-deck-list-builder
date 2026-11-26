@@ -1,0 +1,10 @@
+card: BT1-038
+name: Monzaemon
+kind: digimon
+level: 5
+color: [blue]
+cost: 5
+dp: 6000
+form: Ultimate
+attribute: Vaccine
+traits: [Puppet]

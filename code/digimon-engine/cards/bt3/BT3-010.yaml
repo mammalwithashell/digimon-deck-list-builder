@@ -1,0 +1,26 @@
+card: BT3-010
+name: ZubaEagermon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+form: Champion
+attribute: Vaccine
+traits: [Weapon, Legend-Arms]
+
+effects:
+  - text: "[Your Turn] While this Digimon is level 7, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            is_source_permanent: true
+            level_eq: 7
+    target: { is_source_permanent: true }
+    security_attack: 1
+    summary: "[Inherited][Your Turn] While this Digimon is level 7, it gains <Security A. +1>"

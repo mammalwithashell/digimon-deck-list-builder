@@ -1,0 +1,36 @@
+card: SD02-06
+name: Valner Dragnogh
+kind: tamer
+color: [blue]
+cost: 4
+traits: [ALYSION]
+
+effects:
+  - when: start_of_your_turn
+    text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - when: main_on_field
+    text: "[Main] If you have a Digimon with the [ALYSION] trait, by suspending this Tamer, trash the bottom 2 digivolution cards of 1 of your opponent's Digimon."
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - can_change_orientation: true
+        - any_permanent: { of: you, zone: [battle_area], kind: digimon, trait_has: ALYSION }
+    summary: "[Main] If you have an [ALYSION] Digimon, suspend this Tamer to trash the bottom 2 digivolution cards of 1 opposing Digimon"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 2 }
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}

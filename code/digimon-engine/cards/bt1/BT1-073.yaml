@@ -1,0 +1,29 @@
+card: BT1-073
+name: Kabuterimon
+kind: digimon
+level: 4
+color: [green]
+cost: 6
+dp: 5000
+form: Champion
+attribute: Vaccine
+traits: [Insectoid]
+
+effects:
+  - text: "[Your Turn] This Digimon gets +1000 DP for every suspended Digimon your opponent has."
+    scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: opponent
+          zone: battle_area
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+      delta: 1000
+    summary: "[Your Turn] This Digimon gets +1000 DP for every suspended Digimon your opponent has"

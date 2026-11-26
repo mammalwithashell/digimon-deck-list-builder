@@ -1,0 +1,10 @@
+card: BT1-065
+name: Mushroomon
+kind: digimon
+level: 3
+color: [green]
+cost: 2
+dp: 4000
+form: Rookie
+attribute: Virus
+traits: [Vegetation]

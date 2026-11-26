@@ -1,8 +1,8 @@
 {
   "version": 1,
   "source": "https://world.digimoncard.com/cards/?search=true&card_no=",
-  "card_count": 4465,
-  "qa_count": 6671,
+  "card_count": 4495,
+  "qa_count": 6709,
   "cards": {
     "AD1-001": [
       "Q6050",
@@ -136,6 +136,19 @@
       "Q6117",
       "Q6118"
     ],
+    "BD01-02": [
+      "Q7567",
+      "Q7568"
+    ],
+    "BD01-03": [],
+    "BD01-05": [],
+    "BD01-10": [],
+    "BD02-02": [],
+    "BD02-03": [],
+    "BD02-04": [
+      "Q7584"
+    ],
+    "BD02-08": [],
     "BT1-001": [
       "Q865",
       "Q866"
@@ -8438,6 +8451,17 @@
     "BT9-112": [
       "Q1928"
     ],
+    "ED01-01": [
+      "Q7569",
+      "Q7570"
+    ],
+    "ED01-02": [
+      "Q7585"
+    ],
+    "ED01-09": [],
+    "ED01-10": [
+      "Q7586"
+    ],
     "EX1-001": [
       "Q3187",
       "Q3188"
@@ -12801,6 +12825,15 @@
     "RB1-036": [
       "Q4112"
     ],
+    "SD01-02": [],
+    "SD01-03": [
+      "Q7565",
+      "Q7566"
+    ],
+    "SD01-04": [],
+    "SD02-02": [],
+    "SD02-03": [],
+    "SD02-04": [],
     "ST1-01": [
       "Q601"
     ],
@@ -13536,6 +13569,58 @@
       "Q6233",
       "Q6234",
       "Q6235"
+    ],
+    "ST25-01": [
+      "Q7547",
+      "Q7548"
+    ],
+    "ST25-02": [
+      "Q7549"
+    ],
+    "ST25-03": [
+      "Q7550"
+    ],
+    "ST25-04": [
+      "Q7551",
+      "Q7552"
+    ],
+    "ST25-05": [
+      "Q7553",
+      "Q7554",
+      "Q7555",
+      "Q7556",
+      "Q7557",
+      "Q7558"
+    ],
+    "ST25-06": [
+      "Q7559",
+      "Q7560",
+      "Q7561",
+      "Q7562",
+      "Q7563",
+      "Q7564"
+    ],
+    "ST26-01": [
+      "Q7571",
+      "Q7572"
+    ],
+    "ST26-02": [
+      "Q7573",
+      "Q7574",
+      "Q7575"
+    ],
+    "ST26-03": [],
+    "ST26-04": [
+      "Q7578",
+      "Q7579"
+    ],
+    "ST26-05": [
+      "Q7580",
+      "Q7581"
+    ],
+    "ST26-06": [
+      "Q7582",
+      "Q7583"
     ],
     "ST3-01": [
       "Q630"
@@ -73829,6 +73914,348 @@
       "answer": "Two times. In this situation, your Digimon and Tamers' colors are red, blue, yellow, and white, so you can activate it twice.",
       "card_ids": [
         "EX13-077"
+      ]
+    },
+    "Q7547": {
+      "q_id": "Q7547",
+      "date": "2026-11-20",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card_ids": [
+        "ST25-01"
+      ]
+    },
+    "Q7548": {
+      "q_id": "Q7548",
+      "date": "2026-11-20",
+      "question": "What positions on the memory gauge does \"your opponent has X or more memory\" refer to?",
+      "answer": "It refers to the positions at X and to the right of it on your opponent's side.",
+      "card_ids": [
+        "ST25-01"
+      ]
+    },
+    "Q7549": {
+      "q_id": "Q7549",
+      "date": "2026-11-20",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card_ids": [
+        "ST25-02"
+      ]
+    },
+    "Q7550": {
+      "q_id": "Q7550",
+      "date": "2026-11-20",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card_ids": [
+        "ST25-03"
+      ]
+    },
+    "Q7551": {
+      "q_id": "Q7551",
+      "date": "2026-11-20",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card_ids": [
+        "ST25-04"
+      ]
+    },
+    "Q7552": {
+      "q_id": "Q7552",
+      "date": "2026-11-20",
+      "question": "What does \"also\" mean?",
+      "answer": "“Also” means that the effect given by that effect has the same duration and targets as that effect's previously resolved portion. For example, in the case of “Until the end of the turn, all of your XX Digimon gain AA. If you have a Tamer, they also gain BB,” all of your XX Digimon gain AA until the end of the turn, and if you have a Tamer, all of your XX Digimon also gain BB until the end of the turn as well.",
+      "card_ids": [
+        "ST25-04"
+      ]
+    },
+    "Q7553": {
+      "q_id": "Q7553",
+      "date": "2026-11-20",
+      "question": "What kind of card does \"a card with X in its text\" refer to?",
+      "answer": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card_ids": [
+        "ST25-05"
+      ]
+    },
+    "Q7554": {
+      "q_id": "Q7554",
+      "date": "2026-11-20",
+      "question": "My opponent has 2 Digimon with 3000 DP. Can I activate this card's [When Digivolving] effect to only delete 1 of my opponent's Digimon with 3000 DP?",
+      "answer": "Yes, you can.",
+      "card_ids": [
+        "ST25-05"
+      ]
+    },
+    "Q7555": {
+      "q_id": "Q7555",
+      "date": "2026-11-20",
+      "question": "My opponent has 2 Digimon with 3000 DP. Can I activate this card's [When Digivolving] effect and then not delete any of my opponent's Digimon?",
+      "answer": "No. You must delete at least 1 of your opponent's Digimon.",
+      "card_ids": [
+        "ST25-05"
+      ]
+    },
+    "Q7556": {
+      "q_id": "Q7556",
+      "date": "2026-11-20",
+      "question": "This card's DP is 12000 and it has gained 1 from its own [Your Turn] effect. It performs a security check, and the 1st security check activates another effect, causing this card's DP to drop to 7000 or less. At this time, will it perform the 2nd security check using ?",
+      "answer": "No, the 2nd security check isn't performed. When this card's DP becomes 7000 or less from the 1st security check, it loses the it gained from its own [Your Turn] effect, so the 2nd check isn't performed.",
+      "card_ids": [
+        "ST25-05"
+      ]
+    },
+    "Q7557": {
+      "q_id": "Q7557",
+      "date": "2026-11-20",
+      "question": "I use [Burning Drive] and give 1 of my Digimon +10000 DP. Before processing the part if its effect following \"then,\" if I digivolve my Digimon into this card using this card's Arts Digivolve, can I reference that Digimon's DP to delete an opponent's Digimon?",
+      "answer": "No. You must fully resolve [Burning Drive]'s effect before making the choice to Arts Digivolve or not.",
+      "card_ids": [
+        "ST25-05"
+      ]
+    },
+    "Q7558": {
+      "q_id": "Q7558",
+      "date": "2026-11-20",
+      "question": "I use [Burning Drive] to give 1 of my Digimon +10000 DP. At this time, can I reference the DP of a different Digimon from the one I gave the DP bonus to for the part of the effect after \"then\"?",
+      "answer": "Yes, you can.",
+      "card_ids": [
+        "ST25-05"
+      ]
+    },
+    "Q7559": {
+      "q_id": "Q7559",
+      "date": "2026-11-20",
+      "question": "What does \"isn't affected by [...] effects\" mean, exactly?",
+      "answer": "This effect prevents a card from being affected by effects. For example, your Digimon won't suspend if it's chosen for a \"suspend 1 of your opponent's Digimon\" effect, and its DP won't be reduced by 3000 if it's chosen for a \"1 of your opponent's Digimon gets -3000 DP\" effect.",
+      "card_ids": [
+        "ST25-06"
+      ]
+    },
+    "Q7560": {
+      "q_id": "Q7560",
+      "date": "2026-11-20",
+      "question": "Can a card that has an \"isn't affected by [...] effects\" effect be chosen for an effect?",
+      "answer": "Yes, it can be chosen. For example, a Digimon that isn't affected by effects can be chosen for a \"suspend 1 of your opponent's Digimon\" effect.",
+      "card_ids": [
+        "ST25-06"
+      ]
+    },
+    "Q7561": {
+      "q_id": "Q7561",
+      "date": "2026-11-20",
+      "question": "Can a card that has an \"isn't affected by [...] effects\" effect be given an effect?",
+      "answer": "Yes, it can. It won't be affected by it, but it can be given an effect. However, if an effect such as is given to a Digimon that isn't affected by effects, the Digimon won't be considered to have that effect.",
+      "card_ids": [
+        "ST25-06"
+      ]
+    },
+    "Q7562": {
+      "q_id": "Q7562",
+      "date": "2026-11-20",
+      "question": "If a card is affected by an effect, then it later gains an \"isn't affected by [...] effects\" effect, what happens to the effect that was affecting it?",
+      "answer": "As soon as it gains the \"isn't affected by [...] effects\" effect, it will no longer be affected.",
+      "card_ids": [
+        "ST25-06"
+      ]
+    },
+    "Q7563": {
+      "q_id": "Q7563",
+      "date": "2026-11-20",
+      "question": "If a card has an \"isn't affected by [...] effects\" effect, it gains an effect, then it later loses the \"isn't affected by [...] effects\" effect, what happens to the effect that it gained?",
+      "answer": "It will be affected by the effect as soon as it can be affected by effects.",
+      "card_ids": [
+        "ST25-06"
+      ]
+    },
+    "Q7564": {
+      "q_id": "Q7564",
+      "date": "2026-11-20",
+      "question": "A card that has an \"isn't affected by [...] effects\" effect was given an effect that triggers at a timing such as [When Attacking]. Will the effect trigger if that card later meets the trigger conditions?",
+      "answer": "If the Digimon isn't affected by effects upon the trigger timing, the effect won't trigger.",
+      "card_ids": [
+        "ST25-06"
+      ]
+    },
+    "Q7565": {
+      "q_id": "Q7565",
+      "date": "2026-11-20",
+      "question": "What does an \"add X000 to the maximum your DP-based deletion effects can delete\" effect do?",
+      "answer": "It increases the maximum value described in \"delete Digimon with DP X000 or less\" effects. For example, while \"[Your Turn] Add 1000 to the maximum DP you can choose with DP-based deletion effects\" is active, \"[When Digivolving] Delete 1 of your opponent's Digimon with 3000 DP or less\" will allow you to delete an opponent's Digimon with 4000 DP or less.",
+      "card_ids": [
+        "SD01-03"
+      ]
+    },
+    "Q7566": {
+      "q_id": "Q7566",
+      "date": "2026-11-20",
+      "question": "If \"add X000 to the maximum your DP-based deletion effects can delete\" is active, can the maximum be increased for an effect such as \"delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP\" that references a Digimon's DP for deletion?",
+      "answer": "No, it can't be increased. You can't increase the maximum of a DP-based deletion effect that doesn't show a numerical value.",
+      "card_ids": [
+        "SD01-03"
+      ]
+    },
+    "Q7567": {
+      "q_id": "Q7567",
+      "date": "2026-11-20",
+      "question": "What does an \"add X000 to the maximum your DP-based deletion effects can delete\" effect do?",
+      "answer": "It increases the maximum value described in \"delete Digimon with DP X000 or less\" effects. For example, while \"[Your Turn] Add 1000 to the maximum DP you can choose with DP-based deletion effects\" is active, \"[When Digivolving] Delete 1 of your opponent's Digimon with 3000 DP or less\" will allow you to delete an opponent's Digimon with 4000 DP or less.",
+      "card_ids": [
+        "BD01-02"
+      ]
+    },
+    "Q7568": {
+      "q_id": "Q7568",
+      "date": "2026-11-20",
+      "question": "If \"add X000 to the maximum your DP-based deletion effects can delete\" is active, can the maximum be increased for an effect such as \"delete 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP\" that references a Digimon's DP for deletion?",
+      "answer": "No, it can't be increased. You can't increase the maximum of a DP-based deletion effect that doesn't show a numerical value.",
+      "card_ids": [
+        "BD01-02"
+      ]
+    },
+    "Q7569": {
+      "q_id": "Q7569",
+      "date": "2026-11-20",
+      "question": "My opponent has 2 Digimon with 3000 DP. Can I activate this card's [When Attacking] effect to only delete 1 of my opponent's Digimon with 3000 DP?",
+      "answer": "Yes. Note that you have to choose at least 1 of your opponent's Digimon to delete.",
+      "card_ids": [
+        "ED01-01"
+      ]
+    },
+    "Q7570": {
+      "q_id": "Q7570",
+      "date": "2026-11-20",
+      "question": "I currently have 1 [Kanata Hondo] when I attack with this Digimon and delete my opponent's Digimon in battle. At this time, if an effect on my opponent's deleted Digimon removes that [Kanata Hondo] from the battle area, can this card perform a security check with the gained from its [Your Turn] effect?",
+      "answer": "Yes. In this case, the and the effect on your opponent's Digimon that was deleted in battle trigger simultaneously. The turn player's effects are activated first, so activates and effects that perform checks before End of Attack timing will be pending. Even if the opponent's deleted Digimon's effect activates afterward and your Digimon loses due to [Kanata Hondo] being removed from the battle area, resolving pending effects that perform checks before End of Attack timing means the security check will be performed at that time.",
+      "card_ids": [
+        "ED01-01"
+      ]
+    },
+    "Q7571": {
+      "q_id": "Q7571",
+      "date": "2026-11-20",
+      "question": "Is a \"while your opponent has no Digimon with XX\" condition also met when my opponent has no Digimon?",
+      "answer": "Yes, it's met.",
+      "card_ids": [
+        "ST26-01"
+      ]
+    },
+    "Q7572": {
+      "q_id": "Q7572",
+      "date": "2026-11-20",
+      "question": "What does \"can't be deleted in battle\" mean, exactly?",
+      "answer": "This effect prevents this Digimon from being deleted if it loses a battle against another Digimon or a Security Digimon.",
+      "card_ids": [
+        "ST26-01"
+      ]
+    },
+    "Q7573": {
+      "q_id": "Q7573",
+      "date": "2026-11-20",
+      "question": "Is the condition \"if your opponent has no Digimon with XX\" also considered met when the opponent has no Digimon at all?",
+      "answer": "Yes.",
+      "card_ids": [
+        "ST26-02"
+      ]
+    },
+    "Q7574": {
+      "q_id": "Q7574",
+      "date": "2026-11-20",
+      "question": "What happens to an effect that targets 1 “Digimon with the fewest digivolution cards” if all of the opponent's Digimon have the same number of digivolution cards?",
+      "answer": "You choose 1 Digimon from among them.",
+      "card_ids": [
+        "ST26-02"
+      ]
+    },
+    "Q7575": {
+      "q_id": "Q7575",
+      "date": "2026-11-20",
+      "question": "A Digimon with this card among its digivolution cards attacks, and another effect deletes a digivolution card from one of my opponent's Digimon, making it the unsuspended Digimon with the fewest digivolution cards. Can I activate this card's inherited effect and change the attack target to that Digimon?",
+      "answer": "Yes, you can.",
+      "card_ids": [
+        "ST26-02"
+      ]
+    },
+    "Q7578": {
+      "q_id": "Q7578",
+      "date": "2026-11-20",
+      "question": "I currently have a suspended Digimon with the [Ice-Snow] trait and this card as a digivolution card. After I activate this card's inherited effect and unsuspend the Digimon at the end of my turn, can I attack with it using some other [End of Your Turn] effect?",
+      "answer": "Yes.",
+      "card_ids": [
+        "ST26-04"
+      ]
+    },
+    "Q7579": {
+      "q_id": "Q7579",
+      "date": "2026-11-20",
+      "question": "Can this card's inherited effect be activated even if the Digimon with this card as a digivolution card doesn't have the [Ice-Snow] trait?",
+      "answer": "Yes. However, even if you meet the \"if this effect didn't trash\" condition, you cannot unsuspend the Digimon as it doesn't have the [Ice-Snow] trait.",
+      "card_ids": [
+        "ST26-04"
+      ]
+    },
+    "Q7580": {
+      "q_id": "Q7580",
+      "date": "2026-11-20",
+      "question": "P: Card name in brackets",
+      "answer": "Yes. However, when you attack using [ED01-10 Bond of Snowflakes]'s effect, you suspend the Digimon according to the standard rules. Related Cards",
+      "card_ids": [
+        "ST26-05"
+      ]
+    },
+    "Q7581": {
+      "q_id": "Q7581",
+      "date": "2026-11-20",
+      "question": "Is the condition \"if your opponent has no Digimon with XX\" also considered met when the opponent has no Digimon at all?",
+      "answer": "Yes.",
+      "card_ids": [
+        "ST26-05"
+      ]
+    },
+    "Q7582": {
+      "q_id": "Q7582",
+      "date": "2026-11-20",
+      "question": "Can I process the part of the effect after \"after\" in this card's [All Turns] effect without meeting the \"by\" condition?",
+      "answer": "No, you can't. If you don't suspend this card, you can't process the part after \"after\" in its [All Turns] effect.",
+      "card_ids": [
+        "ST26-06"
+      ]
+    },
+    "Q7583": {
+      "q_id": "Q7583",
+      "date": "2026-11-20",
+      "question": "Is the condition \"if your opponent has no Digimon with XX\" also considered met when the opponent has no Digimon at all?",
+      "answer": "Yes.",
+      "card_ids": [
+        "ST26-06"
+      ]
+    },
+    "Q7584": {
+      "q_id": "Q7584",
+      "date": "2026-11-20",
+      "question": "Is the condition \"if your opponent has no Digimon with XX\" also considered met when the opponent has no Digimon at all?",
+      "answer": "Yes.",
+      "card_ids": [
+        "BD02-04"
+      ]
+    },
+    "Q7585": {
+      "q_id": "Q7585",
+      "date": "2026-11-20",
+      "question": "One of my opponent's Digimon has more digivolution cards than this card, including [EX5-070 X Antibody Proto Form]. When it gets deleted, my opponent activates [EX5-070 X Antibody Proto From]'s inherited effect, leaving that Digimon with the same number or fewer digivolution cards as this Digimon. At this time, does this card's [All Turns] effect trigger?",
+      "answer": "Yes, it triggers. Related Cards",
+      "card_ids": [
+        "ED01-02"
+      ]
+    },
+    "Q7586": {
+      "q_id": "Q7586",
+      "date": "2026-11-20",
+      "question": "Can I activate this card's effect and attack a Digimon with the same number of digivolution cards as my Digimon that I chose?",
+      "answer": "No. You can only attack a Digimon that has fewer digivolution cards than your Digimon you chose.",
+      "card_ids": [
+        "ED01-10"
       ]
     }
   },

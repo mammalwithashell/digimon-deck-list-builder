@@ -1,0 +1,18 @@
+card: BT2-019
+name: Phoenixmon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: [Holy Beast]
+
+effects:
+  - text: "[When Attacking] When this Digimon attacks a player, gain 1 memory."
+    when: when_attacking
+    condition: { event_target_is_player: true }
+    summary: "[When Attacking] When attacking a player, gain 1 memory"
+    process:
+      - gain_memory: 1

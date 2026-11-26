@@ -1,0 +1,114 @@
+card: ST26-05
+name: Yukinamon
+kind: dual
+level: 6
+color: [blue]
+dp: 12000
+traits: [Ice-Snow, ALYSION]
+form: Mega
+attribute: Virus
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [blue]
+    traits: [Ice-Snow, ALYSION]
+    effect_text: "＜Iceclad＞ ＜Piercing＞ ＜Blocker＞ [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] trait Digimon may attack without suspending. [When Attacking] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck."
+  option:
+    use_cost: 5
+    colors: [blue]
+    effect_text: "[Main] Trash all cards from under 1 of your opponent's Digimon or Tamers. Then, 2 of their Digimon or Tamers can't suspend until their turn ends. ＜Arts Digivolve＞"
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    text: "＜Iceclad＞"
+    keyword: Iceclad
+
+  - kind: grant_keyword
+    text: "＜Piercing＞"
+    keyword: Piercing
+
+  - kind: grant_keyword
+    text: "＜Blocker＞"
+    keyword: Blocker
+
+  - when: when_digivolving
+    text: "[When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] trait Digimon may attack without suspending."
+    summary: "[When Digivolving] Trash any 3 opposing digivolution cards; if opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] Digimon may attack without suspending"
+    process:
+      - select_opponent_sources:
+          filter: { host_kind_is: digimon }
+          min: 3
+          max: 3
+          clamp_to_available: true
+          bind_as: materials
+          prompt: "Trash any 3 digivolution cards from your opponent's Digimon"
+          then:
+            - trash_selected_sources: { source_refs: materials }
+      - if:
+          condition:
+            not:
+              any_permanent: { of: opponent, zone: [battle_area], kind: digimon, materials_count_gte: 1 }
+          then:
+            - select_own_permanent:
+                optional: true
+                bind_as: attacker
+                filter:
+                  kind: digimon
+                  trait_has: Ice-Snow
+                  can_attack: { targets: any, without_suspending: true }
+                prompt: "1 of your [Ice-Snow] trait Digimon may attack without suspending"
+            - if:
+                condition: { binding_present: attacker }
+                then:
+                  - may_attack_now:
+                      attacker: attacker
+                      targets: any
+                      without_suspending: true
+                      optional: true
+                      prompt: "Choose an attack target (attacking without suspending)"
+
+  - when: when_attacking
+    text: "[When Attacking] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck."
+    summary: "[When Attacking] You may return 1 opposing Digimon with no digivolution cards to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          optional: true
+          bind_as: returned
+          filter: { kind: digimon, materials_count_lte: 0 }
+          prompt: "You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck"
+      - return_to_deck: { target: returned, position: bottom }
+
+  - when: main_from_hand
+    text: "[Main] Trash all cards from under 1 of your opponent's Digimon or Tamers. Then, 2 of their Digimon or Tamers can't suspend until their turn ends."
+    summary: "[Main] Trash all cards under 1 opposing Digimon or Tamer, then 2 opposing Digimon or Tamers can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: stripped
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          prompt: "Trash all cards from under 1 of your opponent's Digimon or Tamers"
+      - trash_all_sources: { target: stripped }
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          clamp_to_available: true
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          bind_as: locked
+          prompt: "2 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+      - per_selected:
+          selection: locked
+          bind_as: target
+          body:
+            - add_modifier:
+                target: target
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn

@@ -186,6 +186,8 @@ impl Game {
             n_dna_digivolutions: [0u32, 0u32],
             n_digivolve_driven_attacks: [0u32, 0u32],
             digimon_attacks_this_turn: [0u32, 0u32],
+            digivolutions_this_turn: [0u32, 0u32],
+            digisorption_opponent_used_cards: Vec::new(),
             current_phase: GamePhase::Mulligan,
             memory: 0,
             memory_pair,
@@ -346,6 +348,8 @@ impl Game {
             play_enters_suspended: false,
             on_play_suppressor: None,
             pending_play_effect_initiated: false,
+            pending_play_from_trash: false,
+            pending_digi_burst_source_trash: false,
             pending_digivolve_effect_initiated: false,
             pending_hand_discard: None,
             pending_deck_discards: Vec::new(),
@@ -406,6 +410,10 @@ impl Game {
         self.n_dna_digivolutions = [0u32, 0u32];
         self.n_digivolve_driven_attacks = [0u32, 0u32];
         self.digimon_attacks_this_turn = [0u32, 0u32];
+        self.digivolutions_this_turn = [0u32, 0u32];
+        self.digisorption_opponent_used_cards.clear();
+        self.pending_play_from_trash = false;
+        self.pending_digi_burst_source_trash = false;
         self.current_phase = GamePhase::Mulligan;
         self.memory = 0;
         let turn_order: Vec<PlayerId> = (0..self.rules.player_count).collect();

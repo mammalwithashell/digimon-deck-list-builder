@@ -1,0 +1,29 @@
+card: BT1-056
+name: Petermon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 5000
+form: Champion
+attribute: Data
+traits: [Fairy]
+
+effects:
+  - text: "[On Play] You may play 1 [Tinkermon] from your hand or recycle bin without paying its memory cost."
+    when: on_play
+    optional: true
+    summary: "[On Play] You may play 1 [Tinkermon] from your hand or trash without paying its memory cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          filter:
+            all_of:
+              - name_is: Tinkermon
+              - can_play_from_effect_without_cost: true
+          bind_as: pick
+          optional: true
+          prompt: "You may play 1 [Tinkermon] from your hand or trash without paying its memory cost"
+      - play_union_bound_free:
+          binding: pick

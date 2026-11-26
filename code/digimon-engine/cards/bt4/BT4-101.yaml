@@ -1,0 +1,32 @@
+card: BT4-101
+name: "I'll Drag You Into the Depths!"
+kind: option
+color: [blue]
+cost: 1
+
+effects:
+  - text: '[Main] All of your Digimon gain "[Your Turn] When attacking an opponent''s Digimon with no digivolution cards, delete that Digimon." for the turn.'
+    when: main_from_hand
+    summary: '[Main] All your Digimon gain "[Your Turn] When attacking an opponent''s Digimon with no digivolution cards, delete that Digimon" for the turn'
+    process:
+      - grant_triggered_effect:
+          dynamic: true
+          target: { of: you, zone: [battle_area], kind: digimon }
+          timing: when_attacking
+          expiry: end_of_turn
+          body:
+            - if:
+                condition:
+                  all_of:
+                    - your_turn: true
+                    - attack_target_matches:
+                        kind: digimon
+                        materials_count_lte: 0
+                then:
+                  - delete_permanent: { target: attack_target }
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to hand"
+    process:
+      - add_this_option_to_hand: {}

@@ -1,0 +1,30 @@
+card: BD02-02
+name: Renamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Beastkin, ALYSION]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - when: on_play
+    text: "[On Play] Reveal the top 5 cards of your deck. Add 1 blue [ALYSION] trait card among them to the hand. Return the rest to the bottom of the deck."
+    summary: "[On Play] Reveal top 5; add 1 blue [ALYSION] card to hand; return rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 5, bind_as: revealed }
+      - select_reveal:
+          of: you
+          optional: false
+          bind_as: picked
+          filter: { color_is: blue, trait_has: ALYSION }
+          prompt: "Add 1 blue [ALYSION] trait card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

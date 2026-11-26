@@ -1,0 +1,57 @@
+card: BT3-112
+name: Omnimon Alter-S
+kind: digimon
+level: 7
+color: [white]
+cost: 15
+dp: 15000
+attribute: Virus
+traits: [Holy Warrior]
+
+effects:
+  - text: "[When Digivolving] ＜De-Digivolve 1＞ all of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, delete all of your opponent's Digimon with 5000 DP or less."
+    when: when_digivolving
+    summary: "[When Digivolving] <De-Digivolve 1> all of your opponent's Digimon; then delete all of your opponent's Digimon with 5000 DP or less"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+          bind_as: opp_digi
+          body:
+            - de_digivolve: { target: opp_digi, amount: 1 }
+      - delete_all_permanents:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - dp_lte: 5000
+
+  - text: "[When Attacking] You may make this Digimon unblockable by your opponent for the turn by returning one of its level 6 digivolution cards to your hand."
+    when: when_attacking
+    summary: "[When Attacking] You may return 1 of this Digimon's Lv.6 digivolution cards to your hand to make this Digimon unblockable for the turn"
+    process:
+      - select_own_sources:
+          from: source
+          min: 0
+          max: 1
+          filter: { level_eq: 6 }
+          bind_as: lv6_source
+          prompt: "You may return 1 level 6 digivolution card from this Digimon to your hand to make it unblockable for the turn"
+          then:
+            - if:
+                condition:
+                  binding_count_eq:
+                    binding: lv6_source
+                    n: 1
+                then:
+                  - return_selected_sources_to_hand:
+                      source_refs: lv6_source
+                  - add_modifier:
+                      target: source
+                      modifier: CannotBeBlocked
+                      value: 1
+                      expiry: end_of_turn

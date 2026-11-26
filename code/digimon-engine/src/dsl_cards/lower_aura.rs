@@ -66,6 +66,7 @@ pub fn lower_all(
     modifier: Option<String>,
     modifier_value: Option<i32>,
     modifier_name: Option<String>,
+    modifier_colors: Option<Vec<digimon_dsl::compiled::CompiledColor>>,
     synth_identity: Option<CompiledSynthIdentity>,
     while_condition: Option<CompiledPredicate>,
     applies_to_opponent_security_dp: bool,
@@ -147,6 +148,7 @@ pub fn lower_all(
         modifier,
         modifier_value,
         modifier_name,
+        modifier_colors,
         synth_identity,
         effect_immunity,
         modifier_from,
@@ -280,6 +282,7 @@ pub fn lower(
     modifier: Option<String>,
     modifier_value: Option<i32>,
     modifier_name: Option<String>,
+    modifier_colors: Option<Vec<digimon_dsl::compiled::CompiledColor>>,
     synth_identity: Option<CompiledSynthIdentity>,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
     modifier_from: Option<CompiledEffectController>,
@@ -385,6 +388,21 @@ pub fn lower(
     let modifier = modifier.as_deref().and_then(lookup_modifier_type);
     // Name payload for name-carrying modifiers (CanOnlyDigivolveInto — Q3).
     let modifier_name = modifier_name.map(Arc::new);
+    let modifier_colors: Option<Arc<Vec<crate::enums::CardColor>>> = modifier_colors.map(|cs| {
+        Arc::new(
+            cs.into_iter()
+                .map(|c| match c {
+                    digimon_dsl::compiled::CompiledColor::Red => crate::enums::CardColor::Red,
+                    digimon_dsl::compiled::CompiledColor::Blue => crate::enums::CardColor::Blue,
+                    digimon_dsl::compiled::CompiledColor::Yellow => crate::enums::CardColor::Yellow,
+                    digimon_dsl::compiled::CompiledColor::Green => crate::enums::CardColor::Green,
+                    digimon_dsl::compiled::CompiledColor::White => crate::enums::CardColor::White,
+                    digimon_dsl::compiled::CompiledColor::Black => crate::enums::CardColor::Black,
+                    digimon_dsl::compiled::CompiledColor::Purple => crate::enums::CardColor::Purple,
+                })
+                .collect(),
+        )
+    });
     // Structured AdditiveSynthIdentity payload for a `TreatAsDigimon` mass aura
     // (BT25-104 "all of your [Marcus Damon]s are also treated as a 12000 DP
     // Digimon"). G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
@@ -395,6 +413,7 @@ pub fn lower(
 
     if is_self_aura && target_player.is_none() {
         let self_modifier_name = modifier_name.clone();
+        let self_modifier_colors = modifier_colors.clone();
         let self_grant_traits = grant_traits.clone();
         // G-DNA-MATERIAL-TREATED-AS-FOR-TARGET — result-scoped DNA identity.
         let self_dna_identity = dna_material_identity.clone().map(|d| {
@@ -467,6 +486,17 @@ pub fn lower(
                             Expiry::Permanent,
                             crate::modifiers::ModifierPayload::Name {
                                 value: name.as_ref().clone(),
+                                base: false,
+                            },
+                        );
+                    } else if let Some(colors) = &self_modifier_colors {
+                        ctx.add_declarative_modifier_with_payload(
+                            handle,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            crate::modifiers::ModifierPayload::Colors {
+                                value: colors.as_ref().clone(),
                                 base: false,
                             },
                         );
@@ -618,6 +648,17 @@ pub fn lower(
                             Expiry::Permanent,
                             crate::modifiers::ModifierPayload::Name {
                                 value: name.as_ref().clone(),
+                                base: false,
+                            },
+                        );
+                    } else if let Some(colors) = &modifier_colors {
+                        ctx.add_declarative_modifier_with_payload(
+                            h,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            crate::modifiers::ModifierPayload::Colors {
+                                value: colors.as_ref().clone(),
                                 base: false,
                             },
                         );

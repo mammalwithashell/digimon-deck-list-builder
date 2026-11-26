@@ -1,0 +1,28 @@
+{
+  "index": 4592,
+  "norm_id": 0.2296,
+  "card_id": "BD01-01",
+  "card_index": 1,
+  "card_name_eng": "Tokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BD01_01",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Lesser",
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] Raise the limit of the DP deletion effect for this Digimon with the [ALYSION] trait by +1000.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

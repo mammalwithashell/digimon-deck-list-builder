@@ -121,3 +121,11 @@ mod ulforce_exact_export;
 mod dynasmon_exact_fixture;
 
 mod royal_knights_new_cards;
+mod alysion_common;
+mod bd01;
+mod bd02;
+mod ed01;
+mod sd01;
+mod sd02;
+mod st25;
+mod st26;

@@ -1,0 +1,27 @@
+card: BT3-097
+name: A Delicate Plan
+kind: option
+color: [red]
+cost: 1
+
+effects:
+  - text: "[Main] 1 of your Digimon gains \"[Security] effects on Option cards checked by this Digimon don't activate.\" for the turn."
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gains '[Security] effects on Option cards checked by this Digimon don't activate' for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon so Option cards' [Security] effects checked by it don't activate for the turn"
+      - add_modifier:
+          target: target
+          modifier: DoesNotActivateOptionSecurityEffects
+          value: 1
+          expiry: end_of_turn
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to your hand"
+    process:
+      - add_this_option_to_hand: {}

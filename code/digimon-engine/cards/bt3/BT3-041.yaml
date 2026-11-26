@@ -1,0 +1,31 @@
+card: BT3-041
+name: Cherubimon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 11
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: [Cherub, "Three Great Angels"]
+
+effects:
+  - text: "[When Attacking] If you have 3 or fewer security cards, place 1 yellow Digimon from your trash on top of your security stack face down."
+    when: when_attacking
+    condition: { security_count_lte: 3 }
+    summary: "[When Attacking] If you have 3 or fewer security cards, place 1 yellow Digimon from your trash on top of your security stack face down"
+    process:
+      - select_trash:
+          optional: false
+          of: you
+          bind_as: trash_card
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+          prompt: "Place 1 yellow Digimon from your trash on top of your security stack face down"
+      - place_on_security:
+          source: { card: trash_card }
+          of: you
+          position: top
+          face_up: false

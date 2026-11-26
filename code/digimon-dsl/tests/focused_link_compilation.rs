@@ -83,6 +83,7 @@ fn matches_link(card: &CompiledCard, id: &str, cost: u16, dp: i32) -> bool {
                     modifier: None,
                     modifier_value: None,
                     modifier_name: None,
+                    modifier_colors: None,
                     synth_identity: None,
                     while_condition: None,
                     applies_to_opponent_security_dp: false,

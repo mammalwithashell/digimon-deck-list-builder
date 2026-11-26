@@ -1,0 +1,29 @@
+card: BT3-106
+name: Beast Cyclone
+kind: option
+color: [black]
+cost: 3
+
+effects:
+  - text: "[Main] All of your Digimon with ＜Blocker＞ or ＜Reboot＞ gain ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)"
+    when: main_from_hand
+    summary: "[Main] All of your Digimon with <Blocker> or <Reboot> gain <Security A. +1> for the turn"
+    process:
+      - add_modifier:
+          continuous: true
+          target:
+            all_of:
+              - of: you
+              - kind: digimon
+              - any_of:
+                  - has_keyword: Blocker
+                  - has_keyword: Reboot
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_turn
+
+  - text: "[Security] Add this card to your hand."
+    when: on_security
+    summary: "[Security] Add this card to your hand"
+    process:
+      - add_this_option_to_hand: {}

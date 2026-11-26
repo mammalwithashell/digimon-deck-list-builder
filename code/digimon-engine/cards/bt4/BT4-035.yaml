@@ -1,0 +1,33 @@
+card: BT4-035
+name: MirageGaogamon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Data
+traits: [Beast Knight]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+
+effects:
+  - text: "[When Digivolving] Gain 1 memory for every 4 cards in your opponent's hand."
+    when: when_digivolving
+    summary: "[When Digivolving] Gain 1 memory for every 4 cards in your opponent's hand"
+    process:
+      - gain_memory:
+          floor_div:
+            - base: 0
+              per: { card_count_in_zone: { zone: hand, of: opponent } }
+              delta: 1
+            - 4
+
+  - text: "[Your Turn] This Digimon is unblockable."
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    modifier: CannotBeBlocked
+    summary: "[Your Turn] This Digimon is unblockable"

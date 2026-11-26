@@ -1,0 +1,35 @@
+card: BT4-037
+name: Kudamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Vaccine
+traits: [Holy Beast]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - text: "[On Play] You may trash the top card of your security stack to have 1 of your opponent's Digimon get -2000 DP for the turn."
+    when: on_play
+    optional: true
+    active_when: { security_count_gte: 1 }
+    summary: "[On Play] May trash top security card to give 1 opponent Digimon -2000 DP for the turn"
+    process:
+      - trash_top_security: { of: you, bind_count_as: paid_security }
+      - if:
+          condition: { equals: [paid_security, 1] }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"
+            - add_dp_modifier:
+                target: target
+                value: -2000
+                expiry: end_of_turn

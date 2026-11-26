@@ -1807,7 +1807,7 @@ fn validate_post_payment_plural_filter(
                         // the local binding map, even for magic-looking names.
                         "binding_exists" | "binding_present" | "binding_absent"
                         | "binding_count_eq" | "level_eq_binding" | "level_lte_binding"
-                        | "level_gte_binding" | "color_matches_binding" | "not_in_binding"
+                        | "level_gte_binding" | "color_matches_binding" | "name_matches_binding" | "not_in_binding"
                         | "name_not_in_binding" | "of_permanent" | "binding_owner"
                         | "binding_card_kind" | "binding_card_color" | "binding_card_name_is"
                         | "binding_dp" | "binding_play_cost" | "binding_value" => true,
@@ -2380,7 +2380,7 @@ fn validate_step_binding_scope(
                 BindingRef::Named(name)
                     if !matches!(
                         name.as_str(),
-                        "self" | "this" | "carrier" | "source" | "event_target" | "event_card"
+                        "self" | "this" | "carrier" | "source" | "event_target" | "event_card" | "attack_target"
                     ) => Some(name),
                 BindingRef::Structured(reference) => reference
                     .permanent
@@ -3380,6 +3380,8 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotAttackPlayer",
     "VortexCanAttackPlayer",
     "CanAttackUnsuspended",
+    "CanAttackUnsuspendedWithFewerSources",
+    "BattleCompareDigivolutionCards",
     "CanAttackActivePlayer",
     "CannotAttackTarget",
     "CannotBeAttackedBySecurityAttackChanged",
@@ -3413,6 +3415,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotDigivolve",
     "CannotDigivolveAsTamer",
     "CanOnlyDigivolveInto",
+    "CanOnlyDigivolveIntoNameContaining",
     "ChangeColor",
     "AddColor",
     "ChangeLevel",
@@ -3421,6 +3424,8 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "CannotTrash",
     "CannotBlock",
     "CannotBeBlocked",
+    "CannotBeBlockedByNoSources",
+    "DigisorptionMaySuspendOpponent",
     "CannotCounter",
     "DrawBlock",
     "MemoryBlock",
@@ -3634,7 +3639,11 @@ fn validate_modifier_payload(
         );
     }
     let allowed: &[&str] = match keys[0] {
-        "name" => &["ChangeBaseCardName", "CanOnlyDigivolveInto"],
+        "name" => &[
+            "ChangeBaseCardName",
+            "CanOnlyDigivolveInto",
+            "CanOnlyDigivolveIntoNameContaining",
+        ],
         "colors" => &["ChangeBaseCardColor", "AddColor"],
         "dp" => &["ChangeOriginDP", "ChangeCardDP"],
         _ => &["ChangeTraits"],

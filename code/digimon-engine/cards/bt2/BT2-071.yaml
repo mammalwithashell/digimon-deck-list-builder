@@ -1,0 +1,31 @@
+card: BT2-071
+name: Wizardmon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+form: Champion
+attribute: Data
+traits: [Wizard]
+
+effects:
+  - text: "[All Turns] If you have a yellow Digimon in play, this Digimon gains ＜Retaliation＞. (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            color_is: yellow
+    target: {}
+    grant_keyword: { keyword: Retaliation }
+    summary: "[All Turns] While you have a yellow Digimon in play, this Digimon gains <Retaliation>"
+
+  - text: "[On Deletion] ＜Draw 1＞. (Draw 1 card from your deck.)"
+    when: on_deletion
+    summary: "[On Deletion] <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,27 @@
+card: BT1-053
+name: Darcmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+form: Champion
+attribute: Vaccine
+traits: [Angel]
+
+effects:
+  - text: "[Your Turn] When you play a level 3 yellow Digimon, if this Digimon is suspended, ＜Draw 1＞ (Draw 1 card from your deck.)."
+    when: on_ally_played
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_card_kind: digimon
+            - event_card_kind: token
+        - event_card_level_eq: 3
+        - event_card_color_has: [yellow]
+    condition: { source_is_unsuspended: false }
+    summary: "[Your Turn] When you play a level 3 yellow Digimon, if this Digimon is suspended, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

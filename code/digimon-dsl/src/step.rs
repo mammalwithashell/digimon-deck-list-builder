@@ -119,7 +119,7 @@ pub enum StepSpec {
     /// orientation. YAML: `add_top_face_down_security_to_hand: { of: you }`.
     /// G-DSL-ADD-TOP-FACE-DOWN-SECURITY-TO-HAND.
     AddTopFaceDownSecurityToHand(PlayerArg),
-    MayAddTopSecurityToHand(PlayerArg),
+    MayAddTopSecurityToHand(MayAddTopSecurityArgs),
     AddToHandFromReveal(HandleMoveArgs),
     AddThisOptionToHand(EmptyArgs),
     TrashFromHandByIndex(IndexedMoveArgs),
@@ -1630,6 +1630,17 @@ pub struct PlayerArg {
     pub of: PlayerRef,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MayAddTopSecurityArgs {
+    pub of: PlayerRef,
+    /// When `true`, declining or having an empty security stack aborts the
+    /// remaining steps of the clause (e.g. BT3-034 Lopmon: "You may add that
+    /// card to your hand to <Draw 1>").
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub cost: bool,
+}
+
 /// Promote the real breeding permanent, optionally retaining that exact
 /// permanent for later steps. The result exists only after a successful move
 /// and follows its battle identity rather than a field position or card ID.
@@ -1893,6 +1904,13 @@ pub struct ArmDigivolveCostReducerArgs {
     /// of their own Digimon (an interactive, player-visible cost).
     #[serde(default, skip_serializing_if = "is_false")]
     pub suspend_cost: bool,
+    /// When set, the digivolving base permanent's level must equal this value
+    /// (e.g. BT1-109 Smashed Potatoes: "from level 5 to level 6").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from_level: Option<u8>,
+    /// When set, the digivolving card's level must equal this value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub to_level: Option<u8>,
 }
 
 fn is_zero_u8(n: &u8) -> bool {
@@ -2018,6 +2036,8 @@ pub struct MayAttackNowArgs {
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub without_suspending: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub can_attack_unsuspended: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub ignore_summoning_sickness: bool,
     #[serde(default)]
     pub optional: bool,
@@ -2039,6 +2059,8 @@ pub struct ForceAttackArgs {
     pub targets: AttackTargetSpec,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub without_suspending: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub can_attack_unsuspended: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2127,6 +2149,8 @@ pub enum AttackTargetSpec {
     Any,
     Player,
     Digimon,
+    /// Only opponent Digimon with strictly fewer digivolution cards than the attacker.
+    DigimonFewerSources,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

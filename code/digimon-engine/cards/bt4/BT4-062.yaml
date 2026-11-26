@@ -1,0 +1,47 @@
+card: BT4-062
+name: Nidhoggmon
+kind: digimon
+level: 6
+color: [green]
+cost: 13
+dp: 13000
+traits: [Dark Dragon]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 5
+
+effects:
+  - text: "[When Digivolving] ＜Digi-Burst 4＞ (You may trash 4 of this Digimon's digivolution cards to activate the effect below.) ・Suspend all of your opponent's Digimon with 5000 DP or less. Then, return all of your opponent's suspended Digimon to the bottom of the deck in any order."
+    when: when_digivolving
+    summary: "[When Digivolving] <Digi-Burst 4> Suspend all opp Digimon with 5000 DP or less, then return all opp suspended Digimon to the bottom of the deck"
+    process:
+      - digi_burst:
+          count: 4
+          bind_as: burst_sources
+          prompt: "Choose 4 digivolution cards under this Digimon to trash for <Digi-Burst 4>"
+          then:
+            - for_each:
+                over:
+                  of: opponent
+                  zone: [battle_area]
+                  kind: digimon
+                  dp_lte: 5000
+                bind_as: susp_target
+                body:
+                  - suspend: { target: susp_target }
+            - for_each:
+                over:
+                  of: opponent
+                  zone: [battle_area]
+                  kind: digimon
+                  is_suspended: true
+                bind_as: bottom_target
+                body:
+                  - return_to_deck:
+                      target: bottom_target
+                      position: bottom
+                      include_sources: true

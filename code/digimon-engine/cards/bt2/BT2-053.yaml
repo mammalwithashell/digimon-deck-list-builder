@@ -1,0 +1,24 @@
+card: BT2-053
+name: Keramon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Unknown
+traits: [Unidentified]
+
+effects:
+  - text: "[Your Turn] When you play another Digimon with the same name as this Digimon, ＜Draw 1＞ (Draw 1 card from your deck.)"
+    scope: inherited
+    when: on_ally_played
+    active_when: { your_turn: true }
+    trigger_if:
+      event_target_owner: you
+      event_target_kind: digimon
+      event_target_is_source: false
+      event_target_name_matches_source: true
+    summary: "[Your Turn] When you play another Digimon with the same name, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

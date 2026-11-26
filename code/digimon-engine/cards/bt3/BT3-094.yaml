@@ -1,0 +1,37 @@
+card: BT3-094
+name: Ken Ichijoji
+kind: tamer
+color: [green]
+cost: 4
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[Your Turn] When one of your green or blue Digimon deletes an opponent's Digimon in battle and survives, you may suspend this Tamer to gain 1 memory."
+    when: on_ally_won_battle
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      event_battle_surviving_deleter:
+        all_of:
+          - owner: you
+          - kind: digimon
+          - any_of:
+              - color_is: green
+              - color_is: blue
+    summary: "[Your Turn] When one of your green or blue Digimon deletes an opponent's Digimon in battle and survives, you may suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

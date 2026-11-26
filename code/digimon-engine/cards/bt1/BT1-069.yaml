@@ -1,0 +1,16 @@
+card: BT1-069
+name: Ogremon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+form: Champion
+attribute: Virus
+traits: [Demon]
+
+effects:
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"

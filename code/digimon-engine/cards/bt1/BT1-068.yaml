@@ -1,0 +1,22 @@
+card: BT1-068
+name: Kokuwamon
+kind: digimon
+level: 3
+color: [green]
+cost: 4
+dp: 2000
+form: Rookie
+attribute: Data
+traits: [Machine]
+
+effects:
+  - text: "[Your Turn] While this Digimon is level 6 or higher, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - level_gte: 6
+    target: {}
+    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+    summary: "[Your Turn] While this Digimon is level 6 or higher, it gains <Security A. +1>"

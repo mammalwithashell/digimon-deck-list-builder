@@ -1,0 +1,23 @@
+card: ST26-01
+name: Viximon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Lesser, ALYSION]
+form: In-Training
+
+effects:
+  - scope: inherited
+    text: "[Your Turn] While your opponent has no Digimon with digivolution cards, this [Ice-Snow] trait Digimon can't be deleted in battle."
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - trait_has: Ice-Snow
+        - not:
+            any_permanent: { of: opponent, zone: [battle_area], kind: digimon, materials_count_gte: 1 }
+    modifier: CannotBeDestroyedByBattle
+    modifier_value: 1
+    summary: "Inherited [Your Turn] While opponent has no Digimon with digivolution cards, this [Ice-Snow] Digimon can't be deleted in battle"

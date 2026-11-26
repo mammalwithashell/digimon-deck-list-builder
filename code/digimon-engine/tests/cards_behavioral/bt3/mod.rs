@@ -8,3 +8,8 @@ mod bt3_103;
 mod bt3_105;
 mod bt3_109;
 mod bt3_007;
+mod bt3_batch1;
+mod bt3_batch2;
+mod bt3_batch3;
+mod bt3_batch4;
+

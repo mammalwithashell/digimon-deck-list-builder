@@ -1,0 +1,35 @@
+card: BT3-058
+name: BanchoStingmon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 9000
+form: Mega
+attribute: Free
+traits: [Insectoid, Boss]
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[When Attacking] When this Digimon attacks one of your opponent's Digimon with 12000 DP or more, this Digimon gets +7000 DP and ＜Security A. +2＞ (This Digimon checks 2 additional security cards.) for the turn."
+    when: when_attacking
+    condition:
+      attack_target_matches:
+        all_of:
+          - kind: digimon
+          - dp_gte: 12000
+    summary: "[When Attacking] When attacking an opponent's Digimon with 12000+ DP, +7000 DP and <Security A. +2> for the turn"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 7000
+          expiry: end_of_turn
+      - add_modifier:
+          target: source
+          modifier: SecurityAttackChange
+          value: 2
+          expiry: end_of_turn

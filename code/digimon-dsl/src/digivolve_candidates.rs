@@ -227,7 +227,7 @@ fn target_name(b: &CompiledBindingRef) -> Option<String> {
         CompiledBindingRef::Named(n) | CompiledBindingRef::Permanent(n) | CompiledBindingRef::Binding(n) => {
             Some(n.clone())
         }
-        CompiledBindingRef::Source | CompiledBindingRef::SelfRef | CompiledBindingRef::Carrier => {
+        CompiledBindingRef::Source | CompiledBindingRef::SelfRef | CompiledBindingRef::Carrier | CompiledBindingRef::AttackTarget => {
             Some("source".into())
         }
         CompiledBindingRef::EventTarget => Some("event_target".into()),

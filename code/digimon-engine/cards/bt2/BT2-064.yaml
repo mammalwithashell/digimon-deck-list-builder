@@ -1,0 +1,10 @@
+card: BT2-064
+name: HiAndromon
+kind: digimon
+level: 6
+color: [black]
+cost: 10
+dp: 12000
+form: Mega
+attribute: Vaccine
+traits: [Cyborg]

@@ -1,0 +1,46 @@
+card: BT3-091
+name: Lilithmon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Virus
+traits: [Demon Lord, Seven Great Demon Lords]
+
+effects:
+  - text: "[When Digivolving] If you have 10 or more cards in your trash, you may return up to 2 purple Option cards from your trash to your hand."
+    when: when_digivolving
+    condition:
+      count_gte:
+        filter: { of: you, zone: [trash] }
+        n: 10
+    summary: "[When Digivolving] If you have 10+ cards in trash, you may return up to 2 purple Option cards from trash to hand"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 0
+          max: 2
+          optional_zero: true
+          filter:
+            all_of:
+              - kind: option
+              - color_is: purple
+          bind_as: recovered_options
+          prompt: "You may return up to 2 purple Option cards from your trash to your hand"
+      - per_selected:
+          selection: recovered_options
+          bind_as: opt_card
+          body:
+            - add_to_hand_from_trash: { of: you, card: opt_card }
+
+  - text: "[Your Turn] [Once Per Turn] When you use an Option card, gain 2 memory."
+    when: on_use_option
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if: { event_target_owner: you }
+    summary: "[Your Turn][OPT] When you use an Option card, gain 2 memory"
+    process:
+      - gain_memory: 2

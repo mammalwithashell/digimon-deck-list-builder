@@ -75,6 +75,7 @@ pub enum AttackTargetRestriction {
     Any,
     PlayerOnly,
     DigimonOnly,
+    DigimonFewerSources,
 }
 
 impl PartitionRequirement {

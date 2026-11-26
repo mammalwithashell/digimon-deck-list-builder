@@ -1,0 +1,38 @@
+card: BT1-115
+name: Veedramon
+kind: digimon
+level: 4
+color: [blue]
+cost: 6
+dp: 6000
+form: Champion
+attribute: Vaccine
+traits: [Mythical Dragon]
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] If you have a Tamer in play, unsuspend this Digimon."
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+    summary: "[When Attacking][Once Per Turn] If you have a Tamer in play, unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }
+
+  - text: "[All Turns] While you have a blue Tamer in play, this Digimon gets +1000 DP."
+    scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            color_is: blue
+    dp_modifier: 1000
+    summary: "Inherited [All Turns] While you have a blue Tamer in play, this Digimon gets +1000 DP"

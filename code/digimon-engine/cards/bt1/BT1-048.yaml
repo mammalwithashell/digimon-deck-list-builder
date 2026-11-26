@@ -1,0 +1,29 @@
+card: BT1-048
+name: Patamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Data
+traits: [Mammal]
+
+effects:
+  - text: "[On Play] Reveal the top 4 cards of your deck. Add all yellow Tamer cards among them to your hand. Place the rest at the bottom of the deck in any order."
+    when: on_play
+    summary: "[On Play] Reveal top 4 cards of your deck; add all yellow Tamer cards to hand; bottom the rest"
+    process:
+      - reveal_search:
+          of: you
+          count: 4
+          buckets:
+            - optional: false
+              filter:
+                all_of:
+                  - kind: tamer
+                  - color_is: yellow
+              to: hand
+              max: 4
+              prompt: "Add all yellow Tamer cards to your hand"
+          remainder: bottom

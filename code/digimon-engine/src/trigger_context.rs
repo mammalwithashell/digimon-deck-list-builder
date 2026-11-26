@@ -49,6 +49,7 @@ pub enum EventCause {
     SecurityRemoval,
     Cost,
     Rule,
+    DigiBurst,
 }
 
 impl From<crate::replacement::ReplacementCause> for EventCause {
@@ -211,6 +212,9 @@ pub struct TriggerContext {
     pub selected_results: Vec<ResultBinding>,
     pub moved_card_sets: MovedCardSets,
     pub effect_initiated: bool,
+    /// True when the permanent entered the battle area from its owner's trash
+    /// (e.g. BT4-087 Anubismon).
+    pub played_from_trash: bool,
     /// The self `[When Digivolving]` firing of a digivolution an effect
     /// performed (`Game::pending_digivolve_effect_initiated` at enqueue).
     /// Read by `event_is_effect_initiated` only.

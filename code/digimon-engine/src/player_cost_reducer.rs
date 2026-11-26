@@ -82,18 +82,23 @@ pub struct PlayerDigivolveCostReducer {
     /// one of their own unsuspended Digimon. The suspend target is a
     /// player choice surfaced through `pending_selection`.
     pub suspend_cost: bool,
+    /// When `Some(lv)`, the base permanent's level must equal `lv`.
+    pub from_level: Option<u8>,
+    /// When `Some(lv)`, the digivolving card's level must equal `lv`.
+    pub to_level: Option<u8>,
 }
 
 impl PlayerDigivolveCostReducer {
     /// Whether this reducer qualifies for a digivolution onto `target`
-    /// performed by `acting_player`. Checks player scope and the
-    /// target-color filter against the digivolving permanent's top-card
-    /// colors.
+    /// performed by `acting_player`. Checks player scope, target-color filter,
+    /// and optional base/target level transition filters.
     pub fn qualifies(
         &self,
         acting_player: PlayerId,
         target: PermanentHandle,
         top_card_colors: &[CardColor],
+        base_level: Option<u8>,
+        to_card_level: Option<u8>,
     ) -> bool {
         if self.player != acting_player {
             return false;
@@ -102,9 +107,21 @@ impl PlayerDigivolveCostReducer {
             return false;
         }
         let _ = target;
-        match self.target_color {
-            Some(color) => top_card_colors.contains(&color),
-            None => true,
+        if let Some(color) = self.target_color {
+            if !top_card_colors.contains(&color) {
+                return false;
+            }
         }
+        if let Some(req_from) = self.from_level {
+            if base_level != Some(req_from) {
+                return false;
+            }
+        }
+        if let Some(req_to) = self.to_level {
+            if to_card_level != Some(req_to) {
+                return false;
+            }
+        }
+        true
     }
 }

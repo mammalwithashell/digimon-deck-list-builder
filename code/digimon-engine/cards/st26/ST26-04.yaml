@@ -1,0 +1,67 @@
+card: ST26-04
+name: Sekkamon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+# (Rule) Trait: Has [Ice-Snow] Type.
+traits: [Beastkin, ALYSION, Ice-Snow]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    text: "＜Iceclad＞"
+    keyword: Iceclad
+
+  - when: [on_play, when_digivolving]
+    text: "[On Play] [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, 1 of their Digimon or Tamers can't suspend until their turn ends."
+    summary: "[On Play][When Digivolving] Trash any 3 opposing digivolution cards; then 1 opposing Digimon or Tamer can't suspend until their turn ends"
+    process:
+      - select_opponent_sources:
+          filter: { host_kind_is: digimon }
+          min: 3
+          max: 3
+          clamp_to_available: true
+          bind_as: materials
+          prompt: "Trash any 3 digivolution cards from your opponent's Digimon"
+          then:
+            - trash_selected_sources: { source_refs: materials }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: locked
+          filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+          prompt: "1 of your opponent's Digimon or Tamers can't suspend until their turn ends"
+      - add_modifier:
+          target: locked
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    text: "[End of Your Turn] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. If this effect didn't trash, this [Ice-Snow] trait Digimon may unsuspend."
+    when: end_of_your_turn
+    once_per_turn: true
+    summary: "Inherited [End of Your Turn][OPT] Trash bottom 2 sources of 1 opposing Digimon; if none trashed, this [Ice-Snow] Digimon may unsuspend"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 2, bind_trashed_as: trashed }
+      - if:
+          condition: { binding_absent: trashed }
+          then:
+            - select_own_permanent:
+                bind_as: to_unsuspend
+                optional: true
+                filter: { is_source: true, trait_has: Ice-Snow, is_suspended: true, can_unsuspend: true }
+                prompt: "You may unsuspend this Digimon"
+            - unsuspend: { target: to_unsuspend }

@@ -1,0 +1,25 @@
+card: BT4-021
+name: Gaomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Data
+traits: [Beast]
+
+effects:
+  - text: "[Your Turn] When this card is trashed due to activating this Digimon's ＜Digi-Burst＞, return this card to its owner's hand."
+    scope: inherited
+    when: on_digivolution_card_trashed
+    active_when: { your_turn: true }
+    condition:
+      trashed_source_card_id_is: BT4-021
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_cause: digi_burst
+    summary: "[Your Turn] When trashed for <Digi-Burst>, return this card to hand"
+    process:
+      - add_to_hand_from_trash: { of: you, card: self }

@@ -1,0 +1,45 @@
+card: BT3-031
+name: Imperialdramon Dragon Mode
+kind: digimon
+level: 6
+color: [blue]
+cost: 13
+dp: 12000
+form: Mega
+attribute: Free
+traits: ["Ancient Dragon"]
+
+effects:
+  - text: "When one of your [Paildramon] or [Dinobeemon] would digivolve into this card in your hand, reduce the memory cost of the digivolution by 2."
+    kind: cost_reduction
+    when_digivolving_this: true
+    condition:
+      all_of:
+        - cost_target_from_hand: true
+        - cost_target_permanent:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: Paildramon
+                  - name_is: Dinobeemon
+    amount: 2
+    summary: "When one of your [Paildramon] or [Dinobeemon] would digivolve into this card in your hand, reduce the digivolution cost by 2"
+
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  - text: "[When Digivolving] Unsuspend all of your Digimon with ＜Jamming＞"
+    when: when_digivolving
+    summary: "[When Digivolving] Unsuspend all of your Digimon with <Jamming>"
+    process:
+      - for_each:
+          over:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            has_keyword: Jamming
+          bind_as: target
+          body:
+            - unsuspend: { target: target }

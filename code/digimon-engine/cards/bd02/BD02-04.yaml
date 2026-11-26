@@ -1,0 +1,27 @@
+card: BD02-04
+name: Sekkamon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 6000
+traits: [Beastkin, ALYSION]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 2
+
+effects:
+  - scope: inherited
+    text: "[When Attacking] [Once Per Turn] If your opponent has no Digimon with digivolution cards, this Digimon unsuspends."
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      not:
+        any_permanent: { of: opponent, zone: [battle_area], kind: digimon, materials_count_gte: 1 }
+    summary: "Inherited [When Attacking][OPT] If opponent has no Digimon with digivolution cards, this Digimon unsuspends"
+    process:
+      - unsuspend: { target: source }

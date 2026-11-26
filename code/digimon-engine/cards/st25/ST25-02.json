@@ -1,0 +1,36 @@
+{
+  "index": 4623,
+  "norm_id": 0.23115,
+  "card_id": "ST25-02",
+  "card_index": 2,
+  "card_name_eng": "Gemmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST25_02",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mythical Beast",
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] 1 of your Digimon gets +3000 DP for the turn.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Gemmon] in text: Cost 0"
+}

@@ -1,0 +1,10 @@
+card: BT2-075
+name: Myotismon
+kind: digimon
+level: 5
+color: [purple]
+cost: 6
+dp: 7000
+form: Ultimate
+attribute: Virus
+traits: [Undead]

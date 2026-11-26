@@ -1,0 +1,25 @@
+card: BD01-02
+name: Gemmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Mythical Beast, ALYSION]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - scope: inherited
+    text: "[Your Turn] Add 1000 to this [ALYSION] trait Digimon's DP deletion effect's maximum."
+    kind: aura
+    target: {}
+    active_when: { your_turn: true, trait_has: ALYSION }
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 1000
+    summary: "Inherited [Your Turn] Add 1000 to this [ALYSION] Digimon's DP deletion effect's maximum"

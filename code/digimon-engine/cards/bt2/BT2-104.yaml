@@ -1,0 +1,38 @@
+card: BT2-104
+name: Atomic Ray
+kind: option
+color: [black]
+cost: 3
+
+effects:
+  - text: "[Main] Unsuspend 1 of your Digimon with ＜Blocker＞."
+    when: main
+    summary: "[Main] Unsuspend 1 of your Digimon with <Blocker>"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - has_keyword: Blocker
+          prompt: "Choose 1 of your Digimon with <Blocker> to unsuspend"
+      - unsuspend: { target: target }
+
+  - text: "[Security] Unsuspend all of your Digimon with ＜Blocker＞ and they get +5000 DP for the turn."
+    when: on_security
+    summary: "[Security] Unsuspend all of your Digimon with <Blocker> and they get +5000 DP for the turn"
+    process:
+      - for_each:
+          over:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            has_keyword: Blocker
+          bind_as: blocker_digimon
+          body:
+            - unsuspend: { target: blocker_digimon }
+            - add_dp_modifier:
+                target: blocker_digimon
+                value: 5000
+                expiry: end_of_turn

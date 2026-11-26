@@ -1,0 +1,10 @@
+card: BT4-085
+name: Phantomon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 10000
+form: Ultimate
+attribute: Virus
+traits: [Ghost]

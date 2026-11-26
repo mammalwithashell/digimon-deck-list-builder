@@ -64,7 +64,7 @@ fn bt4_072_has_main_on_field_digi_burst_source_cost_clause() {
                         && then
                             .iter()
                             .any(|tail| matches!(tail,
-                                CompiledStep::TrashSelectedSourcesAsCost { source_refs, min_count }
+                                CompiledStep::TrashSelectedSourcesAsCost { source_refs, min_count, .. }
                                     if source_refs == "burst_source" && min_count.is_none()
                             ))
                         && then

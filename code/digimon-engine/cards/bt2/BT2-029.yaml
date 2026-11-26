@@ -1,0 +1,18 @@
+card: BT2-029
+name: MegaSeadramon
+kind: digimon
+level: 5
+color: [blue]
+cost: 8
+dp: 8000
+form: Ultimate
+attribute: Data
+traits: [Aquatic]
+
+effects:
+  - text: "[Your Turn] This Digimon can't be blocked by your opponent's Digimon with no digivolution cards."
+    kind: aura
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    modifier: CannotBeBlockedByNoSources
+    summary: "[Your Turn] Can't be blocked by opponent's Digimon with no digivolution cards"

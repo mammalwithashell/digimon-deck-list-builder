@@ -1,0 +1,27 @@
+card: BT4-047
+name: Rasielmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 10
+dp: 10000
+form: Mega
+attribute: Vaccine
+traits: [Throne]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+
+effects:
+  - text: "[When Digivolving] ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)"
+    when: when_digivolving
+    summary: "[When Digivolving] <Recovery +2 (Deck)>"
+    process:
+      - recover: { of: you, count: 2 }
+
+  - text: "[End of Opponent's Turn] Trash the top card of your security stack."
+    when: end_of_opponents_turn
+    summary: "[End of Opponent's Turn] Trash the top card of your security stack"
+    process:
+      - trash_top_security: { of: you }

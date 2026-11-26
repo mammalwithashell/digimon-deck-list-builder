@@ -1,0 +1,20 @@
+card: BT1-005
+name: Kyaromon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - text: "[Your Turn] While you have 6 or more security cards, this Digimon gets +2000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - security_count_gte: 6
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] While you have 6+ security cards, this Digimon gets +2000 DP"

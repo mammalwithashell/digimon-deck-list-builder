@@ -1,0 +1,10 @@
+card: BT4-022
+name: Sangomon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 4000
+form: Rookie
+attribute: Data
+traits: [Mollusk]

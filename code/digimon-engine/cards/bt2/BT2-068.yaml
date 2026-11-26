@@ -1,0 +1,17 @@
+card: BT2-068
+name: Impmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Virus
+traits: [Evil]
+
+effects:
+  - text: "[On Deletion] Trash the top 3 cards of your deck."
+    when: on_deletion
+    summary: "[On Deletion] Trash the top 3 cards of your deck"
+    process:
+      - trash_from_top: { of: you, count: 3 }

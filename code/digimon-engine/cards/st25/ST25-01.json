@@ -1,0 +1,28 @@
+{
+  "index": 4622,
+  "norm_id": 0.2311,
+  "card_id": "ST25-01",
+  "card_index": 1,
+  "card_name_eng": "Tokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST25_01",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Lesser",
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] While your opponent has 3 or more memory, this Digimon with [Gemmon] in its text gets +3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

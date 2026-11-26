@@ -1,0 +1,53 @@
+card: ED01-01
+name: Rubeusdramon
+kind: digimon
+level: 6
+color: [red]
+cost: 13
+dp: 13000
+traits: [Dragon Warrior, ALYSION]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    text: "[When Digivolving] ＜Blitz＞"
+    keyword: Blitz
+
+  - when: when_attacking
+    text: "[When Attacking] Delete up to 6000 DP total worth of your opponent's Digimon."
+    summary: "[When Attacking] Delete up to 6000 DP total worth of your opponent's Digimon"
+    process:
+      - select_opponent_dp_budget:
+          dp_budget: 6000
+          min_picks: 1
+          filter: { kind: digimon }
+          bind_as: targets
+          prompt: "Delete up to 6000 DP total worth of your opponent's Digimon"
+          then:
+            - delete_bound_permanents: { binding: targets }
+
+  - kind: grant_keyword
+    text: "[Your Turn] While you have [Kanata Hondo], this Digimon gains ＜Piercing＞ and can also attack your opponent's unsuspended Digimon."
+    keyword: Piercing
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent: { of: you, zone: [battle_area], name_is: "Kanata Hondo" }
+    summary: "[Your Turn] While you have [Kanata Hondo], this Digimon gains <Piercing>"
+
+  - kind: aura
+    text: "[Your Turn] While you have [Kanata Hondo], this Digimon gains ＜Piercing＞ and can also attack your opponent's unsuspended Digimon."
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent: { of: you, zone: [battle_area], name_is: "Kanata Hondo" }
+    modifier: CanAttackUnsuspended
+    modifier_value: 1
+    summary: "[Your Turn] While you have [Kanata Hondo], this Digimon can also attack opponent's unsuspended Digimon"

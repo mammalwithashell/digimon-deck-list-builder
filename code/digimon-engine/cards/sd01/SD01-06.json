@@ -1,0 +1,27 @@
+{
+  "index": 4613,
+  "norm_id": 0.23065,
+  "card_id": "SD01-06",
+  "card_index": 6,
+  "card_name_eng": "Kanata Hondo",
+  "card_name_jpn": "",
+  "card_effect_class_name": "SD01_06",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [Your Turn] Add 2000 to your [ALYSION] trait Digimon's DP deletion effects' maximums.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "evo_costs": [],
+  "xros_req": ""
+}

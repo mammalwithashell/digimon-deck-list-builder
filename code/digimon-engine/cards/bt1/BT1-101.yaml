@@ -1,0 +1,32 @@
+card: BT1-101
+name: Howling Crusher
+kind: option
+color: [blue]
+cost: 7
+
+effects:
+  - text: "[Main] Trash all digivolution cards under all of your opponent's Digimon."
+    when: main_from_hand
+    summary: "[Main] Trash all digivolution cards under all of your opponent's Digimon"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: opp_digimon
+          body:
+            - trash_all_sources: { target: opp_digimon }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: opp_digimon
+          body:
+            - trash_all_sources: { target: opp_digimon }

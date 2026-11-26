@@ -1,0 +1,26 @@
+card: BT3-013
+name: Duramon
+kind: digimon
+level: 5
+color: [red]
+cost: 6
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Weapon, Legend-Arms]
+
+effects:
+  - text: "[Your Turn] While this Digimon is level 7, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            is_source_permanent: true
+            level_eq: 7
+    target: { is_source_permanent: true }
+    security_attack: 1
+    summary: "[Inherited][Your Turn] While this Digimon is level 7, it gains <Security A. +1>"

@@ -1,0 +1,17 @@
+card: BT2-045
+name: Argomon
+kind: digimon
+level: 4
+color: [green]
+cost: 6
+dp: 5000
+traits: [Mutant]
+form: Champion
+attribute: Virus
+
+effects:
+  - text: "＜Digisorption -2＞ (When one of your Digimon would digivolve into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 2.)"
+    kind: grant_keyword
+    keyword: Digisorption
+    value: 2
+    summary: "<Digisorption -2>"

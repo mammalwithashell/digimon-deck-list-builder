@@ -502,6 +502,12 @@ impl Walk for digimon_dsl::formula::PerSelector {
                 "ENUM_SCALAR",
                 serde_json::json!("SourceRulesColorCount"),
             ),
+            digimon_dsl::formula::PerSelector::EventDeletedDigimonCount => c.node(
+                path,
+                "digimon_dsl::formula::PerSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("EventDeletedDigimonCount"),
+            ),
         }
     }
 }
@@ -1050,6 +1056,12 @@ impl Walk for digimon_dsl::compiled::CompiledPerSelector {
                 "digimon_dsl::compiled::CompiledPerSelector",
                 "ENUM_SCALAR",
                 serde_json::json!("SourceRulesColorCount"),
+            ),
+            digimon_dsl::compiled::CompiledPerSelector::EventDeletedDigimonCount => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledPerSelector",
+                "ENUM_SCALAR",
+                serde_json::json!("EventDeletedDigimonCount"),
             ),
         }
     }

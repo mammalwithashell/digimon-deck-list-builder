@@ -1,0 +1,26 @@
+card: BT3-108
+name: Dark Despair
+kind: option
+color: [purple]
+cost: 2
+
+effects:
+  - text: "[Main] 1 of your Digimon gains ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until the end of your opponent's next turn."
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gains <Retaliation> until the end of your opponent's next turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Retaliation>"
+      - grant_keyword:
+          target: target
+          keyword: Retaliation
+          expiry: end_of_opponents_next_turn
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to your hand"
+    process:
+      - add_this_option_to_hand: {}

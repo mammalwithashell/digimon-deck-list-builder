@@ -543,6 +543,32 @@ fn evaluate_per(
                 target_permanent(ctx, handle).map(|perm| rules_color_count(perm, ctx.game, handle))
             })
             .unwrap_or(0),
+        CompiledPerSelector::EventDeletedDigimonCount => {
+            event_deleted_digimon_count(ctx.game, ctx.source_card)
+        }
+    }
+}
+
+fn event_deleted_digimon_count(game: &crate::game::Game, source_card: crate::card_source::CardHandle) -> i32 {
+    let Some(trigger) = game.current_trigger_context.as_ref() else {
+        return 0;
+    };
+    if !trigger.simultaneous_play_members.is_empty() {
+        trigger
+            .simultaneous_play_members
+            .iter()
+            .filter(|m| {
+                m.deleted_object.as_ref().is_some_and(|snap| {
+                    snap.card_kind == crate::enums::CardKind::Digimon && snap.top_card != source_card
+                })
+            })
+            .count() as i32
+    } else if trigger.deleted_object.as_ref().is_some_and(|snap| {
+        snap.card_kind == crate::enums::CardKind::Digimon && snap.top_card != source_card
+    }) {
+        1
+    } else {
+        0
     }
 }
 
@@ -679,6 +705,9 @@ fn evaluate_per_read(
                     .map(|perm| rules_color_count(perm, ctx.game, handle))
             })
             .unwrap_or(0),
+        CompiledPerSelector::EventDeletedDigimonCount => {
+            event_deleted_digimon_count(ctx.game, ctx.source_card)
+        }
     }
 }
 

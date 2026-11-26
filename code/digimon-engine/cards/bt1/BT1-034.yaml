@@ -1,0 +1,19 @@
+card: BT1-034
+name: Ikkakumon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 5000
+form: Champion
+attribute: Vaccine
+traits: [Sea Beast]
+
+effects:
+  - text: "[Your Turn] This Digimon can't be blocked by your opponent's Digimon with no digivolution cards."
+    scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    summary: "[Your Turn] Can't be blocked by opponent's Digimon with no digivolution cards"
+    modifier: CannotBeBlockedByNoSources

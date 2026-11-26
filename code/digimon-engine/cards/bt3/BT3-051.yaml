@@ -1,0 +1,43 @@
+card: BT3-051
+name: Dokugumon
+kind: digimon
+level: 4
+color: [green]
+cost: 6
+dp: 5000
+form: Champion
+attribute: Virus
+traits: [Insectoid]
+
+effects:
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 level 5 and 1 level 6 Digimon card among them to your hand. Trash the remaining cards."
+    when: on_play
+    summary: "[On Play] Reveal top 3; add 1 level 5 and 1 level 6 Digimon card to hand; trash the remaining cards"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: lv5_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - level_eq: 5
+            - bind_as: lv6_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - level_eq: 6
+          no_duplicate_cards: true
+          prompt: "Select 1 level 5 and 1 level 6 Digimon card to add to your hand"
+      - add_to_hand_from_reveal: { of: you, card: lv5_pick }
+      - add_to_hand_from_reveal: { of: you, card: lv6_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }

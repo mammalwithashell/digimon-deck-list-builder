@@ -218,6 +218,18 @@ impl Game {
             "digimon_attacks_this_turn",
             &self.digimon_attacks_this_turn,
         );
+        if version != VerificationDigestVersion::LegacyV2 {
+            debug_field(
+                &mut h,
+                "digivolutions_this_turn",
+                &self.digivolutions_this_turn,
+            );
+            debug_field(
+                &mut h,
+                "digisorption_opponent_used_cards",
+                &self.digisorption_opponent_used_cards,
+            );
+        }
         debug_field(&mut h, "mulligan_pending", &self.mulligan_pending);
         debug_field(&mut h, "mulligan_used", &self.mulligan_used);
 

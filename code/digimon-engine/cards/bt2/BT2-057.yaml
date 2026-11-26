@@ -1,0 +1,22 @@
+card: BT2-057
+name: Greymon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Dinosaur]
+form: Champion
+attribute: Vaccine
+
+effects:
+  - text: "[Your Turn] While this Digimon has ＜Reboot＞, it gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - has_keyword: Reboot
+    target: {}
+    grant_keyword: { keyword: Jamming }
+    summary: "[Inherited][Your Turn] While this Digimon has <Reboot>, it gains <Jamming>"

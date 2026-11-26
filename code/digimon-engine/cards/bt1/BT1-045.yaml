@@ -1,0 +1,10 @@
+card: BT1-045
+name: Tsukaimon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 2
+dp: 3000
+form: Rookie
+attribute: Virus
+traits: [Mammal]

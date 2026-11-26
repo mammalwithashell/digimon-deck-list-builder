@@ -1,0 +1,22 @@
+card: BT2-074
+name: Devimon
+kind: digimon
+level: 4
+color: [purple]
+cost: 6
+dp: 4000
+form: Champion
+attribute: Virus
+traits: [Fallen Angel]
+
+effects:
+  - text: "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "<Retaliation>"
+
+  - text: "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)"
+    scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "[Inherited] <Retaliation>"

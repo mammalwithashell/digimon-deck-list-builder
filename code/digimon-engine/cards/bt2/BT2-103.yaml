@@ -1,0 +1,34 @@
+card: BT2-103
+name: Spiral Sword
+kind: option
+color: [black]
+cost: 1
+
+effects:
+  - text: "[Main] 1 of your Digimon gets +3000 DP for the turn."
+    when: main
+    summary: "[Main] 1 of your Digimon gets +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +3000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 3000
+          expiry: end_of_turn
+
+  - text: "[Security] Unsuspend 1 of your Digimon with ＜Blocker＞."
+    when: on_security
+    summary: "[Security] Unsuspend 1 of your Digimon with <Blocker>"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - has_keyword: Blocker
+          prompt: "Choose 1 of your Digimon with <Blocker> to unsuspend"
+      - unsuspend: { target: target }

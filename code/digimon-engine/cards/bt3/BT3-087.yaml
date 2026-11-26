@@ -1,0 +1,31 @@
+card: BT3-087
+name: Mummymon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Virus
+traits: [Undead]
+
+effects:
+  - text: "[When Attacking] You may pay 3 memory to play 1 [MaloMyotismon] from your trash without paying its memory cost. Then, delete this Digimon."
+    when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may pay 3 memory to play 1 [MaloMyotismon] from your trash for free; then delete this Digimon"
+    process:
+      - lose_memory: 3
+      - select_trash:
+          of: you
+          optional: false
+          bind_as: malo_card
+          filter:
+            all_of:
+              - name_is: "MaloMyotismon"
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 [MaloMyotismon] from your trash without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: malo_card
+      - delete_permanent: { target: source }

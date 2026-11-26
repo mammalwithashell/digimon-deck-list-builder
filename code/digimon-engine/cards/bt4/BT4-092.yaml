@@ -1,0 +1,34 @@
+card: BT4-092
+name: Marcus Damon
+kind: tamer
+color: [red]
+cost: 4
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[Your Turn] When one of your Digimon with [Greymon] in its name attacks (other than [DoruGreymon], [BurningGreymon] or [DexDoruGreymon]), you may suspend this Tamer to gain 1 memory."
+    when: on_ally_attack
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_name_contains: "Greymon"
+    summary: "[Your Turn] When one of your [Greymon]-named Digimon attacks, you may suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

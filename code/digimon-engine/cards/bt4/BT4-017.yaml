@@ -1,0 +1,68 @@
+card: BT4-017
+name: RizeGreymon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  - text: "[Your Turn] This Digimon is also treated as yellow"
+    kind: aura
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    modifier: AddColor
+    modifier_colors: [yellow]
+    summary: "[Your Turn] This Digimon is also treated as yellow"
+
+  - text: "[Main] ＜Digi-Burst 2＞ (You may trash 2 of this Digimon's digivolution cards to activate the effect below.) You may play 1 red or yellow Tamer card with a play cost of 4 or less from your hand without paying the cost."
+    when: main_on_field
+    summary: "[Main] <Digi-Burst 2> You may play 1 red or yellow Tamer card with play cost 4 or less from hand free"
+    process:
+      - digi_burst:
+          count: 2
+          bind_as: burst_sources
+          prompt: "Choose 2 digivolution cards under this Digimon to trash for <Digi-Burst 2>"
+          then:
+            - select_hand:
+                of: you
+                optional: true
+                bind_as: tamer_card
+                filter:
+                  kind: tamer
+                  play_cost_lte: 4
+                  any_of:
+                    - color_is: red
+                    - color_is: yellow
+                prompt: "You may play 1 red or yellow Tamer card with a play cost of 4 or less from your hand without paying the cost"
+            - play_from_hand_free:
+                of: you
+                hand_index: tamer_card
+
+  - text: "[When Attacking] If you have a Tamer, 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
+    when: when_attacking
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+    summary: "[Inherited][When Attacking] If you have a Tamer, 1 opponent Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"
+      - add_dp_modifier:
+          target: victim
+          value: -2000
+          expiry: end_of_turn

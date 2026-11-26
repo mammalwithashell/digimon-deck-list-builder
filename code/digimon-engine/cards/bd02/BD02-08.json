@@ -1,0 +1,27 @@
+{
+  "index": 4603,
+  "norm_id": 0.23015,
+  "card_id": "BD02-08",
+  "card_index": 8,
+  "card_name_eng": "Valner Dragnogh",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BD02_08",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a blue Digimon with the [ALYSION] trait, gain 1 memory. [Main] By suspending this Tamer, 1 of your blue Digimon with the [ALYSION] trait gains ＜Piercing＞ for the turn. (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,26 @@
+card: BT1-079
+name: Lillymon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 6000
+form: Ultimate
+attribute: Data
+traits: [Fairy]
+
+effects:
+  - text: "[When Attacking] Suspend 1 of your opponent's Digimon without ＜Blocker＞."
+    scope: inherited
+    when: when_attacking
+    summary: "[When Attacking] Suspend 1 of your opponent's Digimon without <Blocker>"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - not: { has_keyword: Blocker }
+          prompt: "Suspend 1 of your opponent's Digimon without <Blocker>"
+      - suspend: { target: victim }

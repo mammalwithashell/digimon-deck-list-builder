@@ -1,0 +1,24 @@
+card: BT1-049
+name: Labramon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Vaccine
+traits: [Beast]
+
+effects:
+  - text: "[Your Turn] When an opponent's Digimon is deleted by dropping to 0 DP, ＜Draw 1＞ (Draw 1 card from your deck.)."
+    scope: inherited
+    when: on_any_deletion
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_cause: rule
+    summary: "[Your Turn] When an opponent's Digimon is deleted by dropping to 0 DP, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,22 @@
+card: BT1-036
+name: Garurumon
+kind: digimon
+level: 4
+color: [blue]
+cost: 6
+dp: 5000
+form: Champion
+attribute: Vaccine
+traits: [Beast]
+
+effects:
+  - text: "[On Play] Unsuspend 1 of your Digimon."
+    when: on_play
+    summary: "[On Play] Unsuspend 1 of your Digimon"
+    process:
+      - select_own_permanent:
+          filter: { kind: digimon }
+          bind_as: target
+          optional: false
+          prompt: "Unsuspend 1 of your Digimon"
+      - unsuspend: { target: target }

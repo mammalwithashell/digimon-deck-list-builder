@@ -1,0 +1,40 @@
+card: BT3-111
+name: Imperialdramon Dragon Mode
+kind: digimon
+level: 6
+color: [green]
+cost: 13
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Ancient Dragon]
+
+effects:
+  - text: "When one of your [Paildramon] or [Dinobeemon] would digivolve into this card in your hand, reduce the memory cost of the digivolution by 2."
+    kind: cost_reduction
+    when_digivolving_this: true
+    condition:
+      all_of:
+        - cost_target_from_hand: true
+        - cost_target_permanent:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: "Paildramon"
+                  - name_is: "Dinobeemon"
+    amount: 2
+    summary: "When your [Paildramon] or [Dinobeemon] would digivolve into this card in your hand, reduce the digivolution cost by 2"
+
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[Your Turn] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle and survives, unsuspend this Digimon."
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition: { source_deleted_battle_opponent: true }
+    summary: "[Your Turn][OPT] When this Digimon deletes an opponent's Digimon in battle and survives, unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }

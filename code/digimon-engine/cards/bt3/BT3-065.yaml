@@ -1,0 +1,17 @@
+card: BT3-065
+name: Gururumon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 4000
+form: Champion
+attribute: Vaccine
+traits: [Beast]
+
+effects:
+  - text: "[Security] At the end of the battle, play this card without paying the cost."
+    when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}

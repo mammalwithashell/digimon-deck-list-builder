@@ -1,0 +1,17 @@
+card: BT2-055
+name: ToyAgumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Puppet]
+form: Rookie
+attribute: Vaccine
+
+effects:
+  - text: "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)."
+    scope: inherited
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "[Inherited] <Reboot>"

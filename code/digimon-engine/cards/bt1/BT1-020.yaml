@@ -1,0 +1,10 @@
+card: BT1-020
+name: Groundramon
+kind: digimon
+level: 5
+color: [red]
+cost: 5
+dp: 6000
+form: Ultimate
+attribute: Virus
+traits: [Earth Dragon]

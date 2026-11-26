@@ -1,0 +1,49 @@
+card: BT3-088
+name: LadyDevimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 8
+dp: 8000
+form: Ultimate
+attribute: Virus
+traits: [Fallen Angel]
+
+effects:
+  - text: "[When Digivolving] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, trash 2 cards in your hand."
+    when: when_digivolving
+    summary: "[When Digivolving] <Draw 2>. Then, trash 2 cards in your hand"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          optional: false
+          of: you
+          bind_as: trash_a
+          filter: {}
+          prompt: "Trash 1 of 2 cards in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          optional: false
+          of: you
+          bind_as: trash_b
+          filter: {}
+          prompt: "Trash 2 of 2 cards in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }
+
+  - text: "[Your Turn] [Once Per Turn] When you use an Option card, delete 1 of your opponent's level 3 Digimon."
+    scope: inherited
+    when: on_use_option
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if: { event_target_owner: you }
+    summary: "[Inherited][Your Turn][OPT] When you use an Option card, delete 1 of your opponent's level 3 Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          prompt: "Choose 1 of your opponent's level 3 Digimon to delete"
+      - delete_permanent: { target: victim }

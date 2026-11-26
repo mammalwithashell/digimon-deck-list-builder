@@ -1,0 +1,17 @@
+card: BT1-099
+name: Hearts Attack
+kind: option
+color: [blue]
+cost: 3
+
+effects:
+  - text: "[Main] Trash all digivolution cards under 1 of your opponent's Digimon."
+    when: main_from_hand
+    summary: "[Main] Trash all digivolution cards under 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to trash all of its digivolution cards"
+      - trash_all_sources: { target: target }

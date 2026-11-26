@@ -1,0 +1,26 @@
+card: BT1-098
+name: V-Nova Blast
+kind: option
+color: [blue]
+cost: 2
+
+effects:
+  - text: "[Main] 1 of your Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)"
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gains <Jamming> for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Jamming> for the turn"
+      - grant_keyword:
+          target: target
+          keyword: Jamming
+          expiry: end_of_turn
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

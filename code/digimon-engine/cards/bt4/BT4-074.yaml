@@ -1,0 +1,43 @@
+card: BT4-074
+name: Darkdramon
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 11000
+traits: [Cyborg, D-Brigade]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+effects:
+  - text: "＜Rush＞ (This Digimon can attack the turn it comes into play.)"
+    kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+
+  - text: "[On Play] By returning up to 5 Digimon cards with [D-Brigade] trait from your trash to the top of your deck in any order, gain 2 memory for each card you return this way."
+    when: on_play
+    summary: "[On Play] Return up to 5 [D-Brigade] Digimon cards from your trash to the top of your deck in any order; gain 2 memory for each card returned"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          max: 5
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "D-Brigade"
+          bind_as: returns
+          optional_zero: true
+          prompt: "Return up to 5 Digimon cards with the [D-Brigade] trait from your trash to the top of your deck in any order"
+      - per_selected:
+          selection: returns
+          bind_as: returned_card
+          body:
+            - move_trash_card_to_deck_top: { of: you, card: returned_card }
+            - gain_memory: 2

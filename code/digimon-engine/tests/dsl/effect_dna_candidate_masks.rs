@@ -92,7 +92,7 @@ fn setup_payment(memory: i16, cost: &str, reducer: bool) -> (DebugRunner, u16) {
     if reducer {
         let card = r.game.players[0].battle_area[source.index as usize].top_card().handle();
         EffectContext::new(&mut r.game, card, Some(source), 0)
-            .arm_player_digivolve_cost_reducer(2, true, None, true);
+            .arm_player_digivolve_cost_reducer(2, true, None, true, None, None);
     }
     r.game.enqueue_triggered(EffectTiming::MainOnField, TriggerSource::Permanent(source));
     r.game.drain_effect_queue();

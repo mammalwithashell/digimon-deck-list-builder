@@ -1,0 +1,24 @@
+card: BT2-018
+name: Volcanicdramon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 10000
+form: Mega
+attribute: Virus
+traits: [Earth Dragon]
+
+effects:
+  - text: "＜Security A. +1＞ (This Digimon checks 1 additional security card.)."
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - text: "[On Play] Delete all of your opponent's Digimon with 4000 DP or less."
+    when: on_play
+    summary: "[On Play] Delete all opponent Digimon with 4000 DP or less"
+    process:
+      - delete_all_permanents:
+          over: { of: opponent, zone: [battle_area], kind: digimon, dp_lte: 4000 }

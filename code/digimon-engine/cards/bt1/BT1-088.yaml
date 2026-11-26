@@ -1,0 +1,36 @@
+card: BT1-088
+name: Izzy Izumi
+kind: tamer
+color: [green]
+cost: 2
+
+effects:
+  - text: "[Main] If you have a level 5 or higher green Digimon in play, you can suspend this Tamer to reveal the top card of your deck. If that card is a Digimon card, add it to your hand. Otherwise place it at the bottom of your deck."
+    when: main_on_field
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            color_is: green
+            level_gte: 5
+    summary: "[Main] If you have a Lv.5+ green Digimon in play, suspend this Tamer to reveal top card; add if Digimon, else bottom"
+    process:
+      - activation_cost: { suspend_self: true }
+      - reveal_top_deck: { of: you, count: 1, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter: { kind: digimon }
+          prompt: "Add the revealed Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

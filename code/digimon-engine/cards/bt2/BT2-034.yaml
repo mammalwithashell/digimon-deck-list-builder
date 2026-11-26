@@ -1,0 +1,21 @@
+card: BT2-034
+name: Salamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 4
+dp: 2000
+traits: [Mammal]
+form: Rookie
+attribute: Vaccine
+
+effects:
+  - text: "[On Deletion] If you have 3 or fewer security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)"
+    when: on_deletion
+    condition:
+      count_lte:
+        filter: { of: you, zone: [security] }
+        n: 3
+    summary: "[On Deletion] If you have 3 or fewer security cards, <Recovery +1 (Deck)>"
+    process:
+      - recover: { of: you, count: 1 }

@@ -1,0 +1,20 @@
+card: BT1-091
+name: Scrap Claw
+kind: option
+color: [red]
+cost: 3
+
+effects:
+  - text: "[Main] 1 of your Digimon gains ＜Piercing＞ for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gains <Piercing> for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Piercing> for the turn"
+      - grant_keyword:
+          target: target
+          keyword: Piercing
+          expiry: end_of_turn

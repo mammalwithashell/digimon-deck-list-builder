@@ -1,0 +1,32 @@
+card: SD02-05
+name: Yukinamon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 10000
+traits: [Ice-Snow, ALYSION]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 3
+
+effects:
+  - kind: aura
+    text: "[Your Turn] This Digimon can also attack your opponent's unsuspended Digimon with fewer digivolution cards than this Digimon."
+    target: {}
+    active_when: { your_turn: true }
+    modifier: CanAttackUnsuspendedWithFewerSources
+    modifier_value: 1
+    summary: "[Your Turn] This Digimon can also attack opponent's unsuspended Digimon with fewer digivolution cards"
+
+  - kind: aura
+    text: "[All Turns] Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles."
+    target: {}
+    active_when: { all_turns: true }
+    modifier: BattleCompareDigivolutionCards
+    modifier_value: 1
+    summary: "[All Turns] Other than against Security Digimon, compare digivolution card count instead of DP in this Digimon's battles"

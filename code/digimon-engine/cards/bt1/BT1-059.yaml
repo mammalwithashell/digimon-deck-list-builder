@@ -1,0 +1,10 @@
+card: BT1-059
+name: Piximon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 6
+dp: 9000
+form: Ultimate
+attribute: Data
+traits: [Fairy]

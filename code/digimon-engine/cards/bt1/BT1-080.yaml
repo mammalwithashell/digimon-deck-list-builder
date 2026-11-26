@@ -1,0 +1,10 @@
+card: BT1-080
+name: Titamon
+kind: digimon
+level: 6
+color: [green]
+cost: 10
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Shaman]

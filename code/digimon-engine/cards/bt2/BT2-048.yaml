@@ -1,0 +1,16 @@
+card: BT2-048
+name: Cherrymon
+kind: digimon
+level: 5
+color: [green]
+cost: 8
+dp: 7000
+traits: [Vegetation]
+form: Ultimate
+attribute: Virus
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"

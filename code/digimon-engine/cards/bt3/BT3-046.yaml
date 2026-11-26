@@ -1,0 +1,18 @@
+card: BT3-046
+name: Terriermon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Vaccine
+traits: [Beast]
+
+effects:
+  - text: "[All Turns] Your opponent can't gain memory other than by Tamer effects."
+    kind: flood_gate
+    active_when: { all_turns: true }
+    target_player: opponent
+    modifier: CannotGainMemoryExceptFromTamers
+    summary: "[All Turns] Your opponent can't gain memory other than by Tamer effects"

@@ -304,6 +304,10 @@ pub enum PerSelector {
     /// `digivolution_color_count` (anchored at the formula TARGET).
     /// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT.
     SourceRulesColorCount,
+    /// Count of Digimon deleted in the current simultaneous deletion event
+    /// batch (reading `TriggerContext::simultaneous_play_members`, or 1 for a
+    /// single Digimon deletion). Drives BT3-092 MaloMyotismon.
+    EventDeletedDigimonCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -400,6 +404,7 @@ impl Serialize for PerSelector {
             }
             Self::SourceLinkCardCount => serializer.serialize_str("source_link_card_count"),
             Self::SourceRulesColorCount => serializer.serialize_str("source_rules_color_count"),
+            Self::EventDeletedDigimonCount => serializer.serialize_str("event_deleted_digimon_count"),
         }
     }
 }

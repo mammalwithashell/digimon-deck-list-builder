@@ -1,0 +1,16 @@
+card: BT1-052
+name: Seasarmon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+form: Champion
+attribute: Vaccine
+traits: [Holy Beast]
+
+effects:
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"

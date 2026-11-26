@@ -1,0 +1,27 @@
+card: BT2-063
+name: MetalGreymon
+kind: digimon
+level: 5
+color: [black]
+cost: 8
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Cyborg]
+
+effects:
+  - text: "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - text: "[Your Turn] While this Digimon has ＜Reboot＞, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - has_keyword: Reboot
+    target: {}
+    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+    summary: "[Inherited][Your Turn] While this Digimon has <Reboot>, it gains <Security A. +1>"

@@ -1,0 +1,41 @@
+card: BT4-030
+name: Beowolfmon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+form: Hybrid
+attribute: Variable
+traits: [Warrior]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  - text: "[Opponent's Turn] While this Digimon's digivolution cards include a Digimon card with the [Hybrid] trait or a blue Tamer card, it can't be attacked."
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - self_source_count:
+            filter:
+              any_of:
+                - all_of:
+                    - kind: digimon
+                    - trait_has: Hybrid
+                - all_of:
+                    - kind: tamer
+                    - color_is: blue
+            op: gte
+            value: 1
+    target: { is_source_permanent: true }
+    modifier: CannotAttackTarget
+    summary: "[Opponent's Turn] While this Digimon's digivolution cards include a [Hybrid] Digimon or blue Tamer, it can't be attacked"

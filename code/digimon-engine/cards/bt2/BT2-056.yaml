@@ -1,0 +1,10 @@
+card: BT2-056
+name: Numemon
+kind: digimon
+level: 4
+color: [black]
+cost: 3
+dp: 3000
+form: Champion
+attribute: Virus
+traits: [Mollusk]

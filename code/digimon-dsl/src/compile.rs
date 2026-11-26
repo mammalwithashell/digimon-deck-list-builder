@@ -434,6 +434,9 @@ fn compile_attack_target_spec(t: crate::step::AttackTargetSpec) -> CompiledAttac
         crate::step::AttackTargetSpec::Any => CompiledAttackTargetSpec::Any,
         crate::step::AttackTargetSpec::Player => CompiledAttackTargetSpec::Player,
         crate::step::AttackTargetSpec::Digimon => CompiledAttackTargetSpec::Digimon,
+        crate::step::AttackTargetSpec::DigimonFewerSources => {
+            CompiledAttackTargetSpec::DigimonFewerSources
+        }
     }
 }
 
@@ -520,6 +523,7 @@ fn compile_per_selector(
         },
         S::SourceLinkCardCount => CompiledPerSelector::SourceLinkCardCount,
         S::SourceRulesColorCount => CompiledPerSelector::SourceRulesColorCount,
+        S::EventDeletedDigimonCount => CompiledPerSelector::EventDeletedDigimonCount,
     }
 }
 
@@ -1030,6 +1034,7 @@ fn compile_predicate(
             .color_matches_any_field_digimon
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
+        name_matches_binding: p.name_matches_binding.clone(),
         color_matches_returned_card: p.color_matches_returned_card,
         name_matches_returned_card: p.name_matches_returned_card,
         name_matches_source: p.name_matches_source,
@@ -1216,6 +1221,7 @@ fn compile_predicate(
         can_attack: p.can_attack.map(|c| crate::compiled::CompiledCanAttack {
             targets: compile_attack_target_spec(c.targets),
             without_suspending: c.without_suspending,
+            can_attack_unsuspended: c.can_attack_unsuspended,
             ignore_summoning_sickness: c.ignore_summoning_sickness,
         }),
         has_refireable_effect: p.has_refireable_effect.as_ref().and_then(|timing| {
@@ -1455,6 +1461,19 @@ fn compile_predicate(
         all_turns: p.all_turns,
         can_hatch: p.can_hatch.map(compile_player_ref),
         digimon_attacked_this_turn: p.digimon_attacked_this_turn.map(compile_player_ref),
+        digivolved_this_turn: p.digivolved_this_turn.map(compile_player_ref),
+        in_phase: p.in_phase.map(compile_turn_phase),
+        attack_target_matches: p
+            .attack_target_matches
+            .as_deref()
+            .map(|sub| {
+                Box::new(compile_predicate(
+                    sub,
+                    &format!("{prefix}.attack_target_matches"),
+                    card_id,
+                    errors,
+                ))
+            }),
         during_attack: p.during_attack,
         can_gain_memory: p.can_gain_memory,
         in_breeding: p.in_breeding,
@@ -1465,6 +1484,14 @@ fn compile_predicate(
         event_target_trait_contains: p.event_target_trait_contains.clone(),
         event_target_has_digivolution_cards: p.event_target_has_digivolution_cards,
         event_target_stack_size_gte: p.event_target_stack_size_gte,
+        event_target_materials_count_lte: p.event_target_materials_count_lte.as_ref().map(|c| {
+            compile_dp_constraint(
+                c,
+                &format!("{prefix}.event_target_materials_count_lte"),
+                card_id,
+                errors,
+            )
+        }),
         event_target_level_eq,
         event_target_level_lte,
         event_target_level_gte,
@@ -1477,6 +1504,7 @@ fn compile_predicate(
         event_target_is_player: p.event_target_is_player,
         event_target_is_source: p.event_target_is_source,
         event_target_was_self: p.event_target_was_self,
+        event_target_name_matches_source: p.event_target_name_matches_source,
         attack_target_change_reason: p.attack_target_change_reason.clone(),
         attacker_trait_has: p.attacker_trait_has.clone(),
         event_target_owner: p.event_target_owner.map(compile_player_ref),
@@ -1561,6 +1589,7 @@ fn compile_predicate(
         event_target_has_same_level_source: p.event_target_has_same_level_source,
         event_target_digivolved_from_kind: p.event_target_digivolved_from_kind.map(compile_card_kind),
         event_cause: p.event_cause.map(compile_event_cause),
+        event_played_from_trash: p.event_played_from_trash,
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
         trashed_source_trait_has: p.trashed_source_trait_has.clone(),
         trashed_source_card_id_is: p.trashed_source_card_id_is.clone(),
@@ -1767,6 +1796,7 @@ fn compile_event_cause(cause: crate::predicate::EventCauseSpec) -> CompiledEvent
         crate::predicate::EventCauseSpec::SecurityRemoval => CompiledEventCause::SecurityRemoval,
         crate::predicate::EventCauseSpec::Cost => CompiledEventCause::Cost,
         crate::predicate::EventCauseSpec::Rule => CompiledEventCause::Rule,
+        crate::predicate::EventCauseSpec::DigiBurst => CompiledEventCause::DigiBurst,
     }
 }
 
@@ -2572,6 +2602,7 @@ fn compile_declarative(
                 modifier: a.modifier,
                 modifier_value: a.modifier_value,
                 modifier_name: a.modifier_name,
+                modifier_colors: a.modifier_colors.map(|cs| cs.into_iter().map(compile_color).collect()),
                 source_card_trash_protection: a.source_card_trash_protection.as_ref().map(|p| {
                     compile_predicate(
                         p,
@@ -2895,6 +2926,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             "self" => CompiledBindingRef::SelfRef,
             "this" => CompiledBindingRef::Source,
             "carrier" => CompiledBindingRef::Carrier,
+            "attack_target" => CompiledBindingRef::AttackTarget,
             "source" => CompiledBindingRef::Source,
             "event_target" => CompiledBindingRef::EventTarget,
             "event_card" => CompiledBindingRef::EventCard,
@@ -3133,6 +3165,7 @@ fn compile_step(
         },
         S::MayAddTopSecurityToHand(a) => CompiledStep::MayAddTopSecurityToHand {
             of: compile_player_ref(a.of),
+            cost: a.cost,
         },
         S::AddToHandFromReveal(a) => CompiledStep::AddToHandFromReveal {
             of: compile_player_ref(a.of),
@@ -3515,6 +3548,7 @@ fn compile_step(
         S::TrashSelectedSourcesAsCost(a) => CompiledStep::TrashSelectedSourcesAsCost {
             source_refs: a.source_refs.clone(),
             min_count: a.min_count,
+            is_digi_burst: false,
         },
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
@@ -4350,6 +4384,7 @@ fn compile_step(
             then.push(CompiledStep::TrashSelectedSourcesAsCost {
                 source_refs: bind_as.clone(),
                 min_count: None,
+                is_digi_burst: true,
             });
             then.extend(
                 a.then
@@ -4819,6 +4854,7 @@ fn compile_step(
             attacker: compile_binding_ref(&a.attacker),
             targets: compile_attack_target_spec(a.targets),
             without_suspending: a.without_suspending,
+            can_attack_unsuspended: a.can_attack_unsuspended,
             ignore_summoning_sickness: a.ignore_summoning_sickness,
             optional: a.optional,
             prompt: a.prompt.clone(),
@@ -4851,6 +4887,7 @@ fn compile_step(
             attacker: compile_binding_ref(&a.attacker),
             targets: compile_attack_target_spec(a.targets),
             without_suspending: a.without_suspending,
+            can_attack_unsuspended: a.can_attack_unsuspended,
             prompt: a.prompt.clone(),
             cost_upgrade: a.cost_upgrade.map(|u| CompiledAttackCostUpgrade {
                 dp: u.dp.unwrap_or(0),
@@ -4980,11 +5017,25 @@ fn compile_step(
             single_fire: a.single_fire,
             target_color: a.target_color.map(compile_color),
             suspend_cost: a.suspend_cost,
+            from_level: a.from_level,
+            to_level: a.to_level,
         },
     }
 }
 
 // ── Tests ───────────────────────────────────────────────────────────
+
+fn compile_turn_phase(p: crate::predicate::TurnPhaseSpec) -> crate::compiled::CompiledTurnPhase {
+    use crate::compiled::CompiledTurnPhase as C;
+    use crate::predicate::TurnPhaseSpec as S;
+    match p {
+        S::Unsuspend => C::Unsuspend,
+        S::Draw => C::Draw,
+        S::Breeding => C::Breeding,
+        S::Main => C::Main,
+        S::EndTurn => C::EndTurn,
+    }
+}
 
 #[cfg(test)]
 mod tests {
