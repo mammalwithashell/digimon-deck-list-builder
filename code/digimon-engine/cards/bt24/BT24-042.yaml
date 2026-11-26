@@ -94,12 +94,26 @@ effects:
     scope: inherited
     when: on_discard_hand
     once_per_turn: true
+    optional: true
     active_when:
       your_turn: true
     condition:
-      any_of:
-        - source_permanent_trait_has: Demon
-        - source_permanent_trait_has: Titan
+      all_of:
+        - any_of:
+            - source_permanent_trait_has: Demon
+            - source_permanent_trait_has: Titan
+        # DCGO BT24_042.cs:102 `HasMatchConditionOwnersCardInTrash`: do not
+        # queue/offer when no legal [Titamon]/[Titan] digivolve target is in trash.
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              kind: digimon
+              can_digivolve_from_source: true
+              any_of:
+                - name_is: "Titamon"
+                - trait_has: Titan
+            n: 1
     trigger_if:
       event_discard_player: you
     summary: "[Inherited][Your Turn][Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] Digimon may digivolve into [Titamon] or a [Titan] Digimon card in the trash with the cost reduced by 1"

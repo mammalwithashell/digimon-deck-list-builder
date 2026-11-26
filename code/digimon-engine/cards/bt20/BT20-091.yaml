@@ -13,16 +13,14 @@ effects:
     summary: "[Your Turn] When your Royal Knight is played or digivolves, suspend self to Draw 1 and gain 1 memory"
     condition:
       all_of:
+        - event_target_kind: digimon
         - event_target_trait_has: Royal Knight
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: BT20-091
-            is_unsuspended: true
+        - source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_change_orientation: true }
     trigger_if:
       event_target_owner: you
     process:
-      - suspend: { target: source }
+      - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
       - gain_memory: 1
 

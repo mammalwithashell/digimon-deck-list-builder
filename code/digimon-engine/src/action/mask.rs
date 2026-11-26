@@ -158,11 +158,12 @@ pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]
                         continue;
                     }
                     // Memory check: a non-Option card is affordable if
-                    // memory - cost >= memory_min. An eligible `[Assembly]`
-                    // alt-path (materials present in trash) reduces the cost,
-                    // so legality is computed against the REDUCED cost
-                    // (declare-then-pay — G-ASSEMBLY-PLAY-EXECUTION / judge
-                    // quiz Q5). 0 when the card has no eligible assembly path.
+                    // memory - cost >= memory_min. Credit declarable
+                    // `BeforePayCost` play-cost reductions (self and field
+                    // reducers, CR 4.3 §1-3-11-2/3; DCGO `PayingCost(
+                    // checkAvailability: true)`) plus fulfillable `[Assembly]`,
+                    // cast-time assembly (BT15-102), and `[DigiXros]`
+                    // reductions when play-cost reduction is not locked.
                     let printed = card.play_cost(&game.card_data) as i16;
                     let assigned = game
                         .available_play_assignment_base(
@@ -173,16 +174,25 @@ pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]
                         )
                         .map(i32::from)
                         .unwrap_or(printed as i32);
-                    let assembly_reduction =
-                        game.assembly_play_reduction_for_hand_card(player_id, i) as i16;
-                    // Cast-time assembly (BT15-102): like `[Assembly]`, the
-                    // potential place-under reduction participates in
-                    // declare-then-pay legality (DCGO's hidden availability
-                    // ChangeCostClass). 0 for every other card.
-                    let cast_time_reduction =
-                        game.cast_time_assembly_play_reduction_for_hand_card(player_id, i) as i16;
-                    let cost =
-                        (assigned - assembly_reduction as i32 - cast_time_reduction as i32).max(0);
+                    let reduction_blocked = game
+                        .modifiers
+                        .player_has(player_id, ModifierType::CannotReduceCost)
+                        || game
+                            .modifiers
+                            .any_player_has(ModifierType::CannotReducePlayCost);
+                    let before_pay_reduction = game.declarable_cost_reduction(
+                        player_id,
+                        card.handle(),
+                        crate::game_actions::CostReductionKind::Play,
+                    );
+                    let material_reduction = if reduction_blocked {
+                        0
+                    } else {
+                        game.assembly_play_reduction_for_hand_card(player_id, i)
+                            + game.cast_time_assembly_play_reduction_for_hand_card(player_id, i)
+                            + game.digixros_play_reduction_for_hand_card(player_id, i)
+                    };
+                    let cost = (assigned - before_pay_reduction - material_reduction).max(0);
                     if (game.memory as i32 - cost) < game.rules.memory_range.0 as i32 {
                         continue;
                     }

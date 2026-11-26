@@ -109,6 +109,14 @@ effects:
     active_when: { all_turns: true }
     once_per_turn: true
     optional: true
+    # Activation gate (DCGO EX13_022.cs:181-183 `CanUnsuspend(PermanentOfThisCard)`):
+    # if another simultaneous trigger already unsuspended this Digimon before this
+    # inherited trigger resolves, it cannot unsuspend and is not offered.
+    condition:
+      all_of:
+        - not:
+            source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_unsuspend: true }
     trigger_if:
       all_of:
         - event_permanent_is_source: true

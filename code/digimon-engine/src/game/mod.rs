@@ -262,6 +262,7 @@ pub(crate) struct PreparedSourcePlay {
     pub(crate) on_play_suppressor: Option<(PlayerId, crate::enums::EffectSourceKind)>,
     pub(crate) declaration: PendingWouldPlayResume,
     pub(crate) assembly: Option<(crate::card_source::CardHandle, Vec<crate::card_source::CardHandle>)>,
+    pub(crate) digixros: Option<crate::digixros::DigiXrosTransaction>,
 }
 
 /// Open `OnDiscardHand` batch window (G-ENGINE-ON-DISCARD-HAND). Accumulates

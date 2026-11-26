@@ -151,3 +151,61 @@ fn ex12_020_inherited_when_attacking_does_not_draw_if_hand_has_8_or_more_cards()
     assert_eq!(hand_size(&runner, 0), hand_before, "no draw at 8 cards");
     assert_eq!(runner.deck_size(0), deck_before, "deck unchanged");
 }
+
+#[test]
+fn ex12_020_inherited_attack_hand_test_is_a_processing_condition_and_stays_orderable() {
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-020 YAML loads")
+        .dsl_card("EX12-024")
+        .expect("EX12-024 YAML loads")
+        .add_card(blue_digimon("CARRIER", 3, &[]))
+        .add_card(blue_digimon("DRAW", 3, &[]))
+        .add_card(blue_digimon("SEC", 3, &[]))
+        .add_card(blue_digimon("FILL", 3, &[]))
+        .hand(0, &["FILL"; 8])
+        .deck(0, &["DRAW"; 4])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+
+    let carrier = runner.place_stack(0, &[CARD_ID, "EX12-024", "CARRIER"]);
+    runner.attack_player(carrier, 1, false);
+
+    let pending = runner
+        .pending_selection()
+        .expect("both inherited [When Attacking] effects are orderable");
+    assert_eq!(pending.kind, SelectionKind::TriggerOrder);
+    let labels: Vec<String> = pending
+        .effect_choices
+        .as_ref()
+        .map(|choices| choices.iter().map(|c| c.label.clone()).collect())
+        .unwrap_or_default();
+    assert!(
+        labels.iter().any(|l| l.starts_with(CARD_ID)),
+        "EX12-020 (hand 8) stays in the order list: {labels:?}"
+    );
+    assert_eq!(pending.valid_action_ids.len(), 2, "{labels:?}");
+
+    let ex12_020_action = pending
+        .effect_choices
+        .as_ref()
+        .and_then(|choices| choices.iter().find(|c| c.label.starts_with(CARD_ID)))
+        .map(|c| c.action_id)
+        .expect("EX12-020 entry");
+    let hand_before = hand_size(&runner, 0);
+    runner
+        .execute_action(0, ex12_020_action)
+        .expect("choose EX12-020");
+    assert_eq!(
+        hand_size(&runner, 0),
+        hand_before + 1,
+        "8 cards in hand: EX12-020 draws nothing (only sibling EX12-024 draws)"
+    );
+    assert_eq!(
+        runner.game.opt_used(carrier),
+        1,
+        "EX12-020's OPT stays unspent after unmet hand count"
+    );
+}

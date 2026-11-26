@@ -66,3 +66,30 @@ fn ex12_015_inherited_attack_deletes_dp_6000_or_less() {
         "Gokuumon inherited effect deletes the selected 6000 DP Digimon"
     );
 }
+
+#[test]
+fn ex12_015_inherited_does_not_trigger_without_opponent_6000_dp_or_less_digimon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-015 YAML loads")
+        .add_card(plain_digimon("CARRIER", CardColor::Red, 6, 12000))
+        .add_card(plain_digimon("BIG-OPP", CardColor::Blue, 6, 11000))
+        .add_card(plain_digimon("SEC", CardColor::Blue, 3, 3000))
+        .security(1, &["SEC"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+    let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
+    runner.place_on_field(1, "BIG-OPP", Some(0));
+
+    runner.attack_player(carrier, 1, false);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "EX12-015 inherited must not trigger or prompt when opponent has no Digimon with 6000 DP or less"
+    );
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        0,
+        "attack resolves cleanly through security without a spurious EX12-015 prompt"
+    );
+}

@@ -147,8 +147,10 @@ pub(super) fn is_top_bottom_choice(pending: &crate::selection::PendingSelection)
 /// Jesmon (BT23-013): "Play [Atho, Rene & Por] Token" = true, "Player [Sistermon]
 /// in name digimon from hand or trash" = false (BT23_013.cs:121-141; the
 /// from-hand / from-trash bool that follows a false is the zone menu); its
-/// YAML `select_effect_choice` labels. Add a card only after reading its C#
-/// and YAML.
+/// YAML `select_effect_choice` labels. Candlemon (EX13-025): "Security Top" =
+/// true, "Security Bottom" = false (EX13_025.cs:46-65, `fromTop =
+/// SelectedBoolValue`); its YAML `select_effect_choice` labels. Add a card
+/// only after reading its C# and YAML.
 const DCGO_MODE_BOOLS: &[(&str, &str, &str)] = &[
     (
         "EX12-037",
@@ -156,6 +158,7 @@ const DCGO_MODE_BOOLS: &[(&str, &str, &str)] = &[
         "Trash opponent top security, then Recovery +1",
     ),
     ("BT23-013", "Play Atho, Rene & Por Token", "Play Sistermon from hand or trash"),
+    ("EX13-025", "Trash your top security card", "Trash your bottom security card"),
 ];
 
 fn dcgo_mode_bool(card_id: &str) -> Option<(&'static str, &'static str)> {
@@ -254,6 +257,7 @@ pub(super) fn dcgo_zone_menu_asked_for_either_zone(card_id: &str) -> bool {
 pub(super) enum PickZone {
     Hand,
     Trash,
+    Material,
 }
 
 pub(super) fn row_pick_zone(row: &SelectionRow) -> Option<PickZone> {
@@ -261,6 +265,8 @@ pub(super) fn row_pick_zone(row: &SelectionRow) -> Option<PickZone> {
         Some(PickZone::Hand)
     } else if row.zone.as_deref() == Some("Trash") {
         Some(PickZone::Trash)
+    } else if row.zone.as_deref() == Some("DigivolutionCards") {
+        Some(PickZone::Material)
     } else {
         None
     }
@@ -1026,13 +1032,14 @@ fn zone_card_candidate_ids(game: &Game, valid: &[u16]) -> Option<Vec<(u16, Strin
 
 /// A UnionZone prompt that includes `UnionZoneSet::MATERIAL` offers each of the
 /// owner's Digimon's NON-top digivolution cards as
-/// `encode_source_select(field_index, source_index)` — mirror of the installer
-/// in `effect_context/selections.rs`. Match by card identity; `carrier` (a
-/// battle-area index from the row's `targets:`) disambiguates two carriers
-/// holding the same card. Equivalent copies under ONE carrier are the same
-/// pick (first match wins); ambiguity is reported only across distinct
-/// carriers. Breeding-area carriers (`encode_breeding_source_select`) are not
-/// matched.
+/// `encode_source_select(field_index, source_index)` (and, when a field-wide
+/// carrier filter includes breeding like `EX11-053` `[On Deletion]`, breeding
+/// sources via `encode_breeding_source_select(owner, source_index)`) — mirror
+/// of the installer in `effect_context/selections.rs`. Match by card identity;
+/// `carrier` (a battle-area index from the row's `targets:`) disambiguates two
+/// carriers holding the same card. Equivalent copies under ONE carrier are the
+/// same pick (first match wins); ambiguity is reported only across distinct
+/// carriers.
 fn union_zone_source_pick(
     game: &Game,
     owner: crate::PlayerId,
@@ -1040,7 +1047,7 @@ fn union_zone_source_pick(
     valid: &[u16],
     carrier: Option<usize>,
 ) -> Result<Option<u16>, String> {
-    use crate::action::space::encode_source_select;
+    use crate::action::space::{encode_breeding_source_select, encode_source_select};
     let mut hits: Vec<u16> = Vec::new();
     for (pi, perm) in game.player(owner).battle_area.iter().enumerate() {
         if carrier.is_some_and(|c| c != pi) {
@@ -1056,6 +1063,22 @@ fn union_zone_source_pick(
                     // Equivalent copies under this carrier: keep the first.
                     hits.push(id);
                     break;
+                }
+            }
+        }
+    }
+    if carrier.is_none() {
+        if let Some(breed) = game.player(owner).breeding_area.as_ref() {
+            let candidates = breed.card_sources.len().saturating_sub(1);
+            for (si, src) in breed.card_sources.iter().take(candidates).enumerate() {
+                if src.card_id(&game.card_data) != want {
+                    continue;
+                }
+                if let Some(id) = encode_breeding_source_select(owner, si as u16) {
+                    if valid.contains(&id) {
+                        hits.push(id);
+                        break;
+                    }
                 }
             }
         }
@@ -1167,6 +1190,103 @@ fn burst_tamer_route(
 /// count is the printed cost, while the engine's labels show the reduced one.
 /// For a security-origin play the two readings are compared: one route named
 /// by exactly one reading, or by both, is the answer; otherwise it halts.
+/// When multiple digivolution-cost routes share the same recorded cost (e.g.
+/// a card's normal color/level requirement and an alternate digivolution
+/// requirement at the same cost, which DCGO collapses with `.Distinct()`,
+/// `CardController.cs:667`), clone `game` and execute each candidate route.
+/// If every candidate yields the exact same `(verification_digest,
+/// pending_optional_activation_effect)`, the routes are provably
+/// indistinguishable and picking the first is faithful.
+fn same_digest_digivolve_routes(
+    game: &Game,
+    pending: &crate::selection::PendingSelection,
+    action_ids: &[u16],
+) -> Option<u16> {
+    if action_ids.len() < 2
+        || !matches!(pending.kind, SelectionKind::EffectChoice)
+        || !action_ids.iter().all(|id| pending.valid_action_ids.contains(id))
+    {
+        return None;
+    }
+    let actor = pending.selecting_player;
+    let fingerprint = |id: u16| {
+        let mut clone = game.clone();
+        clone.decode_action(id, actor);
+        (
+            clone.verification_digest(),
+            format!("{:?}", clone.pending_optional_activation_effect()),
+        )
+    };
+    let first = fingerprint(action_ids[0]);
+    if action_ids[1..].iter().all(|&id| fingerprint(id) == first) {
+        Some(action_ids[0])
+    } else {
+        None
+    }
+}
+
+/// Does a `TriggerOrder` / `EffectChoice` entry's `source_card` match DCGO's
+/// `chosen_effect_card` (`card_id`)?
+///
+/// Normally DCGO stamps `EffectSourceCard` with the card printing the effect.
+/// For `<Succession>`-adopted effects (`CopyDigivolutionCardEffects`, e.g.
+/// `BT26-103` adopting `BT24-101` in `Nov24#g19` step 145 `v1[149]`), DCGO
+/// copies the below-top effect onto the top card so `chosen_effect_card` names
+/// the carrier's top card (`BT26-103`), while our engine preserves
+/// `source_card = BT24-101`. Check direct identity first, then `<Succession>`
+/// adoption under a battle-area carrier whose top card is `card_id`.
+pub(super) fn source_card_matches_dcgo_chosen_card(
+    game: &Game,
+    source_card: crate::card_source::CardHandle,
+    card_id: &str,
+) -> bool {
+    if game
+        .card_data_for_handle(source_card)
+        .is_some_and(|d| d.card_id == card_id)
+    {
+        return true;
+    }
+    for (pi, player) in game.players.iter().enumerate() {
+        for (si, perm) in player.battle_area.iter().enumerate() {
+            if perm.top_card().card_id(&game.card_data) != card_id {
+                continue;
+            }
+            let handle = crate::permanent::PermanentHandle {
+                player: pi as crate::enums::PlayerId,
+                index: si as u8,
+            };
+            if game.is_adopted_source_card(handle, source_card) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Locate which physical permanent (battle-area slot `Some(idx)` or breeding
+/// area `None`) currently contains `handle` among its `card_sources`.
+fn source_card_host_location(
+    game: &Game,
+    handle: crate::card_source::CardHandle,
+) -> Option<(crate::enums::PlayerId, Option<usize>)> {
+    for (p_idx, player) in game.players.iter().enumerate() {
+        let pid = p_idx as crate::enums::PlayerId;
+        if let Some(breed) = player.breeding_area.as_ref() {
+            if breed.card_sources.iter().any(|c| c.handle() == handle) {
+                return Some((pid, None));
+            }
+        }
+        if let Some(slot) = player
+            .battle_area
+            .iter()
+            .position(|perm| perm.card_sources.iter().any(|c| c.handle() == handle))
+        {
+            return Some((pid, Some(slot)));
+        }
+    }
+    None
+}
+
 fn effect_digivolve_cost_count(
     game: &Game,
     pending: &crate::selection::PendingSelection,
@@ -1206,13 +1326,16 @@ fn effect_digivolve_cost_count(
                 pending.prompt,
                 describe_choices(pending)
             )),
-            several => Err(format!(
-                "count payload {c} is the printed cost of {} engine routes {several:?} (printed {routes:?}); \
-                 DCGO lists each printed cost once (Distinct, CardController.cs:667), so the recording does not \
-                 say which route ran{}",
-                several.len(),
-                describe_choices(pending)
-            )),
+            several => match same_digest_digivolve_routes(game, pending, several) {
+                Some(id) => Ok(id),
+                None => Err(format!(
+                    "count payload {c} is the printed cost of {} engine routes {several:?} (printed {routes:?}); \
+                     DCGO lists each printed cost once (Distinct, CardController.cs:667), so the recording does not \
+                     say which route ran{}",
+                    several.len(),
+                    describe_choices(pending)
+                )),
+            },
         });
     }
     let by_label: Vec<u16> = pending
@@ -1585,6 +1708,27 @@ fn resolve_next_with_provenance(
                 };
             }
         }
+        // `OwnField` / `OppField` encode a slot on ONE player's battle area
+        // (`pending.zone_owner` when set, else `selecting_player` for `OwnField`
+        // and `1 - selecting_player` for `OppField`). A target naming the OTHER
+        // player's battle area must never match the side-implicit
+        // `ATTACK_START + slot` band (otherwise an opponent target `(1, 2)`
+        // silently resolves as own slot 2 on an `OwnField` prompt such as
+        // Alliance vs `-DP` in `Nov24#g19` step 97 `v1[101..102]`).
+        let expected_field_owner = match pending.kind {
+            SelectionKind::OwnField => Some(pending.zone_owner.unwrap_or(pending.selecting_player)),
+            SelectionKind::OppField => Some(pending.zone_owner.unwrap_or(1 - pending.selecting_player)),
+            _ => None,
+        };
+        if let Some(expected) = expected_field_owner {
+            if t.player != expected {
+                return Err(format!(
+                    "frame target (player {}, slot {}) names the wrong side for {:?} prompt '{}' \
+                     (expected player {}, valid {:?})",
+                    t.player, slot, pending.kind, pending.prompt, expected, valid
+                ));
+            }
+        }
         // AnyField explicitly encodes the absolute owner. Never fall back to
         // the side-implicit form: that can be another legal card at the same
         // slot on player 0's field, silently answering the wrong target.
@@ -1671,6 +1815,31 @@ fn resolve_next_with_provenance(
                 .is_some_and(|perm| !perm.is_suspended)
         {
             return Ok(Some(PASS));
+        }
+        // Battle-area DigiXros materials (e.g. EX12-029 targeting EX12-022 in
+        // raw-20261124T071011Z#g3 v1[103] and #g6 step 22): DCGO emits
+        // `SelectPermanentEffect` targeting `(t.player, slot)`, while the
+        // engine's `"Select DigiXros material"` prompt (`SelectionKind::Material`
+        // with `pending.card_choice`) surfaces battle-area candidates as
+        // `CardChoiceZone::BattleTop` rows carrying `(owner, carrier_slot)`.
+        if let Some(owner) = &pending.card_choice {
+            use crate::owned_card_choice::{CardChoiceOperation, CardChoiceZone};
+            let view = owner.view(game, pending.selecting_player);
+            let hits: Vec<u16> = view
+                .rows
+                .iter()
+                .filter(|row| {
+                    matches!(row.operation, CardChoiceOperation::CommitCard)
+                        && matches!(row.zone, Some(CardChoiceZone::BattleTop))
+                        && row.owner == Some(t.player)
+                        && row.carrier_slot.map(u16::from) == Some(slot)
+                        && accepts(row.action_id)
+                })
+                .map(|row| row.action_id)
+                .collect();
+            if let [only] = hits.as_slice() {
+                return Ok(Some(*only));
+            }
         }
         // DCGO's board snapshot is a list of card ids, so two copies of one card
         // are indistinguishable and `remap_selection_targets` pairs them in
@@ -1790,6 +1959,10 @@ fn resolve_next_with_provenance(
                 match row_pick_zone(payload) {
                     Some(PickZone::Hand) => matches!(zone, Some(CardChoiceZone::Hand)),
                     Some(PickZone::Trash) => matches!(zone, Some(CardChoiceZone::Trash)),
+                    Some(PickZone::Material) => matches!(
+                        zone,
+                        Some(CardChoiceZone::BattleSource | CardChoiceZone::BreedingSource)
+                    ),
                     None => true,
                 }
             };
@@ -1802,6 +1975,63 @@ fn resolve_next_with_provenance(
             }) {
                 return Ok(Some(row.action_id));
             }
+            // DCGO's `SelectCardEffect` on a face-down opponent security stack
+            // (e.g. BT24-018 Styracomon "trash any 1 of your opponent's security
+            // cards", raw-20261124T071011Z#g13 step 67) logs the chosen card's
+            // physical ID (`card_ids: ["EX12-075"]`), while the engine's
+            // `CardChoiceView` masks face-down security (`identity_visible: false`,
+            // `card_id: None`). For DCGO recordings only, resolve against the
+            // pinned `ResolvedCardChoice::Security` handle, preferring DCGO's
+            // recorded top-0 `indexes` position when duplicate copies exist.
+            if dcgo_recording && matches!(pending.kind, SelectionKind::Security) {
+                let sec_matches: Vec<(u16, usize, usize)> = view
+                    .rows
+                    .iter()
+                    .filter(|row| {
+                        matches!(row.operation, crate::owned_card_choice::CardChoiceOperation::CommitCard)
+                            && !row.identity_visible
+                            && accepts(row.action_id)
+                    })
+                    .filter_map(|row| {
+                        let mut probe = owner.clone();
+                        match probe.resolve(game, row.action_id) {
+                            Ok(crate::card_choice_page::CardChoiceResult::Selected(
+                                crate::owned_card_choice::ResolvedCardChoice::Security {
+                                    owner: sec_owner,
+                                    index,
+                                    card,
+                                },
+                            )) if game
+                                .card_data_for_handle(card)
+                                .is_some_and(|d| d.card_id == *want) =>
+                            {
+                                let sec_len = game.player(sec_owner).security.len();
+                                Some((row.action_id, index, sec_len))
+                            }
+                            _ => None,
+                        }
+                    })
+                    .collect();
+                if let [(only, _, _)] = sec_matches.as_slice() {
+                    return Ok(Some(*only));
+                }
+                if sec_matches.len() > 1 {
+                    if let Some(dcgo_idx) = payload
+                        .indexes
+                        .as_ref()
+                        .and_then(|idxs| idxs.get(picks_done).or_else(|| idxs.first()))
+                        .and_then(|&i| usize::try_from(i).ok())
+                    {
+                        if let Some((id, _, _)) = sec_matches
+                            .iter()
+                            .find(|(_, eng_idx, sec_len)| sec_len.checked_sub(1 + dcgo_idx) == Some(*eng_idx))
+                        {
+                            return Ok(Some(*id));
+                        }
+                    }
+                    return Ok(Some(sec_matches[0].0));
+                }
+            }
             return Err(format!("card pick '{}' not found in {:?} visible legal physical rows on page {} of '{}'",
                 want, pending.kind, view.page_index, pending.prompt));
         }
@@ -1810,10 +2040,20 @@ fn resolve_next_with_provenance(
         // whatever kind tag it shows (CountCappedMultiSelect / PlayCostBudget /
         // OrderedPermutation).
         // A row that names its zone (`row_pick_zone`) picks only there.
-        let in_named_zone = |id: u16| match row_pick_zone(payload) {
-            Some(PickZone::Hand) => hand_or_trash_band(id) == Some(true),
-            Some(PickZone::Trash) => hand_or_trash_band(id) == Some(false),
-            None => true,
+        let in_named_zone = |id: u16| {
+            use crate::action::space::{
+                BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, SOURCE_SELECT_END,
+                SOURCE_SELECT_START,
+            };
+            match row_pick_zone(payload) {
+                Some(PickZone::Hand) => hand_or_trash_band(id) == Some(true),
+                Some(PickZone::Trash) => hand_or_trash_band(id) == Some(false),
+                Some(PickZone::Material) => {
+                    (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&id)
+                        || (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&id)
+                }
+                None => true,
+            }
         };
         if let Some(pairs) = zone_card_candidate_ids(game, valid) {
             if let Some(id) = pairs
@@ -1866,6 +2106,10 @@ fn resolve_next_with_provenance(
                     match zone {
                         Some(PickZone::Hand) => in_hand(),
                         Some(PickZone::Trash) => in_trash(),
+                        Some(PickZone::Material) if material => {
+                            union_zone_source_pick(game, zone_owner, want, valid, None)?
+                        }
+                        Some(PickZone::Material) => None,
                         None => match in_hand().or_else(in_trash) {
                             Some(id) => Some(id),
                             None if material => {
@@ -1943,6 +2187,32 @@ fn resolve_next_with_provenance(
                     .map(|entry| entry.action_id)
                     .collect();
                 if matching.len() > 1 {
+                    // DCGO's refire effect picker (`BT11_112.cs:138-180` etc.)
+                    // puts every refirable effect of the carrier into one
+                    // `SelectCardEffect` in printed card order and logs the
+                    // chosen 0-based position in `payload.indexes`
+                    // (`SetTargetCardAndIndicies`). When the parked prompt is
+                    // `ResumeFrame::RefireEffectChoice`, `indexes` selects the
+                    // exact refired effect of `want` (`raw-20261124T071011Z#g4`
+                    // step 59: `BT11-112` refiring `EX13-023`'s 2 `[When Digivolving]`
+                    // effects).
+                    if dcgo_recording
+                        && matches!(
+                            game.pending_selection_resume.as_ref().and_then(|s| s.frames.last()),
+                            Some(crate::resume::ResumeFrame::RefireEffectChoice(_))
+                        )
+                    {
+                        if let Some(idx) = payload
+                            .indexes
+                            .as_ref()
+                            .and_then(|idxs| idxs.get(picks_done).or_else(|| idxs.first()))
+                            .and_then(|&i| usize::try_from(i).ok())
+                        {
+                            if let Some(&action) = matching.get(idx) {
+                                return Ok(Some(action));
+                            }
+                        }
+                    }
                     return Err(format!(
                         "card pick '{}' is ambiguous among effect choices {:?}",
                         want, matching
@@ -2090,9 +2360,20 @@ fn resolve_next_with_provenance(
                 .filter_map(|(i, _)| pending.effect_choices.as_ref()?.get(i))
                 .filter(|entry| pending.valid_action_ids.contains(&entry.action_id))
                 .collect();
-            return match matches.as_slice() {
-                [entry] => Ok(Some(entry.action_id)),
-                _ => Err(format!("recorded printed digivolution cost {c} matches {} legal routes", matches.len())),
+            let match_ids: Vec<u16> = matches.iter().map(|entry| entry.action_id).collect();
+            return match match_ids.as_slice() {
+                [id] => Ok(Some(*id)),
+                several if several.len() > 1 => match same_digest_digivolve_routes(game, pending, several) {
+                    Some(id) => Ok(Some(id)),
+                    None => Err(format!(
+                        "recorded printed digivolution cost {c} matches {} legal routes",
+                        several.len()
+                    )),
+                },
+                _ => Err(format!(
+                    "recorded printed digivolution cost {c} matches {} legal routes",
+                    match_ids.len()
+                )),
             };
         }
         // Typed count rows carry the declared physical prefix separately from
@@ -2136,6 +2417,20 @@ fn resolve_next_with_provenance(
                 return Ok(Some(matches[0].action_id));
             }
             if matches.len() > 1 {
+                let match_ids: Vec<u16> = matches.iter().map(|e| e.action_id).collect();
+                let is_digivolve_cost_choice = pending.prompt == "Choose which digivolution cost to pay"
+                    || matches!(
+                        game.pending_selection_resume.as_ref().and_then(|s| s.frames.last()),
+                        Some(
+                            crate::resume::ResumeFrame::DigivolveCostChoice(_)
+                                | crate::resume::ResumeFrame::EffectDigivolveCostChoice(_)
+                        )
+                    );
+                if is_digivolve_cost_choice {
+                    if let Some(id) = same_digest_digivolve_routes(game, pending, &match_ids) {
+                        return Ok(Some(id));
+                    }
+                }
                 return Err(format!(
                     "count payload {} matches {} branches of the {:?} prompt '{}' — ambiguous{}",
                     c,
@@ -2182,11 +2477,6 @@ fn resolve_next_with_provenance(
                 return Ok(Some(e.action_id));
             }
         }
-        if valid.len() == candidates.len() {
-            if let Some(id) = valid.get(index) {
-                return Ok(Some(*id));
-            }
-        }
         // A count whose candidate set is a single value was never a decision.
         // DCGO's `IDegeneration.Degeneration` always opens a `SelectCountEffect`
         // after the <De-Digivolve> target pick, even when only one card can be
@@ -2194,11 +2484,18 @@ fn resolve_next_with_provenance(
         // forced singleton; the engine installs no count prompt when exactly one
         // card is trashable (CR 4.3 16-12-1: declare 1..N, 0 not allowed - the
         // number is forced). The parked prompt is not a branch list, so there is
-        // nothing to answer: consume the row. A multi-value candidate set still
-        // fails below, because that is a real disagreement about how many cards
-        // are trashable.
+        // nothing to answer: consume the row (even if that non-branch prompt
+        // happens to have 1 valid action id, e.g. an optional lone `OwnField`
+        // pick parked after `<De-Digivolve 1>`). A multi-value candidate set
+        // still fails below, because that is a real disagreement about how many
+        // cards are trashable.
         if candidates.len() == 1 && pending.effect_choices.is_none() {
             return Ok(None);
+        }
+        if valid.len() == candidates.len() {
+            if let Some(id) = valid.get(index) {
+                return Ok(Some(*id));
+            }
         }
         return Err(format!(
             "count payload {} chose option {} of {:?}, but the {:?} prompt '{}' offers {} valid id(s)",
@@ -2228,14 +2525,54 @@ fn resolve_next_with_provenance(
                     .iter()
                     .filter(|e| accepts(e.action_id))
                     .filter(|e| {
-                        e.source_card
-                            .and_then(|c| game.card_data_for_handle(c))
-                            .is_some_and(|d| d.card_id == card_id)
+                        e.source_card.is_some_and(|c| {
+                            source_card_matches_dcgo_chosen_card(game, c, card_id)
+                        })
                     })
                     .map(|e| e.action_id)
                     .collect();
                 if let [only] = matching.as_slice() {
                     return Ok(Some(*only));
+                }
+                // Identical duplicate triggers:
+                //  - duplicate keyword triggers on the SAME physical card (e.g.
+                //    multiple granted <Alliance> instances per CR 4.3 §16-22), OR
+                //  - identical copies of the same card tucked inside the SAME
+                //    physical permanent (e.g. 3 copies of BT13-007 King Drasil_7D6
+                //    under the breeding stack firing the same mandatory inherited
+                //    slot 3 trigger, raw-20261124T071011Z#g17 step 59).
+                // The entries are strictly symmetric, so picking the first is
+                // equivalent.
+                if matching.len() > 1 {
+                    let matched_entries: Vec<&crate::selection::EffectChoiceEntry> = matching
+                        .iter()
+                        .filter_map(|id| entries.iter().find(|e| e.action_id == *id))
+                        .collect();
+                    if matched_entries.len() == matching.len() {
+                        let first = matched_entries[0];
+                        let same_effect_shape = matched_entries.iter().all(|e| {
+                            e.keyword == first.keyword
+                                && e.timing == first.timing
+                                && e.source_kind == first.source_kind
+                                && e.is_optional == first.is_optional
+                                && e.label == first.label
+                        });
+                        let same_card_keyword_dup = first.keyword.is_some()
+                            && matched_entries.iter().all(|e| e.source_card == first.source_card);
+                        let same_host_permanent_dup = first
+                            .source_card
+                            .and_then(|c| source_card_host_location(game, c))
+                            .is_some_and(|host| {
+                                matched_entries.iter().all(|e| {
+                                    e.source_card
+                                        .and_then(|c| source_card_host_location(game, c))
+                                        == Some(host)
+                                })
+                            });
+                        if same_effect_shape && (same_card_keyword_dup || same_host_permanent_dup) {
+                            return Ok(Some(matching[0]));
+                        }
+                    }
                 }
                 // Two simultaneous effects of ONE card (a printed clause and a
                 // keyword body such as <Fortitude>): the position DCGO chose is
@@ -4534,5 +4871,526 @@ mod owned_boolean_replay_tests {
             if count==29 { r.game.resolve_selection(0,crate::card_choice_page::CARD_CHOICE_NEXT).unwrap(); }
             assert!(resolve_next(&r.game,&row(true),0).is_err(),"boolean cannot choose among {count} physical cards");
         }
+    }
+    #[test]
+    fn ex13_025_security_top_bottom_mode_bool_maps_true_to_top_and_false_to_bottom() {
+        let mut r = DebugRunner::builder()
+            .add_card(make_test_card("EX13-025", "Candlemon"))
+            .hand(0, &["EX13-025"])
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        let source = r.game.players[0].hand[0].handle();
+        EffectContext::new(&mut r.game, source, None, 0).select_effect_choice(
+            "Trash your top or bottom security card",
+            vec![
+                "Trash your top security card".to_string(),
+                "Trash your bottom security card".to_string(),
+            ],
+            |_, _| {},
+        );
+        let pending = r.game.pending_selection.as_ref().unwrap();
+        let top_id = pending.valid_action_ids[0];
+        let bottom_id = pending.valid_action_ids[1];
+        assert_eq!(mode_bool_branches(&r.game, pending), Some((top_id, bottom_id)));
+        assert_eq!(resolve_next(&r.game, &row(true), 0), Ok(Some(top_id)));
+        assert_eq!(resolve_next(&r.game, &row(false), 0), Ok(Some(bottom_id)));
+    }
+    #[test]
+    fn multiple_skills_same_card_identical_keyword_duplicates_pick_first() {
+        let mut r = DebugRunner::builder()
+            .add_card(make_test_card("EX12-048", "SeitenGokuumon"))
+            .hand(0, &["EX12-048"])
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        let source = r.game.players[0].hand[0].handle();
+        EffectContext::new(&mut r.game, source, None, 0).select_effect_choice(
+            "Choose which triggered effect to resolve next (2 pending)",
+            vec!["EX12-048 Alliance".to_string(), "EX12-048 Alliance".to_string()],
+            |_, _| {},
+        );
+        let pending = r.game.pending_selection.as_mut().unwrap();
+        pending.kind = SelectionKind::TriggerOrder;
+        for entry in pending.effect_choices.as_mut().unwrap().iter_mut() {
+            entry.source_card = Some(source);
+            entry.keyword = Some(crate::enums::Keyword::Alliance);
+            entry.timing = Some(crate::enums::EffectTiming::WhenAttacking);
+            entry.is_optional = true;
+        }
+        let first_id = pending.valid_action_ids[0];
+        let ms_row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "MultipleSkills", "int_value": 1,
+            "chosen_effect_card": "EX12-048"
+        }))
+        .unwrap();
+        assert_eq!(resolve_next(&r.game, &ms_row, 0), Ok(Some(first_id)));
+    }
+    #[test]
+    fn same_cost_equivalent_digivolve_routes_resolve_cleanly() {
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT17-023")
+            .expect("BT17-023 YAML")
+            .dsl_card("BT18-088")
+            .expect("BT18-088 YAML")
+            .hand(0, &["BT17-023"])
+            .deck(0, &["BT18-088", "BT18-088"])
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        r.game.memory = 5;
+        r.place_on_field(0, "BT18-088", None);
+        let digivolve_action = crate::action::space::encode_digivolve(0, 0);
+        r.game.decode_action(digivolve_action, 0);
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("BT17-023 onto BT18-088 should park DigivolveCostChoice");
+        assert_eq!(pending.prompt, "Choose which digivolution cost to pay");
+        let count_row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "SelectCountEffect", "count": 2
+        }))
+        .unwrap();
+        let chosen = resolve_next(&r.game, &count_row, 0)
+            .expect("same-cost equivalent digivolve routes should resolve cleanly")
+            .expect("must return an action id");
+        assert!(pending.valid_action_ids.contains(&chosen));
+    }
+    #[test]
+    fn multiple_skills_same_permanent_identical_inherited_copies_pick_first() {
+        let mut r = DebugRunner::builder()
+            .add_card(make_test_card("BT13-007", "King Drasil_7D6"))
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        // Stack 3 physical copies of BT13-007 inside P0's breeding permanent
+        // (raw-20261124T071011Z#g17 step 59).
+        r.place_on_field(0, "BT13-007", None);
+        let mut breed = r.game.players[0].battle_area.pop().unwrap();
+        r.place_on_field(0, "BT13-007", None);
+        let c1 = r.game.players[0].battle_area.pop().unwrap().card_sources.pop().unwrap();
+        r.place_on_field(0, "BT13-007", None);
+        let c2 = r.game.players[0].battle_area.pop().unwrap().card_sources.pop().unwrap();
+        let h0 = breed.card_sources[0].handle();
+        let (h1, h2) = (c1.handle(), c2.handle());
+        breed.card_sources.push(c1);
+        breed.card_sources.push(c2);
+        r.game.players[0].breeding_area = Some(breed);
+
+        EffectContext::new(&mut r.game, h0, None, 0).select_effect_choice(
+            "Choose which triggered effect to resolve next (3 pending)",
+            vec![
+                "BT13-007 slot 3 (mandatory)".to_string(),
+                "BT13-007 slot 3 (mandatory)".to_string(),
+                "BT13-007 slot 3 (mandatory)".to_string(),
+            ],
+            |_, _| {},
+        );
+        let pending = r.game.pending_selection.as_mut().unwrap();
+        pending.kind = SelectionKind::TriggerOrder;
+        for (entry, handle) in pending.effect_choices.as_mut().unwrap().iter_mut().zip([h0, h1, h2]) {
+            entry.source_card = Some(handle);
+            entry.keyword = None;
+            entry.timing = Some(crate::enums::EffectTiming::OnPlay);
+            entry.is_optional = false;
+        }
+        let first_id = pending.valid_action_ids[0];
+        let ms_row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "MultipleSkills", "int_value": 2,
+            "chosen_effect_card": "BT13-007"
+        }))
+        .unwrap();
+        assert_eq!(resolve_next(&r.game, &ms_row, 0), Ok(Some(first_id)));
+
+        // Negative check: if one copy sits on a DIFFERENT permanent, refuse to collapse.
+        r.place_on_field(0, "BT13-007", None);
+        let h_other = r.game.players[0].battle_area[0].top_card().handle();
+        r.game.pending_selection.as_mut().unwrap().effect_choices.as_mut().unwrap()[2].source_card = Some(h_other);
+        assert!(resolve_next(&r.game, &ms_row, 0).is_err());
+    }
+    #[test]
+    fn facedown_security_card_choice_resolves_for_dcgo_recording() {
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT24-018")
+            .expect("BT24-018 YAML")
+            .add_card(make_test_card("EX12-012", "SecBottom"))
+            .add_card(make_test_card("EX12-075", "SecTop"))
+            .security(1, &["EX12-012", "EX12-075"])
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        let styra = r.place_on_field(0, "BT24-018", None);
+        r.game.enqueue_triggered(
+            crate::enums::EffectTiming::WhenDigivolving,
+            crate::selection::TriggerSource::Permanent(styra),
+        );
+        r.game.drain_effect_queue();
+        let pending = r.game.pending_selection.as_ref().expect("BT24-018 security pick parked");
+        assert_eq!(pending.kind, SelectionKind::Security);
+        let view = pending.card_choice.as_ref().unwrap().view(&r.game, 0);
+        assert!(view.rows.iter().all(|row| !row.identity_visible && row.card_id.is_none()));
+        let pick_row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "SelectCardEffect",
+            "card_ids": ["EX12-075"], "indexes": [0]
+        }))
+        .unwrap();
+        // Non-DCGO callers must NOT peek at face-down opponent security.
+        assert!(resolve_next(&r.game, &pick_row, 0).is_err());
+        let chosen = resolve_next_dcgo(&r.game, &pick_row, 0)
+            .expect("DCGO recording should resolve face-down opponent security card")
+            .expect("must return an action id");
+        r.game.decode_action(chosen, 0);
+        assert_eq!(r.game.players[1].trash.len(), 1);
+        assert_eq!(r.game.players[1].trash[0].card_id(&r.game.card_data), "EX12-075");
+    }
+    #[test]
+    fn battle_area_digixros_target_resolves_card_choice_battle_top_row() {
+        let mut r = DebugRunner::builder()
+            .dsl_card("EX12-029")
+            .expect("EX12-029 YAML")
+            .dsl_card("EX12-022")
+            .expect("EX12-022 YAML")
+            .hand(0, &["EX12-029"])
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        r.game.memory = 10;
+        r.place_on_field(0, "EX12-022", None);
+        // Play EX12-029 from hand slot 0 -> parks DigiXros material selection
+        // with a BattleTop row for EX12-022 at slot 0.
+        r.game.decode_action(crate::action::space::PLAY_HAND_START, 0);
+        let pending = r.game.pending_selection.as_ref().expect("DigiXros selection parked");
+        assert_eq!(pending.kind, SelectionKind::Material);
+        let target_row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "SelectPermanentEffect",
+            "targets": [{"player": 0, "frame": 0}]
+        }))
+        .unwrap();
+        let chosen = resolve_next(&r.game, &target_row, 0)
+            .expect("BattleTop DigiXros material target should resolve cleanly")
+            .expect("must return an action id");
+        assert!(pending.valid_action_ids.contains(&chosen));
+        assert_ne!(chosen, PASS);
+    }
+    #[test]
+    fn refire_effect_choice_resolves_duplicate_card_by_dcgo_index() {
+        let mut r = DebugRunner::builder()
+            .dsl_card("BT11-112")
+            .expect("BT11-112 YAML")
+            .dsl_card("EX13-023")
+            .expect("EX13-023 YAML")
+            .add_card(make_test_card("OPP-DIGI", "OppDigi"))
+            .security(1, &["OPP-DIGI"])
+            .start();
+        r.skip_mulligan();
+        r.game.enter_main_phase();
+        r.game.turn_count = 3;
+        r.place_on_field(0, "BT11-112", None);
+        let ulforce = r.place_on_field(0, "EX13-023", None);
+        r.game.players[0].battle_area[ulforce.index as usize].turn_played = 1;
+        r.place_on_field(1, "OPP-DIGI", None);
+
+        // Attack security with EX13-023 -> suspends -> queues BT11-112 + EX13-023 WA.
+        let atk = crate::action::space::encode_attack(
+            ulforce.index as u16,
+            crate::action::space::SECURITY_TARGET,
+        );
+        r.game.decode_action(atk, 0);
+        let rina_entry = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("TriggerOrder parked")
+            .effect_choices
+            .as_ref()
+            .unwrap()
+            .iter()
+            .find(|e| {
+                e.source_card
+                    .and_then(|h| r.game.card_data_for_handle(h))
+                    .is_some_and(|d| d.card_id == "BT11-112")
+            })
+            .expect("BT11-112 entry in TriggerOrder")
+            .action_id;
+        r.game.decode_action(rina_entry, 0);
+        // Accept BT11-112's optional outer gate if parked.
+        if r.game.pending_selection.as_ref().is_some_and(|p| {
+            p.valid_action_ids == [crate::action::space::REPLACEMENT_ACCEPT]
+        }) {
+            r.game.decode_action(crate::action::space::REPLACEMENT_ACCEPT, 0);
+        }
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("RefireEffectChoice parked");
+        assert_eq!(pending.kind, SelectionKind::EffectChoice);
+        assert_eq!(pending.valid_action_ids.len(), 2);
+
+        let pick0: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "SelectCardEffect",
+            "card_ids": ["EX13-023"], "indexes": [0]
+        }))
+        .unwrap();
+        let pick1: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "SelectCardEffect",
+            "card_ids": ["EX13-023"], "indexes": [1]
+        }))
+        .unwrap();
+        assert!(resolve_next(&r.game, &pick1, 0).is_err());
+        assert_eq!(resolve_next_dcgo(&r.game, &pick0, 0), Ok(Some(pending.valid_action_ids[0])));
+        assert_eq!(resolve_next_dcgo(&r.game, &pick1, 0), Ok(Some(pending.valid_action_ids[1])));
+    }
+
+    #[test]
+    fn union_zone_breeding_source_resolves_for_owned_card_choice_and_legacy_union() {
+        use crate::action::space::{encode_breeding_source_select, BREEDING_TARGET, PLAY_HAND_START};
+        use crate::card_source::CardHandle;
+        use crate::enums::{EffectSourceKind, GamePhase};
+        use crate::owned_card_choice::{CardChoiceZone, OwnedCardChoice};
+        use crate::permanent::PermanentHandle;
+        use crate::selection::{PendingSelection, UnionZoneOrigin, UnionZoneSet};
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("BT20-102", "OmnimonX"))
+            .add_card(make_test_card("BT13-007", "King Drasil_7D6"))
+            .hand(1, &["BT20-102"])
+            .memory(0)
+            .start();
+        runner.place_stack(1, &["BT20-102", "BT13-007"]);
+        let breed = runner.game.players[1].battle_area.pop().unwrap();
+        let breed_src_handle = breed.card_sources[0].handle();
+        let hand_handle = runner.game.players[1].hand[0].handle();
+        runner.game.players[1].breeding_area = Some(breed);
+
+        let breed_src_id = encode_breeding_source_select(1, 0).unwrap();
+
+        // Part A: legacy UnionZone (no OwnedCardChoice) scans breeding_area and honors DigivolutionCards zone.
+        runner.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::UnionZone {
+                zones: UnionZoneSet::HAND | UnionZoneSet::MATERIAL,
+            },
+            selecting_player: 1,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![PLAY_HAND_START, breed_src_id],
+            is_optional: true,
+            prompt: "Play 1 Omnimon (X Antibody)".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            card_choice: None,
+            zone_owner: Some(1),
+        });
+        let mat_row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 1, "prompt": "SelectCardEffect",
+            "card_ids": ["BT20-102"], "zone": "DigivolutionCards"
+        }))
+        .unwrap();
+        assert_eq!(
+            resolve_next(&runner.game, &mat_row, 0),
+            Ok(Some(breed_src_id)),
+            "DigivolutionCards zone must resolve breeding source over hand copy"
+        );
+        // Without a zone hint and with only the breeding source offered, legacy scan still finds it.
+        runner.game.pending_selection.as_mut().unwrap().valid_action_ids = vec![breed_src_id];
+        let zoneless_row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 1, "prompt": "SelectCardEffect",
+            "card_ids": ["BT20-102"]
+        }))
+        .unwrap();
+        assert_eq!(resolve_next(&runner.game, &zoneless_row, 0), Ok(Some(breed_src_id)));
+
+        // Part B: OwnedCardChoice::union (EX11-053 [On Deletion]) resolves BreedingSource under DigivolutionCards.
+        let candidates = vec![
+            (hand_handle, UnionZoneOrigin::Hand),
+            (
+                breed_src_handle,
+                UnionZoneOrigin::Material {
+                    carrier: PermanentHandle {
+                        player: 1,
+                        index: BREEDING_TARGET as u8,
+                    },
+                    source_index: 0,
+                },
+            ),
+        ];
+        let owner = OwnedCardChoice::union(&mut runner.game, 1, &candidates, true).expect("union choice");
+        let valid_ids = owner.valid_action_ids(&runner.game);
+        let view = owner.view(&runner.game, 1);
+        let expected_breeding_action = view
+            .rows
+            .iter()
+            .find(|row| matches!(row.zone, Some(CardChoiceZone::BreedingSource)))
+            .expect("BreedingSource row")
+            .action_id;
+        runner.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::UnionZone {
+                zones: UnionZoneSet::HAND | UnionZoneSet::MATERIAL,
+            },
+            selecting_player: 1,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: valid_ids,
+            is_optional: true,
+            prompt: "Play 1 Omnimon (X Antibody)".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            card_choice: Some(owner),
+            zone_owner: None,
+        });
+        assert_eq!(
+            resolve_next(&runner.game, &mat_row, 0),
+            Ok(Some(expected_breeding_action)),
+            "OwnedCardChoice::union must select BreedingSource rather than Hand when zone is DigivolutionCards"
+        );
+    }
+
+    #[test]
+    fn own_field_and_opp_field_reject_targets_naming_the_wrong_player() {
+        use crate::action::space::ATTACK_START;
+        use crate::card_source::CardHandle;
+        use crate::enums::{EffectSourceKind, GamePhase};
+        use crate::selection::PendingSelection;
+
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("MON", "Mon"))
+            .memory(0)
+            .start();
+        runner.place_on_field(0, "MON", None);
+        runner.place_on_field(1, "MON", None);
+
+        let target_p0: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "SelectPermanentEffect",
+            "targets": [{"player": 0, "frame": 0}]
+        }))
+        .unwrap();
+        let target_p1: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "SelectPermanentEffect",
+            "targets": [{"player": 1, "frame": 0}]
+        }))
+        .unwrap();
+
+        // OwnField for P0 (zone_owner: None -> expects player 0) rejects P1 target.
+        runner.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::OwnField,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![ATTACK_START],
+            is_optional: false,
+            prompt: "Declare an ally (Alliance)".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            card_choice: None,
+            zone_owner: None,
+        });
+        assert_eq!(resolve_next(&runner.game, &target_p0, 0), Ok(Some(ATTACK_START)));
+        let err = resolve_next(&runner.game, &target_p1, 0).unwrap_err();
+        assert!(err.contains("wrong side"), "got: {err}");
+
+        // OppField for P0 (zone_owner: None -> expects player 1) rejects P0 target.
+        runner.game.pending_selection.as_mut().unwrap().kind = SelectionKind::OppField;
+        assert_eq!(resolve_next(&runner.game, &target_p1, 0), Ok(Some(ATTACK_START)));
+        let err_opp = resolve_next(&runner.game, &target_p0, 0).unwrap_err();
+        assert!(err_opp.contains("wrong side"), "got: {err_opp}");
+
+        // Explicit zone_owner overrides selecting_player perspective (e.g. opponent chooses own permanent).
+        runner.game.pending_selection.as_mut().unwrap().zone_owner = Some(0);
+        assert_eq!(resolve_next(&runner.game, &target_p0, 0), Ok(Some(ATTACK_START)));
+        let err_override = resolve_next(&runner.game, &target_p1, 0).unwrap_err();
+        assert!(err_override.contains("wrong side"), "got: {err_override}");
+    }
+
+    #[test]
+    fn succession_adopted_trigger_matches_carrier_chosen_effect_card() {
+        use crate::enums::{EffectSourceKind, GamePhase};
+        use crate::selection::{EffectChoiceEntry, PendingSelection};
+
+        let mut runner = DebugRunner::builder()
+            .dsl_card("BT26-103")
+            .expect("BT26-103 YAML")
+            .dsl_card("BT24-101")
+            .expect("BT24-101 YAML")
+            .add_card(make_test_card("OTHER-SRC", "OtherSrc"))
+            .memory(0)
+            .start();
+        let stack = runner.place_stack(0, &["OTHER-SRC", "BT24-101", "BT26-103"]);
+        let sources = &runner.game.players[0].battle_area[stack.index as usize].card_sources;
+        let other_h = sources[0].handle();
+        let bt24_h = sources[1].handle();
+        let bt26_h = sources[2].handle();
+
+        assert!(source_card_matches_dcgo_chosen_card(&runner.game, bt26_h, "BT26-103"));
+        assert!(
+            source_card_matches_dcgo_chosen_card(&runner.game, bt24_h, "BT26-103"),
+            "<Succession>-adopted BT24-101 must match carrier BT26-103"
+        );
+        assert!(source_card_matches_dcgo_chosen_card(&runner.game, bt24_h, "BT24-101"));
+        assert!(
+            !source_card_matches_dcgo_chosen_card(&runner.game, other_h, "BT26-103"),
+            "non-adopted source under BT26-103 must not match BT26-103"
+        );
+
+        // When both BT26-103's own effect (30) and its <Succession>-adopted BT24-101 effect (31)
+        // are in TriggerOrder, `chosen_effect_card: "BT26-103"` matches BOTH and does not blindly
+        // commit to 30 — leaving ReplayDriver::same_card_order_verdict to prove which ran.
+        runner.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::TriggerOrder,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids: vec![30, 31],
+            is_optional: false,
+            prompt: "Choose which triggered effect to resolve next (2 pending)".to_string(),
+            effect_choices: Some(vec![
+                EffectChoiceEntry {
+                    action_id: 30,
+                    label: "BT26-103 slot 4 (mandatory)".to_string(),
+                    source_card: Some(bt26_h),
+                    source_kind: Some(EffectSourceKind::Digimon),
+                    timing: None,
+                    is_optional: false,
+                    keyword: None,
+                    count_choice: None,
+                    observation_metadata: Default::default(),
+                },
+                EffectChoiceEntry {
+                    action_id: 31,
+                    label: "BT24-101 slot 1 (mandatory)".to_string(),
+                    source_card: Some(bt24_h),
+                    source_kind: Some(EffectSourceKind::Digimon),
+                    timing: None,
+                    is_optional: false,
+                    keyword: None,
+                    count_choice: None,
+                    observation_metadata: Default::default(),
+                },
+            ]),
+            source_card: bt26_h,
+            source_permanent: Some(stack),
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            card_choice: None,
+            zone_owner: None,
+        });
+        let row: SelectionRow = serde_json::from_value(serde_json::json!({
+            "step": 0, "actor": 0, "prompt": "MultipleSkills",
+            "int_value": 1, "chosen_effect_card": "BT26-103"
+        }))
+        .unwrap();
+        assert!(
+            resolve_next(&runner.game, &row, 0).is_err(),
+            "must report ambiguity between BT26-103 and its <Succession>-adopted BT24-101 instead of blindly choosing 30"
+        );
     }
 }

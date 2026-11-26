@@ -129,11 +129,15 @@ impl<'a> EffectContext<'a> {
             .timing_keys()
             .iter()
             .flat_map(|timing_key| enumerate_refireable_effects(self.game, target, timing_key))
+            .filter(|effect| {
+                bypass_once_per_turn || self.game.refire_effect_slot_available(effect)
+            })
             .collect();
         let enumerated = effects.len();
         let effects = self.collapse_combined_timing_clauses(effects);
         // DCGO lists one effect object per timing tag of a printed combined
-        // effect, so a collapsed clause stands for `enumerated` DCGO entries.
+        // effect (excluding already OPT-spent effects via `CanUse`), so a
+        // collapsed clause stands for `enumerated` available DCGO entries.
         let dcgo_entries = (effects.len() == 1 && enumerated > 1).then_some(enumerated);
         self.dispatch_refireable_effects(
             effects,
@@ -245,11 +249,23 @@ impl<'a> EffectContext<'a> {
             [] => false,
             [effect] if !optional => {
                 if let Some(dcgo_entries) = dcgo_entries {
-                    let carrier_card_id = effect.card_id.clone();
+                    // For a `<Succession>`-adopted effect, DCGO's
+                    // `CopyDigivolutionCardEffects` stamps `EffectSourceCard`
+                    // as the permanent's top card (not the below-top source),
+                    // so `last_collapsed_refire` records the carrier's top card.
+                    let carrier_card = self
+                        .game
+                        .top_card_handle(effect.source)
+                        .unwrap_or(effect.source_card);
+                    let carrier_card_id = self
+                        .game
+                        .card_data_for_handle(carrier_card)
+                        .map(|d| d.card_id.clone())
+                        .unwrap_or_else(|| effect.card_id.clone());
                     self.game.last_collapsed_refire = Some(crate::game::CollapsedRefire {
                         grantor: self.source_card,
                         carrier: effect.source,
-                        carrier_card: effect.source_card,
+                        carrier_card,
                         carrier_card_id,
                         controller: self.player,
                         dcgo_entries,

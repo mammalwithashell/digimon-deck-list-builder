@@ -321,6 +321,17 @@ impl Game {
                 .expect("active batch must persist into the deletion-trigger stage");
             batch.stage = BatchStage::TriggerFlush;
         }
+        // §16-34-1 / §16-34-3 / §11-1-4: if this deletion batch was a parked
+        // `<Overclock>` cost whose replacement just resolved, declare the
+        // mandatory attack NOW while still inside this batch's deferred-drain
+        // scope — BEFORE Stage 5 flushes deletion triggers and the rest of
+        // the `[End of Your Turn]` pool. `begin_attack_overclock` enqueues
+        // `[When Attacking]` into the same deferred scope and yields while
+        // `draining_deferred > 0`, so Stage 5 flushes `<Overclock>`'s death
+        // triggers and `[When Attacking]` together in one pool (§15-4-3-2).
+        if let Some(receipt) = self.current_deletion_receipt {
+            self.resume_parked_overclock_attack_for_receipt(receipt);
+        }
         self.exit_deferred_drain_and_flush();
         // A park unwinds with every remaining entry (either kind) still
         // queued; the post-selection drain resumes them.

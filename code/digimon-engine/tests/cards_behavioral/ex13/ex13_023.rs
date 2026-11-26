@@ -217,6 +217,7 @@ fn ex13_023_returns_every_fewest_source_opponent_digimon_to_deck_bottom() {
     let _c = r.place_stack(1, &["FILL", "OPP"]);
     let uv = r.place_stack(0, &["L5", CARD_ID]);
     let deck_before = r.game.players[1].deck.len();
+    let trash_before = r.game.players[1].trash.len();
     r.fire_on_play(0, uv.index as usize);
     order_first(&mut r);
     // Orientation pick first (only UlforceVeedramon itself): decline it.
@@ -232,8 +233,13 @@ fn ex13_023_returns_every_fewest_source_opponent_digimon_to_deck_bottom() {
     assert_eq!(left, vec![3], "only the 2-source Digimon stays");
     assert_eq!(
         r.game.players[1].deck.len(),
-        deck_before + 4,
-        "both 1-source Digimon returned with their cards to the deck"
+        deck_before + 2,
+        "only the 2 bounced top Digimon cards return to the deck bottom (§4-7-8)"
+    );
+    assert_eq!(
+        r.game.players[1].trash.len(),
+        trash_before + 2,
+        "the 2 digivolution cards under the bounced Digimon are trashed (§4-7-8 / DCGO DeckBottomBounceClass)"
     );
 }
 

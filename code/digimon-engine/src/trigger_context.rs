@@ -63,6 +63,7 @@ impl From<crate::replacement::ReplacementCause> for EventCause {
             crate::replacement::ReplacementCause::Overclock => EventCause::Overclock,
             // DigiXros material consumption is the controller's own play action.
             crate::replacement::ReplacementCause::DigiXros => EventCause::OwnEffect,
+            crate::replacement::ReplacementCause::Rule => EventCause::Rule,
         }
     }
 }

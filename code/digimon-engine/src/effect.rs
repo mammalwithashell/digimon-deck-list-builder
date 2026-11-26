@@ -1877,7 +1877,12 @@ pub fn enumerate_refireable_effects(
     };
     let stack_size = perm.card_sources.len();
     let is_deletion = timing_key == "on_deletion";
-    let adopted = if is_deletion {
+    // CR 4.3 §16-47 (`<Succession>`): a permanent gains every non-inherited,
+    // non-linked face effect of its topmost specified digivolution card, so
+    // refires (`BT24-102` Homeros, `BT11-112`, etc.; DCGO `EffectList` +
+    // `CopyDigivolutionCardEffects`) must see adopted `[On Play]` /
+    // `[When Digivolving]` effects as well as `[On Deletion]`.
+    let adopted = if timing_key != "option_main" {
         game.succession_source_indices(source)
     } else {
         Vec::new()
@@ -1888,7 +1893,9 @@ pub fn enumerate_refireable_effects(
         .iter()
         .enumerate()
         .rev()
-        .take(if is_deletion { stack_size } else { 1 })
+        .filter(|(index, _)| {
+            is_deletion || *index + 1 == stack_size || adopted.contains(index)
+        })
         .map(|(index, card)| (Some(index), card));
     let linked_sources = perm
         .linked_cards
@@ -1896,7 +1903,7 @@ pub fn enumerate_refireable_effects(
         .filter(|_| is_deletion)
         .map(|card| (None, card));
     for (stack_index, card) in stack_sources.chain(linked_sources) {
-        if is_deletion && card.face_down {
+        if card.face_down && stack_index.is_some_and(|idx| idx + 1 < stack_size) {
             continue;
         }
         let source_card = card.handle();
@@ -1931,6 +1938,8 @@ pub fn enumerate_refireable_effects(
                         ),
                         None => effect.linked || effect.inherited,
                     }
+            } else if stack_index.is_some_and(|idx| idx + 1 < stack_size) {
+                effect.can_be_refired() && crate::game::Game::is_adoptable_effect(effect)
             } else {
                 effect.can_be_refired()
             };

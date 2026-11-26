@@ -443,9 +443,10 @@ fn ex13_077_on_play_ally_attacks_without_suspending_then_one_effect_per_two_colo
     let mode_view = runner.pending_selection_view().unwrap();
     let mode_mask = build_action_mask(&runner.game, mode_view.selecting_player);
     assert!(mode_view.valid_action_ids.iter().all(|a| mode_mask[*a as usize] > 0.0));
-    runner.execute_branch(1).expect("return-5 mode");
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice), "'by returning' yes/no");
-    runner.execute_branch(0).expect("return");
+    // Opponent has no Digimon, so battle (30) is masked out; surviving choices are
+    // Return 5 (31) and Don't activate (32).
+    assert_eq!(mode_view.valid_action_ids, vec![31, 32]);
+    runner.execute_branch(0).expect("return-5 mode");
     for _ in 0..5 {
         let v = runner.pending_selection_view().expect("return pick");
         assert!(runner.game.pending_attack.is_some());
@@ -516,8 +517,10 @@ fn ex13_077_return_mode_needs_five_opponent_trash_cards() {
     let own_sec0 = runner.security_count(0);
     fire(&mut runner, EffectTiming::OnPlay, omni);
     pass(&mut runner);
-    runner.execute_branch(1).expect("return mode");
-    assert!(runner.pending_selection_view().is_none(), "unpayable: no prompt");
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "neither battle (0 opp Digimon) nor return-5 (4 opp trash) is payable: no prompt"
+    );
     assert_eq!(runner.trash_size(1), 4);
     assert_eq!(runner.security_count(0), own_sec0, "no Recovery without returning");
 }
@@ -532,8 +535,10 @@ fn ex13_077_return_mode_may_be_declined() {
     let own_sec0 = runner.security_count(0);
     fire(&mut runner, EffectTiming::OnPlay, omni);
     pass(&mut runner);
-    runner.execute_branch(1).expect("return mode");
-    runner.execute_branch(1).expect("don't return");
+    // Surviving choices: [Return 5 (31), Don't activate (32)].
+    runner.execute_branch(0).expect("return mode");
+    assert!(has_trash_pick(&runner), "direct optional-zero 5-card trash pick");
+    pass(&mut runner);
     assert!(runner.pending_selection_view().is_none());
     assert_eq!(runner.trash_size(1), 6);
     assert_eq!(runner.security_count(0), own_sec0);
@@ -566,6 +571,7 @@ fn ex13_077_declining_at_the_attack_target_prompt_still_runs_the_then() {
     runner.game.turn_count = 1;
     let omni = runner.place_on_field(0, CARD_ID, None);
     let ally = runner.place_on_field(0, "ALLY-R", Some(0));
+    runner.place_on_field(1, "OPP", Some(0));
     let opp_sec0 = runner.security_count(1);
     fire(&mut runner, EffectTiming::OnPlay, omni);
     pick_field(&mut runner, ally);
@@ -626,6 +632,7 @@ fn ex13_077_no_attacker_prompt_when_none_can_attack_and_then_still_runs() {
     runner.game.turn_count = 1;
     let omni = runner.place_on_field(0, CARD_ID, None); // summoning sick
     runner.place_on_field(0, "TAMER-Y", Some(0)); // White + Yellow = 2 colors
+    runner.place_on_field(1, "OPP", Some(0));
     fire(&mut runner, EffectTiming::OnPlay, omni);
     assert_eq!(
         runner.pending_kind(),
@@ -686,7 +693,6 @@ fn ex13_077_battle_triggers_wait_for_the_effect_and_pool_with_its_deck_add() {
     pass(&mut runner); // decline the attack
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
     runner.execute_branch(1).expect("return mode");
-    runner.execute_branch(0).expect("return 5");
     for _ in 0..5 {
         assert!(has_trash_pick(&runner), "{:?}", runner.pending_selection_view());
         let pick = non_pass(&runner)[0];
@@ -728,4 +734,61 @@ fn ex13_077_battle_triggers_wait_for_the_effect_and_pool_with_its_deck_add() {
     pass(&mut runner);
     let _ = runner.auto_resolve();
     assert_eq!(memory_gains(&runner), vec![(1, "BT23-064".to_string())]);
+}
+
+#[test]
+fn ex13_077_stops_repeating_when_neither_mode_is_payable() {
+    // 7 distinct colors (White + 6 sources) -> 3 iterations; opponent has 0
+    // Digimon and 10 trash cards. Loops 1 and 2 offer [31: Return 5, 32: Don't]
+    // and empty the opponent's trash; loop 3 breaks silently with no 3rd prompt
+    // (DCGO EX13_077.cs:139 `if (!canBattle && !canRecover) break;`).
+    let mut runner = builder().start();
+    runner.skip_mulligan();
+    let omni = runner.place_stack(0, &["ADV-R", "ADV-B", "ADV-Y", "ADV-G", "ADV-BK", "ADV-P", CARD_ID]);
+    // An opponent Digimon sitting in breeding must NOT count as a battle target.
+    runner.place_in_breeding(1, "OPP");
+    inject_all(&mut runner, 1, &["PAD"; 10]);
+    let own_sec0 = runner.security_count(0);
+    runner.game.tick_declarative_effects();
+    fire(&mut runner, EffectTiming::OnPlay, omni);
+    pass(&mut runner); // decline attack
+    for round in 0..2 {
+        let view = runner.pending_selection_view().expect("mode choice");
+        assert_eq!(view.kind, SelectionKind::EffectChoice, "round {round}");
+        assert_eq!(view.valid_action_ids, vec![31, 32], "only return-5 and don't activate");
+        runner.execute_branch(0).expect("return 5");
+        for _ in 0..5 {
+            assert!(has_trash_pick(&runner), "round {round} trash pick");
+            let pick = non_pass(&runner)[0];
+            runner.execute_action(0, pick).expect("trash pick");
+        }
+    }
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "loop 3 exits silently when opponent has 0 Digimon and <5 trash"
+    );
+    assert_eq!(runner.trash_size(1), 0);
+    assert_eq!(runner.security_count(0), own_sec0 + 2);
+}
+
+#[test]
+fn ex13_077_dont_activate_breaks_remaining_loops() {
+    // 4 colors -> 2 iterations; choosing "Don't activate" on loop 1 exits the
+    // loop immediately (DCGO EX13_077.cs:165 `if (selectedValue == 3) break;`).
+    let mut runner = builder().start();
+    runner.skip_mulligan();
+    let omni = runner.place_stack(0, &["ADV-R", "ADV-B", CARD_ID]);
+    runner.place_on_field(0, "TAMER-Y", Some(0));
+    runner.place_on_field(1, "OPP", Some(0));
+    runner.game.tick_declarative_effects();
+    fire(&mut runner, EffectTiming::WhenDigivolving, omni);
+    pass(&mut runner); // decline attack
+    let view = runner.pending_selection_view().expect("mode choice");
+    assert_eq!(view.kind, SelectionKind::EffectChoice);
+    assert_eq!(view.valid_action_ids, vec![30, 32]);
+    runner.execute_branch(1).expect("don't activate");
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "choosing Don't activate exits remaining loops"
+    );
 }

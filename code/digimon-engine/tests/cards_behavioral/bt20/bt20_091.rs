@@ -1,7 +1,8 @@
 //! BT20-091 Cool Boy - Tamer, White, LIBERATOR.
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledColor, CompiledStep, CompiledTiming,
+    CompiledActivationCostKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledStep,
+    CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -68,10 +69,12 @@ fn bt20_091_has_rk_play_or_digivolve_suspend_draw_memory_clause() {
         })
         .expect("Royal Knight observer exists");
     assert!(clause.optional);
-    assert!(clause
-        .process
-        .iter()
-        .any(|step| matches!(step, CompiledStep::Suspend { .. })));
+    assert!(clause.process.iter().any(|step| matches!(
+        step,
+        CompiledStep::ActivationCost {
+            kind: CompiledActivationCostKind::SuspendSelf
+        }
+    )));
     assert!(clause
         .process
         .iter()
@@ -260,4 +263,123 @@ fn bt20_091_omekamon_not_offered_with_a_full_battle_area() {
         "no free frame for Omekamon: no response offered"
     );
     assert!(!field_contains(&r, 0, "RK-TARGET"), "the leave proceeds");
+}
+
+// ─── [Your Turn] suspend-self observer scoping ──────────────────────────────
+// DCGO BT20_091.cs:27,62: only own Royal Knight Digimon trigger it, and each
+// Cool Boy checks its own CanActivateSuspendCostEffect(card) — an already
+// suspended Cool Boy must not trigger just because a second copy on the board
+// is unsuspended.
+
+#[test]
+fn bt20_091_suspended_copy_does_not_trigger_when_sibling_is_unsuspended() {
+    let mut rk = royal_knight_card("RK-PLAY");
+    rk.play_cost = 3;
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT20-091")
+        .expect("BT20-091 YAML loads")
+        .add_card(rk)
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &["RK-PLAY"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    let first = r.place_on_field(0, "BT20-091", Some(0));
+    let second = r.place_on_field(0, "BT20-091", Some(0));
+    r.game.players[0].battle_area[first.index as usize].is_suspended = true;
+
+    r.play(0, 0).expect("play Royal Knight Digimon");
+
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("only the unsuspended Cool Boy should offer its optional trigger");
+    assert_eq!(pending.kind, SelectionKind::TriggerOrder);
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "already-suspended Cool Boy must not also queue a trigger"
+    );
+    let action = pending.valid_action_ids[0];
+    r.execute_action(0, action)
+        .expect("activate unsuspended Cool Boy");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no second trigger should remain after the lone unsuspended copy resolves"
+    );
+    assert!(r.game.players[0].battle_area[second.index as usize].is_suspended);
+    assert_eq!(r.game.players[0].hand.len(), 1, "drew 1 card");
+    assert_eq!(r.game.memory, 8, "10 - 3 play cost + 1 from Cool Boy");
+}
+
+#[test]
+fn bt20_091_cannot_suspend_lock_blocks_trigger() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+
+    let mut rk = royal_knight_card("RK-PLAY");
+    rk.play_cost = 3;
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT20-091")
+        .expect("BT20-091 YAML loads")
+        .add_card(rk)
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &["RK-PLAY"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    let cool_boy = r.place_on_field(0, "BT20-091", Some(0));
+    r.game.modifiers.add(
+        cool_boy,
+        ModifierEntry::simple(ModifierType::CannotSuspend, 0, Expiry::Permanent, 1),
+    );
+
+    r.play(0, 0).expect("play Royal Knight Digimon");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Cool Boy under CannotSuspend cannot pay its suspend cost"
+    );
+    assert!(!r.game.players[0].battle_area[cool_boy.index as usize].is_suspended);
+    assert_eq!(r.game.players[0].hand.len(), 0);
+    assert_eq!(r.game.memory, 7);
+}
+
+#[test]
+fn bt20_091_non_digimon_royal_knight_does_not_trigger() {
+    let mut rk_tamer = royal_knight_card("RK-TAMER");
+    rk_tamer.card_kind = CardKind::Tamer;
+    rk_tamer.level = None;
+    rk_tamer.dp = None;
+    rk_tamer.play_cost = 3;
+    let mut r = DebugRunner::builder()
+        .dsl_card("BT20-091")
+        .expect("BT20-091 YAML loads")
+        .add_card(rk_tamer)
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &["RK-TAMER"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+    r.skip_mulligan();
+
+    let cool_boy = r.place_on_field(0, "BT20-091", Some(0));
+    r.play(0, 0).expect("play Royal Knight Tamer");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Cool Boy triggers only on Digimon played/digivolving, not Tamers"
+    );
+    assert!(!r.game.players[0].battle_area[cool_boy.index as usize].is_suspended);
+    assert_eq!(r.game.players[0].hand.len(), 0);
+    assert_eq!(r.game.memory, 7);
 }

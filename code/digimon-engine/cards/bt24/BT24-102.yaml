@@ -14,9 +14,11 @@ traits: [Iliad, TS]
 #   [Security] Play this card without paying the cost.
 #
 # Track K: the End-of-Your-Turn clause uses `refire_effect` with the
-# `on_play_or_when_digivolving` timing filter. This is not a fake play or
-# fake digivolution: the selected Digimon stays in place, the chosen effect
-# uses that Digimon as carrier, and Homeros remains the effect source.
+# `on_play_or_when_digivolving` timing filter and `target_attribution: true`
+# (CR 4.3 §15-15-7; DCGO BT24_102.cs:241 `selectedEffect.SetIsDigimonEffect(true)`):
+# the selected Digimon stays in place, the chosen effect runs with that Digimon
+# as both carrier and effect source, while `last_collapsed_refire.grantor`
+# still records Homeros.
 
 effects:
   - when: start_of_your_main_phase
@@ -50,13 +52,11 @@ effects:
     # (SelectPermanentEffect canNoSelect: true; opens nothing with no
     # candidate).
     condition:
-      any_permanent:
-        of: you
-        zone: [battle_area]
-        card_number_is: "BT24-102"
-        is_unsuspended: true
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent: { of: you, is_source: true, can_change_orientation: true }
     process:
-      - suspend: { target: source }
+      - activation_cost: { suspend_self: true }
       - select_own_permanent:
           bind_as: refire_target
           optional: true
@@ -74,6 +74,7 @@ effects:
           optional: false
           source: refire_target
           timing: on_play_or_when_digivolving
+          target_attribution: true
 
   - text: "[Security] Play this card without paying the cost."
     when: on_security

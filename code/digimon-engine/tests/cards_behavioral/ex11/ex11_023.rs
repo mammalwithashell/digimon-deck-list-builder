@@ -10,8 +10,7 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause, CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause,
-    CompiledScope, CompiledStep, CompiledTiming,
+    CompiledDeclarativeClause, CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
@@ -101,38 +100,15 @@ fn ex11_023_has_alliance_scapegoat_and_lowest_level_delete_clauses() {
         "Alliance should be a native keyword grant"
     );
 
-    let replacement = card
-        .effects
-        .iter()
-        .find_map(|clause| match clause {
-            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
-                scope,
-                trigger,
-                optional,
-                active_when,
-                process,
+    assert!(
+        card.effects.iter().any(|clause| matches!(
+            clause,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
+                keyword,
                 ..
-            }) if *scope == CompiledScope::FaceUp && trigger == "when_would_be_deleted" => {
-                Some((optional, active_when, process))
-            }
-            _ => None,
-        })
-        .expect("Scapegoat should lower as a face-up would-delete replacement");
-
-    assert!(*replacement.0, "Scapegoat is optional");
-    assert!(
-        replacement.1.as_ref().is_some_and(|pred| pred
-            .none_of
-            .iter()
-            .any(|inner| inner.replacement_cause == Some(CompiledReplacementCause::OwnEffect))),
-        "Scapegoat must not trigger for own-effect deletion"
-    );
-    assert!(
-        replacement
-            .2
-            .iter()
-            .any(|step| matches!(step, CompiledStep::SubstituteReplacement { .. })),
-        "Scapegoat should substitute the selected other Digimon"
+            }) if keyword == "Scapegoat"
+        )),
+        "Scapegoat should be a native keyword grant"
     );
 
     let delete_clause = card
@@ -273,6 +249,36 @@ fn ex11_023_scapegoat_is_not_offered_for_own_effect_deletion() {
     let field = field_ids(&runner, 0);
     assert!(!field.contains(&"EX11-023".to_string()));
     assert!(field.contains(&"OTHER-DIGIMON".to_string()));
+}
+
+#[test]
+fn ex11_023_scapegoat_does_not_duplicate_when_card_data_also_has_keyword() {
+    let mut runner = runner();
+    if let Some(cd) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "EX11-023")
+    {
+        if !cd.keywords.contains(&Keyword::Scapegoat) {
+            cd.keywords.push(Keyword::Scapegoat);
+        }
+    }
+    let kaguyamon = runner.place_on_field(0, "EX11-023", Some(0));
+    runner.place_on_field(0, "OTHER-DIGIMON", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(kaguyamon, ReplacementCause::OpponentEffect);
+
+    let accept = runner
+        .pending_selection_view()
+        .expect("single Scapegoat Replacement prompt");
+    assert_eq!(
+        accept.kind,
+        SelectionKind::Replacement,
+        "printed Keyword::Scapegoat and YAML grant_keyword must deduplicate to 1 Replacement prompt"
+    );
 }
 
 #[test]

@@ -347,3 +347,97 @@ fn bt26_103_counter_arm_not_offered_once_opt_is_spent() {
         "spent [Once Per Turn] Counter must not be offered"
     );
 }
+
+/// CR 4.3 §16-47 (`<Succession>`): BT26-103 gains BT24-101's unlimited
+/// `[On Play] [When Digivolving]` effect. Even after BT26-103's own
+/// `[When Digivolving] [Once Per Turn]` is spent this turn, `BT24-102`
+/// Homeros can still select BT26-103 (`has_refireable_effect`) and refire
+/// the adopted BT24-101 clause (and `last_collapsed_refire` records carrier
+/// `BT26-103` with `dcgo_entries == 2`).
+#[test]
+fn bt26_103_succession_adopted_on_play_wd_is_refireable_by_homeros_after_own_wd_opt_spent() {
+    use digimon_engine::effect::TimingFilter;
+
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT26-103")
+        .dsl_card("BT24-101")
+        .expect("BT24-101 Jupitermon")
+        .dsl_card("BT24-102")
+        .expect("BT24-102 Homeros")
+        .add_card(filler("FILLER"))
+        .add_card({
+            let mut c = digimon("OPP", "Opp", CardColor::Red, 6, 9, &[]);
+            c.dp = Some(50000);
+            c
+        })
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .security(0, &["FILLER"; 5])
+        .security(1, &["FILLER"; 3])
+        .memory(3)
+        .start();
+    r.set_first_player(0);
+
+    let wrath = r.place_stack(0, &["BT24-101", CARD_ID]);
+    let homeros = r.place_on_field(0, "BT24-102", Some(0));
+    let opp = r.place_on_field(1, "OPP", Some(0));
+
+    // Spend BT26-103's own [When Digivolving] [OPT] (and BT24-101's adopted WD).
+    fire(&mut r, EffectTiming::WhenDigivolving, wrath);
+    drain(&mut r);
+
+    // BT24-101's unlimited [On Play][When Digivolving] is still refireable via <Succession>.
+    assert!(
+        r.game.has_refireable_effect(wrath, TimingFilter::Either),
+        "BT26-103 must remain refireable via <Succession>([Jupitermon]) after its own WD OPT is spent"
+    );
+
+    let dp_before_refire = r.effective_dp(opp).expect("opp DP before refire");
+    let sec_before_refire = r.security_count(0);
+
+    // Trigger BT24-102 Homeros [End of Your Turn]: suspend -> pick BT26-103 -> refire BT24-101.
+    fire(&mut r, EffectTiming::EndOfYourTurn, homeros);
+    r.accept_optional_trigger()
+        .expect("accept Homeros End of Your Turn");
+    let pick_wrath = r
+        .pending_selection_view()
+        .expect("Homeros offers BT26-103 as an Olympos XII refire target");
+    assert_eq!(pick_wrath.kind, digimon_engine::selection::SelectionKind::OwnField);
+    let pick_action = pick_wrath
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("non-pass Wrath Mode pick");
+    r.execute_action(0, pick_action)
+        .expect("choose BT26-103 for Homeros refire");
+
+    // Collapsed refire must reflect BT24-101's 2 DCGO entries (OP+WD) stamped
+    // with the carrier permanent's top card (BT26-103).
+    let collapsed = r
+        .game
+        .last_collapsed_refire
+        .as_ref()
+        .expect("collapsed refire record for adopted [On Play][When Digivolving]");
+    assert_eq!(collapsed.carrier_card_id, CARD_ID);
+    assert_eq!(collapsed.dcgo_entries, 2);
+
+    // BT24-101's refired body trashed 1 top security and parked the -13000 DP pick.
+    let dp_pick = r
+        .pending_selection_view()
+        .expect("adopted BT24-101 -13000 DP target pick");
+    assert_eq!(dp_pick.kind, digimon_engine::selection::SelectionKind::OppField);
+    drain(&mut r);
+
+    assert_eq!(
+        r.security_count(0),
+        sec_before_refire - 1,
+        "refired BT24-101 trashed 1 top security"
+    );
+    assert_eq!(
+        r.effective_dp(opp),
+        Some(dp_before_refire - 13000),
+        "refired BT24-101 applied -13000 DP to OPP"
+    );
+}

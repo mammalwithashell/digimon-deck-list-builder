@@ -688,14 +688,32 @@ pub fn parse_printed_keywords(
         // `fix-innate-keyword-overextraction` change.
         let field = strip_leading_keyword_headers(text);
         let mut from = 0usize;
+        let mut paren_depth = 0usize;
         while let Some(rel) = field[from..].find('＜') {
             let open = from + rel;
+            // Track outer parentheses between keyword tokens so keywords inside
+            // reminder text or Token definitions (e.g. EX12-057's
+            // `(Digimon/Yellow/6000 DP/＜Blocker＞ ＜Guard＞)`) are never parsed
+            // as innate keywords of the outer card. Parentheses inside a token
+            // itself (e.g. `＜Decoy (Black)＞`, `＜Fragment (3)＞`) lie between
+            // `open` and `from` and are skipped.
+            for ch in field[from..open].chars() {
+                match ch {
+                    '(' | '（' => paren_depth += 1,
+                    ')' | '）' => paren_depth = paren_depth.saturating_sub(1),
+                    _ => {}
+                }
+            }
             let after_open = &field[open + '＜'.len_utf8()..];
             let Some(end) = after_open.find('＞') else {
                 break;
             };
             let inside = &after_open[..end];
             from = open + '＜'.len_utf8() + end + '＞'.len_utf8();
+
+            if paren_depth > 0 {
+                continue;
+            }
 
             // Innate iff the left context — after trimming trailing whitespace —
             // is empty (field start) or ends with `]` (a `[Timing/Location]`
@@ -1413,5 +1431,42 @@ mod tests {
         assert!(kws.contains(&Keyword::BlastDigivolve), "got {kws:?}");
         assert!(kws.contains(&Keyword::SecurityAttackPlus(1)), "got {kws:?}");
         assert!(kws.contains(&Keyword::Blocker), "got {kws:?}");
+    }
+
+    #[test]
+    fn token_parenthetical_keywords_are_not_innate() {
+        use crate::enums::Keyword;
+        // EX12-057 Takutoumon: `<Blocker> <Guard>` describe the played [Paishu]
+        // Token inside parentheses, NOT innate keywords of EX12-057 itself.
+        let kws = parse_printed_keywords(
+            "[On Play] [When Digivolving] [Counter] [Once Per Turn] You may play 1 [Paishu] Token. (Digimon/Yellow/6000 DP/＜Blocker＞ ＜Guard＞)\r\n[All Turns] [Once Per Turn] When any of your Digimon are played, ＜De-Digivolve 2＞ 1 of your opponent's Digimon.",
+            "",
+            "",
+        );
+        assert!(
+            kws.is_empty(),
+            "EX12-057 must not inherit [Paishu] Token's <Blocker>/<Guard>, got {kws:?}"
+        );
+
+        // BT23-013-style: real innate keywords survive while chained keywords
+        // inside a Token parenthetical are ignored.
+        let kws = parse_printed_keywords(
+            "＜Rush＞ ＜Alliance＞\r\n[On Play] Play 1 Token (Digimon/White/6000 DP/＜Reboot＞ ＜Blocker＞ ＜Decoy (Red/Black)＞).",
+            "",
+            "",
+        );
+        assert_eq!(kws, vec![Keyword::Rush, Keyword::Alliance]);
+
+        // Parentheses INSIDE a top-level keyword token (`＜Decoy (Red/Black)＞`)
+        // remain innate and do not corrupt outer parenthesis tracking.
+        let kws = parse_printed_keywords(
+            "＜Decoy (Red/Black)＞ (reminder) ＜Blocker＞",
+            "",
+            "",
+        );
+        assert_eq!(
+            kws,
+            vec![Keyword::Decoy((1 << 0) | (1 << 5)), Keyword::Blocker]
+        );
     }
 }

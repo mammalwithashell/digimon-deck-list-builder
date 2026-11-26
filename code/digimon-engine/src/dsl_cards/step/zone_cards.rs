@@ -647,8 +647,36 @@ fn return_cards_to_deck(
 }
 
 /// `play_cards_free` — play the listed hand/trash cards simultaneously, free.
+///
+/// A single-card play routes through the standard effect-play pipeline
+/// (`play_from_hand_free` / `play_from_trash_free_unsuspended`) so `<Assembly>`
+/// (CR 4.3 7-3-2-10), `<DigiXros>`, and `WhenWouldPlay` replacements are
+/// offered just as on any other effect play (DCGO `PlayCardClass.PlayCard`
+/// `CardSources.Count == 1`, `CardController.cs:913-936` — e.g. `BT26-081`
+/// Mervamon playing `BT26-073` Aegiochusmon: Dark from hand or trash with
+/// Assembly -2). Multi-card plays preserve simultaneous physical entry before
+/// play triggers fire (`play_cards_from_zones_free`).
 pub(crate) fn play_cards_free(ctx: &mut EffectContext<'_>, cards: &[CardHandle]) {
     let controller = ctx.player;
+    if let [card] = cards {
+        let card = *card;
+        if !matches!(
+            ctx.game.card_kind_for_handle(card),
+            Some(crate::enums::CardKind::Digimon) | Some(crate::enums::CardKind::Tamer)
+        ) {
+            return;
+        }
+        match ctx.game.locate_card_source_ref(card) {
+            Some(CardSourceRef::Hand(p, idx)) if p == controller => {
+                let _ = ctx.play_from_hand_free(controller, idx);
+            }
+            Some(CardSourceRef::Trash(p, _)) if p == controller => {
+                let _ = ctx.play_from_trash_free_unsuspended(card);
+            }
+            _ => {}
+        }
+        return;
+    }
     ctx.game.play_cards_from_zones_free(controller, cards);
 }
 

@@ -231,3 +231,118 @@ fn ex12_002_pick_excludes_unaffordable_digivolution() {
     let offered = ex12_002_offered(vec![cheap], &["SW-EVO", "SW-EVO-CHEAP"], -10);
     assert_eq!(offered, vec!["SW-EVO-CHEAP".to_string()]);
 }
+
+/// Even when the carrier (e.g. a Lv.6 like Erlangmon EX12-034) has no legal
+/// digivolve target in hand, having an [SW] card in hand still offers the
+/// outer optional Yes/No gate (DCGO EX12_002.cs:18,35-51; BT21-001 idiom),
+/// and declining it preserves the [Once Per Turn] for a second [SW] play in
+/// the same turn (Q1818 / CR 4.3 §15-14-1-4).
+#[test]
+fn ex12_002_outer_prompt_decline_preserves_opt_even_without_evo_target() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-002 YAML loads")
+        .add_card(red_sw_digimon("CARRIER-LV6", 6, 12))
+        .add_card(red_sw_digimon("SW-ALLY-1", 3, 3))
+        .add_card(red_sw_digimon("SW-ALLY-2", 3, 3))
+        .add_card(red_sw_evo("SW-EVO"))
+        .hand(0, &["SW-EVO"])
+        .memory(10)
+        .start();
+    runner.place_stack(0, &[CARD_ID, "CARRIER-LV6"]);
+
+    let ally1 = runner.place_on_field(0, "SW-ALLY-1", Some(0));
+    runner.fire_play_event_triggers(ally1.player, ally1.index as usize, false, false);
+    let view1 = runner
+        .pending_selection_view()
+        .expect("EX12-002 should offer outer optional Yes/No with [SW] in hand");
+    assert!(view1.is_optional, "outer activation gate must be optional");
+    assert_ne!(
+        view1.kind,
+        SelectionKind::Hand,
+        "outer activation gate precedes the hand pick"
+    );
+    runner
+        .execute_action(view1.selecting_player, PASS)
+        .expect("decline EX12-002 outer gate");
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "declining outer gate ends EX12-002 without opening hand pick"
+    );
+
+    let ally2 = runner.place_on_field(0, "SW-ALLY-2", Some(0));
+    runner.fire_play_event_triggers(ally2.player, ally2.index as usize, false, false);
+    let view2 = runner
+        .pending_selection_view()
+        .expect("declining outer gate must preserve [Once Per Turn] for a second [SW] play");
+    assert!(view2.is_optional);
+    runner
+        .execute_action(view2.selecting_player, PASS)
+        .expect("decline second EX12-002 outer gate");
+}
+
+/// Accepting the outer optional gate spends the [Once Per Turn] even when no
+/// hand card can legally digivolve onto the carrier (CR 4.3 §15-7-4 / §15-7-5).
+#[test]
+fn ex12_002_outer_prompt_accept_without_evo_target_spends_opt() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-002 YAML loads")
+        .add_card(red_sw_digimon("CARRIER-LV6", 6, 12))
+        .add_card(red_sw_digimon("SW-ALLY-1", 3, 3))
+        .add_card(red_sw_digimon("SW-ALLY-2", 3, 3))
+        .add_card(red_sw_evo("SW-EVO"))
+        .hand(0, &["SW-EVO"])
+        .memory(10)
+        .start();
+    runner.place_stack(0, &[CARD_ID, "CARRIER-LV6"]);
+
+    let ally1 = runner.place_on_field(0, "SW-ALLY-1", Some(0));
+    runner.fire_play_event_triggers(ally1.player, ally1.index as usize, false, false);
+    let view1 = runner
+        .pending_selection_view()
+        .expect("EX12-002 should offer outer optional Yes/No");
+    let accept = view1
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("outer gate must have an accept action");
+    runner
+        .execute_action(view1.selecting_player, accept)
+        .expect("accept EX12-002 outer gate");
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no legal digivolve candidate on Lv.6 carrier leaves no hand pick"
+    );
+
+    let ally2 = runner.place_on_field(0, "SW-ALLY-2", Some(0));
+    runner.fire_play_event_triggers(ally2.player, ally2.index as usize, false, false);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "accepting the outer gate must spend [Once Per Turn]"
+    );
+}
+
+/// With no [SW] card in hand, EX12-002 does not offer its activation prompt
+/// (DCGO EX12_002.cs:35-51 `HasMatchConditionOwnersHand`).
+#[test]
+fn ex12_002_does_not_trigger_without_sw_card_in_hand() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-002 YAML loads")
+        .add_card(red_sw_digimon("CARRIER", 3, 3))
+        .add_card(red_sw_digimon("SW-ALLY", 3, 3))
+        .add_card(plain_red_digimon("PLAIN"))
+        .hand(0, &["PLAIN"])
+        .memory(10)
+        .start();
+    runner.place_stack(0, &[CARD_ID, "CARRIER"]);
+
+    let ally = runner.place_on_field(0, "SW-ALLY", Some(0));
+    runner.fire_play_event_triggers(ally.player, ally.index as usize, false, false);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no [SW] card in hand should not trigger EX12-002"
+    );
+}

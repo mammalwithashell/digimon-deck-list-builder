@@ -518,12 +518,11 @@ fn overclock_cost_parks_board() -> (DebugRunner, usize, usize) {
 /// begin until any triggered [When Attacking] effects and other triggered
 /// effects have been resolved"; Q3869: the other `[End of Your Turn]` effect
 /// activates AFTER the keyword's attack declaration. When <Overclock>'s cost
-/// deletion parks a decision (here <Armor Purge>, declined), the attack is
-/// declared from `resume_pending_overclock_attack` at the `resolve_selection`
-/// tail, AFTER the tail's drain has already resolved the pool's remaining
-/// entry: `EOT`'s memory gain comes before the declaration.
+/// deletion parks a replacement (here <Armor Purge>, declined), the attack is
+/// declared inside `complete_deletion_batch_after_replacements` BEFORE Stage 5
+/// flushes deletion triggers and the rest of the end-of-turn pool, so `OC`'s
+/// attack declaration precedes `EOT`'s memory gain.
 #[test]
-#[ignore = "G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL ordering half: stays open, non-blocking by controller ruling (§11-1-4, §16-34-2; Task 21 re-review M-4 / Task 36 brief)"]
 fn overclock_attack_declared_before_the_rest_of_the_pool_when_its_cost_parks() {
     let (mut r, cp, _) = overclock_cost_parks_board();
     let tp = r.turn_player();
@@ -997,5 +996,180 @@ fn no_attack_is_declared_while_another_attack_is_in_progress() {
     assert!(
         !r.game.player(tp).battle_area[oc.index as usize].is_attacking,
         "OC is not attacking"
+    );
+}
+
+/// `[When Attacking] Gain 1 memory.`
+struct WhenAttackingGainOne;
+
+impl CardEffect for WhenAttackingGainOne {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_attacking(card)
+            .name("[When Attacking] Gain 1 memory")
+            .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+/// Two simultaneous `[On Deletion]` triggers (mirrors sacrificing a stack with
+/// `<Fortitude>` + `[On Deletion]` such as `EX12-065` Kaguyamon for
+/// `EX11-024` Cendrillmon's `<Overclock>` in `Nov24#g19` step 85).
+struct TwoOnDeletionTriggers;
+
+impl CardEffect for TwoOnDeletionTriggers {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![
+            Effect::on_deletion(card)
+                .name("[On Deletion] Gain 1 memory (A)")
+                .process(|ctx| ctx.gain_memory(1))
+                .build(),
+            Effect::on_deletion(card)
+                .name("[On Deletion] Gain 1 memory (B)")
+                .process(|ctx| ctx.gain_memory(1))
+                .build(),
+        ]
+    }
+}
+
+/// §16-34-1 / §16-34-3 / §15-4-3-2 (DCGO `OverclockProcess`): `<Overclock>`'s
+/// cost deletion and mandatory attack declaration are one continuous effect
+/// body. Multiple `[On Deletion]` triggers on the sacrificed Digimon must NOT
+/// interrupt `<Overclock>` before it declares the attack; the attack is
+/// declared first, and the `[On Deletion]` triggers pool simultaneously with
+/// the attacker's `[When Attacking]` effects so the turn player may order
+/// `[When Attacking]` before `[On Deletion]`.
+#[test]
+fn overclock_cost_deletion_declares_attack_before_draining_on_deletion_triggers() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", 12000))
+        .add_card(make_digimon("SAC", 12000))
+        .add_card(make_digimon("SEC", 1000))
+        .security(1, &["SEC", "SEC"])
+        .start();
+    r.register_effect("OC", Arc::new(WhenAttackingGainOne));
+    r.register_effect("SAC", Arc::new(TwoOnDeletionTriggers));
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let sac = r.place_on_field(tp, "SAC", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    let security_before = r.game.player(opp).security.len();
+    let cp = r.event_checkpoint();
+
+    r.game.end_turn();
+    r.game
+        .resolve_selection(tp, encode_attack(0, sac.index as u16))
+        .expect("pay SAC as Overclock cost");
+
+    // The attack must already be declared before any OnDeletion trigger drains.
+    assert!(
+        r.game.pending_attack.is_some(),
+        "Overclock attack must be declared before draining cost-deletion triggers"
+    );
+    let events_after_cost = r.events_since(cp);
+    assert!(
+        events_after_cost
+            .iter()
+            .any(|e| matches!(e, digimon_engine::events::GameEvent::Attack { attacker_card_id, .. } if attacker_card_id == "OC")),
+        "GameEvent::Attack for OC must already be emitted before TriggerOrder parks"
+    );
+
+    // All three triggers (OC's [When Attacking] + SAC's two [On Deletion]s)
+    // must be in the same simultaneous TriggerOrder pool.
+    let order = r
+        .pending_selection()
+        .expect("simultaneous TriggerOrder for OnDeletion + WhenAttacking");
+    assert_eq!(order.kind, SelectionKind::TriggerOrder, "{order:?}");
+    let choices = order.effect_choices.as_ref().expect("effect_choices");
+    assert_eq!(choices.len(), 3, "expected 3 pooled triggers, got {choices:?}");
+    let wa_action = choices
+        .iter()
+        .find(|c| c.label.starts_with("OC"))
+        .map(|c| c.action_id)
+        .expect("OC's [When Attacking] must be pooled alongside SAC's [On Deletion]");
+
+    // Resolve [When Attacking] first, then the remaining [On Deletion] triggers.
+    r.game
+        .resolve_selection(tp, wa_action)
+        .expect("resolve OC [When Attacking] first");
+    r.auto_resolve().expect("resolve remaining triggers and finish attack");
+
+    let all_events = r.events_since(cp);
+    let attack_pos = all_events
+        .iter()
+        .position(|e| matches!(e, digimon_engine::events::GameEvent::Attack { attacker_card_id, .. } if attacker_card_id == "OC"))
+        .expect("OC attack event");
+    let first_mem_pos = all_events
+        .iter()
+        .position(|e| matches!(e, digimon_engine::events::GameEvent::MemoryChange { delta: 1, .. }))
+        .expect("first trigger memory gain");
+    assert!(
+        attack_pos < first_mem_pos,
+        "attack declaration (#{attack_pos}) must precede all trigger resolutions (#{first_mem_pos})"
+    );
+    assert_eq!(
+        r.game.player(opp).security.len(),
+        security_before - 1,
+        "Overclock attack checked 1 security card"
+    );
+}
+
+/// §16-34-1 / §16-34-3 (DCGO `OverclockProcess` + `EX9_032.cs:245`): deleting a
+/// Digimon to pay `<Overclock>` is performed by your own effect, so "other than
+/// by your effects" replacements (`<Scapegoat>`, `EX9-032` inherited leave-save)
+/// on the sacrificed Digimon must NOT trigger or interrupt the Overclock attack.
+#[test]
+fn overclock_cost_deletion_does_not_trigger_other_than_own_effect_replacements() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", 12000))
+        .add_card(make_digimon("SAC", 12000))
+        .add_card(make_digimon("OTHER", 3000))
+        .add_card(make_digimon("SEC", 1000))
+        .security(1, &["SEC", "SEC"])
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let sac = r.place_on_field(tp, "SAC", Some(0));
+    let _other = r.place_on_field(tp, "OTHER", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    // Give the sacrifice <Scapegoat> ("When this Digimon would be deleted other
+    // than by your effects, by deleting 1 of your other Digimon, prevent that
+    // deletion") with OTHER available to pay it.
+    r.game
+        .modifiers
+        .grant_keyword(sac, Keyword::Scapegoat, Expiry::Permanent, tp);
+
+    let security_before = r.game.player(opp).security.len();
+    r.game.end_turn();
+    assert!(r.pending_selection().is_some(), "Overclock sacrifice prompt");
+
+    r.game
+        .resolve_selection(tp, encode_attack(0, sac.index as u16))
+        .expect("pay SAC as Overclock cost");
+
+    assert!(
+        r.pending_selection().is_none(),
+        "Overclock own-effect cost deletion must not install <Scapegoat> replacement, got {:?}",
+        r.pending_selection().map(|s| (s.kind, s.prompt.clone()))
+    );
+    assert!(
+        !r.game
+            .player(tp)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&r.game.card_data) == "SAC"),
+        "SAC was deleted to pay Overclock"
+    );
+    assert_eq!(
+        r.game.player(opp).security.len(),
+        security_before - 1,
+        "Overclock attack declared and checked 1 security card immediately"
     );
 }
