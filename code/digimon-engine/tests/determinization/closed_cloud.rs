@@ -572,220 +572,275 @@ fn identity_independent_queued_observer_does_not_keep_a_concealed_event_card() {
 
 #[test]
 fn cloud_pool_continuations_are_composition_independent_and_resolve() {
-    with_big_stack(|| {
-        let rows: serde_json::Value = serde_json::from_str(include_str!(
-            "../../../../data/training_pools/ex13-20261026/distinct_training_decks.json"
-        ))
-        .unwrap();
-        let rows = rows.as_array().unwrap();
-        let mut failures = Vec::new();
-        let mut checked = 0;
-        let mut selected = 0;
-        let focus = std::env::var("DIGIMON_BELIEF_TEST_CASE")
-            .ok()
-            .map(|v| v.parse::<usize>().unwrap());
-        for (case, row) in rows.iter().enumerate() {
-            if focus.is_some_and(|f| f != case) {
-                continue;
-            }
-            for offset in [0u64, 1000] {
-                selected += 1;
-                eprintln!(
-                    "cloud continuation case {case}, seed offset {offset}: {}",
-                    row["archetype"]
-                );
-                let cards: Vec<String> = serde_json::from_value(row["cards"].clone()).unwrap();
-                let refs: Vec<&str> = cards.iter().map(String::as_str).collect();
-                let prior = WeightedDeckPrior::new(
-                    PriorSnapshot::new(
-                        "standard",
-                        "cloud-continuation-regression",
-                        cards.iter().cloned().collect(),
-                        vec![CandidateDeck {
-                            cards: cards.clone(),
-                            weight: 1.0,
-                        }],
-                        0.1,
-                        128,
-                    )
-                    .unwrap(),
-                )
-                .unwrap();
-                let mut game = new_game_with(20261029 + case as u64 + offset, &refs, &refs);
-                game.enable_belief_knowledge().unwrap();
-                let mut rng = Lcg(1949 + case as u64 + offset);
-                for decision in 0..128 {
-                    if game.game_over {
-                        break;
-                    }
-                    let viewer = decision_player(&game);
-                    let memory = game.belief_knowledge(viewer).unwrap().clone();
-                    let seed = decision as u64 + 999;
-                    let world = match materialize_closed(&game, viewer, &memory, &prior, seed) {
-                        Ok(w) => w,
-                        Err(e) => {
-                            let locate = |handle| {
-                                game.players.iter().find_map(|p| {
-                                    [
-                                        ("hand", &p.hand),
-                                        ("deck", &p.deck),
-                                        ("security", &p.security),
-                                        ("trash", &p.trash),
-                                    ]
-                                    .into_iter()
-                                    .find_map(
-                                        |(zone, cards)| {
-                                            cards
-                                                .iter()
-                                                .position(|c| c.handle() == handle)
-                                                .map(|index| (p.id, zone, index))
-                                        },
-                                    )
-                                })
-                            };
-                            if e.contains("position") {
-                                let facts = serde_json::to_value(&memory).unwrap();
-                                for fact in facts["cards"]
-                                    .as_array()
-                                    .unwrap()
-                                    .iter()
-                                    .filter(|c| !c["position"].is_null())
-                                {
-                                    let instance = fact["instance"].as_u64().unwrap() as u16;
-                                    eprintln!("position forensic fact={fact} location={:?} deck_counts={:?}",
-                                    locate(digimon_engine::card_source::CardHandle(instance)),
-                                    game.players.iter().map(|p| (p.deck.len(), p.security.len())).collect::<Vec<_>>());
-                                }
+    let rows: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../data/training_pools/ex13-20261026/distinct_training_decks.json"
+    ))
+    .unwrap();
+    let rows = rows.as_array().unwrap();
+    let focus = std::env::var("DIGIMON_BELIEF_TEST_CASE")
+        .ok()
+        .map(|v| v.parse::<usize>().unwrap());
+    let tasks: Vec<(usize, u64, String, Vec<String>)> = rows
+        .iter()
+        .enumerate()
+        .filter(|(case, _)| focus.is_none_or(|f| f == *case))
+        .flat_map(|(case, row)| {
+            let archetype = row["archetype"].as_str().unwrap_or("").to_string();
+            let cards: Vec<String> = serde_json::from_value(row["cards"].clone()).unwrap();
+            [0u64, 1000]
+                .into_iter()
+                .map(move |offset| (case, offset, archetype.clone(), cards.clone()))
+        })
+        .collect();
+    let selected = tasks.len();
+    let workers = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(4)
+        .clamp(1, 8)
+        .min(selected.max(1));
+    let next_task = std::sync::atomic::AtomicUsize::new(0);
+    let results = std::sync::Mutex::new(Vec::<(usize, u64, usize, Vec<String>)>::with_capacity(
+        selected,
+    ));
+
+    std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(workers);
+        for _ in 0..workers {
+            let tasks_ref = &tasks;
+            let next_ref = &next_task;
+            let results_ref = &results;
+            handles.push(
+                std::thread::Builder::new()
+                    .stack_size(256 * 1024 * 1024)
+                    .spawn_scoped(scope, move || {
+                        loop {
+                            let idx = next_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            if idx >= tasks_ref.len() {
+                                break;
                             }
-                            if e.contains("effect queue") {
-                                for q in game.effect_queue.iter() {
-                                    eprintln!("queue forensic source={:?} controller={} card={} location={:?} attribution={:?}",
-                                    q.source_card, q.controller, q.card_id, locate(q.source_card), q.attribution_source_card);
-                                }
-                            }
-                            let location = match game
-                                .pending_selection_resume
-                                .as_ref()
-                                .and_then(|s| s.frames.last())
-                            {
-                                Some(digimon_engine::resume::ResumeFrame::RunTail {
-                                    prov, ..
-                                }) => format!(" source location {:?}", locate(prov.source_card)),
-                                _ => String::new(),
-                            };
-                            eprintln!("case {case} decision {decision}: {e}{location}");
-                            if let Some(digimon_engine::resume::ResumeFrame::RunTail {
-                                trigger_context: Some(c),
-                                ..
-                            }) = game
-                                .pending_selection_resume
-                                .as_ref()
-                                .and_then(|s| s.frames.last())
-                            {
-                                for h in [
-                                    c.source_effect.and_then(|e| e.source_card.read()),
-                                    c.target_card.read(),
-                                    c.event_card.read(),
-                                    c.event_source_card,
-                                    c.event_host_card,
-                                ]
-                                .into_iter()
-                                .flatten()
-                                {
-                                    eprintln!(
-                                        "context forensic handle={h:?} location={:?}",
-                                        locate(h)
-                                    );
-                                }
-                            }
-                            failures.push(format!("case {case} offset {offset} {} decision {decision}: {e}; frame {:?}",
-                            row["archetype"], game.pending_selection_resume));
-                            break;
-                        }
-                    };
-                    // Corrupt only the source's UNENTITLED opposing composition. The
-                    // same restricted evidence and seed must still give the same world.
-                    let mut other = game.clone();
-                    let entitled: serde_json::Value = serde_json::to_value(&memory).unwrap();
-                    let known: std::collections::HashSet<u16> = entitled["cards"]
-                        .as_array()
-                        .unwrap()
-                        .iter()
-                        .map(|c| c["instance"].as_u64().unwrap() as u16)
-                        .collect();
-                    {
-                        let replacement = other
-                            .card_data
-                            .iter()
-                            .position(|c| c.card_id == "ST1-02")
+                            let (case, offset, archetype, cards) = &tasks_ref[idx];
+                            let (case, offset) = (*case, *offset);
+                            let mut local_failures = Vec::new();
+                            let mut local_checked = 0usize;
+                            let refs: Vec<&str> = cards.iter().map(String::as_str).collect();
+                            let prior = WeightedDeckPrior::new(
+                                PriorSnapshot::new(
+                                    "standard",
+                                    "cloud-continuation-regression",
+                                    cards.iter().cloned().collect(),
+                                    vec![CandidateDeck {
+                                        cards: cards.clone(),
+                                        weight: 1.0,
+                                    }],
+                                    0.1,
+                                    128,
+                                )
+                                .unwrap(),
+                            )
                             .unwrap();
-                        let opp = &mut other.players[(1 - viewer) as usize];
-                        for c in opp
-                            .hand
-                            .iter_mut()
-                            .chain(&mut opp.deck)
-                            .chain(&mut opp.security)
-                        {
-                            if !known.contains(&c.card_index) {
-                                c.data_index = replacement;
+                            let mut game =
+                                new_game_with(20261029 + case as u64 + offset, &refs, &refs);
+                            game.enable_belief_knowledge().unwrap();
+                            let mut rng = Lcg(1949 + case as u64 + offset);
+                            let replacement = game
+                                .card_data
+                                .iter()
+                                .position(|c| c.card_id == "ST1-02")
+                                .unwrap();
+                            for decision in 0..128 {
+                                if game.game_over {
+                                    break;
+                                }
+                                let viewer = decision_player(&game);
+                                let memory = game.belief_knowledge(viewer).unwrap().clone();
+                                let seed = decision as u64 + 999;
+                                let world =
+                                    match materialize_closed(&game, viewer, &memory, &prior, seed) {
+                                        Ok(w) => w,
+                                        Err(e) => {
+                                            let locate = |handle| {
+                                                game.players.iter().find_map(|p| {
+                                                    [
+                                                        ("hand", &p.hand),
+                                                        ("deck", &p.deck),
+                                                        ("security", &p.security),
+                                                        ("trash", &p.trash),
+                                                    ]
+                                                    .into_iter()
+                                                    .find_map(|(zone, cards)| {
+                                                        cards
+                                                            .iter()
+                                                            .position(|c| c.handle() == handle)
+                                                            .map(|index| (p.id, zone, index))
+                                                    })
+                                                })
+                                            };
+                                            if e.contains("position") {
+                                                for (owner, instance, zone, pos) in
+                                                    memory.positioned_facts()
+                                                {
+                                                    eprintln!(
+                                                        "position forensic owner={owner} instance={instance} zone={zone:?} pos={pos} location={:?} deck_counts={:?}",
+                                                        locate(digimon_engine::card_source::CardHandle(instance)),
+                                                        game.players.iter().map(|p| (p.deck.len(), p.security.len())).collect::<Vec<_>>()
+                                                    );
+                                                }
+                                            }
+                                            if e.contains("effect queue") {
+                                                for q in game.effect_queue.iter() {
+                                                    eprintln!(
+                                                        "queue forensic source={:?} controller={} card={} location={:?} attribution={:?}",
+                                                        q.source_card, q.controller, q.card_id, locate(q.source_card), q.attribution_source_card
+                                                    );
+                                                }
+                                            }
+                                            let location = match game
+                                                .pending_selection_resume
+                                                .as_ref()
+                                                .and_then(|s| s.frames.last())
+                                            {
+                                                Some(digimon_engine::resume::ResumeFrame::RunTail {
+                                                    prov,
+                                                    ..
+                                                }) => format!(
+                                                    " source location {:?}",
+                                                    locate(prov.source_card)
+                                                ),
+                                                _ => String::new(),
+                                            };
+                                            eprintln!("case {case} decision {decision}: {e}{location}");
+                                            if let Some(
+                                                digimon_engine::resume::ResumeFrame::RunTail {
+                                                    trigger_context: Some(c),
+                                                    ..
+                                                },
+                                            ) = game
+                                                .pending_selection_resume
+                                                .as_ref()
+                                                .and_then(|s| s.frames.last())
+                                            {
+                                                for h in [
+                                                    c.source_effect
+                                                        .and_then(|e| e.source_card.read()),
+                                                    c.target_card.read(),
+                                                    c.event_card.read(),
+                                                    c.event_source_card,
+                                                    c.event_host_card,
+                                                ]
+                                                .into_iter()
+                                                .flatten()
+                                                {
+                                                    eprintln!(
+                                                        "context forensic handle={h:?} location={:?}",
+                                                        locate(h)
+                                                    );
+                                                }
+                                            }
+                                            local_failures.push(format!(
+                                                "case {case} offset {offset} \"{archetype}\" decision {decision}: {e}; frame {:?}",
+                                                game.pending_selection_resume
+                                            ));
+                                            break;
+                                        }
+                                    };
+                                // Corrupt only the source's UNENTITLED opposing composition. The
+                                // same restricted evidence and seed must still give the same world.
+                                let mut other = game.clone();
+                                let known: std::collections::HashSet<u16> =
+                                    memory.known_instances().collect();
+                                {
+                                    let opp = &mut other.players[(1 - viewer) as usize];
+                                    for c in opp
+                                        .hand
+                                        .iter_mut()
+                                        .chain(&mut opp.deck)
+                                        .chain(&mut opp.security)
+                                    {
+                                        if !known.contains(&c.card_index) {
+                                            c.data_index = replacement;
+                                        }
+                                    }
+                                    for c in opp
+                                        .battle_area
+                                        .iter_mut()
+                                        .chain(opp.breeding_area.iter_mut())
+                                        .flat_map(|p| {
+                                            p.card_sources.iter_mut().chain(&mut p.linked_cards)
+                                        })
+                                        .filter(|c| c.face_down && !known.contains(&c.card_index))
+                                    {
+                                        c.data_index = replacement;
+                                    }
+                                    opp.original_deck.clear();
+                                }
+                                let alternate =
+                                    materialize_closed(&other, viewer, &memory, &prior, seed)
+                                        .unwrap();
+                                assert_eq!(full_zone_dump(&world), full_zone_dump(&alternate));
+                                assert_eq!(world.to_scenario(), alternate.to_scenario());
+                                let mask = digimon_engine::build_action_mask(&game, viewer);
+                                let action = rng.pick(&mask).expect("nonterminal legal decision");
+                                let mut a = world;
+                                let mut b = alternate;
+                                a.decode_action(action, viewer);
+                                b.decode_action(action, viewer);
+                                assert_eq!(a.to_scenario(), b.to_scenario());
+                                local_checked += 1;
+                                game.decode_action(action, viewer);
+                                for seat in 0..2 {
+                                    let ledger = game.belief_knowledge(seat).unwrap();
+                                    for (owner, instance, zone, position) in
+                                        ledger.positioned_facts()
+                                    {
+                                        let cards = match zone {
+                                            KnowledgeZone::Deck => &game.players[owner as usize].deck,
+                                            KnowledgeZone::Security => {
+                                                &game.players[owner as usize].security
+                                            }
+                                            KnowledgeZone::Digitama => {
+                                                &game.players[owner as usize].digitama_deck
+                                            }
+                                            _ => continue,
+                                        };
+                                        let actual = cards
+                                            .iter()
+                                            .rev()
+                                            .position(|c| c.card_index == instance);
+                                        assert_eq!(
+                                            actual,
+                                            Some(position),
+                                            "case {case} offset {offset} decision {decision} action {action} seat {seat} stale fact owner={owner} instance={instance} zone={zone:?} pos={position}"
+                                        );
+                                    }
+                                }
                             }
+                            results_ref.lock().unwrap().push((
+                                case,
+                                offset,
+                                local_checked,
+                                local_failures,
+                            ));
                         }
-                        for c in opp
-                            .battle_area
-                            .iter_mut()
-                            .chain(opp.breeding_area.iter_mut())
-                            .flat_map(|p| p.card_sources.iter_mut().chain(&mut p.linked_cards))
-                            .filter(|c| c.face_down && !known.contains(&c.card_index))
-                        {
-                            c.data_index = replacement;
-                        }
-                        opp.original_deck.clear();
-                    }
-                    let alternate =
-                        materialize_closed(&other, viewer, &memory, &prior, seed).unwrap();
-                    assert_eq!(full_zone_dump(&world), full_zone_dump(&alternate));
-                    assert_eq!(world.to_scenario(), alternate.to_scenario());
-                    let mask = digimon_engine::build_action_mask(&game, viewer);
-                    let action = rng.pick(&mask).expect("nonterminal legal decision");
-                    let mut a = world;
-                    let mut b = alternate;
-                    a.decode_action(action, viewer);
-                    b.decode_action(action, viewer);
-                    assert_eq!(a.to_scenario(), b.to_scenario());
-                    checked += 1;
-                    let before_frame = format!("{:?}", game.pending_selection_resume);
-                    game.decode_action(action, viewer);
-                    for seat in 0..2 {
-                        let facts =
-                            serde_json::to_value(game.belief_knowledge(seat).unwrap()).unwrap();
-                        for fact in facts["cards"]
-                            .as_array()
-                            .unwrap()
-                            .iter()
-                            .chain(facts["concealed_positions"].as_array().unwrap().iter())
-                            .filter(|c| !c["position"].is_null())
-                        {
-                            let owner = fact["owner"].as_u64().unwrap() as usize;
-                            let cards = match fact["zone"].as_str().unwrap() {
-                                "deck" => &game.players[owner].deck,
-                                "security" => &game.players[owner].security,
-                                "digitama" => &game.players[owner].digitama_deck,
-                                _ => continue,
-                            };
-                            let position = fact["position"].as_u64().unwrap() as usize;
-                            let actual = cards.iter().rev().position(|c| {
-                                c.card_index == fact["instance"].as_u64().unwrap() as u16
-                            });
-                            assert_eq!(actual, Some(position), "case {case} decision {decision} action {action} seat {seat} stale fact {fact}; before {before_frame}");
-                        }
-                    }
-                }
-            }
+                    })
+                    .expect("spawn closed_cloud worker"),
+            );
         }
-        assert!(failures.is_empty(), "{}", failures.join("\n"));
-        assert!(
-            selected > 0 && checked >= selected * 2,
-            "every selected list must exercise both seats"
-        );
+        for h in handles {
+            h.join().expect("closed_cloud worker panicked");
+        }
     });
+
+    let mut results = results.into_inner().unwrap();
+    results.sort_by_key(|(case, offset, _, _)| (*case, *offset));
+    let mut checked = 0usize;
+    let mut failures = Vec::new();
+    for (_, _, local_checked, local_failures) in results {
+        checked += local_checked;
+        failures.extend(local_failures);
+    }
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    assert!(
+        selected > 0 && checked >= selected * 2,
+        "every selected list must exercise both seats"
+    );
 }

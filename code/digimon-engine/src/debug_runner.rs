@@ -1243,10 +1243,10 @@ impl DebugRunnerBuilder {
     #[cfg(feature = "dsl-yaml-loader")]
     pub fn dsl_card(mut self, card_id: &str) -> Result<Self, String> {
         let compiled = embedded_dsl_registry()?
-            .lookup(card_id)
-            .ok_or_else(|| format!("DSL card {card_id} not found in embedded pack"))?
-            .clone();
-        self.register_compiled_card(compiled);
+            .lookup_arc(card_id)
+            .ok_or_else(|| format!("DSL card {card_id} not found in embedded pack"))?;
+        let data = cached_embedded_card_data(card_id, compiled.as_ref());
+        self.register_compiled_card_arc(compiled, Some(data), true);
         Ok(self)
     }
 
@@ -1254,16 +1254,8 @@ impl DebugRunnerBuilder {
     /// runner. Useful for tests that need compact behavior-specific cards.
     #[cfg(feature = "dsl-yaml-loader")]
     pub fn from_dsl_yaml(mut self, yaml: &str) -> Result<Self, String> {
-        let spec: digimon_dsl::CardSpec =
-            serde_yml::from_str(yaml).map_err(|e| format!("parse DSL YAML: {e}"))?;
-        let compiled = digimon_dsl::compile::compile(&spec).map_err(|errors| {
-            errors
-                .into_iter()
-                .map(|e| format!("{} {}: {}", e.card_id, e.path, e.message))
-                .collect::<Vec<_>>()
-                .join("\n")
-        })?;
-        self.register_compiled_card(compiled);
+        let (compiled, data) = compile_dsl_yaml_cached(yaml)?;
+        self.register_compiled_card_arc(compiled, Some(data), false);
         Ok(self)
     }
 
@@ -1350,22 +1342,7 @@ impl DebugRunnerBuilder {
 
         // We bypass Game::new because it shuffles/deals from decks, which loses
         // determinism. Instead, build an empty Game with the shared card_data and
-        // manually populate each player's zones.
-
-        // Build the card_data store and lookup map. Assign `data_index` in the
-        // SAME deterministic (sorted-by-id) order as `card_store::build_shared_card_store`
-        // so this local map agrees with the `Game`'s shared (memoized) store —
-        // `HashMap` iteration order would otherwise differ per instance and
-        // mismatch the cached store's assignment.
-        let mut card_data_store: Vec<CardData> = Vec::new();
-        let mut data_index_map: HashMap<String, usize> = HashMap::new();
-        let mut sorted_ids: Vec<&String> = self.card_data.keys().collect();
-        sorted_ids.sort();
-        for id in sorted_ids {
-            let idx = card_data_store.len();
-            data_index_map.insert(id.clone(), idx);
-            card_data_store.push(self.card_data[id].clone());
-        }
+        // manually populate each player's zones using `game.card_id_index`.
 
         // Build empty decks (one per player) and pass through Game::new with
         // rules adjusted to the actual player_count we want.
@@ -1378,10 +1355,10 @@ impl DebugRunnerBuilder {
         let mut game = Game::new(&empty_decks, &self.card_data, rules, Some(0xC0FFEE))
             .expect("DebugRunner: Game::new failed");
         #[cfg(feature = "dsl-yaml-loader")]
-        {
-            // `alt_path_registry` is a shared `Arc` (see `card_store`); copy-on-write
-            // so a DebugRunner's injected cards extend a private copy.
-            std::sync::Arc::make_mut(&mut game.alt_path_registry).extend(
+        if !self.compiled_cards.is_empty() {
+            // Only populate the tiny overlay when a DebugRunner-injected card
+            // carries `alt_paths`, leaving the shared embedded base untouched.
+            game.alt_path_registry.extend_overrides(
                 self.compiled_cards
                     .iter()
                     .filter_map(|(card_id, compiled)| {
@@ -1419,26 +1396,30 @@ impl DebugRunnerBuilder {
 
             if let Some(ids) = self.hands.get(&pid) {
                 for card_id in ids {
-                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card =
+                        Self::make_card(&game.card_id_index, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].put_in_hand(card);
                 }
             }
             if let Some(ids) = self.decks.get(&pid) {
                 for card_id in ids {
-                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card =
+                        Self::make_card(&game.card_id_index, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].put_on_deck_top(card);
                 }
             }
             if let Some(ids) = self.securities.get(&pid) {
                 for card_id in ids {
-                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
+                    let card =
+                        Self::make_card(&game.card_id_index, card_id, pid, &mut next_card_index);
                     game.players[pid as usize].put_on_security_top(card);
                 }
             }
             if let Some(ids) = self.digitamas.get(&pid) {
                 for card_id in ids {
-                    let card = Self::make_card(&data_index_map, card_id, pid, &mut next_card_index);
-                    if card_data_store[card.data_index].card_kind != CardKind::DigiEgg {
+                    let card =
+                        Self::make_card(&game.card_id_index, card_id, pid, &mut next_card_index);
+                    if game.card_data[card.data_index].card_kind != CardKind::DigiEgg {
                         // Allow non-eggs in digitama for tests, but warn via debug.
                     }
                     game.players[pid as usize].put_on_digi_egg_deck_top(card);
@@ -1455,8 +1436,7 @@ impl DebugRunnerBuilder {
         if let Some(reg) = self.registry.take() {
             game.effect_registry = reg;
         } else {
-            // Default registry already populated by Game::new -> build_registry().
-            // Make sure test cards are registered (build_registry() does this).
+            // Default registry already populated by Game::new -> build_registry_cached().
             let _ = build_registry; // silence unused-import if path changes
         }
 
@@ -1486,17 +1466,28 @@ impl DebugRunnerBuilder {
     }
 
     #[cfg(feature = "dsl-yaml-loader")]
-    fn register_compiled_card(&mut self, compiled: CompiledCard) {
-        use crate::cards::raw_rust;
+    fn register_compiled_card_arc(
+        &mut self,
+        compiled: Arc<CompiledCard>,
+        prebuilt_data: Option<CardData>,
+        from_embedded: bool,
+    ) {
         let card_id = compiled.card.clone();
-        let compiled = Arc::new(compiled);
         self.card_data
             .entry(card_id.clone())
-            .or_insert_with(|| card_data_from_compiled(compiled.as_ref()));
+            .or_insert_with(|| prebuilt_data.unwrap_or_else(|| card_data_from_compiled(compiled.as_ref())));
         self.compiled_cards
             .insert(card_id.clone(), compiled.clone());
-        let registry = self.registry.get_or_insert_with(build_registry);
-        let raw = Arc::new(raw_rust::build_registry());
+        // Embedded pack cards are already registered in `build_registry_cached()`.
+        // Only overlay into `self.registry` when the caller supplied a custom
+        // registry or inline YAML that may override the embedded pack.
+        if from_embedded && self.registry.is_none() {
+            return;
+        }
+        let registry = self
+            .registry
+            .get_or_insert_with(crate::cards::build_registry_cached);
+        let raw = crate::cards::raw_rust_registry_cached();
         registry.insert(
             &card_id,
             Arc::new(DslCardEffect::new_with_raw(compiled, raw)),
@@ -1507,6 +1498,71 @@ impl DebugRunnerBuilder {
 #[cfg(feature = "dsl-yaml-loader")]
 fn embedded_dsl_registry() -> Result<&'static digimon_dsl::CardRegistry, String> {
     crate::dsl_registry::from_embedded_cached()
+}
+
+/// Process-cached `card_data_from_compiled` for cards loaded from the immutable
+/// embedded DSL pack (`DebugRunnerBuilder::dsl_card`).
+#[cfg(feature = "dsl-yaml-loader")]
+fn cached_embedded_card_data(card_id: &str, compiled: &CompiledCard) -> CardData {
+    static CACHE: OnceLock<std::sync::Mutex<HashMap<String, CardData>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    if let Some(existing) = cache.lock().unwrap().get(card_id) {
+        return existing.clone();
+    }
+    let built = card_data_from_compiled(compiled);
+    let mut guard = cache.lock().unwrap();
+    guard
+        .entry(card_id.to_string())
+        .or_insert_with(|| built.clone())
+        .clone()
+}
+
+/// Content-keyed cache for `DebugRunnerBuilder::from_dsl_yaml`: test files
+/// typically pass the same `const CARD_YAML: &str` across 10-20 test fns, so
+/// caching `(Arc<CompiledCard>, CardData)` avoids re-running `serde_yml` and
+/// `digimon_dsl::compile::compile` on every test.
+#[cfg(feature = "dsl-yaml-loader")]
+fn compile_dsl_yaml_cached(yaml: &str) -> Result<(Arc<CompiledCard>, CardData), String> {
+    use std::hash::{Hash, Hasher};
+    type Entry = (String, Arc<CompiledCard>, CardData);
+    const MAX_ENTRIES: usize = 512;
+
+    static CACHE: OnceLock<std::sync::Mutex<HashMap<u64, Vec<Entry>>>> = OnceLock::new();
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    yaml.hash(&mut hasher);
+    let hash = hasher.finish();
+
+    let cache = CACHE.get_or_init(|| std::sync::Mutex::new(HashMap::new()));
+    {
+        let guard = cache.lock().unwrap();
+        if let Some(bucket) = guard.get(&hash) {
+            if let Some((_, compiled, data)) = bucket.iter().find(|(s, _, _)| s == yaml) {
+                return Ok((Arc::clone(compiled), data.clone()));
+            }
+        }
+    }
+
+    let spec: digimon_dsl::CardSpec =
+        serde_yml::from_str(yaml).map_err(|e| format!("parse DSL YAML: {e}"))?;
+    let compiled = Arc::new(digimon_dsl::compile::compile(&spec).map_err(|errors| {
+        errors
+            .into_iter()
+            .map(|e| format!("{} {}: {}", e.card_id, e.path, e.message))
+            .collect::<Vec<_>>()
+            .join("\n")
+    })?);
+    let data = card_data_from_compiled(compiled.as_ref());
+
+    let mut guard = cache.lock().unwrap();
+    let total: usize = guard.values().map(Vec::len).sum();
+    if total >= MAX_ENTRIES {
+        guard.clear();
+    }
+    let bucket = guard.entry(hash).or_default();
+    if !bucket.iter().any(|(s, _, _)| s == yaml) {
+        bucket.push((yaml.to_string(), Arc::clone(&compiled), data.clone()));
+    }
+    Ok((compiled, data))
 }
 
 #[cfg(feature = "dsl-yaml-loader")]

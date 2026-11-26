@@ -36,12 +36,18 @@ jobs:
   clone-safety-and-both-path:
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      CARGO_INCREMENTAL: "0"
+      RUSTFLAGS: "-C link-arg=-fuse-ld=lld"
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install lld linker
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends lld
 
       - name: Cache cargo registry + target
         uses: actions/cache@v5
@@ -50,7 +56,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ${{ runner.os }}-cargo-engine-clone-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+          key: ${{ runner.os }}-cargo-engine-clone-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
 
       # The clone-independence / clone-replays-identically guard tests live in
       # the engine lib (`src/resume.rs` #[cfg(test)] mod) alongside the
@@ -63,66 +69,44 @@ jobs:
       # The full per-card behavioral suite is the both-path parity gate: it runs
       # resume-flipped installers through the data VM and the rest through the
       # legacy closure executor in the same process.
-      # Compile separately so the test process stays below GitHub's long-running
-      # step cancellation window on cold runners.
       - name: Compile both-path parity suite
         env:
           RUST_MIN_STACK: "268435456"
         run: cargo test -p digimon-engine --test cards_behavioral --no-run
 
-      # Libtest filters are substring based. These three commands partition the
-      # full suite without overlap: BT tests, non-BT EX tests, then everything
-      # containing neither marker.
-      - name: Both-path parity (BT cards)
+      - name: Both-path parity (all cards)
         env:
           RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test cards_behavioral bt -- --test-threads=8
+        run: cargo test -p digimon-engine --test cards_behavioral -- --test-threads=8
 
-      - name: Both-path parity (EX cards)
+      # Compile and run the DSL behavioral, archetype, judge-quiz, and
+      # selection-pilot suites together so Cargo builds all four binaries in
+      # parallel across all runner cores.
+      - name: DSL, archetype, judge-quiz, and selection suites
         env:
           RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test cards_behavioral ex -- --test-threads=8 --skip bt
-
-      - name: Both-path parity (remaining cards)
-        env:
-          RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test cards_behavioral -- --test-threads=8 --skip bt --skip ex
-
-      # The DSL behavioral + archetype/interaction tests round out the gate.
-      - name: DSL behavioral tests
-        env:
-          RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test dsl
-
-      - name: Archetype interaction tests
-        env:
-          RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test archetypes
-
-      # Judge-quiz faithfulness corpus — carries the Q30 mid-interrupt-chain
-      # clone guard (q30_partition_second_play_hook_clones_faithfully_mid_chain:
-      # a data AfterSelectionHook armed across a fork must replay identically).
-      - name: Judge-quiz tests (incl. armed-hook clone guard)
-        env:
-          RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test judge_quiz
-
-      # Selection-kind pilots — carries the TEST-010 worked-example clone guard
-      # (test_010_prompt_clones_faithfully).
-      - name: Selection pilot tests (incl. worked-example clone guard)
-        env:
-          RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test selection
+        run: >
+          cargo test -p digimon-engine
+          --test dsl --test archetypes --test judge_quiz --test selection
+          --no-fail-fast -- --test-threads=8
 
       # Clone-fuzz — random real-deck playouts (starter pairs + an Appmon
       # link pair) that CLONE at every decision, resolve both copies, and
-      # fingerprint-compare (plus ship-of-Theseus swaps). This is the
-      # observational guard the source-level audits can't provide: it caught
-      # `install_select_hand` parking closure-only (2026-07-02) right after
-      # the caller-map audit declared zero production closure paths. Scale
-      # with CLONE_FUZZ_GAMES.
+      # fingerprint-compare (plus ship-of-Theseus swaps). Scale with
+      # CLONE_FUZZ_GAMES.
       - name: Clone-fuzz (per-decision fork faithfulness on real playouts)
         env:
           RUST_MIN_STACK: "268435456"
           CLONE_FUZZ_GAMES: "12"
+        run: cargo test -p digimon-engine --test clone_fuzz --features dsl-yaml-loader
+
+      # Continuously verify both debug cache differential oracles
+      # (`effects_cache` and `tick_declarative_effects`) across all 3 deck
+      # pairs (including Appmon link/App-Fusion) on every PR, reusing the
+      # already-compiled `clone_fuzz` binary.
+      - name: Cache differential oracle check (clone_fuzz, DIGIMON_VERIFY_CACHES=1)
+        env:
+          RUST_MIN_STACK: "268435456"
+          CLONE_FUZZ_GAMES: "3"
+          DIGIMON_VERIFY_CACHES: "1"
         run: cargo test -p digimon-engine --test clone_fuzz --features dsl-yaml-loader

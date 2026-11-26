@@ -269,6 +269,10 @@ impl CardRegistry {
         self.cards.get(card_id).map(|c| c.get())
     }
 
+    pub fn lookup_arc(&self, card_id: &str) -> Option<Arc<CompiledCard>> {
+        self.cards.get(card_id).map(|c| c.get_arc())
+    }
+
     pub fn len(&self) -> usize {
         self.cards.len()
     }

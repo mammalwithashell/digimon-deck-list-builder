@@ -118,19 +118,53 @@ pub fn enrich_card_data_with_dsl_alt_paths(
 ) -> usize {
     let mut inserted = 0;
     if let Some(enrichments) = registry.enrichments() {
+        let apply = |card: &mut CardData, e: &digimon_dsl::pack::CardPackEnrichment| -> usize {
+            card.ace_overflow = e.ace_overflow;
+            card.digixros_aliases = e.digixros_aliases.clone();
+            card.also_treated_as = e.also_treated_as.clone();
+            let mut added = 0;
+            for dna_cost in e.alt_paths.iter().filter_map(compiled_dna_cost) {
+                if !card.dna_costs.contains(&dna_cost) {
+                    card.dna_costs.push(dna_cost);
+                    added += 1;
+                }
+            }
+            added
+        };
+
+        // Test runners routinely pass 1-20 card DBs while the embedded pack
+        // holds ~5,000 enrichments. When `cards` is smaller, index the static
+        // enrichment slice once and probe only the cards present.
+        if cards.len() < enrichments.len() {
+            if let Ok(embedded) = crate::dsl_registry::from_embedded_cached() {
+                if embedded
+                    .enrichments()
+                    .is_some_and(|emb| std::ptr::eq(emb.as_ptr(), enrichments.as_ptr()))
+                {
+                    static EMBEDDED_INDEX: std::sync::OnceLock<HashMap<String, usize>> =
+                        std::sync::OnceLock::new();
+                    let index = EMBEDDED_INDEX.get_or_init(|| {
+                        enrichments
+                            .iter()
+                            .enumerate()
+                            .map(|(i, e)| (e.card_id.clone(), i))
+                            .collect()
+                    });
+                    for (card_id, card) in cards.iter_mut() {
+                        if let Some(&idx) = index.get(card_id) {
+                            inserted += apply(card, &enrichments[idx]);
+                        }
+                    }
+                    return inserted;
+                }
+            }
+        }
+
         for e in enrichments {
             let Some(card) = cards.get_mut(&e.card_id) else {
                 continue;
             };
-            card.ace_overflow = e.ace_overflow;
-            card.digixros_aliases = e.digixros_aliases.clone();
-            card.also_treated_as = e.also_treated_as.clone();
-            for dna_cost in e.alt_paths.iter().filter_map(compiled_dna_cost) {
-                if !card.dna_costs.contains(&dna_cost) {
-                    card.dna_costs.push(dna_cost);
-                    inserted += 1;
-                }
-            }
+            inserted += apply(card, e);
         }
         return inserted;
     }

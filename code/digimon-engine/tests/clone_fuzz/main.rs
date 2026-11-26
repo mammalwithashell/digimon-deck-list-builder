@@ -246,52 +246,95 @@ fn fuzz_one_game(
 
 #[test]
 fn clone_is_faithful_at_every_decision_of_random_playouts() {
-    // Registry construction recurses deeply — run on a big-stack thread
-    // (same mitigation as digimon-engine-cli main / RUST_MIN_STACK docs).
-    std::thread::Builder::new()
-        .stack_size(256 * 1024 * 1024)
-        .spawn(|| {
-            let games: u64 = std::env::var("CLONE_FUZZ_GAMES")
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(12);
-            let card_data = load_card_data();
-            let registry = CardRegistry::from_cards(&card_data);
-            let owned = |d: &[&str]| -> Vec<String> { d.iter().map(|s| s.to_string()).collect() };
-            // Pair 3 reaches the link/plug-in/App-Fusion selection machinery.
-            let pairs: Vec<(Vec<String>, Vec<String>)> = vec![
-                (owned(D1), owned(D2)),
-                (owned(D3), owned(D4)),
-                (load_library_deck("Appmon"), load_library_deck("Hero Appmon")),
-            ];
-            let (mut total_decisions, mut total_swaps) = (0u32, 0u32);
-            let mut closure_parks = std::collections::BTreeMap::new();
-            for seed in 0..games {
-                let (d1, d2) = &pairs[(seed % pairs.len() as u64) as usize];
-                let (n, s) =
-                    fuzz_one_game(1000 + seed, d1, d2, &card_data, &registry, &mut closure_parks);
-                total_decisions += n;
-                total_swaps += s;
-            }
-            eprintln!(
-                "clone_fuzz: {games} games, {total_decisions} decisions cloned+verified, {total_swaps} ship-of-theseus swaps"
+    let games: u64 = std::env::var("CLONE_FUZZ_GAMES")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(12);
+    let card_data = load_card_data();
+    let registry = CardRegistry::from_cards(&card_data);
+    let owned = |d: &[&str]| -> Vec<String> { d.iter().map(|s| s.to_string()).collect() };
+    // Pair 3 reaches the link/plug-in/App-Fusion selection machinery.
+    let pairs: Vec<(Vec<String>, Vec<String>)> = vec![
+        (owned(D1), owned(D2)),
+        (owned(D3), owned(D4)),
+        (load_library_deck("Appmon"), load_library_deck("Hero Appmon")),
+    ];
+
+    let workers = std::thread::available_parallelism()
+        .map(usize::from)
+        .unwrap_or(4)
+        .clamp(1, 8)
+        .min((games as usize).max(1));
+    let next_seed = std::sync::atomic::AtomicU64::new(0);
+    let totals = std::sync::Mutex::new((
+        0u32,
+        0u32,
+        std::collections::BTreeMap::<String, u32>::new(),
+    ));
+
+    std::thread::scope(|scope| {
+        let mut handles = Vec::with_capacity(workers);
+        for _ in 0..workers {
+            let next_ref = &next_seed;
+            let totals_ref = &totals;
+            let pairs_ref = &pairs;
+            let card_data_ref = &card_data;
+            let registry_ref = &registry;
+            handles.push(
+                std::thread::Builder::new()
+                    .stack_size(256 * 1024 * 1024)
+                    .spawn_scoped(scope, move || {
+                        let mut local_decisions = 0u32;
+                        let mut local_swaps = 0u32;
+                        let mut local_parks = std::collections::BTreeMap::new();
+                        loop {
+                            let seed = next_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            if seed >= games {
+                                break;
+                            }
+                            let (d1, d2) = &pairs_ref[(seed % pairs_ref.len() as u64) as usize];
+                            let (n, s) = fuzz_one_game(
+                                1000 + seed,
+                                d1,
+                                d2,
+                                card_data_ref,
+                                registry_ref,
+                                &mut local_parks,
+                            );
+                            local_decisions += n;
+                            local_swaps += s;
+                        }
+                        let mut guard = totals_ref.lock().unwrap();
+                        guard.0 += local_decisions;
+                        guard.1 += local_swaps;
+                        for (site, count) in local_parks {
+                            *guard.2.entry(site).or_insert(0) += count;
+                        }
+                    })
+                    .expect("spawn clone_fuzz worker"),
             );
-            assert!(
-                total_decisions > 100,
-                "fuzz did not reach a meaningful decision count ({total_decisions})"
-            );
-            if !closure_parks.is_empty() {
-                let mut report = String::from(
-                    "closure-only pending_selection parks found in production playouts \
-                     (clone-UNSAFE — these must move to the resumable VM):\n",
-                );
-                for (site, count) in &closure_parks {
-                    report.push_str(&format!("  x{count}  {site}\n"));
-                }
-                panic!("{report}");
-            }
-        })
-        .expect("spawn")
-        .join()
-        .expect("fuzz thread panicked");
+        }
+        for h in handles {
+            h.join().expect("clone_fuzz worker panicked");
+        }
+    });
+
+    let (total_decisions, total_swaps, closure_parks) = totals.into_inner().unwrap();
+    eprintln!(
+        "clone_fuzz: {games} games, {total_decisions} decisions cloned+verified, {total_swaps} ship-of-theseus swaps"
+    );
+    assert!(
+        total_decisions > 100,
+        "fuzz did not reach a meaningful decision count ({total_decisions})"
+    );
+    if !closure_parks.is_empty() {
+        let mut report = String::from(
+            "closure-only pending_selection parks found in production playouts \
+             (clone-UNSAFE — these must move to the resumable VM):\n",
+        );
+        for (site, count) in &closure_parks {
+            report.push_str(&format!("  x{count}  {site}\n"));
+        }
+        panic!("{report}");
+    }
 }

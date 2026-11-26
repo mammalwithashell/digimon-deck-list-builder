@@ -24,24 +24,33 @@ resolver = "2"
 [profile.release]
 strip = true
 
-# Optimize dev/test builds. This engine's tests are simulation-heavy, and at
-# `opt-level = 0` they were dominated by unoptimized engine code: the
-# `cards_behavioral` suite (~7.8k tests) ran 56.5 min. Measured on a 484-test
-# subset, 8 threads, with mimalloc (see code/digimon-engine/tests/cards_behavioral/main.rs):
-#
-#   opt-level = 0    48.0s          full suite ~13 min
-#   opt-level = 2    19.5s          full suite  5.2 min  (measured, not projected)
-#
-# The trade is compile time: a full cold build ran 509s at opt-level 2, and the
-# incremental test-binary rebuild 244s against 87s at opt-level 0 -- roughly
-# +2 min per build against -8 min per full suite run.
-#
-# `debug-assertions` deliberately stays ON (the dev default). The codebase uses
-# `debug_assert!` for real invariants, and turning those off to buy speed would
-# quietly change what the suite verifies.
-#
-# NOTE: this only pays with the allocator fix. At opt-level 2 on the Windows
-# system heap, 4 threads ran SLOWER than 1 (136-166s vs 60s) -- faster compute
-# just hammered the heap lock harder. The two changes are a pair.
+# Optimize dev/test builds while keeping compile/link times and binary sizes
+# lean:
+# - `opt-level = 1` keeps simulation-heavy tests fast (combined with lazy DSL
+#   pack loading, O(1) DebugRunner overlays, and opt-in cache oracles) while
+#   cutting LLVM codegen time on large test crates like `cards_behavioral`.
+# - `debug = "line-tables-only"` preserves full file:line backtraces on panics
+#   and assertion failures while shrinking `.rlib`/test binaries ~5x (~300 MB ->
+#   ~50 MB each), slashing linker I/O and CI target-cache bloat.
+# - `debug-assertions` deliberately stays ON (the dev default). The codebase
+#   uses `debug_assert!` for real invariants.
 [profile.dev]
+opt-level = 1
+debug = "line-tables-only"
+
+# Keep build scripts and build-dependencies (`build.rs` compiling ~5,000 YAML
+# card specs into `cards.pack`) at `opt-level = 2` so `build.rs` stays fast.
+[profile.dev.build-override]
 opt-level = 2
+
+# Optimize third-party dependencies without debuginfo (fast serde/regex/hash at
+# test runtime, smaller `.rlib`s and faster linking).
+[profile.dev.package."*"]
+opt-level = 2
+debug = 0
+
+# `digimon-dsl` is a schema/compiler crate, never on the per-step simulation
+# hot path once `cards.pack` is embedded. Compiling it at `opt-level = 0`
+# shaves significant time off cold and incremental dev/test builds.
+[profile.dev.package.digimon-dsl]
+opt-level = 0
