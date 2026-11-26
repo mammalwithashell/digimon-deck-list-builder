@@ -120,7 +120,7 @@ class LstmValueWrapper(nn.Module):
     independently of actor state.
     """
 
-    def __init__(self, policy):
+    def __init__(self, policy, value_activation: str = "identity"):
         super().__init__()
         self.features_extractor = policy.features_extractor
         self.vf_features_extractor = getattr(policy, "vf_features_extractor", None)
@@ -137,6 +137,7 @@ class LstmValueWrapper(nn.Module):
             )
         self.mlp_extractor_value = policy.mlp_extractor.value_net
         self.value_net = policy.value_net
+        self.value_activation = value_activation
 
     def forward(
         self,
@@ -150,7 +151,10 @@ class LstmValueWrapper(nn.Module):
         lstm_out, (h_out, c_out) = self.lstm(lstm_in, (h, c))
         lstm_out = lstm_out.squeeze(0)
         latent_vf = self.mlp_extractor_value(lstm_out)
-        return self.value_net(latent_vf), h_out, c_out
+        value = self.value_net(latent_vf)
+        if self.value_activation == "tanh":
+            value = torch.tanh(value)
+        return value, h_out, c_out
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +346,11 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
         output_names=["logits", "h_out", "c_out"],
         dynamic_axes={
             "obs": {0: "batch"},
+            "h_in": {1: "batch"},
+            "c_in": {1: "batch"},
             "logits": {0: "batch"},
+            "h_out": {1: "batch"},
+            "c_out": {1: "batch"},
         },
         opset_version=17,
         dynamo=False,
@@ -352,8 +360,10 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
     # Companion value graph: same (obs, h, c) signature, threads the
     # CRITIC's own LSTM state (see LstmValueWrapper for why it is a
     # separate file rather than extra outputs on the main graph).
+    from digimon_gym.agents import value_activation
+    activation = value_activation.get(model)
     value_path = Path(output_path).with_suffix(".value.onnx")
-    value_wrapper = LstmValueWrapper(policy)
+    value_wrapper = LstmValueWrapper(policy, activation)
     value_wrapper.eval()
     torch.onnx.export(
         value_wrapper,
@@ -363,7 +373,11 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
         output_names=["value", "h_out", "c_out"],
         dynamic_axes={
             "obs": {0: "batch"},
+            "h_in": {1: "batch"},
+            "c_in": {1: "batch"},
             "value": {0: "batch"},
+            "h_out": {1: "batch"},
+            "c_out": {1: "batch"},
         },
         opset_version=17,
         dynamo=False,

@@ -21,12 +21,12 @@ use digimon_engine::{
         closed::materialize_closed_with_diagnostics,
     },
     game::Game,
-    inference::BatchedPolicyValueEvaluator,
     observation::{build_observation_tensor_with_mask, ObservationProfileId},
     rules::Rules,
     search::{
         decision_player, determinized_search_batched, determinized_search_sampled,
-        DeterminizedConfig, EvalRequest, PolicyValueFn, SearchResult,
+        load_search_evaluator_for_profile, DeterminizedConfig, EvalRequest, PolicyValueFn,
+        SearchResult,
     },
 };
 use serde_json::{json, Value};
@@ -42,6 +42,7 @@ struct Args {
     simulations: Option<u32>,
     worlds: Option<u32>,
     macro_substeps: u32,
+    macro_substep_min_prior: f32,
     json: Option<String>,
 }
 
@@ -57,6 +58,7 @@ fn parse_args() -> Args {
         simulations: None,
         worlds: None,
         macro_substeps: 0,
+        macro_substep_min_prior: 0.0,
         json: None,
     };
     while let Some(flag) = it.next() {
@@ -67,6 +69,7 @@ fn parse_args() -> Args {
             "--simulations" => args.simulations = Some(value.parse().unwrap()),
             "--worlds" => args.worlds = Some(value.parse().unwrap()),
             "--macro-substeps" => args.macro_substeps = value.parse().unwrap(),
+            "--macro-substep-min-prior" => args.macro_substep_min_prior = value.parse().unwrap(),
             "--json" => args.json = Some(value),
             _ => panic!("unknown flag {flag}"),
         }
@@ -127,10 +130,21 @@ fn run() {
     .unwrap();
     game.enable_belief_knowledge().unwrap();
     game.turn_count = setup["turn_count_reset"].as_u64().unwrap_or(1) as _;
+    let profile = ObservationProfileId::StandardLiteV2;
+    let mut eval =
+        load_search_evaluator_for_profile(Path::new(&args.model), profile, true, 0).unwrap();
+    eval.reset_episode();
     for (i, a) in plan_of(&setup["actions"]).into_iter().enumerate() {
         let pid = decision_player(&game);
-        assert!(build_action_mask(&game, pid)[a as usize] > 0.5,
-            "recorded action {a} at move {i} is illegal on this engine; the exam no longer reproduces");
+        let mask = build_action_mask(&game, pid);
+        assert!(
+            mask[a as usize] > 0.5,
+            "recorded action {a} at move {i} is illegal on this engine; the exam no longer reproduces"
+        );
+        if eval.is_recurrent() && mask.iter().filter(|&&m| m > 0.5).count() > 1 {
+            let obs = build_observation_tensor_with_mask(&game, pid, &registry, profile, &mask);
+            eval.observe_committed_step(pid, &obs, &mask);
+        }
         game.decode_action(a, pid);
     }
     let search = &exam["search"];
@@ -160,10 +174,6 @@ fn run() {
         WeightedDeckPrior::new(snapshot).unwrap()
     });
 
-    let profile = ObservationProfileId::StandardLiteV2;
-    let mut eval =
-        BatchedPolicyValueEvaluator::load_for_profile(Path::new(&args.model), profile).unwrap();
-    eval.require_terminal_value().unwrap();
     let simulations = args
         .simulations
         .unwrap_or(search["simulations"].as_u64().unwrap() as u32);
@@ -193,6 +203,7 @@ fn run() {
         config.worlds = worlds;
         config.search.simulations = simulations;
         config.search.macro_substeps = args.macro_substeps;
+        config.search.macro_substep_min_prior = args.macro_substep_min_prior;
         config.search.dirichlet_epsilon = 0.;
         config.search.observation_profile = profile;
         config.search.seed = base_seed.wrapping_add(k.wrapping_mul(0x5851f42d4c957f2d));
@@ -203,7 +214,7 @@ fn run() {
                     &registry,
                     &game,
                     viewer,
-                    &mut eval,
+                    eval.as_mut(),
                     &config,
                     batch,
                     &mut |seed| {
@@ -213,9 +224,14 @@ fn run() {
                 )
                 .unwrap()
             }
-            None => {
-                determinized_search_batched(&registry, &game, viewer, &mut eval, &config, batch)
-            }
+            None => determinized_search_batched(
+                &registry,
+                &game,
+                viewer,
+                eval.as_mut(),
+                &config,
+                batch,
+            ),
         };
         let chosen = result.best_plan().unwrap().to_vec();
         let mut verdicts = Vec::new();
@@ -269,8 +285,10 @@ fn run() {
 
     // Value head along the exam's lines, from the searching seat's side.
     let mut lines = json!({});
+    let root_states = [eval.root_recurrent_state(0), eval.root_recurrent_state(1)];
     for (name, acts) in exam["lines"].as_object().cloned().unwrap_or_default() {
         let mut g = game.clone();
+        let mut line_states = root_states.clone();
         let mut values = Vec::new();
         let acts = plan_of(&acts);
         for step in 0..=acts.len() {
@@ -280,14 +298,20 @@ fn run() {
             let mover = decision_player(&g);
             let mask = build_action_mask(&g, mover);
             let obs = build_observation_tensor_with_mask(&g, mover, &registry, profile, &mask);
-            let v = PolicyValueFn::evaluate_batch(
-                &mut eval,
+            let st_in = line_states.get(mover as usize).and_then(|s| s.clone());
+            let (ev, st_out) = eval.evaluate_batch_recurrent(
                 &[EvalRequest {
                     obs,
                     mask: mask.clone(),
                 }],
-            )[0]
-            .value;
+                &[st_in],
+            );
+            let v = ev[0].value;
+            if let Some(next_st) = st_out.into_iter().next().flatten() {
+                if let Some(slot) = line_states.get_mut(mover as usize) {
+                    *slot = Some(next_st);
+                }
+            }
             values.push(if mover == viewer { v } else { -v });
             if step == acts.len() {
                 break;

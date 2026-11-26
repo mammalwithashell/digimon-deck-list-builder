@@ -297,3 +297,154 @@ fn macro_substeps_preserves_serial_and_batched_bit_exactness() {
         }
     });
 }
+
+/// Deterministic mock recurrent evaluator whose policy/value depend on the
+/// incoming `RecurrentState`, proving that serial and batched MCTS thread
+/// per-player hidden states identically down every tree path.
+#[derive(Default)]
+struct MockRecurrentEvaluator {
+    root: [Option<digimon_engine::search::RecurrentState>; 2],
+    batches: Vec<usize>,
+    non_none_inputs: usize,
+}
+
+impl PolicyValueFn for MockRecurrentEvaluator {
+    fn evaluate_batch(&mut self, requests: &[EvalRequest]) -> Vec<Evaluation> {
+        let states = vec![None; requests.len()];
+        self.evaluate_batch_recurrent(requests, &states).0
+    }
+
+    fn evaluate_batch_recurrent(
+        &mut self,
+        requests: &[EvalRequest],
+        states_in: &[Option<digimon_engine::search::RecurrentState>],
+    ) -> (
+        Vec<Evaluation>,
+        Vec<Option<digimon_engine::search::RecurrentState>>,
+    ) {
+        self.batches.push(requests.len());
+        let mut evals = Vec::with_capacity(requests.len());
+        let mut nexts = Vec::with_capacity(requests.len());
+        for (req, st) in requests.iter().zip(states_in) {
+            if st.is_some() {
+                self.non_none_inputs += 1;
+            }
+            let h_in = st.as_ref().map(|s| s.h_pi[0]).unwrap_or(0.0);
+            let legal: Vec<usize> = req
+                .mask
+                .iter()
+                .enumerate()
+                .filter(|(_, &m)| m > 0.5)
+                .map(|(i, _)| i)
+                .collect();
+            let mut weights = Vec::with_capacity(legal.len());
+            let mut sum = 0.0f32;
+            for (rank, &a) in legal.iter().enumerate() {
+                let w = 1.0 + ((a % 7) as f32) * 0.1 + (h_in * (rank as f32 + 1.0)).sin().abs() * 0.25;
+                weights.push((a, w));
+                sum += w;
+            }
+            let mut policy = vec![0.0f32; req.mask.len()];
+            for (a, w) in weights {
+                policy[a] = w / sum;
+            }
+            let obs_sum: f32 = req.obs.iter().take(16).sum();
+            let next_h = (h_in * 0.7 + obs_sum * 0.05 + 0.13).tanh();
+            let value = (next_h * 0.5).clamp(-0.95, 0.95);
+            evals.push(Evaluation { policy, value });
+            nexts.push(Some(digimon_engine::search::RecurrentState {
+                h_pi: vec![next_h; 4],
+                c_pi: vec![next_h * 0.5; 4],
+                h_vf: vec![next_h * -0.5; 4],
+                c_vf: vec![next_h * 0.25; 4],
+            }));
+        }
+        (evals, nexts)
+    }
+
+    fn is_recurrent(&self) -> bool {
+        true
+    }
+
+    fn root_recurrent_state(
+        &self,
+        player: digimon_engine::enums::PlayerId,
+    ) -> Option<digimon_engine::search::RecurrentState> {
+        self.root.get(player as usize).and_then(|s| s.clone())
+    }
+}
+
+#[test]
+fn recurrent_evaluator_threads_state_with_serial_and_batched_parity() {
+    run_big_stack(|| {
+        let data = load_card_data();
+        let registry = CardRegistry::from_cards(&data);
+        let roots = vec![game(&data, 19, 12), game(&data, 23, 24)];
+        let configs: Vec<SearchConfig> = (0..roots.len())
+            .map(|i| SearchConfig {
+                simulations: 48,
+                seed: 1200 + i as u64,
+                macro_substeps: 8,
+                macro_substep_min_prior: 0.85,
+                ..Default::default()
+            })
+            .collect();
+        let seed_state = digimon_engine::search::RecurrentState {
+            h_pi: vec![0.42; 4],
+            c_pi: vec![0.11; 4],
+            h_vf: vec![-0.25; 4],
+            c_vf: vec![0.07; 4],
+        };
+        let mcts = Mcts::new(&registry);
+        let mut serial = MockRecurrentEvaluator {
+            root: [Some(seed_state.clone()), Some(seed_state.clone())],
+            ..Default::default()
+        };
+        let expected: Vec<_> = roots
+            .iter()
+            .zip(&configs)
+            .map(|(r, c)| mcts.search(r, &mut serial, c))
+            .collect();
+        let mut batched = MockRecurrentEvaluator {
+            root: [Some(seed_state.clone()), Some(seed_state)],
+            ..Default::default()
+        };
+        let actual = mcts.search_batch(&roots, &mut batched, &configs);
+        assert_eq!(actual, expected);
+        assert!(batched.non_none_inputs > roots.len());
+        assert_eq!(
+            serial.batches.iter().sum::<usize>(),
+            batched.batches.iter().sum::<usize>()
+        );
+    });
+}
+
+#[test]
+fn macro_substep_min_prior_gates_and_preserves_parity() {
+    run_big_stack(|| {
+        let data = load_card_data();
+        let registry = CardRegistry::from_cards(&data);
+        let root = game(&data, 17, 18);
+        let mcts = Mcts::new(&registry);
+        let cfg_zero = SearchConfig {
+            simulations: 40,
+            seed: 555,
+            macro_substeps: 0,
+            macro_substep_min_prior: 0.0,
+            ..Default::default()
+        };
+        let cfg_strict = SearchConfig {
+            simulations: 40,
+            seed: 555,
+            macro_substeps: 16,
+            macro_substep_min_prior: 1.0,
+            ..Default::default()
+        };
+        // With min_prior=1.0 on a non-degenerate evaluator, no multi-option
+        // pending selection has top prior >= 1.0, so search matches macro_substeps=0.
+        let r0 = mcts.search(&root, &mut SignalEvaluator::default(), &cfg_zero);
+        let r_strict = mcts.search(&root, &mut SignalEvaluator::default(), &cfg_strict);
+        assert_eq!(r0, r_strict);
+    });
+}
+

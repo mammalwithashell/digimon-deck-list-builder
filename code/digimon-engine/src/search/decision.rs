@@ -173,13 +173,37 @@ pub(crate) fn evaluate_requests(
     evaluator: &mut dyn PolicyValueFn,
     cap: usize,
 ) -> Vec<Evaluation> {
+    let states_in = vec![None; requests.len()];
+    evaluate_requests_recurrent(requests, &states_in, evaluator, cap).0
+}
+
+/// Recurrent-aware batch evaluation: threads per-request optional hidden states
+/// through `PolicyValueFn::evaluate_batch_recurrent` while enforcing the batch cap.
+pub(crate) fn evaluate_requests_recurrent(
+    requests: &[EvalRequest],
+    states_in: &[Option<super::evaluator::RecurrentState>],
+    evaluator: &mut dyn PolicyValueFn,
+    cap: usize,
+) -> (Vec<Evaluation>, Vec<Option<super::evaluator::RecurrentState>>) {
+    assert_eq!(
+        requests.len(),
+        states_in.len(),
+        "requests/states_in length mismatch"
+    );
     let mut result = Vec::with_capacity(requests.len());
-    for batch in requests.chunks(cap.max(1)) {
-        let evaluated = evaluator.evaluate_batch(batch);
+    let mut states_out = Vec::with_capacity(requests.len());
+    let chunk = cap.max(1);
+    for (batch, batch_states) in requests.chunks(chunk).zip(states_in.chunks(chunk)) {
+        let (evaluated, next_states) = evaluator.evaluate_batch_recurrent(batch, batch_states);
         assert_eq!(
             evaluated.len(),
             batch.len(),
             "evaluator returned wrong batch size"
+        );
+        assert_eq!(
+            next_states.len(),
+            batch.len(),
+            "evaluator returned wrong recurrent state batch size"
         );
         for (request, evaluation) in batch.iter().zip(&evaluated) {
             assert_eq!(request.mask.len(), evaluation.policy.len());
@@ -196,6 +220,7 @@ pub(crate) fn evaluate_requests(
             );
         }
         result.extend(evaluated);
+        states_out.extend(next_states);
     }
-    result
+    (result, states_out)
 }

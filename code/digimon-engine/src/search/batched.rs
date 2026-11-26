@@ -28,7 +28,12 @@ struct Tree {
 }
 
 impl Tree {
-    fn new(mcts: &Mcts<'_>, root: &Game, config: &SearchConfig) -> Self {
+    fn new(
+        mcts: &Mcts<'_>,
+        root: &Game,
+        root_states: [Option<RecurrentState>; 2],
+        config: &SearchConfig,
+    ) -> Self {
         debug_assert_eq!(root.rules.player_count, 2);
         let mut tree = Self {
             arena: Vec::new(),
@@ -37,7 +42,7 @@ impl Tree {
             completed: 0,
             pending: None,
         };
-        match mcts.prepare_node(measure("clone", || root.clone()), false, config) {
+        match mcts.prepare_node(measure("clone", || root.clone()), false, root_states, config) {
             PreparedNode::Ready(node, _) => {
                 tree.arena.push(node);
             }
@@ -63,7 +68,10 @@ impl Tree {
         self.arena[parent].edges[edge].child = Some(child);
     }
 
-    fn next_request(&mut self, mcts: &Mcts<'_>) -> Option<Vec<EvalRequest>> {
+    fn next_request(
+        &mut self,
+        mcts: &Mcts<'_>,
+    ) -> Option<(Vec<EvalRequest>, Vec<Option<RecurrentState>>)> {
         if let Some(Pending::Root(prepared) | Pending::Expand { prepared, .. }) = &mut self.pending
         {
             return Some(mcts.node_requests(prepared));
@@ -96,11 +104,15 @@ impl Tree {
                         ),
                         mask,
                     };
+                    let st = node
+                        .recurrent_states
+                        .get(node.mover as usize)
+                        .and_then(|s| s.clone());
                     self.pending = Some(Pending::Depth {
                         mover: node.mover,
                         path,
                     });
-                    return Some(vec![request]);
+                    return Some((vec![request], vec![st]));
                 }
                 let edge = select_edge(&self.arena[cur], self.config.c_puct, self.config.unvisited_q);
                 path.push((cur, edge));
@@ -108,11 +120,12 @@ impl Tree {
                     Some(child) => cur = child,
                     None => {
                         let parent = &self.arena[cur];
+                        let parent_states = parent.recurrent_states.clone();
                         let mut game = measure("clone", || parent.game.clone());
                         measure("step", || {
                             apply_plan(&mut game, parent.mover, &parent.edges[edge].plan)
                         });
-                        match mcts.prepare_node(game, true, &self.config) {
+                        match mcts.prepare_node(game, true, parent_states, &self.config) {
                             PreparedNode::Ready(node, value) => {
                                 let mover = node.mover;
                                 self.attach(cur, edge, node);
@@ -138,10 +151,15 @@ impl Tree {
         None
     }
 
-    fn accept(&mut self, mcts: &Mcts<'_>, evaluations: &[Evaluation]) {
+    fn accept(
+        &mut self,
+        mcts: &Mcts<'_>,
+        evaluations: &[Evaluation],
+        states_out: &[Option<RecurrentState>],
+    ) {
         match self.pending.take().expect("unsolicited neural evaluation") {
             Pending::Root(prepared) => {
-                let (mut node, _) = mcts.finish_node(prepared, evaluations);
+                let (mut node, _) = mcts.finish_node(prepared, evaluations, states_out);
                 if self.config.dirichlet_epsilon > 0.0 && node.edges.len() > 1 {
                     let noise = sample_dirichlet(
                         &mut self.rng,
@@ -164,6 +182,7 @@ impl Tree {
             } => match mcts.step_or_finish_node(
                 prepared,
                 evaluations,
+                states_out,
                 &mut substeps_remaining,
                 &self.config,
             ) {
@@ -213,7 +232,13 @@ impl Tree {
                 }
             }),
             self.completed,
-        ).with_priors(root.edges.iter().map(|e| (e.plan.clone(), e.raw_prior, e.prior)).collect())
+        )
+        .with_priors(
+            root.edges
+                .iter()
+                .map(|e| (e.plan.clone(), e.raw_prior, e.prior))
+                .collect(),
+        )
     }
 }
 
@@ -230,32 +255,39 @@ impl Mcts<'_> {
     ) -> Vec<SearchResult> {
         let _profile = span("search_batch");
         assert_eq!(roots.len(), configs.len(), "one configuration per root");
+        let root_states = [
+            evaluator.root_recurrent_state(0),
+            evaluator.root_recurrent_state(1),
+        ];
         let mut trees: Vec<_> = roots
             .iter()
             .zip(configs)
-            .map(|(r, c)| Tree::new(self, r, c))
+            .map(|(r, c)| Tree::new(self, r, root_states.clone(), c))
             .collect();
         loop {
             let mut requests = Vec::new();
+            let mut states_in = Vec::new();
             let mut slots = Vec::new();
             for (slot, tree) in trees.iter_mut().enumerate() {
-                if let Some(request) = tree.next_request(self) {
+                if let Some((request, req_states)) = tree.next_request(self) {
                     let start = requests.len();
                     requests.extend(request);
+                    states_in.extend(req_states);
                     slots.push((slot, start..requests.len()));
                 }
             }
             if requests.is_empty() {
                 break;
             }
-            let evaluations = evaluate_requests(&requests, evaluator, roots.len());
+            let (evaluations, states_out) =
+                evaluate_requests_recurrent(&requests, &states_in, evaluator, roots.len());
             assert_eq!(
                 evaluations.len(),
                 requests.len(),
                 "evaluator returned wrong batch size"
             );
             for (slot, range) in slots {
-                trees[slot].accept(self, &evaluations[range]);
+                trees[slot].accept(self, &evaluations[range.clone()], &states_out[range]);
             }
         }
         trees.iter().map(Tree::result).collect()

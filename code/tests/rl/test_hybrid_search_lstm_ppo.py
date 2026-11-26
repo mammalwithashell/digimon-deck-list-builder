@@ -329,3 +329,149 @@ def test_auto_advance_forced_wrapper_skips_single_action_states():
     obs, reward, terminated, truncated, _ = wrapped.step(3)
     assert terminated
     assert inner.applied == [0, 2, 1, 3]
+
+
+def test_search_budget_flags_macro_substep_min_prior():
+    from tools.run_selfplay_generation import search_budget_flags
+
+    base = argparse.Namespace(
+        full_search=True,
+        macro_substeps=16,
+        macro_substep_min_prior=0.0,
+    )
+    assert search_budget_flags(base) == ["--macro-substeps", "16"]
+
+    gated = argparse.Namespace(
+        full_search=True,
+        macro_substeps=16,
+        macro_substep_min_prior=0.85,
+    )
+    assert search_budget_flags(gated) == [
+        "--macro-substeps",
+        "16",
+        "--macro-substep-min-prior",
+        "0.85",
+    ]
+
+    disabled_macro = argparse.Namespace(
+        full_search=True,
+        macro_substeps=0,
+        macro_substep_min_prior=0.85,
+    )
+    assert search_budget_flags(disabled_macro) == []
+
+
+def test_lstm_onnx_export_dynamic_batch_parity_and_regularization(tmp_path: Path):
+    import onnxruntime as ort
+    from digimon_gym.agents.azero_lstm_distill import distill_lstm
+
+    shard_dir = _write_synthetic_shard_dir(tmp_path / "shards", games=4, steps_per_seat=3)
+    out_zip = tmp_path / "lstm_reg.zip"
+    out_onnx = tmp_path / "lstm_reg.onnx"
+    value_onnx = tmp_path / "lstm_reg.value.onnx"
+
+    summary = distill_lstm(
+        shard_dirs=[shard_dir],
+        out=out_zip,
+        lstm_hidden_size=32,
+        net_arch=[32, 32],
+        features_dim=32,
+        embedding_dim=4,
+        epochs=2,
+        seq_batch_size=4,
+        lr=1e-3,
+        weight_decay=1e-4,
+        value_label_smoothing=0.05,
+        holdout_fraction=0.25,
+        device="cpu",
+        seed=19,
+        export_onnx=out_onnx,
+    )
+    assert summary["weight_decay"] == pytest.approx(1e-4)
+    assert summary["value_label_smoothing"] == pytest.approx(0.05)
+    assert np.isfinite(summary["epochs"][0]["heldout"]["value_mse"])
+    assert out_onnx.exists()
+    assert value_onnx.exists()
+
+    # Verify dynamic batch=4 matches 4 independent batch=1 evaluations on both actor and critic ONNX.
+    rng = np.random.default_rng(77)
+    obs_dim = current_contract("standard_lite_v2")["tensor_size"]
+    batch = 4
+    obs = rng.standard_normal((batch, obs_dim), dtype=np.float32) * 0.1
+    h_in = rng.standard_normal((1, batch, 32), dtype=np.float32) * 0.1
+    c_in = rng.standard_normal((1, batch, 32), dtype=np.float32) * 0.1
+
+    actor_sess = ort.InferenceSession(str(out_onnx), providers=["CPUExecutionProvider"])
+    b_logits, b_h, b_c = actor_sess.run(
+        ["logits", "h_out", "c_out"],
+        {"obs": obs, "h_in": h_in, "c_in": c_in},
+    )
+    assert b_logits.shape[0] == batch
+    assert b_h.shape == (1, batch, 32)
+    assert b_c.shape == (1, batch, 32)
+
+    critic_sess = ort.InferenceSession(str(value_onnx), providers=["CPUExecutionProvider"])
+    b_val, b_hv, b_cv = critic_sess.run(
+        ["value", "h_out", "c_out"],
+        {"obs": obs, "h_in": h_in, "c_in": c_in},
+    )
+    assert b_val.shape == (batch, 1)
+    assert b_hv.shape == (1, batch, 32)
+    assert b_cv.shape == (1, batch, 32)
+
+    for i in range(batch):
+        s_logits, s_h, s_c = actor_sess.run(
+            ["logits", "h_out", "c_out"],
+            {"obs": obs[i : i + 1], "h_in": h_in[:, i : i + 1, :], "c_in": c_in[:, i : i + 1, :]},
+        )
+        np.testing.assert_allclose(b_logits[i], s_logits[0], atol=1e-5, rtol=1e-4)
+        np.testing.assert_allclose(b_h[:, i, :], s_h[:, 0, :], atol=1e-5, rtol=1e-4)
+        np.testing.assert_allclose(b_c[:, i, :], s_c[:, 0, :], atol=1e-5, rtol=1e-4)
+
+        s_val, s_hv, s_cv = critic_sess.run(
+            ["value", "h_out", "c_out"],
+            {"obs": obs[i : i + 1], "h_in": h_in[:, i : i + 1, :], "c_in": c_in[:, i : i + 1, :]},
+        )
+        np.testing.assert_allclose(b_val[i], s_val[0], atol=1e-5, rtol=1e-4)
+        np.testing.assert_allclose(b_hv[:, i, :], s_hv[:, 0, :], atol=1e-5, rtol=1e-4)
+        np.testing.assert_allclose(b_cv[:, i, :], s_cv[:, 0, :], atol=1e-5, rtol=1e-4)
+
+
+def test_campaign_cli_iterative_lstm_and_architecture_flags(tmp_path: Path):
+    from tools.run_hybrid_small_campaign import build_parser, make_config
+
+    args = build_parser().parse_args(
+        [
+            "--run-dir",
+            str(tmp_path / "iter_run"),
+            "--mode",
+            "iterative-lstm",
+            "--rounds",
+            "3",
+            "--iterative-search-generations",
+            "2",
+            "--net-arch",
+            "512,512",
+            "--features-dim",
+            "384",
+            "--lstm-hidden-size",
+            "384",
+            "--macro-substep-min-prior",
+            "0.85",
+            "--weight-decay",
+            "1e-4",
+            "--value-label-smoothing",
+            "0.05",
+        ]
+    )
+    cfg = make_config(args)
+    assert cfg.mode == "iterative-lstm"
+    assert cfg.iterative_rounds == 3
+    assert cfg.iterative_search_generations == 2
+    assert cfg.net_arch == (512, 512)
+    assert cfg.features_dim == 384
+    assert cfg.lstm_hidden_size == 384
+    assert cfg.macro_substep_min_prior == pytest.approx(0.85)
+    assert cfg.weight_decay == pytest.approx(1e-4)
+    assert cfg.value_label_smoothing == pytest.approx(0.05)
+

@@ -254,6 +254,10 @@ enum Command {
         /// (0 = single-decision expansion, unchanged).
         #[arg(long, default_value_t = 0)]
         macro_substeps: u32,
+        /// Minimum top prior probability required to bundle an interior
+        /// pending-selection macro-substep (0.0 = unconditional).
+        #[arg(long, default_value_t = 0.0)]
+        macro_substep_min_prior: f32,
         /// Observation profile override. Defaults to the model's
         /// embedded training contract.
         #[arg(long)]
@@ -395,6 +399,7 @@ fn run() -> ExitCode {
             cheap_sims,
             root_noise_epsilon,
             macro_substeps,
+            macro_substep_min_prior,
             tensor_profile,
         } => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
@@ -426,6 +431,7 @@ fn run() -> ExitCode {
                 cheap_sims,
                 root_noise_epsilon,
                 macro_substeps,
+                macro_substep_min_prior,
                 tensor_profile,
                 card_data,
                 cli.cards_json

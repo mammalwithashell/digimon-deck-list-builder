@@ -33,12 +33,58 @@ pub struct Evaluation {
     pub value: f32,
 }
 
+/// Recurrent hidden states (actor + critic `(h, c)`) threaded per player
+/// along a search path when using a recurrent evaluator such as
+/// `BatchedLstmPolicyValueEvaluator`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecurrentState {
+    pub h_pi: Vec<f32>,
+    pub c_pi: Vec<f32>,
+    pub h_vf: Vec<f32>,
+    pub c_vf: Vec<f32>,
+}
+
 /// A batched policy+value function guiding selection and leaf evaluation.
 pub trait PolicyValueFn {
     /// Evaluate a batch of states. Must return exactly one [`Evaluation`]
     /// per request, in order, each policy the same length as the request's
     /// mask with zero mass on masked-out actions.
     fn evaluate_batch(&mut self, requests: &[EvalRequest]) -> Vec<Evaluation>;
+
+    /// Evaluate a batch with explicit per-request recurrent input states.
+    /// Stateless evaluators ignore `states_in` and return `None` states.
+    fn evaluate_batch_recurrent(
+        &mut self,
+        requests: &[EvalRequest],
+        _states_in: &[Option<RecurrentState>],
+    ) -> (Vec<Evaluation>, Vec<Option<RecurrentState>>) {
+        let evals = self.evaluate_batch(requests);
+        let states_out = vec![None; evals.len()];
+        (evals, states_out)
+    }
+
+    /// True if this evaluator threads recurrent hidden state across decisions.
+    fn is_recurrent(&self) -> bool {
+        false
+    }
+
+    /// Live root recurrent state for `player` at the start of a search call.
+    fn root_recurrent_state(&self, _player: crate::enums::PlayerId) -> Option<RecurrentState> {
+        None
+    }
+
+    /// Reset live per-episode recurrent state at the start of a new game.
+    fn reset_episode(&mut self) {}
+
+    /// Advance the live per-episode recurrent state for `player` on a real
+    /// non-forced game decision committed in self-play.
+    fn observe_committed_step(
+        &mut self,
+        _player: crate::enums::PlayerId,
+        _obs: &[f32],
+        _mask: &[f32],
+    ) {
+    }
 }
 
 /// Stub evaluator: uniform priors over legal actions, value 0.0.

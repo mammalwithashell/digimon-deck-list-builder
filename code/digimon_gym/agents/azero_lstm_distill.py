@@ -446,6 +446,8 @@ def distill_lstm(
     value_coef: float = 1.0,
     max_grad_norm: float = 1.0,
     holdout_fraction: float = 0.15,
+    weight_decay: float = 0.0,
+    value_label_smoothing: float = 0.0,
     device: str = "cpu",
     seed: int = 0,
     export_onnx: Optional[Path] = None,
@@ -560,7 +562,14 @@ def distill_lstm(
         else None
     )
 
-    optimizer = torch.optim.Adam(policy.parameters(), lr=lr)
+    if weight_decay < 0.0:
+        raise ValueError(f"weight_decay must be >= 0.0, got {weight_decay}")
+    if not (0.0 <= value_label_smoothing < 1.0):
+        raise ValueError(f"value_label_smoothing must lie in [0, 1), got {value_label_smoothing}")
+    if weight_decay > 0.0:
+        optimizer = torch.optim.AdamW(policy.parameters(), lr=lr, weight_decay=weight_decay)
+    else:
+        optimizer = torch.optim.Adam(policy.parameters(), lr=lr)
     rng = np.random.default_rng(seed)
     dev = policy.device
     best = {"epoch": None, "loss": float("inf"), "state": None}
@@ -577,6 +586,8 @@ def distill_lstm(
             obs_t, pi_t, legal_t, seq_mask_t, weight_t, z_t, term_t = _collate_batch(
                 batch, ds.action_dim, dev
             )
+            if value_label_smoothing > 0.0:
+                z_t = z_t * (1.0 - value_label_smoothing)
             logits, values = _forward_sequences(policy, obs_t)
             masked_logits = logits.masked_fill(~legal_t, torch.finfo(logits.dtype).min)
             logp = torch.log_softmax(masked_logits, dim=-1)
@@ -693,6 +704,8 @@ def distill_lstm(
         "heldout_sequences": len(heldout_seqs),
         "total_rows": ds.total_rows,
         "excluded_games": sum(len(q["games"]) for q in ds.exclusions),
+        "weight_decay": float(weight_decay),
+        "value_label_smoothing": float(value_label_smoothing),
         "epochs": history,
         "selection": selection,
         "out": str(out),
@@ -718,6 +731,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--value-coef", type=float, default=1.0)
     p.add_argument("--max-grad-norm", type=float, default=1.0)
     p.add_argument("--holdout-fraction", type=float, default=0.15)
+    p.add_argument("--weight-decay", type=float, default=0.0)
+    p.add_argument("--value-label-smoothing", type=float, default=0.0)
     p.add_argument("--device", default="cpu")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--export-onnx", type=Path, default=None)
@@ -743,6 +758,8 @@ def main(argv: list[str] | None = None) -> int:
         value_coef=args.value_coef,
         max_grad_norm=args.max_grad_norm,
         holdout_fraction=args.holdout_fraction,
+        weight_decay=args.weight_decay,
+        value_label_smoothing=args.value_label_smoothing,
         device=args.device,
         seed=args.seed,
         export_onnx=args.export_onnx,

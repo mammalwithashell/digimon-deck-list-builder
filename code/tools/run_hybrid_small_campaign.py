@@ -36,6 +36,9 @@ if str(REPO_ROOT / "code") not in sys.path:
 @dataclass
 class CampaignConfig:
     preset: str = "full"
+    mode: str = "hybrid-ab"           # "hybrid-ab" | "iterative-lstm"
+    iterative_rounds: int = 2
+    iterative_search_generations: int = 1
     seed: int = 20261126
     procs: int = 2
     net_arch: tuple[int, ...] = (256, 256)
@@ -50,12 +53,15 @@ class CampaignConfig:
     worlds: int = 4
     eval_batch_size: int = 4
     macro_substeps: int = 16
+    macro_substep_min_prior: float = 0.0
     reduced_sims: int = 64
     full_search_fraction: float = 0.25
     cheap_sims: int = 64
     search_epochs: int = 4
     search_batch_size: int = 256
     holdout_fraction: float = 0.15
+    weight_decay: float = 0.0
+    value_label_smoothing: float = 0.0
     distill_epochs: int = 6
     distill_seq_batch_size: int = 16
     ppo_timesteps: int = 500_000
@@ -71,12 +77,24 @@ class CampaignConfig:
     policy_eval_games_per_archetype: int = 120  # 120 * 3 = 360 games
     searched_eval_games: int = 180              # 90 seat-balanced pairs
     exam_seeds: int = 8
+    init_lstm_zip: Optional[str] = None
+    init_lstm_onnx: Optional[str] = None
+
+
+def _parse_net_arch(raw: str) -> tuple[int, ...]:
+    parts = [int(p.strip()) for p in raw.split(",") if p.strip()]
+    if not parts or any(p <= 0 for p in parts):
+        raise ValueError(f"--net-arch must be comma-separated positive ints, got {raw!r}")
+    return tuple(parts)
 
 
 def make_config(args: argparse.Namespace) -> CampaignConfig:
     if args.preset == "smoke":
         cfg = CampaignConfig(
             preset="smoke",
+            mode=getattr(args, "mode", "hybrid-ab"),
+            iterative_rounds=1,
+            iterative_search_generations=1,
             seed=args.seed,
             procs=min(args.procs, 2),
             net_arch=(64, 64),
@@ -91,6 +109,7 @@ def make_config(args: argparse.Namespace) -> CampaignConfig:
             worlds=2,
             eval_batch_size=2,
             macro_substeps=8,
+            macro_substep_min_prior=0.0,
             reduced_sims=8,
             full_search_fraction=0.5,
             cheap_sims=8,
@@ -114,8 +133,33 @@ def make_config(args: argparse.Namespace) -> CampaignConfig:
             exam_seeds=2,
         )
     else:
-        cfg = CampaignConfig(preset="full", seed=args.seed, procs=args.procs)
+        cfg = CampaignConfig(
+            preset="full",
+            mode=getattr(args, "mode", "hybrid-ab"),
+            seed=args.seed,
+            procs=args.procs,
+        )
 
+    if getattr(args, "rounds", None) is not None:
+        cfg.iterative_rounds = args.rounds
+    if getattr(args, "iterative_search_generations", None) is not None:
+        cfg.iterative_search_generations = args.iterative_search_generations
+    if getattr(args, "net_arch", None) is not None:
+        cfg.net_arch = _parse_net_arch(args.net_arch)
+    if getattr(args, "features_dim", None) is not None:
+        cfg.features_dim = args.features_dim
+    if getattr(args, "lstm_hidden_size", None) is not None:
+        cfg.lstm_hidden_size = args.lstm_hidden_size
+    if getattr(args, "macro_substep_min_prior", None) is not None:
+        cfg.macro_substep_min_prior = args.macro_substep_min_prior
+    if getattr(args, "weight_decay", None) is not None:
+        cfg.weight_decay = args.weight_decay
+    if getattr(args, "value_label_smoothing", None) is not None:
+        cfg.value_label_smoothing = args.value_label_smoothing
+    if getattr(args, "init_lstm_zip", None) is not None:
+        cfg.init_lstm_zip = str(args.init_lstm_zip)
+    if getattr(args, "init_lstm_onnx", None) is not None:
+        cfg.init_lstm_onnx = str(args.init_lstm_onnx)
     if args.bootstrap_rounds is not None:
         cfg.bootstrap_rounds = args.bootstrap_rounds
     if args.search_games is not None:
@@ -420,6 +464,7 @@ def run_searched_head_to_head(
     worlds: int,
     eval_batch_size: int,
     macro_substeps: int,
+    macro_substep_min_prior: float = 0.0,
     reduced_sims: int = 0,
     seed: int,
 ) -> dict:
@@ -449,6 +494,8 @@ def run_searched_head_to_head(
         budget_flags += ["--reduced-sims", str(reduced_sims)]
     if macro_substeps > 0:
         budget_flags += ["--macro-substeps", str(macro_substeps)]
+        if macro_substep_min_prior > 0.0:
+            budget_flags += ["--macro-substep-min-prior", str(macro_substep_min_prior)]
 
     chunk = max(2, min(16, games // max(1, procs)))
     if chunk % 2 != 0:
@@ -527,6 +574,7 @@ def run_searched_head_to_head(
         "sims": sims,
         "worlds": worlds,
         "macro_substeps": macro_substeps,
+        "macro_substep_min_prior": macro_substep_min_prior,
         "games": len(records),
         "truncated_games": truncated_total,
         "wins": wins,
@@ -550,6 +598,7 @@ def run_search_exam(
     *,
     seeds: int = 8,
     macro_substeps: int = 0,
+    macro_substep_min_prior: float = 0.0,
 ) -> dict:
     out_json.parent.mkdir(parents=True, exist_ok=True)
     cmd = [
@@ -564,6 +613,8 @@ def run_search_exam(
         "--json",
         str(out_json),
     ]
+    if macro_substep_min_prior > 0.0:
+        cmd += ["--macro-substep-min-prior", str(macro_substep_min_prior)]
     env = dict(os.environ)
     env["DIGIMON_CARDS_JSON"] = str(REPO_ROOT / "data" / "cards.json")
     res = subprocess.run(cmd, capture_output=True, text=True, env=env)
@@ -571,6 +622,7 @@ def run_search_exam(
         raise RuntimeError(f"search_exam failed:\n{res.stdout}\n{res.stderr}")
     report = json.loads(out_json.read_text(encoding="utf-8"))
     report["macro_substeps"] = macro_substeps
+    report["macro_substep_min_prior"] = macro_substep_min_prior
     report["stdout"] = res.stdout
     atomic_write_json(out_json, report)
     return report
@@ -712,6 +764,7 @@ def run_campaign(
                     "--worlds", str(cfg.worlds),
                     "--eval-batch-size", str(cfg.eval_batch_size),
                     "--macro-substeps", str(cfg.macro_substeps),
+                    "--macro-substep-min-prior", str(cfg.macro_substep_min_prior),
                     "--reduced-sims", str(cfg.reduced_sims),
                     "--full-search-fraction", str(cfg.full_search_fraction),
                     "--cheap-sims", str(cfg.cheap_sims),
@@ -719,6 +772,8 @@ def run_campaign(
                     "--epochs", str(cfg.search_epochs),
                     "--batch-size", str(cfg.search_batch_size),
                     "--lr", "2e-4",
+                    "--weight-decay", str(cfg.weight_decay),
+                    "--value-label-smoothing", str(cfg.value_label_smoothing),
                     "--value-coef", "1.0",
                     "--value-holdout-fraction", str(cfg.holdout_fraction),
                     "--value-activation", "tanh",
@@ -753,7 +808,9 @@ def run_campaign(
             ),
             "examon_exam_macro16": run_search_exam(
                 exam_bin, exam_json, gen3_onnx, stage1_dir / "exam_gen3_macro16.json",
-                seeds=cfg.exam_seeds, macro_substeps=cfg.macro_substeps
+                seeds=cfg.exam_seeds,
+                macro_substeps=cfg.macro_substeps,
+                macro_substep_min_prior=cfg.macro_substep_min_prior,
             ),
         }
         atomic_write_json(stage1_dir / "stage1_gate.json", gate1)
@@ -795,6 +852,8 @@ def run_campaign(
             epochs=cfg.distill_epochs,
             seq_batch_size=cfg.distill_seq_batch_size,
             lr=3e-4,
+            weight_decay=cfg.weight_decay,
+            value_label_smoothing=cfg.value_label_smoothing,
             value_coef=1.0,
             holdout_fraction=cfg.holdout_fraction,
             device="cpu",
@@ -1031,6 +1090,7 @@ def run_campaign(
                         "--worlds", str(cfg.worlds),
                         "--eval-batch-size", str(cfg.eval_batch_size),
                         "--macro-substeps", str(cfg.macro_substeps),
+                        "--macro-substep-min-prior", str(cfg.macro_substep_min_prior),
                         "--reduced-sims", str(cfg.reduced_sims),
                         "--full-search-fraction", str(cfg.full_search_fraction),
                         "--cheap-sims", str(cfg.cheap_sims),
@@ -1038,6 +1098,8 @@ def run_campaign(
                         "--epochs", str(cfg.search_epochs),
                         "--batch-size", str(cfg.search_batch_size),
                         "--lr", "1e-4",
+                        "--weight-decay", str(cfg.weight_decay),
+                        "--value-label-smoothing", str(cfg.value_label_smoothing),
                         "--value-coef", "1.0",
                         "--value-holdout-fraction", str(cfg.holdout_fraction),
                         "--value-activation", "tanh",
@@ -1152,6 +1214,7 @@ def run_campaign(
                 worlds=cfg.worlds,
                 eval_batch_size=cfg.eval_batch_size,
                 macro_substeps=cfg.macro_substeps,
+                macro_substep_min_prior=cfg.macro_substep_min_prior,
                 reduced_sims=cfg.reduced_sims,
                 seed=cfg.seed + seed_off,
             )
@@ -1160,6 +1223,7 @@ def run_campaign(
         for name, onnx_path in (
             ("Gen0", gen0_onnx),
             ("Gen3", gen3_onnx),
+            ("lstm_ppo_r1", lstm_ppo_onnx),
             ("Gen6_control", gen6_control_onnx),
             ("Gen6_hybrid", gen6_hybrid_onnx),
         ):
@@ -1170,7 +1234,9 @@ def run_campaign(
                 ),
                 "macro_16": run_search_exam(
                     exam_bin, exam_json, onnx_path, stage5_dir / "exams" / f"{name}_macro16.json",
-                    seeds=cfg.exam_seeds, macro_substeps=cfg.macro_substeps
+                    seeds=cfg.exam_seeds,
+                    macro_substeps=cfg.macro_substeps,
+                    macro_substep_min_prior=cfg.macro_substep_min_prior,
                 ),
             }
 
@@ -1194,6 +1260,384 @@ def run_campaign(
     return json.loads(final_eval_path.read_text(encoding="utf-8"))
 
 
+def run_iterative_lstm_campaign(
+    run_dir: Path,
+    pool_dir: Path,
+    cli_bin: Path,
+    exam_bin: Path,
+    cfg: CampaignConfig,
+) -> dict:
+    """Multi-round iterative Search(LSTM) -> AZ-LSTM -> KL-Anchored PPO loop."""
+    import digimon_engine
+    from digimon_gym.agents.gauntlet import GeneralistDeckPool
+    from digimon_gym.agents.opponent_pool import OpponentEntry as PpoOpponentEntry, OpponentPool
+    from digimon_gym.agents.pilot_training import train as ppo_train
+    from digimon_gym.agents.training_config import TrainingConfig
+    from digimon_gym.digimon_gym import greedy_policy
+    from digimon_gym.tensor_profiles import get_tensor_profile
+    from tools.export_onnx import export_lstm
+    from tools.prepare_small_hybrid_pool import prepare_pool
+    from tools.run_selfplay_generation import load_state as load_sp_state, main as sp_main
+    from tools.search_opponents import SCHEMA as OPP_SCHEMA, checkpoint_entry
+
+    run_dir.mkdir(parents=True, exist_ok=True)
+    atomic_write_json(run_dir / "campaign_config.json", asdict(cfg))
+
+    if not (pool_dir / "manifest.json").exists():
+        prepare_pool(out_dir=pool_dir)
+
+    implemented = set(digimon_engine.load_implemented_card_ids())
+    heldout_pool = GeneralistDeckPool.from_snapshot(
+        pool_dir / "heldout_snapshot.json", implemented_card_ids=implemented
+    )
+    train_pool = GeneralistDeckPool.from_snapshot(
+        pool_dir / "train_snapshot.json", implemented_card_ids=implemented
+    )
+    decks_path = pool_dir / "decks.json"
+    heldout_decks_path = pool_dir / "heldout_decks.json"
+    exam_json = REPO_ROOT / "qa" / "search-exams" / "ex13-examon-training-before-wingdramon.json"
+
+    os.environ["DIGIMON_ONNX_OPPONENT"] = "1"
+
+    state = load_campaign_state(run_dir)
+    completed = set(state.get("completed_stages", []))
+
+    # Round 0 seed: either explicit --init-lstm-zip or Stage 0->1->2 warm start.
+    if cfg.init_lstm_zip is not None:
+        r0_zip = Path(cfg.init_lstm_zip).resolve()
+        if cfg.init_lstm_onnx is not None:
+            r0_onnx = Path(cfg.init_lstm_onnx).resolve()
+        else:
+            r0_onnx = run_dir / "round0_init" / "init_lstm.onnx"
+            if not r0_onnx.exists():
+                r0_onnx.parent.mkdir(parents=True, exist_ok=True)
+                export_lstm(str(r0_zip), str(r0_onnx), get_tensor_profile("standard_lite_v2"))
+    else:
+        # Run Stages 0, 1, 2 to bootstrap the initial distilled LSTM.
+        bootstrap_cfg = CampaignConfig(**{**asdict(cfg), "mode": "hybrid-ab"})
+        stage2_dir = run_dir / "stage2_distill"
+        r0_zip = stage2_dir / "lstm_distilled_r1.zip"
+        r0_onnx = stage2_dir / "lstm_distilled_r1.onnx"
+        if "stage2_lstm_distill" not in completed:
+            # Reuse Stages 0-2 by marking Stages 3-5 skipped inside a dedicated pre-bootstrap helper.
+            _run_bootstrap_to_lstm(run_dir, pool_dir, cli_bin, exam_bin, bootstrap_cfg)
+            state = load_campaign_state(run_dir)
+            completed = set(state.get("completed_stages", []))
+
+    round_checkpoints: list[dict[str, str]] = [
+        {"name": "lstm_r0", "zip": str(r0_zip), "onnx": str(r0_onnx)}
+    ]
+    prev_zip = r0_zip
+    prev_onnx = r0_onnx
+
+    for r in range(1, cfg.iterative_rounds + 1):
+        round_dir = run_dir / f"round{r}"
+        search_dir = round_dir / "search_lstm"
+        ppo_dir = round_dir / "ppo_lstm"
+        n_gens = max(1, cfg.iterative_search_generations)
+        az_zip = search_dir / f"gen{n_gens - 1}" / "model.zip"
+        az_onnx = search_dir / f"gen{n_gens - 1}" / "model.onnx"
+        ppo_zip = ppo_dir / f"lstm_ppo_r{r}.zip"
+        ppo_onnx = ppo_dir / f"lstm_ppo_r{r}.onnx"
+
+        # Step A: Search(LSTM) -> AZ-LSTM sequence fit
+        stage_search = f"round{r}_search_lstm"
+        if stage_search not in completed:
+            update_progress(run_dir, stage_search, "running", round=r, generations=n_gens)
+            search_dir.mkdir(parents=True, exist_ok=True)
+            pool_flags: list[str] = []
+            if len(round_checkpoints) > 1:
+                opp_entries = [
+                    checkpoint_entry(
+                        f"lstm-r{idx}",
+                        Path(ckpt["onnx"]),
+                        weight=1.0,
+                        mode="policy_lstm",
+                    )
+                    for idx, ckpt in enumerate(round_checkpoints[:-1])
+                ]
+                opp_pool_path = search_dir / "pool_source.json"
+                atomic_write_json(
+                    opp_pool_path,
+                    {
+                        "schema": OPP_SCHEMA,
+                        "selfplay_probability": 0.5,
+                        "opponents": opp_entries,
+                    },
+                )
+                pool_flags = [
+                    "--opponent-pool", str(opp_pool_path),
+                    "--selfplay-probability", "0.5",
+                ]
+
+            existing_sp = load_sp_state(search_dir) if (search_dir / "state.json").exists() else {"next_gen": 0}
+            done_g = int(existing_sp.get("next_gen", 0))
+            rem_g = n_gens - done_g
+            if rem_g > 0:
+                partial_dir = search_dir / f"gen{done_g}"
+                resume_flag = ["--resume-selfplay"] if (partial_dir / "schedule.json").exists() else []
+                rc = sp_main(
+                    [
+                        "--run-dir", str(search_dir),
+                        "--seed-model", str(prev_zip),
+                        "--seed-model-onnx", str(prev_onnx),
+                        *pool_flags,
+                        "--decks", str(decks_path),
+                        "--cli-bin", str(cli_bin),
+                        "--generations", str(rem_g),
+                        "--games", str(cfg.search_games),
+                        "--procs", str(cfg.procs),
+                        "--chunk-games", str(cfg.chunk_games),
+                        "--sims", str(cfg.sims),
+                        "--worlds", str(cfg.worlds),
+                        "--eval-batch-size", str(cfg.eval_batch_size),
+                        "--macro-substeps", str(cfg.macro_substeps),
+                        "--macro-substep-min-prior", str(cfg.macro_substep_min_prior),
+                        "--reduced-sims", str(cfg.reduced_sims),
+                        "--full-search-fraction", str(cfg.full_search_fraction),
+                        "--cheap-sims", str(cfg.cheap_sims),
+                        "--window", "3",
+                        "--trainer-kind", "lstm",
+                        "--epochs", str(cfg.distill_epochs),
+                        "--seq-batch-size", str(cfg.distill_seq_batch_size),
+                        "--lr", "2e-4",
+                        "--weight-decay", str(cfg.weight_decay),
+                        "--value-label-smoothing", str(cfg.value_label_smoothing),
+                        "--value-coef", "1.0",
+                        "--value-holdout-fraction", str(cfg.holdout_fraction),
+                        "--train-device", "cpu",
+                        "--quarantine-truncation",
+                        "--skip-eval",
+                        "--seed", str(cfg.seed + r * 1_000_000),
+                        *resume_flag,
+                    ]
+                )
+                if rc != 0:
+                    raise RuntimeError(f"{stage_search} exited with code {rc}")
+
+            completed.add(stage_search)
+            state["completed_stages"] = sorted(completed)
+            state["artifacts"][f"az_lstm_r{r}_zip"] = str(az_zip)
+            state["artifacts"][f"az_lstm_r{r}_onnx"] = str(az_onnx)
+            save_campaign_state(run_dir, state)
+            update_progress(run_dir, stage_search, "completed", az_onnx=str(az_onnx))
+
+        # Step B: KL-Anchored Clean-Reward LSTM PPO vs PFSP pool of prior checkpoints
+        stage_ppo = f"round{r}_ppo_lstm"
+        if stage_ppo not in completed:
+            update_progress(run_dir, stage_ppo, "running", round=r, timesteps=cfg.ppo_timesteps)
+            ppo_dir.mkdir(parents=True, exist_ok=True)
+            ppo_pool_path = ppo_dir / "ppo_opponent_pool.json"
+            ppo_entries = [
+                PpoOpponentEntry(
+                    name=ckpt["name"],
+                    weights_path=str(Path(ckpt["zip"]).resolve()),
+                    algorithm="lstm",
+                    win_rate_vs_pool=0.50,
+                    games_played=100,
+                )
+                for ckpt in round_checkpoints
+            ]
+            ppo_entries.append(
+                PpoOpponentEntry(
+                    name=f"az_lstm_r{r}",
+                    weights_path=str(az_zip.resolve()),
+                    algorithm="lstm",
+                    win_rate_vs_pool=0.35,
+                    games_played=100,
+                )
+            )
+            OpponentPool(manifest_path=ppo_pool_path, entries=ppo_entries).save()
+
+            ppo_cfg = TrainingConfig(
+                algorithm="lstm",
+                timesteps=cfg.ppo_timesteps,
+                seed=cfg.seed + r * 1_000_000 + 300_000,
+                n_envs=cfg.ppo_n_envs,
+                vec_env_backend="subproc" if cfg.ppo_n_envs > 1 else "dummy",
+                learning_rate=cfg.ppo_lr,
+                lr_schedule="linear",
+                n_steps=cfg.ppo_n_steps,
+                batch_size=cfg.ppo_n_steps,
+                n_epochs=cfg.ppo_epochs,
+                gamma=0.995,
+                gae_lambda=0.95,
+                clip_range=0.2,
+                ent_coef=0.005,
+                vf_coef=0.5,
+                max_grad_norm=0.5,
+                lstm_hidden_size=cfg.lstm_hidden_size,
+                net_arch=list(cfg.net_arch),
+                opponent="pool",
+                opponent_pool_manifest=str(ppo_pool_path),
+                opponent_pool_mode="pfsp",
+                eval_freq=cfg.ppo_eval_freq,
+                eval_episodes=cfg.ppo_eval_episodes,
+                anchored_eval_freq=0,
+                checkpoint_every=cfg.ppo_checkpoint_every,
+                init_from=str(az_zip),
+                kl_anchor_checkpoint=str(az_zip),
+                kl_coef=cfg.kl_coef,
+                auto_advance_forced=True,
+                generalist=True,
+                curriculum_pool=str(pool_dir / "train_snapshot.json"),
+                curriculum_seed=cfg.seed + r * 1_000_000 + 310_000,
+                eval_seed=cfg.seed + r * 1_000_000 + 320_000,
+                models_dir=str(ppo_dir / "models"),
+                tensorboard_log=str(ppo_dir / "tb"),
+                run_name=f"lstm_ppo_r{r}",
+                tensor_profile="standard_lite_v2",
+                record_games="off",
+                mulligan_log="off",
+                eval_game_log="on",
+                match_format="single",
+                reward_profile_override="terminal_strategic_v1",
+            )
+            ppo_train(
+                cfg=ppo_cfg,
+                generalist_deck_pool=train_pool,
+                device="cpu",
+                verbose=1,
+            )
+            final_zip = ppo_dir / "models" / f"lstm_ppo_r{r}" / "final.zip"
+            final_meta = ppo_dir / "models" / f"lstm_ppo_r{r}" / "final.meta.json"
+            shutil.copy2(final_zip, ppo_zip)
+            shutil.copy2(final_meta, ppo_zip.with_suffix(".meta.json"))
+            export_lstm(str(ppo_zip), str(ppo_onnx), get_tensor_profile("standard_lite_v2"))
+
+            ppo_adapter = OnnxAgentAdapter(ppo_onnx, is_lstm=True, skip_forced=True)
+            prev_opp = OnnxAgentAdapter(prev_onnx, is_lstm=True, skip_forced=True).as_opponent_fn()
+            gate = {
+                "vs_greedy": evaluate_policy_matchup_detailed(
+                    ppo_adapter, greedy_policy, heldout_pool, cfg.gate_games_per_archetype, cfg.seed + r * 10_000 + 500
+                ),
+                "vs_development_v1": evaluate_policy_matchup_detailed(
+                    ppo_adapter, development_v1_opponent, heldout_pool, cfg.gate_games_per_archetype, cfg.seed + r * 10_000 + 600
+                ),
+                "vs_prev_round": evaluate_policy_matchup_detailed(
+                    ppo_adapter, prev_opp, heldout_pool, cfg.gate_games_per_archetype, cfg.seed + r * 10_000 + 700
+                ),
+                "examon_exam_macro0": run_search_exam(
+                    exam_bin, exam_json, ppo_onnx, ppo_dir / f"exam_r{r}_macro0.json",
+                    seeds=cfg.exam_seeds, macro_substeps=0
+                ),
+                "examon_exam_macro_gated": run_search_exam(
+                    exam_bin, exam_json, ppo_onnx, ppo_dir / f"exam_r{r}_macro_gated.json",
+                    seeds=cfg.exam_seeds,
+                    macro_substeps=cfg.macro_substeps,
+                    macro_substep_min_prior=cfg.macro_substep_min_prior,
+                ),
+            }
+            atomic_write_json(ppo_dir / f"round{r}_gate.json", gate)
+            completed.add(stage_ppo)
+            state["completed_stages"] = sorted(completed)
+            state["artifacts"][f"lstm_ppo_r{r}_zip"] = str(ppo_zip)
+            state["artifacts"][f"lstm_ppo_r{r}_onnx"] = str(ppo_onnx)
+            save_campaign_state(run_dir, state)
+            update_progress(
+                run_dir,
+                stage_ppo,
+                "completed",
+                wr_vs_prev=gate["vs_prev_round"]["win_rate"],
+                wr_vs_greedy=gate["vs_greedy"]["win_rate"],
+            )
+
+        round_checkpoints.append({"name": f"lstm_ppo_r{r}", "zip": str(ppo_zip), "onnx": str(ppo_onnx)})
+        prev_zip = ppo_zip
+        prev_onnx = ppo_onnx
+
+    # Final Held-Out Evaluation
+    stage5_dir = run_dir / "stage5_eval"
+    final_eval_path = stage5_dir / "final_evaluation.json"
+    if "iterative_evaluation" not in completed:
+        update_progress(run_dir, "iterative_evaluation", "running")
+        stage5_dir.mkdir(parents=True, exist_ok=True)
+        adapters = {
+            ckpt["name"]: OnnxAgentAdapter(Path(ckpt["onnx"]), is_lstm=True, skip_forced=True)
+            for ckpt in round_checkpoints
+        }
+        policy_only_vs_baselines: dict[str, dict] = {}
+        for idx, (name, adapter) in enumerate(adapters.items()):
+            policy_only_vs_baselines[name] = {
+                "vs_greedy": evaluate_policy_matchup_detailed(
+                    adapter, greedy_policy, heldout_pool, cfg.policy_eval_games_per_archetype, cfg.seed + 50_000 + idx * 1000
+                ),
+                "vs_development_v1": evaluate_policy_matchup_detailed(
+                    adapter, development_v1_opponent, heldout_pool, cfg.policy_eval_games_per_archetype, cfg.seed + 60_000 + idx * 1000
+                ),
+            }
+        latest_name = round_checkpoints[-1]["name"]
+        latest_onnx = Path(round_checkpoints[-1]["onnx"])
+        searched_head_to_heads: dict[str, dict] = {}
+        if len(round_checkpoints) >= 2:
+            searched_head_to_heads[f"{latest_name}_vs_lstm_r0"] = run_searched_head_to_head(
+                cli_bin=cli_bin,
+                out_dir=stage5_dir / "searched_h2h" / f"{latest_name}_vs_lstm_r0",
+                candidate_onnx=latest_onnx,
+                opponent_id="lstm-r0",
+                opponent_onnx=r0_onnx,
+                opponent_mode="search",
+                heldout_decks_path=heldout_decks_path,
+                games=cfg.searched_eval_games,
+                procs=cfg.procs,
+                sims=cfg.sims,
+                worlds=cfg.worlds,
+                eval_batch_size=cfg.eval_batch_size,
+                macro_substeps=cfg.macro_substeps,
+                macro_substep_min_prior=cfg.macro_substep_min_prior,
+                reduced_sims=cfg.reduced_sims,
+                seed=cfg.seed + 81_000,
+            )
+        final_report = {
+            "schema": "iterative-lstm-campaign-eval-v1",
+            "preset": cfg.preset,
+            "config": asdict(cfg),
+            "pool_manifest": json.loads((pool_dir / "manifest.json").read_text(encoding="utf-8")),
+            "round_checkpoints": round_checkpoints,
+            "policy_only_vs_baselines": policy_only_vs_baselines,
+            "searched_head_to_heads": searched_head_to_heads,
+        }
+        atomic_write_json(final_eval_path, final_report)
+        completed.add("iterative_evaluation")
+        state["completed_stages"] = sorted(completed)
+        state["artifacts"]["final_evaluation"] = str(final_eval_path)
+        save_campaign_state(run_dir, state)
+        update_progress(run_dir, "iterative_evaluation", "completed", report=str(final_eval_path))
+
+    return json.loads(final_eval_path.read_text(encoding="utf-8"))
+
+
+def _run_bootstrap_to_lstm(
+    run_dir: Path,
+    pool_dir: Path,
+    cli_bin: Path,
+    exam_bin: Path,
+    cfg: CampaignConfig,
+) -> None:
+    """Run Stages 0->1->2 only (bootstrap MLP -> Search Gen1-3 -> Distilled LSTM) for iterative-lstm mode."""
+    state = load_campaign_state(run_dir)
+    completed = set(state.get("completed_stages", []))
+    # Temporarily mark stages 3-5 as completed so run_campaign stops cleanly after Stage 2.
+    sentinel_stages = ["stage3_lstm_ppo", "stage4_hybrid_and_control", "stage5_evaluation"]
+    added = [s for s in sentinel_stages if s not in completed]
+    if added:
+        state["completed_stages"] = sorted(completed | set(added))
+        save_campaign_state(run_dir, state)
+    stage5_dummy = run_dir / "stage5_eval" / "final_evaluation.json"
+    created_dummy = False
+    if not stage5_dummy.exists():
+        atomic_write_json(stage5_dummy, {"placeholder": True})
+        created_dummy = True
+    try:
+        run_campaign(run_dir, pool_dir, cli_bin, exam_bin, cfg)
+    finally:
+        if created_dummy and stage5_dummy.exists():
+            stage5_dummy.unlink()
+        state = load_campaign_state(run_dir)
+        state["completed_stages"] = sorted(set(state.get("completed_stages", [])) - set(added))
+        save_campaign_state(run_dir, state)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     p.add_argument("--run-dir", type=Path, required=True)
@@ -1213,6 +1657,22 @@ def build_parser() -> argparse.ArgumentParser:
         default=REPO_ROOT / "target" / "release" / "examples" / "search_exam",
     )
     p.add_argument("--preset", choices=("full", "smoke"), default="full")
+    p.add_argument(
+        "--mode",
+        choices=("hybrid-ab", "iterative-lstm"),
+        default="hybrid-ab",
+        help="hybrid-ab: 5-stage paired A/B campaign; iterative-lstm: multi-round Search(LSTM)->AZ-LSTM->KL-PPO loop",
+    )
+    p.add_argument("--rounds", type=int, default=None, help="number of Search(LSTM)->PPO rounds in iterative-lstm mode")
+    p.add_argument("--iterative-search-generations", type=int, default=None, help="Search(LSTM) generations per iterative round")
+    p.add_argument("--init-lstm-zip", type=Path, default=None, help="optional starting LSTM .zip for iterative-lstm mode (skips Stages 0-2)")
+    p.add_argument("--init-lstm-onnx", type=Path, default=None, help="optional starting LSTM .onnx matching --init-lstm-zip")
+    p.add_argument("--net-arch", type=str, default=None, help="comma-separated MLP hidden widths, e.g. 512,512")
+    p.add_argument("--features-dim", type=int, default=None, help="feature extractor output width")
+    p.add_argument("--lstm-hidden-size", type=int, default=None, help="LSTM hidden state width")
+    p.add_argument("--macro-substep-min-prior", type=float, default=None, help="confidence threshold for interior macro-substeps (e.g. 0.85)")
+    p.add_argument("--weight-decay", type=float, default=None, help="AdamW decoupled weight decay for AZ/distill fitting (e.g. 1e-4)")
+    p.add_argument("--value-label-smoothing", type=float, default=None, help="shrink training value targets z by (1 - eps) (e.g. 0.05)")
     p.add_argument("--seed", type=int, default=20261126)
     p.add_argument("--procs", type=int, default=2)
     p.add_argument("--bootstrap-rounds", type=int, default=None)
@@ -1227,7 +1687,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     cfg = make_config(args)
-    run_campaign(args.run_dir, args.pool_dir, args.cli_bin, args.exam_bin, cfg)
+    if cfg.mode == "iterative-lstm":
+        run_iterative_lstm_campaign(args.run_dir, args.pool_dir, args.cli_bin, args.exam_bin, cfg)
+    else:
+        run_campaign(args.run_dir, args.pool_dir, args.cli_bin, args.exam_bin, cfg)
     return 0
 
 

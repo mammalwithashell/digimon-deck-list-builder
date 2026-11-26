@@ -5,10 +5,12 @@ use ort::session::Session;
 pub mod contract;
 pub mod evaluator;
 pub mod lstm;
+pub mod lstm_evaluator;
 pub mod mlp;
 
 pub use evaluator::{masked_softmax, BatchedPolicyValueEvaluator, EvalResult};
 pub use lstm::OnnxLstmPolicy;
+pub use lstm_evaluator::{is_lstm_onnx, BatchedLstmPolicyValueEvaluator};
 pub use mlp::OnnxMlpPolicy;
 
 #[derive(Debug)]

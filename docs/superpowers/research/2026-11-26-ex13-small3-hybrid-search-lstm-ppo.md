@@ -109,10 +109,14 @@ Graded with `search_exam` (`8` seeds, `320` sims, `4` worlds):
 
 ---
 
-## 5. Compute & Next Architectural Steps
+## 5. Compute & Next Architectural Steps (Implemented in PR #810)
 
 - **Throughput:** `~250–277` games/hr on a 2-vCPU Xeon vs **`~2,100–2,470` games/hr** on a 16-vCPU Hetzner `ccx43` (`12.6–16.7 min` per 450-game generation including PyTorch fitting + ONNX export; `0` truncations).
-- **Recommended Next Iteration:**
-  1. Add a recurrent `OnnxLstmEvaluator` for Rust MCTS so `lstm_ppo_r1` can serve as the search prior/value network directly (combining recurrent strategic memory with `320/4` tactical search).
-  2. Narrow `--macro-substeps` to forced/argmaxed sub-selections so multi-target effect chains (`<Training>`, reveals) retain full UCT precision.
-  3. Scale the proven `Search → Sequence Distill → KL-Anchored Clean-Reward LSTM PPO` loop to the full EX13 archetype pool.
+- **Implemented Next-Iteration Upgrades (ready for the full EX13 pool):**
+  1. **Recurrent LSTM inside Rust MCTS (`BatchedLstmPolicyValueEvaluator`):** `PolicyValueFn` now supports opt-in per-player `(h_pi, c_pi, h_vf, c_vf)` recurrent state threading through `Mcts::search`, `Mcts::search_batch`, `pimc_search`, `selfplay/driver.rs`, `digimon-engine-cli`, and `search_exam.rs`, using actor `<stem>.onnx` + companion critic `<stem>.value.onnx` (with dynamic batch axis `1` on hidden states in `export_onnx.py` and automatic batch-1 fallback for legacy exports).
+     - *Live `search_exam` verification on `lstm_ppo_r1.onnx` (`4` seeds, `320/4`, `--macro-substeps 16 --macro-substep-min-prior 0.85`):* **`4/4` on `[1002]`** (`15%–20%` of visits) and **`4/4` avoiding `[4]`**, with a smoothly calibrated non-saturated value curve (`+0.25 → +0.27 → +0.33 → +0.28 → +0.33 → +0.45 → +0.38 → +0.37 → +0.01`, vs `+0.25 → +0.15 → -0.06` on `wingdramon_from_hand`).
+  2. **Confidence-Gated Macro-Substeps (`--macro-substep-min-prior`):** Interior `pending_selection` macro-substep bundling now stops and hands control back to UCT whenever `best_prior < macro_substep_min_prior` (default `0.0`, preserving existing behavior unless enabled).
+     - *Live `search_exam` verification on `Gen6_hybrid` (`8` seeds, `320/4`, `--macro-substeps 16 --macro-substep-min-prior 0.85`):* recovered from **`2/8` → `8/8`** on `[1002]` (`58%–68%` of root visits, choosing `[1002]` outright on all 8 seeds) while keeping `8/8` avoiding `[4]`.
+  3. **Regularized Value Calibration & Capacity Scaling:** Added opt-in `--weight-decay` (`AdamW` when `> 0.0`) and `--value-label-smoothing` (shrink training `z` by `1 - eps`, raw `z` on held-out MSE) to `azero_trainer.py`, `azero_lstm_distill.py`, and `run_selfplay_generation.py`, plus `--net-arch`, `--features-dim`, and `--lstm-hidden-size` overrides in `run_hybrid_small_campaign.py`.
+  4. **Multi-Round Iterative `Search(LSTM) -> AZ-LSTM -> KL-Anchored PPO` Loop:** Wired `--trainer-kind {mlp,lstm}` in `run_selfplay_generation.py` and `--mode iterative-lstm --rounds R` in `run_hybrid_small_campaign.py` for full EX13 pool scaling.
+
