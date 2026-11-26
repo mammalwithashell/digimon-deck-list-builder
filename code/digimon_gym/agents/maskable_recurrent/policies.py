@@ -175,23 +175,15 @@ class MaskableRecurrentActorCriticPolicy(RecurrentActorCriticPolicy):
         log_prob = distribution.log_prob(actions)
         return actions, values, log_prob, RNNStates(lstm_states_pi, lstm_states_vf)
 
-    def evaluate_actions(
+    def evaluate_actions_with_logits(
         self,
         obs: th.Tensor,
         actions: th.Tensor,
         lstm_states: RNNStates,
         episode_starts: th.Tensor,
         action_masks: Optional[th.Tensor] = None,
-    ) -> tuple[th.Tensor, th.Tensor, th.Tensor]:
-        """Evaluate actions with optional masking.
-
-        :param obs: Observation tensor
-        :param actions: Actions to evaluate
-        :param lstm_states: LSTM states at sequence starts
-        :param episode_starts: Episode boundary flags
-        :param action_masks: Boolean mask of valid actions
-        :return: (values, log_probs, entropy)
-        """
+    ) -> tuple[th.Tensor, th.Tensor, th.Tensor, th.Tensor]:
+        """Evaluate actions and also return unmasked action logits for KL regularization."""
         features = self.extract_features(obs)
         if self.share_features_extractor:
             pi_features = vf_features = features
@@ -213,14 +205,29 @@ class MaskableRecurrentActorCriticPolicy(RecurrentActorCriticPolicy):
         latent_pi = self.mlp_extractor.forward_actor(latent_pi)
         latent_vf = self.mlp_extractor.forward_critic(latent_vf)
 
-        distribution = self._get_action_dist_from_latent(latent_pi)
+        action_logits = self.action_net(latent_pi)
+        distribution = self.action_dist.proba_distribution(action_logits=action_logits)
 
         if action_masks is not None:
             distribution.apply_masking(action_masks)
 
         log_prob = distribution.log_prob(actions)
         values = self.value_net(latent_vf)
-        return values, log_prob, distribution.entropy()
+        return values, log_prob, distribution.entropy(), action_logits
+
+    def evaluate_actions(
+        self,
+        obs: th.Tensor,
+        actions: th.Tensor,
+        lstm_states: RNNStates,
+        episode_starts: th.Tensor,
+        action_masks: Optional[th.Tensor] = None,
+    ) -> tuple[th.Tensor, th.Tensor, th.Tensor]:
+        """Evaluate actions with optional masking."""
+        values, log_prob, entropy, _ = self.evaluate_actions_with_logits(
+            obs, actions, lstm_states, episode_starts, action_masks=action_masks
+        )
+        return values, log_prob, entropy
 
     def get_distribution(
         self,

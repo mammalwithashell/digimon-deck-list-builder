@@ -7,7 +7,22 @@ use rand::{Rng, SeedableRng};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use crate::inference::OnnxPolicy;
 use crate::search::PolicyValueFn;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OpponentMode {
+    #[default]
+    Search,
+    PolicyLstm,
+}
+
+impl OpponentMode {
+    pub fn is_default(&self) -> bool {
+        matches!(self, Self::Search)
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -22,6 +37,10 @@ pub struct OpponentEntry {
     /// Only meaningful with `learner_decks`; None = any non-learner archetype.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decks: Option<Vec<String>>,
+    /// Execution mode when this opponent controls Seat B (`search` default, or
+    /// `policy_lstm` for recurrent policy-only sparring opponents).
+    #[serde(default, skip_serializing_if = "OpponentMode::is_default")]
+    pub mode: OpponentMode,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -198,6 +217,9 @@ pub struct SpecialistDecks {
 pub struct HistoricalOpponents {
     pub manifest: OpponentManifest,
     pub evaluators: Vec<Box<dyn PolicyValueFn>>,
+    /// Parallel recurrent policy runners for `OpponentMode::PolicyLstm` entries.
+    /// May be empty when all entries use `OpponentMode::Search`.
+    pub policies: Vec<Option<Box<dyn OnnxPolicy>>>,
 }
 
 impl HistoricalOpponents {
@@ -205,6 +227,37 @@ impl HistoricalOpponents {
         self.manifest.validate()?;
         if self.evaluators.len() != self.manifest.opponents.len() {
             return Err("opponent evaluator count mismatch".into());
+        }
+        if self.policies.is_empty() {
+            if self
+                .manifest
+                .opponents
+                .iter()
+                .any(|e| e.mode != OpponentMode::Search)
+            {
+                return Err("policy_lstm opponent missing OnnxPolicy runner".into());
+            }
+        } else {
+            if self.policies.len() != self.manifest.opponents.len() {
+                return Err("opponent policy runner count mismatch".into());
+            }
+            for (entry, policy) in self.manifest.opponents.iter().zip(&self.policies) {
+                match (entry.mode, policy.is_some()) {
+                    (OpponentMode::Search, false) | (OpponentMode::PolicyLstm, true) => {}
+                    (OpponentMode::PolicyLstm, false) => {
+                        return Err(format!(
+                            "opponent {} (policy_lstm) missing OnnxPolicy runner",
+                            entry.id
+                        ));
+                    }
+                    (OpponentMode::Search, true) => {
+                        return Err(format!(
+                            "opponent {} (search) unexpectedly supplied OnnxPolicy runner",
+                            entry.id
+                        ));
+                    }
+                }
+            }
         }
         Ok(())
     }

@@ -521,11 +521,16 @@ def make_agent_opponent_fn(
         # selection), which is fine on CPU — and matches the MLP/ONNX paths below.
         model = MaskableRecurrentPPO.load(weights_path, device="cpu")
         contract = validate_checkpoint(model)
+        skip_forced = bool(getattr(model, "digimon_skip_forced_steps", False))
         # LSTM state must persist across steps within a single episode.
         lstm_states: list = [None]  # mutable container for closure
 
         def _lstm_policy(env: DigimonEnv) -> int:
             mask = env.action_mask()
+            if skip_forced:
+                valid = np.flatnonzero(mask > 0)
+                if len(valid) == 1:
+                    return int(valid[0])
             obs = env.runner.get_board_tensor(2)
             _validate_opponent_inputs(contract, env, obs, mask)
             action, lstm_states[0] = model.predict(
@@ -800,6 +805,58 @@ class OpponentWrapper(gymnasium.Wrapper):
         # No opponent step happened (already the agent's turn) — the passed-in
         # obs/info from the agent's own step are still current.
         return obs, info, accumulated_reward, env.is_game_over, False
+
+
+class AutoAdvanceForcedWrapper(gymnasium.Wrapper):
+    """Opt-in wrapper that auto-steps 1-legal-action Player 1 states.
+
+    Self-play shards (`selfplay-shards-v1`) omit choiceless 1-action states,
+    and native Seat-B `OnnxLstmPolicy` only steps recurrent `(h, c)` on
+    decisions with `>= 2` legal actions. Placing this wrapper immediately
+    outside `OpponentWrapper` aligns `MaskableRecurrentPPO` rollouts and
+    anchored evaluations 1-to-1 with shard trajectories while accumulating
+    all step rewards across forced transitions.
+    """
+
+    MAX_FORCED_CHAIN = 512
+
+    def __init__(self, env: gymnasium.Env):
+        super().__init__(env)
+        self._unwrapped_env: DigimonEnv = _unwrap_to_digimon_env(env)
+
+    def reset(self, **kwargs):
+        obs, info = self.env.reset(**kwargs)
+        inner = self._unwrapped_env
+        forced_steps = 0
+        while not inner.is_game_over and forced_steps < self.MAX_FORCED_CHAIN:
+            mask = inner.action_mask()
+            valid = np.flatnonzero(mask > 0)
+            if len(valid) != 1:
+                break
+            obs, _r, terminated, truncated, info = self.env.step(int(valid[0]))
+            forced_steps += 1
+            if terminated or truncated:
+                break
+        return obs, info
+
+    def step(self, action):
+        obs, reward, terminated, truncated, info = self.env.step(int(action))
+        total_reward = float(reward)
+        inner = self._unwrapped_env
+        forced_steps = 0
+        while (
+            not (terminated or truncated)
+            and not inner.is_game_over
+            and forced_steps < self.MAX_FORCED_CHAIN
+        ):
+            mask = inner.action_mask()
+            valid = np.flatnonzero(mask > 0)
+            if len(valid) != 1:
+                break
+            obs, r, terminated, truncated, info = self.env.step(int(valid[0]))
+            total_reward += float(r)
+            forced_steps += 1
+        return obs, total_reward, terminated, truncated, info
 
 
 # ─── Callbacks ───────────────────────────────────────────────────────
@@ -2156,7 +2213,8 @@ def make_env(opponent: str = "greedy",
              match_env_seed: Optional[int] = None,
              reward_profile_factory: Optional[Callable] = None,
              league_entries: Optional[List] = None,
-             league_sampling_mode: str = "pfsp") -> gymnasium.Env:
+             league_sampling_mode: str = "pfsp",
+             auto_advance_forced: bool = False) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -2240,6 +2298,8 @@ def make_env(opponent: str = "greedy",
                 f"Expected one of {valid_opponents}."
             )
     env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+    if auto_advance_forced:
+        env = AutoAdvanceForcedWrapper(env)
 
     # BO3 match wrapper sits between OpponentWrapper and any deck-pool
     # wrappers so each deck-pool reset corresponds to a MATCH (not a
@@ -2380,6 +2440,8 @@ def make_vec_env(
             else:
                 opp_fn = opponent_fn
             wrapped = OpponentWrapper(base_env, opponent_fn=opp_fn)
+            if getattr(cfg, "auto_advance_forced", False):
+                wrapped = AutoAdvanceForcedWrapper(wrapped)
             # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
             if cfg.match_format == "bo3":
                 from digimon_gym.agents.match_env import MatchEnv
@@ -2959,6 +3021,7 @@ def train(total_timesteps: int = 100_000,
             match_format=cfg.match_format,
             match_env_seed=cfg.seed,
             reward_profile_factory=reward_profile_factory,
+            auto_advance_forced=cfg.auto_advance_forced,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -2985,7 +3048,13 @@ def train(total_timesteps: int = 100_000,
 
     if cfg.resume_from:
         if use_lstm:
-            model = MaskableRecurrentPPO.load(cfg.resume_from, env=env, device=device)
+            model = MaskableRecurrentPPO.load(
+                cfg.resume_from,
+                env=env,
+                device=device,
+                kl_anchor_path=cfg.kl_anchor_checkpoint,
+                kl_coef=cfg.kl_coef,
+            )
             validate_checkpoint(model)
         else:
             model = MaskablePPO.load(cfg.resume_from, env=env, device=device)
@@ -2998,7 +3067,23 @@ def train(total_timesteps: int = 100_000,
             print(f"  [resume] loaded checkpoint, num_timesteps={model.num_timesteps}")
     elif cfg.init_from:
         if use_lstm:
-            model = MaskableRecurrentPPO.load(cfg.init_from, env=env, device=device)
+            model = MaskableRecurrentPPO.load(
+                cfg.init_from,
+                env=env,
+                device=device,
+                learning_rate=learning_rate,
+                n_steps=n_steps,
+                batch_size=n_steps,
+                n_epochs=n_epochs,
+                gamma=gamma,
+                gae_lambda=cfg.gae_lambda,
+                clip_range=cfg.clip_range,
+                ent_coef=cfg.ent_coef,
+                vf_coef=cfg.vf_coef,
+                max_grad_norm=cfg.max_grad_norm,
+                kl_anchor_path=cfg.kl_anchor_checkpoint,
+                kl_coef=cfg.kl_coef,
+            )
             validate_checkpoint(model)
         else:
             model = MaskablePPO.load(cfg.init_from, env=env, device=device)
@@ -3024,6 +3109,8 @@ def train(total_timesteps: int = 100_000,
             verbose=0,
             device=device,
             seed=cfg.seed,
+            kl_anchor_path=cfg.kl_anchor_checkpoint,
+            kl_coef=cfg.kl_coef,
             policy_kwargs=dict(
                 lstm_hidden_size=lstm_hidden_size,
                 n_lstm_layers=1,
@@ -3057,6 +3144,11 @@ def train(total_timesteps: int = 100_000,
         validate_checkpoint(model, observation_layout.id)
     else:
         model.digimon_contract = current_contract(observation_layout.id)
+
+    if cfg.auto_advance_forced:
+        model.digimon_skip_forced_steps = True
+    if cfg.reward_profile_override == "terminal_strategic_v1":
+        model.digimon_value_semantics = "terminal_outcome"
 
     # Partial warm-start: transfer ONLY the features-extractor weights (the
     # CardEmbeddingExtractor — embeddings + projection) from a checkpoint into
@@ -3111,6 +3203,8 @@ def train(total_timesteps: int = 100_000,
             if reward_profile_factory is not None:
                 base_env = reward_profile_factory(base_env)
             wrapped = OpponentWrapper(base_env, opponent_fn=pool_opponent_fn)
+            if cfg.auto_advance_forced:
+                wrapped = AutoAdvanceForcedWrapper(wrapped)
             # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
             if cfg.match_format == "bo3":
                 from digimon_gym.agents.match_env import MatchEnv
@@ -3170,6 +3264,7 @@ def train(total_timesteps: int = 100_000,
             reward_profile_factory=reward_profile_factory,
             league_entries=league_entries,
             league_sampling_mode=cfg.opponent_pool_mode,
+            auto_advance_forced=cfg.auto_advance_forced,
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -3719,6 +3814,30 @@ def _build_argparser() -> argparse.ArgumentParser:
              "recording path) to models/<run>/eval_game_log.jsonl. One row "
              "per eval game. Default: on.",
     )
+    parser.add_argument(
+        "--auto-advance-forced",
+        action="store_true",
+        help="Auto-step 1-legal-action P1 states so recurrent hidden-state "
+             "transitions match selfplay-shards-v1 trajectories.",
+    )
+    parser.add_argument(
+        "--kl-anchor-checkpoint",
+        type=str,
+        default=None,
+        help="Frozen reference MaskableRecurrentPPO .zip for masked forward KL regularization.",
+    )
+    parser.add_argument(
+        "--kl-coef",
+        type=float,
+        default=None,
+        help="Masked forward KL penalty weight against --kl-anchor-checkpoint.",
+    )
+    parser.add_argument(
+        "--reward-profile",
+        type=str,
+        default=None,
+        help="Override reward profile name in profiles.yaml (e.g. terminal_strategic_v1).",
+    )
     return parser
 
 
@@ -3770,8 +3889,13 @@ def main():
         "record_games_dir": args.record_games_dir,
         "record_games_max": args.record_games_max,
         "record_games_sample_rate": args.record_games_sample_rate,
+        "kl_anchor_checkpoint": args.kl_anchor_checkpoint,
+        "kl_coef": args.kl_coef,
+        "reward_profile_override": args.reward_profile,
     }
     overrides.update({key: value for key, value in legacy_overrides.items() if value is not None})
+    if args.auto_advance_forced:
+        overrides["auto_advance_forced"] = True
     # --mulligan-log always has a value (choices default "on"); always propagate it.
     overrides["mulligan_log"] = args.mulligan_log
     # Same for --eval-game-log.

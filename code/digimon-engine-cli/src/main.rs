@@ -250,6 +250,10 @@ enum Command {
         /// seats). Omit for the search default; 0 for evaluation games.
         #[arg(long)]
         root_noise_epsilon: Option<f32>,
+        /// Interior non-combat pending-selection macro-substeps per expansion
+        /// (0 = single-decision expansion, unchanged).
+        #[arg(long, default_value_t = 0)]
+        macro_substeps: u32,
         /// Observation profile override. Defaults to the model's
         /// embedded training contract.
         #[arg(long)]
@@ -390,6 +394,7 @@ fn run() -> ExitCode {
             full_search_fraction,
             cheap_sims,
             root_noise_epsilon,
+            macro_substeps,
             tensor_profile,
         } => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
@@ -420,6 +425,7 @@ fn run() -> ExitCode {
                 full_search_fraction,
                 cheap_sims,
                 root_noise_epsilon,
+                macro_substeps,
                 tensor_profile,
                 card_data,
                 cli.cards_json

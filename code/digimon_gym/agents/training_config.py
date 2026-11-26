@@ -166,6 +166,14 @@ class TrainingConfig:
     wandb_run_name: Optional[str] = None
     wandb_mode: str = "online"
     wandb_tags: Optional[List[str]] = None
+    # Hybrid search <-> recurrent PPO seams (default OFF/zero -> byte-identical):
+    # - auto_advance_forced: auto-step 1-legal-action P1 states so recurrent
+    #   (h_t, c_t) transitions align 1-to-1 with selfplay-shards-v1 trajectories.
+    # - kl_anchor_checkpoint / kl_coef: frozen reference LSTM policy for masked
+    #   forward KL regularization during MaskableRecurrentPPO updates.
+    auto_advance_forced: bool = False
+    kl_anchor_checkpoint: Optional[str] = None
+    kl_coef: float = 0.0
 
     def __post_init__(self) -> None:
         self._validate()
@@ -303,6 +311,12 @@ class TrainingConfig:
                 "wandb_mode must be one of 'online', 'offline', 'disabled', "
                 f"got {self.wandb_mode!r}"
             )
+        if self.kl_coef < 0.0:
+            raise ValueError(f"kl_coef must be >= 0.0, got {self.kl_coef}")
+        if self.kl_coef > 0.0 and not self.kl_anchor_checkpoint:
+            raise ValueError("kl_coef > 0 requires kl_anchor_checkpoint")
+        if self.kl_anchor_checkpoint and self.algorithm != "lstm":
+            raise ValueError("kl_anchor_checkpoint is only supported for algorithm='lstm'")
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

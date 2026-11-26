@@ -31,7 +31,10 @@ import numpy as np
 from digimon_gym.digimon_gym import DigimonEnv, greedy_policy
 from digimon_gym.agents.champion_registry import ChampionRegistry
 from digimon_gym.agents.pilot_training import (
-    OpponentWrapper, make_agent_opponent_fn, _unwrap_to_digimon_env,
+    AutoAdvanceForcedWrapper,
+    OpponentWrapper,
+    make_agent_opponent_fn,
+    _unwrap_to_digimon_env,
 )
 
 # Safety rail so a pathological non-terminating game can't hang a sweep.
@@ -80,6 +83,8 @@ def play_one(agent_model, opponent_fn, deck1, deck2, seed: int,
         inner,
         opponent_fn=opponent_fn,
     )
+    if getattr(agent_model, "digimon_skip_forced_steps", False):
+        env = AutoAdvanceForcedWrapper(env)
     if collector is not None:
         inner.card_eval_collector = collector
     first_game = len(collector.games) if collector is not None else 0

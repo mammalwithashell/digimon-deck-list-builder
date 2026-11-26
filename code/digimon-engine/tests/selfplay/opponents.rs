@@ -18,6 +18,7 @@ fn manifest(probability: f64) -> OpponentManifest {
             metadata_sha256: "b".repeat(64),
             weight: 1.0,
             decks: None,
+            mode: Default::default(),
         }],
         learner_decks: None,
     }
@@ -147,6 +148,7 @@ fn historical_seats_keep_search_targets_and_filter_only_opponent_rows() {
             let mut pool = HistoricalOpponents {
                 manifest: manifest(0.0),
                 evaluators: vec![Box::new(CountingUniform(old_calls.clone()))],
+                policies: Vec::new(),
             };
             let history = root.join("history");
             run_self_play_with_opponents(
@@ -328,6 +330,7 @@ fn specialist_learner_always_pilots_its_archetype_and_only_its_rows_train() {
             let mut pool = HistoricalOpponents {
                 manifest,
                 evaluators: vec![Box::new(UniformEvaluator)],
+                policies: Vec::new(),
             };
             run_self_play_with_opponents(
                 &data, &decks, &names, &mut UniformEvaluator, &config, &root, "uniform",
@@ -347,6 +350,123 @@ fn specialist_learner_always_pilots_its_archetype_and_only_its_rows_train() {
                 kinds.insert(g["opponent_id"].as_str().unwrap().to_string());
             }
             assert!(kinds.contains("current") || kinds.contains("old"));
+        })
+        .unwrap()
+        .join()
+        .unwrap();
+}
+
+struct MockLstmOpponent {
+    resets: Arc<AtomicUsize>,
+    calls: Arc<AtomicUsize>,
+    step_in_game: usize,
+}
+
+impl digimon_engine::inference::OnnxPolicy for MockLstmOpponent {
+    fn predict(
+        &mut self,
+        _obs: &[f32],
+        mask: &[f32],
+    ) -> Result<usize, digimon_engine::inference::InferenceError> {
+        self.calls.fetch_add(1, Ordering::Relaxed);
+        let legal: Vec<usize> = mask
+            .iter()
+            .enumerate()
+            .filter(|(_, &m)| m > 0.5)
+            .map(|(i, _)| i)
+            .collect();
+        assert!(
+            legal.len() > 1,
+            "forced 1-action steps must not advance recurrent Seat-B state"
+        );
+        let pick = legal[self.step_in_game % legal.len()];
+        self.step_in_game += 1;
+        Ok(pick)
+    }
+
+    fn reset(&mut self) {
+        self.resets.fetch_add(1, Ordering::Relaxed);
+        self.step_in_game = 0;
+    }
+}
+
+#[test]
+fn policy_lstm_opponent_resets_per_game_and_emits_only_learner_rows() {
+    use digimon_engine::selfplay::opponents::OpponentMode;
+    std::thread::Builder::new()
+        .stack_size(256 * 1024 * 1024)
+        .spawn(|| {
+            let data = load_card_data();
+            let decks = vec![
+                D1.iter().map(|s| s.to_string()).collect(),
+                D2.iter().map(|s| s.to_string()).collect(),
+            ];
+            let root =
+                std::env::temp_dir().join(format!("policy-lstm-opponents-{}", std::process::id()));
+            let mut config = SelfPlayConfig {
+                games: 4,
+                seed: 73,
+                decision_cap: 40,
+                shard_rows: 100000,
+                evaluation_batch_size: 2,
+                ..Default::default()
+            };
+            config.search.worlds = 2;
+            config.search.search.simulations = 4;
+            config.search.search.macro_substeps = 8;
+
+            let mut m = manifest(0.0);
+            m.opponents[0].mode = OpponentMode::PolicyLstm;
+
+            // Missing OnnxPolicy runner must fail closed.
+            let bad = HistoricalOpponents {
+                manifest: m.clone(),
+                evaluators: vec![Box::new(UniformEvaluator)],
+                policies: Vec::new(),
+            };
+            assert!(bad.validate().is_err());
+
+            let resets = Arc::new(AtomicUsize::new(0));
+            let lstm_calls = Arc::new(AtomicUsize::new(0));
+            let unused_eval_calls = Arc::new(AtomicUsize::new(0));
+            let mut pool = HistoricalOpponents {
+                manifest: m,
+                evaluators: vec![Box::new(CountingUniform(unused_eval_calls.clone()))],
+                policies: vec![Some(Box::new(MockLstmOpponent {
+                    resets: resets.clone(),
+                    calls: lstm_calls.clone(),
+                    step_in_game: 99,
+                }))],
+            };
+            pool.validate().unwrap();
+            run_self_play_with_opponents(
+                &data,
+                &decks,
+                &[],
+                &mut UniformEvaluator,
+                &config,
+                &root,
+                "uniform",
+                Some(&mut pool),
+            )
+            .unwrap();
+            assert_eq!(resets.load(Ordering::Relaxed), 4, "reset once per game");
+            assert!(lstm_calls.load(Ordering::Relaxed) > 0, "lstm stepped Seat B");
+            assert_eq!(
+                unused_eval_calls.load(Ordering::Relaxed),
+                0,
+                "Seat-B policy_lstm must not invoke search evaluator"
+            );
+            let r = receipt(&root);
+            assert_eq!(r["search"]["macro_substeps"], 8);
+            let games = r["opponent_games"].as_array().unwrap();
+            assert_eq!(games.len(), 4);
+            for g in games {
+                let learner = g["learner_seat"].as_u64().unwrap() as usize;
+                assert_eq!(g["training_rows_by_seat"][1 - learner], 0);
+                assert_eq!(g["searched_decisions_by_seat"][1 - learner], 0);
+                assert!(g["training_rows_by_seat"][learner].as_u64().unwrap() > 0);
+            }
         })
         .unwrap()
         .join()

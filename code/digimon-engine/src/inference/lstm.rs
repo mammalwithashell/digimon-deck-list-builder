@@ -11,7 +11,35 @@ pub struct OnnxLstmPolicy {
     c: Array3<f32>,
 }
 
+use std::path::Path;
+
 impl OnnxLstmPolicy {
+    pub fn load_for_profile(
+        path: &Path,
+        profile: crate::observation::ObservationProfileId,
+    ) -> Result<Self, InferenceError> {
+        let layout = crate::observation::observation_layout(profile);
+        let session = Session::builder()
+            .map_err(|e| InferenceError::LoadFailed(e.to_string()))?
+            .with_intra_threads(1)
+            .map_err(|e| InferenceError::LoadFailed(e.to_string()))?
+            .commit_from_file(path)
+            .map_err(|e| InferenceError::LoadFailed(e.to_string()))?;
+        super::contract::validate_session_contract(&session, &layout)?;
+        let output_names: Vec<String> = session
+            .outputs()
+            .iter()
+            .map(|o| o.name().to_string())
+            .collect();
+        let has_logits = output_names.iter().any(|n| n == "logits");
+        let has_h_out = output_names.iter().any(|n| n == "h_out");
+        let has_c_out = output_names.iter().any(|n| n == "c_out");
+        if !(has_logits && has_h_out && has_c_out) {
+            return Err(InferenceError::UnsupportedOutputs(output_names));
+        }
+        Self::from_session(session)
+    }
+
     pub(crate) fn from_session(session: Session) -> Result<Self, InferenceError> {
         let hidden_size = detect_hidden_size(&session)?;
         Ok(Self {

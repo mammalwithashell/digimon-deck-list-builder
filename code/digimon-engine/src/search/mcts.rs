@@ -83,6 +83,12 @@ pub struct SearchConfig {
     /// behaviour. Negative values make search exploit visited moves more,
     /// which is what a higher-level value head does implicitly.
     pub unvisited_q: f32,
+    /// Opt-in interior effect-resolution lookahead: on interior expansions
+    /// (`depth >= 1`), advance non-combat `pending_selection` states by
+    /// greedily applying the highest-prior plan up to `macro_substeps` times
+    /// before materializing the child node and scoring its leaf value.
+    /// `0` (default) retains single-decision expansion byte-for-byte.
+    pub macro_substeps: u32,
 }
 
 impl Default for SearchConfig {
@@ -96,6 +102,7 @@ impl Default for SearchConfig {
             observation_profile: default_observation_profile(),
             max_decisions: 512,
             unvisited_q: 0.0,
+            macro_substeps: 0,
         }
     }
 }
@@ -412,13 +419,28 @@ impl<'a> Mcts<'a> {
         evaluator: &mut dyn PolicyValueFn,
         config: &SearchConfig,
     ) -> (Node, f32) {
-        let prepared = self.prepare_node(game, auto_advance, config);
-        match prepared {
-            PreparedNode::Ready(node, value) => (node, value),
-            mut prepared => {
-                let requests = self.node_requests(&mut prepared);
-                let evaluations = evaluate_requests(&requests, evaluator, 1);
-                self.finish_node(prepared, &evaluations)
+        let mut substeps_remaining = if auto_advance {
+            config.macro_substeps
+        } else {
+            0
+        };
+        let mut prepared = self.prepare_node(game, auto_advance, config);
+        loop {
+            match prepared {
+                PreparedNode::Ready(node, value) => return (node, value),
+                mut next => {
+                    let requests = self.node_requests(&mut next);
+                    let evaluations = evaluate_requests(&requests, evaluator, 1);
+                    match self.step_or_finish_node(
+                        next,
+                        &evaluations,
+                        &mut substeps_remaining,
+                        config,
+                    ) {
+                        NodeStep::Done(node, value) => return (node, value),
+                        NodeStep::Substep(advanced) => prepared = advanced,
+                    }
+                }
             }
         }
     }
@@ -497,9 +519,23 @@ impl<'a> Mcts<'a> {
     }
 
     fn finish_node(&self, prepared: PreparedNode, evaluations: &[Evaluation]) -> (Node, f32) {
+        let mut zero = 0u32;
+        match self.step_or_finish_node(prepared, evaluations, &mut zero, &SearchConfig::default()) {
+            NodeStep::Done(node, value) => (node, value),
+            NodeStep::Substep(_) => unreachable!("zero substeps cannot substep"),
+        }
+    }
+
+    fn step_or_finish_node(
+        &self,
+        prepared: PreparedNode,
+        evaluations: &[Evaluation],
+        substeps_remaining: &mut u32,
+        config: &SearchConfig,
+    ) -> NodeStep {
         let _profile = span("finish_node");
         let PreparedNode::Evaluate {
-            game,
+            mut game,
             mover,
             surface,
         } = prepared
@@ -507,6 +543,29 @@ impl<'a> Mcts<'a> {
             unreachable!("terminal nodes are already complete");
         };
         let (priors, value) = surface.evaluate(evaluations);
+        if *substeps_remaining > 0
+            && !game.game_over
+            && game.pending_selection.is_some()
+            && !game.current_phase.is_combat_phase()
+        {
+            *substeps_remaining -= 1;
+            let mut best_idx = 0usize;
+            let mut best_prior = f32::NEG_INFINITY;
+            for (i, &p) in priors.iter().enumerate() {
+                if p > best_prior {
+                    best_prior = p;
+                    best_idx = i;
+                }
+            }
+            let chosen_plan = &surface.plans[best_idx];
+            measure("step", || {
+                apply_plan(&mut game, mover, chosen_plan)
+            });
+            return match self.prepare_node(game, true, config) {
+                PreparedNode::Ready(node, ready_val) => NodeStep::Done(node, ready_val),
+                next_prepared => NodeStep::Substep(next_prepared),
+            };
+        }
         let edges = surface
             .plans
             .into_iter()
@@ -520,7 +579,7 @@ impl<'a> Mcts<'a> {
                 w: 0.,
             })
             .collect();
-        (
+        NodeStep::Done(
             Node {
                 game,
                 mover,
@@ -530,6 +589,11 @@ impl<'a> Mcts<'a> {
             value,
         )
     }
+}
+
+enum NodeStep {
+    Done(Node, f32),
+    Substep(PreparedNode),
 }
 
 /// Apply forced (single-legal-action) decision points until the state

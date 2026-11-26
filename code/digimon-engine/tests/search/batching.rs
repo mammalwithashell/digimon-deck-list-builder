@@ -230,3 +230,70 @@ fn batching_preserves_hidden_permutation_and_leaves_ismcts_serial() {
         assert!(evaluator.batches.iter().all(|&n| n == 1));
     });
 }
+
+#[test]
+fn macro_substeps_preserves_serial_and_batched_bit_exactness() {
+    run_big_stack(|| {
+        let data = load_card_data();
+        let registry = CardRegistry::from_cards(&data);
+        let roots = vec![
+            game(&data, 7, 12),
+            game(&data, 11, 24),
+            game(&data, 21, 18),
+            game(&data, 22, 25),
+        ];
+        for substeps in [1, 4, 16] {
+            let configs: Vec<_> = [8, 24, 48, 64]
+                .into_iter()
+                .enumerate()
+                .map(|(i, sims)| SearchConfig {
+                    simulations: sims,
+                    seed: 901 + i as u64,
+                    macro_substeps: substeps,
+                    ..Default::default()
+                })
+                .collect();
+            let mcts = Mcts::new(&registry);
+            let mut serial = SignalEvaluator::default();
+            let expected: Vec<_> = roots
+                .iter()
+                .zip(&configs)
+                .map(|(r, c)| mcts.search(r, &mut serial, c))
+                .collect();
+            let mut batched = SignalEvaluator::default();
+            let actual = mcts.search_batch(&roots, &mut batched, &configs);
+            assert_eq!(actual, expected, "substeps={substeps}");
+            assert_eq!(
+                serial.batches.iter().sum::<usize>(),
+                batched.batches.iter().sum::<usize>(),
+                "substeps={substeps}"
+            );
+        }
+
+        // Also check determinized_search_batched across batch=1,2,4 with macro_substeps=16.
+        let mut det_cfg = DeterminizedConfig::default();
+        det_cfg.worlds = 4;
+        det_cfg.search.simulations = 64;
+        det_cfg.search.seed = 2026;
+        det_cfg.search.macro_substeps = 16;
+        let expected_det = determinized_search_batched(
+            &registry,
+            &roots[1],
+            decision_player(&roots[1]),
+            &mut SignalEvaluator::default(),
+            &det_cfg,
+            1,
+        );
+        for batch in [2, 4] {
+            let actual_det = determinized_search_batched(
+                &registry,
+                &roots[1],
+                decision_player(&roots[1]),
+                &mut SignalEvaluator::default(),
+                &det_cfg,
+                batch,
+            );
+            assert_eq!(actual_det, expected_det, "det batch={batch}");
+        }
+    });
+}

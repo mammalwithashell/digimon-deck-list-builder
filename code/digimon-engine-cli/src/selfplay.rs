@@ -12,12 +12,12 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use digimon_engine::card_data::CardData;
-use digimon_engine::inference::BatchedPolicyValueEvaluator;
+use digimon_engine::inference::{BatchedPolicyValueEvaluator, OnnxLstmPolicy, OnnxPolicy};
 use digimon_engine::search::{
     DeterminizationMode, DeterminizedConfig, MemoizedEvaluator, PolicyValueFn,
     UniformEvaluator,
 };
-use digimon_engine::selfplay::opponents::{HistoricalOpponents, OpponentManifest};
+use digimon_engine::selfplay::opponents::{HistoricalOpponents, OpponentManifest, OpponentMode};
 use digimon_engine::selfplay::{run_self_play_with_opponents, SelfPlayConfig};
 
 use crate::winprob::resolve_profile;
@@ -100,6 +100,7 @@ pub fn run(
     full_search_fraction: f32,
     cheap_sims: u32,
     root_noise_epsilon: Option<f32>,
+    macro_substeps: u32,
     tensor_profile: Option<String>,
     card_data: HashMap<String, CardData>,
     admission_dir: PathBuf,
@@ -256,6 +257,7 @@ pub fn run(
     config.search.mode = mode;
     config.search.worlds = worlds;
     config.search.search.simulations = sims;
+    config.search.search.macro_substeps = macro_substeps;
     if let Some(epsilon) = root_noise_epsilon {
         config.search.search.dirichlet_epsilon = epsilon;
     }
@@ -274,6 +276,7 @@ pub fn run(
                 )
                 .unwrap();
                 let mut evaluators: Vec<Box<dyn PolicyValueFn>> = Vec::new();
+                let mut policies: Vec<Option<Box<dyn OnnxPolicy>>> = Vec::new();
                 for entry in &manifest.opponents {
                     let meta: serde_json::Value = serde_json::from_slice(
                         &std::fs::read(format!("{}.meta.json", entry.path.display()))
@@ -285,25 +288,53 @@ pub fn run(
                         .unwrap()
                         .iter()
                         .any(|(k, v)| meta.get(k) != Some(v))
-                        || meta["value_semantics"] != "terminal_outcome"
                     {
                         return Err(format!(
-                            "opponent {} sidecar contract/value mismatch",
+                            "opponent {} sidecar contract mismatch",
                             entry.id
                         ));
                     }
-                    let e = BatchedPolicyValueEvaluator::load_for_profile(&entry.path, profile)
-                        .map_err(|e| format!("opponent {}: {e}", entry.id))?;
-                    e.require_terminal_value().map_err(|e| e.to_string())?;
-                    evaluators.push(if cache_entries == 0 {
-                        Box::new(e)
-                    } else {
-                        Box::new(MemoizedEvaluator::new(e, cache_entries))
-                    });
+                    match entry.mode {
+                        OpponentMode::Search => {
+                            if meta["value_semantics"] != "terminal_outcome" {
+                                return Err(format!(
+                                    "opponent {} sidecar contract/value mismatch",
+                                    entry.id
+                                ));
+                            }
+                            let e = BatchedPolicyValueEvaluator::load_for_profile(
+                                &entry.path,
+                                profile,
+                            )
+                            .map_err(|e| format!("opponent {}: {e}", entry.id))?;
+                            e.require_terminal_value().map_err(|e| e.to_string())?;
+                            evaluators.push(if cache_entries == 0 {
+                                Box::new(e)
+                            } else {
+                                Box::new(MemoizedEvaluator::new(e, cache_entries))
+                            });
+                            policies.push(None);
+                        }
+                        OpponentMode::PolicyLstm => {
+                            if let Some(vs) = meta.get("value_semantics") {
+                                if vs != "terminal_outcome" {
+                                    return Err(format!(
+                                        "opponent {} incompatible value_semantics: {vs}",
+                                        entry.id
+                                    ));
+                                }
+                            }
+                            let lstm = OnnxLstmPolicy::load_for_profile(&entry.path, profile)
+                                .map_err(|e| format!("opponent {}: {e}", entry.id))?;
+                            evaluators.push(Box::new(UniformEvaluator));
+                            policies.push(Some(Box::new(lstm)));
+                        }
+                    }
                 }
                 Ok(HistoricalOpponents {
                     manifest,
                     evaluators,
+                    policies,
                 })
             })();
             match loaded {

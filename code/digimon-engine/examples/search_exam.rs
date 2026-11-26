@@ -41,6 +41,7 @@ struct Args {
     seeds: u64,
     simulations: Option<u32>,
     worlds: Option<u32>,
+    macro_substeps: u32,
     json: Option<String>,
 }
 
@@ -55,6 +56,7 @@ fn parse_args() -> Args {
         seeds: 8,
         simulations: None,
         worlds: None,
+        macro_substeps: 0,
         json: None,
     };
     while let Some(flag) = it.next() {
@@ -64,6 +66,7 @@ fn parse_args() -> Args {
             "--seeds" => args.seeds = value.parse().unwrap(),
             "--simulations" => args.simulations = Some(value.parse().unwrap()),
             "--worlds" => args.worlds = Some(value.parse().unwrap()),
+            "--macro-substeps" => args.macro_substeps = value.parse().unwrap(),
             "--json" => args.json = Some(value),
             _ => panic!("unknown flag {flag}"),
         }
@@ -189,6 +192,7 @@ fn run() {
         let mut config = DeterminizedConfig::default();
         config.worlds = worlds;
         config.search.simulations = simulations;
+        config.search.macro_substeps = args.macro_substeps;
         config.search.dirichlet_epsilon = 0.;
         config.search.observation_profile = profile;
         config.search.seed = base_seed.wrapping_add(k.wrapping_mul(0x5851f42d4c957f2d));

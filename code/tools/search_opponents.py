@@ -17,10 +17,13 @@ def metadata_path(model: Path) -> Path:
     return Path(str(model) + ".meta.json")
 
 
-def checkpoint_entry(identifier: str, path: Path, weight: float = 1.0) -> dict:
+def checkpoint_entry(identifier: str, path: Path, weight: float = 1.0, mode: str | None = None) -> dict:
     path = path.resolve(strict=True)
-    return dict(id=identifier, path=str(path), sha256=sha256(path),
-                metadata_sha256=sha256(metadata_path(path)), weight=weight)
+    entry = dict(id=identifier, path=str(path), sha256=sha256(path),
+                 metadata_sha256=sha256(metadata_path(path)), weight=weight)
+    if mode is not None and mode != "search":
+        entry["mode"] = mode
+    return entry
 
 
 def validate_pool(pool: dict, base: Path, current: Path) -> dict:
@@ -47,8 +50,11 @@ def validate_pool(pool: dict, base: Path, current: Path) -> dict:
     ids, hashes, entries = set(), set(), []
     for entry in pool["opponents"]:
         required = {"id", "path", "sha256", "metadata_sha256", "weight"}
-        if not required <= set(entry) or set(entry) - required - {"decks"}:
+        if not required <= set(entry) or set(entry) - required - {"decks", "mode"}:
             raise ValueError("Invalid opponent entry fields")
+        mode = entry.get("mode", "search")
+        if mode not in ("search", "policy_lstm"):
+            raise ValueError(f"Unsupported opponent mode: {mode!r}")
         if "decks" in entry:
             decks = entry["decks"]
             if (learner is None or not isinstance(decks, list) or not decks
@@ -66,7 +72,12 @@ def validate_pool(pool: dict, base: Path, current: Path) -> dict:
         if digest != entry["sha256"] or sha256(metadata_path(path)) != entry["metadata_sha256"]:
             raise ValueError(f"Opponent artifact hash mismatch: {identifier}")
         meta = json.loads(metadata_path(path).read_text())
-        if any(meta.get(k) != current_meta[k] for k in CONTRACT_KEYS) or meta.get("value_semantics") != "terminal_outcome":
+        if any(meta.get(k) != current_meta[k] for k in CONTRACT_KEYS):
+            raise ValueError(f"Opponent contract/value mismatch: {identifier}")
+        if mode == "search":
+            if meta.get("value_semantics") != "terminal_outcome":
+                raise ValueError(f"Opponent contract/value mismatch: {identifier}")
+        elif "value_semantics" in meta and meta.get("value_semantics") != "terminal_outcome":
             raise ValueError(f"Opponent contract/value mismatch: {identifier}")
         ids.add(identifier)
         hashes.add(digest)

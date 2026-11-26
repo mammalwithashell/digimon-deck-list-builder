@@ -85,8 +85,10 @@ def search_budget_flags(args) -> list[str]:
     phase budget 64 + playout-cap randomization 0.25/64 (0.27x compute, no
     measurable loss at equal games). `--full-search` turns both off; setting
     `--reduced-sims 0` or `--full-search-fraction 1` turns one off."""
+    macro = getattr(args, "macro_substeps", 0) or 0
+    macro_flags = ["--macro-substeps", str(macro)] if macro > 0 else []
     if getattr(args, "full_search", False):
-        return []
+        return macro_flags
     flags: list[str] = []
     reduced = getattr(args, "reduced_sims", 0) or 0
     if reduced > 0:
@@ -94,7 +96,7 @@ def search_budget_flags(args) -> list[str]:
     fraction = getattr(args, "full_search_fraction", 1.0)
     if fraction is not None and fraction < 1.0:
         flags += ["--full-search-fraction", str(fraction), "--cheap-sims", str(getattr(args, "cheap_sims", 64))]
-    return flags
+    return flags + macro_flags
 
 
 def run_selfplay_stage(
@@ -570,6 +572,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="total sims for the cheap value-only searches when --full-search-fraction < 1")
     p.add_argument("--full-search", action="store_true",
         help="disable both budget levers: 320/4-style full search at every root (the pre-2026-10-28 behaviour)")
+    p.add_argument("--macro-substeps", type=int, default=0,
+        help="interior non-combat pending-selection macro-substeps per MCTS expansion (0 = unchanged)")
     p.add_argument("--eval-batch-size", type=int, default=4,
         help="independent PIMC worlds per evaluation batch; 1 is the serial reference")
     p.add_argument("--mode", default="pimc")

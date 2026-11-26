@@ -373,6 +373,25 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
     # Verify round-trip
     write_export_metadata(output_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id), value_head=value_path.name)
     write_export_metadata(value_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id))
+    value_semantics = getattr(model, "digimon_value_semantics", None)
+    if value_semantics is not None:
+        import onnx
+        for target_onnx in (Path(output_path), value_path):
+            graph = onnx.load(str(target_onnx))
+            prop = graph.metadata_props.add()
+            prop.key, prop.value = "digimon_value_semantics", value_semantics
+            onnx.save(graph, str(target_onnx))
+            meta_path = Path(f"{target_onnx}.meta.json")
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["value_semantics"] = value_semantics
+            meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    information = getattr(model, "digimon_information", None)
+    if information is not None:
+        for target_onnx in (Path(output_path), value_path):
+            meta_path = Path(f"{target_onnx}.meta.json")
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["information"] = information
+            meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     _verify_lstm(policy, wrapper, output_path, tensor_size)
     _verify_lstm_value(value_wrapper, str(value_path), policy, tensor_size)
 

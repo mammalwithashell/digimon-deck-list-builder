@@ -11,6 +11,7 @@ enum Pending {
         parent: usize,
         edge: usize,
         path: Vec<(usize, usize)>,
+        substeps_remaining: u32,
     },
     Depth {
         mover: PlayerId,
@@ -63,7 +64,8 @@ impl Tree {
     }
 
     fn next_request(&mut self, mcts: &Mcts<'_>) -> Option<Vec<EvalRequest>> {
-        if let Some(Pending::Root(prepared)) = &mut self.pending {
+        if let Some(Pending::Root(prepared) | Pending::Expand { prepared, .. }) = &mut self.pending
+        {
             return Some(mcts.node_requests(prepared));
         }
         assert!(
@@ -124,6 +126,7 @@ impl Tree {
                                     parent: cur,
                                     edge,
                                     path,
+                                    substeps_remaining: self.config.macro_substeps,
                                 });
                                 return Some(request);
                             }
@@ -157,12 +160,28 @@ impl Tree {
                 parent,
                 edge,
                 path,
-            } => {
-                let (node, value) = mcts.finish_node(prepared, evaluations);
-                let mover = node.mover;
-                self.attach(parent, edge, node);
-                self.backup(&path, value, mover);
-            }
+                mut substeps_remaining,
+            } => match mcts.step_or_finish_node(
+                prepared,
+                evaluations,
+                &mut substeps_remaining,
+                &self.config,
+            ) {
+                NodeStep::Done(node, value) => {
+                    let mover = node.mover;
+                    self.attach(parent, edge, node);
+                    self.backup(&path, value, mover);
+                }
+                NodeStep::Substep(next_prepared) => {
+                    self.pending = Some(Pending::Expand {
+                        prepared: next_prepared,
+                        parent,
+                        edge,
+                        path,
+                        substeps_remaining,
+                    });
+                }
+            },
             Pending::Depth { mover, path } => self.backup(&path, evaluations[0].value, mover),
         }
     }

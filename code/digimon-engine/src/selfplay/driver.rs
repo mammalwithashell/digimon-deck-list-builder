@@ -389,6 +389,11 @@ pub fn run_self_play_with_opponents(
         let mut decisions = 0u32;
         let mut non_forced = 0u32;
         let game_first_record = buffer.records.len();
+        if let (Some(pool), Some(index)) = (opponents.as_deref_mut(), historical) {
+            if let Some(Some(policy)) = pool.policies.get_mut(index) {
+                policy.reset();
+            }
+        }
 
         while !game.game_over && decisions < config.decision_cap {
             let pid = decision_player(&game);
@@ -438,6 +443,34 @@ pub fn run_self_play_with_opponents(
                     continue;
                 }
                 _ => {}
+            }
+
+            if let (Some(index), Some(current)) = (historical, learner) {
+                if current != pid {
+                    if let Some(Some(policy)) =
+                        opponents.as_deref_mut().and_then(|p| p.policies.get_mut(index))
+                    {
+                        let obs =
+                            build_observation_tensor_with_mask(&game, pid, &registry, profile, &mask);
+                        let action = policy.predict(&obs, &mask).map_err(|e| {
+                            format!("game {game_idx} decision {decisions} lstm opponent: {e}")
+                        })? as u16;
+                        if mask.get(action as usize).copied().unwrap_or(0.0) <= 0.5 {
+                            return Err(format!(
+                                "game {game_idx} decision {decisions}: lstm opponent chose illegal action {action}"
+                            ));
+                        }
+                        if trace_decisions {
+                            eprintln!(
+                                "game {game_idx} decision {decisions}: lstm opponent action {action}"
+                            );
+                        }
+                        non_forced += 1;
+                        game.decode_action(action, pid);
+                        decisions += 1;
+                        continue;
+                    }
+                }
             }
 
             // Budget allocation (search-budget experiments). The full budget
@@ -722,6 +755,7 @@ pub fn run_self_play_with_opponents(
             "dirichlet_alpha": config.search.search.dirichlet_alpha,
             "dirichlet_epsilon": config.search.search.dirichlet_epsilon,
             "max_decisions": config.search.search.max_decisions,
+            "macro_substeps": config.search.search.macro_substeps,
             "evaluation_batch_size_requested": config.evaluation_batch_size,
             "evaluation_batch_size": if config.search.mode == DeterminizationMode::IsMcts { 1 }
                 else { config.evaluation_batch_size.min(config.search.worlds.max(1).min(config.search.search.simulations.max(1)) as usize) },
