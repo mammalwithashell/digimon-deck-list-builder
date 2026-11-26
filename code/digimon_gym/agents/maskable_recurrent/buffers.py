@@ -32,6 +32,7 @@ class MaskableRecurrentRolloutBufferSamples(NamedTuple):
     episode_starts: th.Tensor
     mask: th.Tensor
     action_masks: th.Tensor
+    ref_log_probs: Optional[th.Tensor] = None
 
 
 class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
@@ -45,7 +46,7 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
     :param observation_space: Observation space
     :param action_space: Action space
     :param hidden_state_shape: Shape for LSTM state storage
-        (n_steps, lstm.num_layers, n_envs, lstm.hidden_size)
+        (n_steps, lstm.num_layers, n_envs, hidden_size)
     :param device: PyTorch device
     :param gae_lambda: GAE lambda for advantage estimation
     :param gamma: Discount factor
@@ -53,6 +54,7 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
     """
 
     action_masks: np.ndarray
+    ref_log_probs: Optional[np.ndarray]
 
     def __init__(
         self,
@@ -64,8 +66,11 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
         gae_lambda: float = 1,
         gamma: float = 0.99,
         n_envs: int = 1,
+        track_ref_log_probs: bool = False,
     ):
         self.mask_dims = 0
+        self.track_ref_log_probs = track_ref_log_probs
+        self.ref_log_probs = None
         super().__init__(
             buffer_size, observation_space, action_space,
             hidden_state_shape, device, gae_lambda, gamma, n_envs,
@@ -85,6 +90,12 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
         self.action_masks = np.ones(
             (self.buffer_size, self.n_envs, self.mask_dims), dtype=np.float32
         )
+        if self.track_ref_log_probs:
+            self.ref_log_probs = np.zeros(
+                (self.buffer_size, self.n_envs, self.mask_dims), dtype=np.float32
+            )
+        else:
+            self.ref_log_probs = None
         super().reset()
 
     def add(
@@ -92,10 +103,15 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
         *args,
         lstm_states: RNNStates,
         action_masks: Optional[np.ndarray] = None,
+        ref_log_probs: Optional[np.ndarray] = None,
         **kwargs,
     ) -> None:
         if action_masks is not None:
             self.action_masks[self.pos] = action_masks.reshape(
+                self.n_envs, self.mask_dims
+            )
+        if self.track_ref_log_probs and ref_log_probs is not None and self.ref_log_probs is not None:
+            self.ref_log_probs[self.pos] = ref_log_probs.reshape(
                 self.n_envs, self.mask_dims
             )
         super().add(*args, lstm_states=lstm_states, **kwargs)
@@ -116,7 +132,7 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
                 self.__dict__[tensor] = self.__dict__[tensor].swapaxes(1, 2)
 
             # Flatten: (n_steps, n_envs, *shape) -> (n_envs * n_steps, *shape)
-            for tensor in [
+            fields = [
                 "observations",
                 "actions",
                 "values",
@@ -129,7 +145,10 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
                 "cell_states_vf",
                 "episode_starts",
                 "action_masks",
-            ]:
+            ]
+            if self.track_ref_log_probs and self.ref_log_probs is not None:
+                fields.append("ref_log_probs")
+            for tensor in fields:
                 self.__dict__[tensor] = self.swap_and_flatten(
                     self.__dict__[tensor]
                 )
@@ -199,6 +218,12 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
             self.action_masks[batch_inds], padding_value=1.0
         ).reshape(padded_batch_size, self.mask_dims)
 
+        ref_log_probs_padded = None
+        if self.track_ref_log_probs and self.ref_log_probs is not None:
+            ref_log_probs_padded = self.pad(
+                self.ref_log_probs[batch_inds], padding_value=0.0
+            ).reshape(padded_batch_size, self.mask_dims)
+
         return MaskableRecurrentRolloutBufferSamples(
             observations=self.pad(self.observations[batch_inds]).reshape(
                 (padded_batch_size, *self.obs_shape)
@@ -216,4 +241,5 @@ class MaskableRecurrentRolloutBuffer(RecurrentRolloutBuffer):
                 np.ones_like(self.returns[batch_inds])
             ),
             action_masks=action_masks_padded,
+            ref_log_probs=ref_log_probs_padded,
         )

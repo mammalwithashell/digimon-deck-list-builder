@@ -353,6 +353,8 @@ def train(
     export_onnx: Path | None = None,
     holdout_fraction: float = 0.0,
     value_activation_name: str | None = None,
+    weight_decay: float = 0.0,
+    value_label_smoothing: float = 0.0,
 ) -> dict:
     """Run the AZ update and save the new checkpoint. Returns a summary dict.
 
@@ -369,6 +371,11 @@ def train(
     import torch
     from sb3_contrib import MaskablePPO
     from digimon_gym.agents import value_activation
+
+    if weight_decay < 0.0:
+        raise ValueError(f"weight_decay must be >= 0.0, got {weight_decay}")
+    if not (0.0 <= value_label_smoothing < 1.0):
+        raise ValueError(f"value_label_smoothing must lie in [0, 1), got {value_label_smoothing}")
 
     torch.manual_seed(seed)
     ds = load_shards(shard_dirs)
@@ -421,7 +428,10 @@ def train(
     best = {"epoch": None, "loss": float("inf"), "state": None}
 
     policy.set_training_mode(True)
-    optimizer = torch.optim.Adam(policy.parameters(), lr=lr)
+    if weight_decay > 0.0:
+        optimizer = torch.optim.AdamW(policy.parameters(), lr=lr, weight_decay=weight_decay)
+    else:
+        optimizer = torch.optim.Adam(policy.parameters(), lr=lr)
     rng = np.random.default_rng(seed)
     dev = policy.device
 
@@ -437,6 +447,8 @@ def train(
             pi_t = torch.as_tensor(pi_np, device=dev)
             mask_t = torch.as_tensor(mask_np, device=dev)
             z_t = torch.as_tensor(z_np, device=dev)
+            if value_label_smoothing > 0.0:
+                z_t = z_t * (1.0 - value_label_smoothing)
 
             logits, raw_values = _forward(policy, obs_t)
             values = value_activation.apply(activation, raw_values)
@@ -658,6 +670,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="share of WHOLE games held out from both losses; the best held-out epoch is saved")
     p.add_argument("--value-activation", choices=("identity", "tanh"), default=None,
                    help="value-head output activation (default: keep the init checkpoint's)")
+    p.add_argument("--weight-decay", type=float, default=0.0,
+                   help="AdamW weight decay (0.0 uses plain Adam)")
+    p.add_argument("--value-label-smoothing", type=float, default=0.0,
+                   help="shrink training terminal z targets by (1 - eps); held-out MSE uses raw z")
     p.add_argument("--calibrate-value-only", action="store_true",
                    help="refit only the critic (actor bitwise frozen) on a whole-game split, keeping "
                         "the best held-out epoch; ignores --value-coef and --holdout-fraction")
@@ -689,6 +705,8 @@ def main(argv: list[str] | None = None) -> int:
         export_onnx=args.export_onnx,
         holdout_fraction=args.holdout_fraction,
         value_activation_name=args.value_activation,
+        weight_decay=args.weight_decay,
+        value_label_smoothing=args.value_label_smoothing,
     )
     return 0
 

@@ -473,3 +473,143 @@ fn determinized_search_worlds_are_hygienic_and_respect_the_root_mask() {
         }
     });
 }
+
+#[test]
+fn canonicalize_hidden_preserves_parked_main_declare_guard() {
+    run_big_stack(|| {
+        let cards = load_card_data();
+        let registry = CardRegistry::from_cards(&cards);
+
+        let mut deck: Vec<String> = Vec::with_capacity(50);
+        deck.extend(std::iter::repeat_n("BT26-021".to_string(), 4));
+        deck.extend(std::iter::repeat_n("BT25-092".to_string(), 4));
+        deck.extend(std::iter::repeat_n("ST1-03".to_string(), 22));
+        deck.extend(std::iter::repeat_n("ST1-04".to_string(), 20));
+
+        let mut game = Game::new(
+            &[deck.clone(), deck],
+            &cards,
+            digimon_engine::rules::Rules::standard(),
+            Some(20261126),
+        )
+        .expect("valid test decks");
+        while let Some(mp) = game.mulligan_current_player() {
+            game.decode_action(0, mp);
+        }
+        let tp = game.turn_player();
+        let opp = 1 - tp;
+        game.enter_main_phase();
+        game.set_memory(5);
+
+        // Move one BT26-021 (Gekomon) onto tp's battle area and one BT25-092 (Asuna Shiroki, [TS] Tamer) to tp's trash.
+        let geko_pos = game.players[tp as usize]
+            .deck
+            .iter()
+            .position(|c| c.card_id(&game.card_data) == "BT26-021")
+            .or_else(|| {
+                game.players[tp as usize]
+                    .hand
+                    .iter()
+                    .position(|c| c.card_id(&game.card_data) == "BT26-021")
+                    .map(|i| i + 1000)
+            })
+            .expect("BT26-021 present");
+        let geko = if geko_pos >= 1000 {
+            game.players[tp as usize].hand.remove(geko_pos - 1000)
+        } else {
+            game.players[tp as usize].deck.remove(geko_pos)
+        };
+        let perm = digimon_engine::permanent::Permanent::new(geko, 0);
+        game.players[tp as usize].battle_area.push(perm);
+
+        let asuna_pos = game.players[tp as usize]
+            .deck
+            .iter()
+            .position(|c| c.card_id(&game.card_data) == "BT25-092")
+            .or_else(|| {
+                game.players[tp as usize]
+                    .hand
+                    .iter()
+                    .position(|c| c.card_id(&game.card_data) == "BT25-092")
+                    .map(|i| i + 1000)
+            })
+            .expect("BT25-092 present");
+        let asuna = if asuna_pos >= 1000 {
+            game.players[tp as usize].hand.remove(asuna_pos - 1000)
+        } else {
+            game.players[tp as usize].deck.remove(asuna_pos)
+        };
+        game.players[tp as usize].trash.push(asuna);
+
+        let pre_mask = digimon_engine::build_action_mask(&game, tp);
+        let main_act = (1000u16..1030u16)
+            .find(|&a| pre_mask[a as usize] > 0.5)
+            .expect("BT26-021 [Main] action must be legal before declaration");
+
+        // Build hidden-to-hidden variant BEFORE parking so both states record valid parks for their infoset.
+        let mut hidden_variant = game.clone();
+        let mut swapped = false;
+        {
+            let p = &hidden_variant.players[opp as usize];
+            let mut swap_pair = None;
+            'find: for (hi, hc) in p.hand.iter().enumerate() {
+                for (di, dc) in p.deck.iter().enumerate() {
+                    if hc.card_id(&hidden_variant.card_data) != dc.card_id(&hidden_variant.card_data) {
+                        swap_pair = Some((hi, di));
+                        break 'find;
+                    }
+                }
+            }
+            if let Some((hi, di)) = swap_pair {
+                let p = &mut hidden_variant.players[opp as usize];
+                std::mem::swap(&mut p.hand[hi], &mut p.deck[di]);
+                swapped = true;
+            }
+        }
+
+        // Declare [Main] and decline the optional trash selection -> parks main_act via refund_opt on both.
+        for g in [&mut game, &mut hidden_variant] {
+            g.decode_action(main_act, tp);
+            assert!(g.pending_selection.is_some(), "expected SelectTrash prompt");
+            g.decode_action(PASS, tp);
+            assert!(g.pending_selection.is_none());
+            assert!(
+                !g.main_declare_guard().parked().is_empty(),
+                "declining refund_opt [Main] must park the declaration"
+            );
+        }
+        let root_mask = digimon_engine::build_action_mask(&game, tp);
+        assert_eq!(root_mask[main_act as usize], 0.0, "parked [Main] must be masked out at root");
+        let legal = legal_actions(&root_mask);
+
+        for (mode, sims) in [
+            (DeterminizationMode::Pimc, 64u32),
+            (DeterminizationMode::IsMcts, 32u32),
+        ] {
+            let config = DeterminizedConfig {
+                worlds: 4,
+                mode,
+                search: SearchConfig {
+                    simulations: sims,
+                    seed: 77,
+                    ..SearchConfig::default()
+                },
+            };
+            let mut eval = ObsProbeEvaluator;
+            let res = determinized_search(&registry, &game, tp, &mut eval, &config);
+            for (action, _) in &res.root_visits {
+                assert!(
+                    legal.contains(action),
+                    "{mode:?}: parked action {action} leaked into determinized root visits"
+                );
+            }
+
+            if swapped {
+                let mut eval2 = ObsProbeEvaluator;
+                let res2 = determinized_search(&registry, &hidden_variant, tp, &mut eval2, &config);
+                assert_eq!(res, res2, "{mode:?}: hidden permutation leaked under active main_declare_guard");
+            }
+        }
+    });
+}
+

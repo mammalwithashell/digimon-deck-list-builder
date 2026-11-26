@@ -44,9 +44,9 @@ use crate::observation::{
     build_observation_tensor_with_mask, default_observation_profile, ObservationProfileId,
 };
 
-use super::decision::{apply_plan, evaluate_requests, Surface};
+use super::decision::{apply_plan, evaluate_requests_recurrent, Surface};
 use super::dirichlet::sample_dirichlet;
-use super::evaluator::{EvalRequest, Evaluation, PolicyValueFn};
+use super::evaluator::{EvalRequest, Evaluation, PolicyValueFn, RecurrentState};
 
 #[path = "batched.rs"]
 mod batched;
@@ -83,6 +83,18 @@ pub struct SearchConfig {
     /// behaviour. Negative values make search exploit visited moves more,
     /// which is what a higher-level value head does implicitly.
     pub unvisited_q: f32,
+    /// Opt-in interior effect-resolution lookahead: on interior expansions
+    /// (`depth >= 1`), advance non-combat `pending_selection` states by
+    /// greedily applying the highest-prior plan up to `macro_substeps` times
+    /// before materializing the child node and scoring its leaf value.
+    /// `0` (default) retains single-decision expansion byte-for-byte.
+    pub macro_substeps: u32,
+    /// Confidence gate for macro-substep bundling: only bundle an interior
+    /// `pending_selection` when the top prior probability is `>= macro_substep_min_prior`.
+    /// `0.0` (default) bundles unconditionally when `macro_substeps > 0`;
+    /// setting e.g. `0.85` preserves UCT branching on uncertain multi-target
+    /// choices (such as `<Training>` reveals) while still bundling near-forced steps.
+    pub macro_substep_min_prior: f32,
 }
 
 impl Default for SearchConfig {
@@ -96,6 +108,8 @@ impl Default for SearchConfig {
             observation_profile: default_observation_profile(),
             max_decisions: 512,
             unvisited_q: 0.0,
+            macro_substeps: 0,
+            macro_substep_min_prior: 0.0,
         }
     }
 }
@@ -245,6 +259,8 @@ struct Node {
     /// `Some(v)` when the state is terminal; `v` is for `mover`.
     terminal_value: Option<f32>,
     edges: Vec<Edge>,
+    /// Per-player recurrent hidden states after evaluating this node.
+    recurrent_states: [Option<RecurrentState>; 2],
 }
 
 enum PreparedNode {
@@ -253,6 +269,7 @@ enum PreparedNode {
         game: Game,
         mover: PlayerId,
         surface: Surface,
+        incoming_states: [Option<RecurrentState>; 2],
     },
 }
 
@@ -283,9 +300,18 @@ impl<'a> Mcts<'a> {
         );
         let mut rng = StdRng::seed_from_u64(config.seed);
         let mut arena: Vec<Node> = Vec::new();
+        let root_states = [
+            evaluator.root_recurrent_state(0),
+            evaluator.root_recurrent_state(1),
+        ];
 
-        let (root_node, _root_eval) =
-            self.make_node(measure("clone", || root.clone()), false, evaluator, config);
+        let (root_node, _root_eval) = self.make_node(
+            measure("clone", || root.clone()),
+            false,
+            root_states,
+            evaluator,
+            config,
+        );
         if root_node.terminal_value.is_some() || root_node.edges.is_empty() {
             return SearchResult {
                 root_priors: Vec::new(),
@@ -335,7 +361,12 @@ impl<'a> Mcts<'a> {
                         config.observation_profile,
                         &mask,
                     );
-                    let eval = evaluator.evaluate_batch(&[EvalRequest { obs, mask }]);
+                    let st_in = node
+                        .recurrent_states
+                        .get(node.mover as usize)
+                        .and_then(|s| s.clone());
+                    let (eval, _) =
+                        evaluator.evaluate_batch_recurrent(&[EvalRequest { obs, mask }], &[st_in]);
                     break (eval[0].value, node.mover);
                 }
                 let edge_idx = select_edge(&arena[cur], config.c_puct, config.unvisited_q);
@@ -345,11 +376,13 @@ impl<'a> Mcts<'a> {
                     None => {
                         // ── Expansion + evaluation ───────────────────────
                         let parent = &arena[cur];
+                        let parent_states = parent.recurrent_states.clone();
                         let mut game = measure("clone", || parent.game.clone());
                         measure("step", || {
                             apply_plan(&mut game, parent.mover, &parent.edges[edge_idx].plan)
                         });
-                        let (node, value) = self.make_node(game, true, evaluator, config);
+                        let (node, value) =
+                            self.make_node(game, true, parent_states, evaluator, config);
                         let mover = node.mover;
                         let child_idx = arena.len();
                         arena.push(node);
@@ -396,7 +429,13 @@ impl<'a> Mcts<'a> {
                 0.
             },
             config.simulations,
-        ).with_priors(root.edges.iter().map(|e| (e.plan.clone(), e.raw_prior, e.prior)).collect())
+        )
+        .with_priors(
+            root.edges
+                .iter()
+                .map(|e| (e.plan.clone(), e.raw_prior, e.prior))
+                .collect(),
+        )
     }
 
     /// Materialize a node from a game state, optionally auto-advancing
@@ -409,16 +448,34 @@ impl<'a> Mcts<'a> {
         &self,
         game: Game,
         auto_advance: bool,
+        incoming_states: [Option<RecurrentState>; 2],
         evaluator: &mut dyn PolicyValueFn,
         config: &SearchConfig,
     ) -> (Node, f32) {
-        let prepared = self.prepare_node(game, auto_advance, config);
-        match prepared {
-            PreparedNode::Ready(node, value) => (node, value),
-            mut prepared => {
-                let requests = self.node_requests(&mut prepared);
-                let evaluations = evaluate_requests(&requests, evaluator, 1);
-                self.finish_node(prepared, &evaluations)
+        let mut substeps_remaining = if auto_advance {
+            config.macro_substeps
+        } else {
+            0
+        };
+        let mut prepared = self.prepare_node(game, auto_advance, incoming_states, config);
+        loop {
+            match prepared {
+                PreparedNode::Ready(node, value) => return (node, value),
+                mut next => {
+                    let (requests, states_in) = self.node_requests(&mut next);
+                    let (evaluations, states_out) =
+                        evaluate_requests_recurrent(&requests, &states_in, evaluator, 1);
+                    match self.step_or_finish_node(
+                        next,
+                        &evaluations,
+                        &states_out,
+                        &mut substeps_remaining,
+                        config,
+                    ) {
+                        NodeStep::Done(node, value) => return (node, value),
+                        NodeStep::Substep(advanced) => prepared = advanced,
+                    }
+                }
             }
         }
     }
@@ -427,6 +484,7 @@ impl<'a> Mcts<'a> {
         &self,
         mut game: Game,
         auto_advance: bool,
+        incoming_states: [Option<RecurrentState>; 2],
         config: &SearchConfig,
     ) -> PreparedNode {
         let _profile = span("prepare_node");
@@ -445,6 +503,7 @@ impl<'a> Mcts<'a> {
                     mover,
                     terminal_value: Some(tv),
                     edges: Vec::new(),
+                    recurrent_states: incoming_states,
                 },
                 tv,
             );
@@ -470,6 +529,7 @@ impl<'a> Mcts<'a> {
                     mover,
                     terminal_value: Some(0.0),
                     edges: Vec::new(),
+                    recurrent_states: incoming_states,
                 },
                 0.0,
             );
@@ -486,27 +546,97 @@ impl<'a> Mcts<'a> {
             game,
             mover,
             surface,
+            incoming_states,
         }
     }
 
-    fn node_requests(&self, prepared: &mut PreparedNode) -> Vec<EvalRequest> {
-        let PreparedNode::Evaluate { surface, .. } = prepared else {
-            unreachable!("terminal nodes do not need inference");
-        };
-        std::mem::take(&mut surface.requests)
-    }
-
-    fn finish_node(&self, prepared: PreparedNode, evaluations: &[Evaluation]) -> (Node, f32) {
-        let _profile = span("finish_node");
+    fn node_requests(
+        &self,
+        prepared: &mut PreparedNode,
+    ) -> (Vec<EvalRequest>, Vec<Option<RecurrentState>>) {
         let PreparedNode::Evaluate {
-            game,
             mover,
             surface,
+            incoming_states,
+            ..
+        } = prepared
+        else {
+            unreachable!("terminal nodes do not need inference");
+        };
+        let reqs = std::mem::take(&mut surface.requests);
+        let st = incoming_states
+            .get(*mover as usize)
+            .and_then(|s| s.clone());
+        let states_in = vec![st; reqs.len()];
+        (reqs, states_in)
+    }
+
+    fn finish_node(
+        &self,
+        prepared: PreparedNode,
+        evaluations: &[Evaluation],
+        states_out: &[Option<RecurrentState>],
+    ) -> (Node, f32) {
+        let mut zero = 0u32;
+        match self.step_or_finish_node(
+            prepared,
+            evaluations,
+            states_out,
+            &mut zero,
+            &SearchConfig::default(),
+        ) {
+            NodeStep::Done(node, value) => (node, value),
+            NodeStep::Substep(_) => unreachable!("zero substeps cannot substep"),
+        }
+    }
+
+    fn step_or_finish_node(
+        &self,
+        prepared: PreparedNode,
+        evaluations: &[Evaluation],
+        states_out: &[Option<RecurrentState>],
+        substeps_remaining: &mut u32,
+        config: &SearchConfig,
+    ) -> NodeStep {
+        let _profile = span("finish_node");
+        let PreparedNode::Evaluate {
+            mut game,
+            mover,
+            surface,
+            mut incoming_states,
         } = prepared
         else {
             unreachable!("terminal nodes are already complete");
         };
         let (priors, value) = surface.evaluate(evaluations);
+        if let Some(next_st) = states_out.first().and_then(|s| s.clone()) {
+            if let Some(slot) = incoming_states.get_mut(mover as usize) {
+                *slot = Some(next_st);
+            }
+        }
+        if *substeps_remaining > 0
+            && !game.game_over
+            && game.pending_selection.is_some()
+            && !game.current_phase.is_combat_phase()
+        {
+            let mut best_idx = 0usize;
+            let mut best_prior = f32::NEG_INFINITY;
+            for (i, &p) in priors.iter().enumerate() {
+                if p > best_prior {
+                    best_prior = p;
+                    best_idx = i;
+                }
+            }
+            if best_prior >= config.macro_substep_min_prior {
+                *substeps_remaining -= 1;
+                let chosen_plan = &surface.plans[best_idx];
+                measure("step", || apply_plan(&mut game, mover, chosen_plan));
+                return match self.prepare_node(game, true, incoming_states, config) {
+                    PreparedNode::Ready(node, ready_val) => NodeStep::Done(node, ready_val),
+                    next_prepared => NodeStep::Substep(next_prepared),
+                };
+            }
+        }
         let edges = surface
             .plans
             .into_iter()
@@ -520,16 +650,22 @@ impl<'a> Mcts<'a> {
                 w: 0.,
             })
             .collect();
-        (
+        NodeStep::Done(
             Node {
                 game,
                 mover,
                 terminal_value: None,
                 edges,
+                recurrent_states: incoming_states,
             },
             value,
         )
     }
+}
+
+enum NodeStep {
+    Done(Node, f32),
+    Substep(PreparedNode),
 }
 
 /// Apply forced (single-legal-action) decision points until the state

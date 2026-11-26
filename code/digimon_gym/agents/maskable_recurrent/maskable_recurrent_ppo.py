@@ -93,8 +93,14 @@ class MaskableRecurrentPPO(RecurrentPPO):
         verbose: int = 0,
         seed: Optional[int] = None,
         device: Union[th.device, str] = "auto",
+        kl_anchor_path: Optional[str] = None,
+        kl_coef: float = 0.0,
         _init_setup_model: bool = True,
     ):
+        self.kl_anchor_path = kl_anchor_path
+        self.kl_coef = float(kl_coef)
+        self._kl_anchor_policy: Optional[MaskableRecurrentActorCriticPolicy] = None
+        self._last_ref_lstm_states_pi: Optional[tuple[th.Tensor, th.Tensor]] = None
         super().__init__(
             policy,
             env,
@@ -120,6 +126,12 @@ class MaskableRecurrentPPO(RecurrentPPO):
             device=device,
             _init_setup_model=_init_setup_model,
         )
+
+    def _excluded_save_params(self) -> list[str]:
+        return super()._excluded_save_params() + [
+            "_kl_anchor_policy",
+            "_last_ref_lstm_states_pi",
+        ]
 
     def _setup_model(self) -> None:
         self._setup_lr_schedule()
@@ -152,6 +164,31 @@ class MaskableRecurrentPPO(RecurrentPPO):
             ),
         )
 
+        kl_anchor_path = getattr(self, "kl_anchor_path", None)
+        kl_coef = float(getattr(self, "kl_coef", 0.0) or 0.0)
+        use_kl_anchor = bool(self.env is not None and kl_anchor_path and kl_coef > 0.0)
+        if use_kl_anchor:
+            anchor_model = MaskableRecurrentPPO.load(
+                str(kl_anchor_path),
+                device=self.device,
+                kl_anchor_path=None,
+                kl_coef=0.0,
+            )
+            anchor_policy = anchor_model.policy.to(self.device)
+            anchor_policy.set_training_mode(False)
+            for param in anchor_policy.parameters():
+                param.requires_grad_(False)
+            self._kl_anchor_policy = anchor_policy
+            ref_lstm = anchor_policy.lstm_actor
+            ref_shape = (ref_lstm.num_layers, self.n_envs, ref_lstm.hidden_size)
+            self._last_ref_lstm_states_pi = (
+                th.zeros(ref_shape, device=self.device),
+                th.zeros(ref_shape, device=self.device),
+            )
+        else:
+            self._kl_anchor_policy = None
+            self._last_ref_lstm_states_pi = None
+
         hidden_state_buffer_shape = (
             self.n_steps, lstm.num_layers, self.n_envs, lstm.hidden_size
         )
@@ -166,6 +203,7 @@ class MaskableRecurrentPPO(RecurrentPPO):
             gamma=self.gamma,
             gae_lambda=self.gae_lambda,
             n_envs=self.n_envs,
+            track_ref_log_probs=use_kl_anchor,
         )
 
         # Initialize schedules for policy/value clipping
@@ -191,6 +229,7 @@ class MaskableRecurrentPPO(RecurrentPPO):
         Copy-modified from RecurrentPPO.collect_rollouts() to add:
         1. Action mask collection via get_action_masks(env)
         2. Passing action_masks to policy.forward() and rollout_buffer.add()
+        3. Optional frozen KL-anchor actor log-probabilities with exact recurrent state
         """
         assert isinstance(rollout_buffer, MaskableRecurrentRolloutBuffer), (
             f"{type(rollout_buffer)} doesn't support recurrent + maskable policy"
@@ -215,6 +254,14 @@ class MaskableRecurrentPPO(RecurrentPPO):
         callback.on_rollout_start()
 
         lstm_states = deepcopy(self._last_lstm_states)
+        ref_lstm_states_pi = (
+            (
+                self._last_ref_lstm_states_pi[0].clone(),
+                self._last_ref_lstm_states_pi[1].clone(),
+            )
+            if self._kl_anchor_policy is not None and self._last_ref_lstm_states_pi is not None
+            else None
+        )
 
         while n_steps < n_rollout_steps:
             if (
@@ -224,6 +271,7 @@ class MaskableRecurrentPPO(RecurrentPPO):
             ):
                 self.policy.reset_noise(env.num_envs)
 
+            ref_log_probs_step = None
             with th.no_grad():
                 obs_tensor = obs_as_tensor(self._last_obs, self.device)
                 episode_starts = th.tensor(
@@ -240,6 +288,39 @@ class MaskableRecurrentPPO(RecurrentPPO):
                     obs_tensor, lstm_states, episode_starts,
                     action_masks=action_masks,
                 )
+
+                if self._kl_anchor_policy is not None and ref_lstm_states_pi is not None:
+                    ref_feats = self._kl_anchor_policy.extract_features(obs_tensor)
+                    ref_pi_feats = (
+                        ref_feats
+                        if self._kl_anchor_policy.share_features_extractor
+                        else ref_feats[0]
+                    )
+                    ref_latent_pi, ref_lstm_states_pi = self._kl_anchor_policy._process_sequence(
+                        ref_pi_feats,
+                        ref_lstm_states_pi,
+                        episode_starts,
+                        self._kl_anchor_policy.lstm_actor,
+                    )
+                    ref_latent_pi = self._kl_anchor_policy.mlp_extractor.forward_actor(ref_latent_pi)
+                    ref_logits = self._kl_anchor_policy.action_net(ref_latent_pi)
+                    if action_masks is not None:
+                        mask_bool = th.as_tensor(
+                            action_masks, dtype=th.bool, device=self.device
+                        ).reshape_as(ref_logits)
+                        ref_masked = ref_logits.masked_fill(
+                            ~mask_bool, th.finfo(ref_logits.dtype).min
+                        )
+                        ref_log_probs_step = (
+                            th.log_softmax(ref_masked, dim=-1)
+                            .masked_fill(~mask_bool, 0.0)
+                            .cpu()
+                            .numpy()
+                        )
+                    else:
+                        ref_log_probs_step = (
+                            th.log_softmax(ref_logits, dim=-1).cpu().numpy()
+                        )
 
             actions = actions.cpu().numpy()
 
@@ -295,11 +376,14 @@ class MaskableRecurrentPPO(RecurrentPPO):
                 log_probs,
                 lstm_states=self._last_lstm_states,
                 action_masks=action_masks,
+                ref_log_probs=ref_log_probs_step,
             )
 
             self._last_obs = new_obs
             self._last_episode_starts = dones
             self._last_lstm_states = lstm_states
+            if ref_lstm_states_pi is not None:
+                self._last_ref_lstm_states_pi = ref_lstm_states_pi
 
         with th.no_grad():
             episode_starts = th.tensor(
@@ -335,6 +419,8 @@ class MaskableRecurrentPPO(RecurrentPPO):
         entropy_losses = []
         pg_losses, value_losses = [], []
         clip_fractions = []
+        anchor_kl_losses = []
+        kl_coef = float(getattr(self, "kl_coef", 0.0) or 0.0)
 
         continue_training = True
 
@@ -348,16 +434,19 @@ class MaskableRecurrentPPO(RecurrentPPO):
                 # Sequence padding mask (True = real data, False = padding)
                 mask = rollout_data.mask > 1e-8
 
-                # Pass action_masks to evaluate_actions
-                values, log_prob, entropy = self.policy.evaluate_actions(
-                    rollout_data.observations,
-                    actions,
-                    rollout_data.lstm_states,
-                    rollout_data.episode_starts,
-                    action_masks=rollout_data.action_masks,
+                # Pass action_masks to evaluate_actions_with_logits
+                values, log_prob, entropy, action_logits = (
+                    self.policy.evaluate_actions_with_logits(
+                        rollout_data.observations,
+                        actions,
+                        rollout_data.lstm_states,
+                        rollout_data.episode_starts,
+                        action_masks=rollout_data.action_masks,
+                    )
                 )
 
                 values = values.flatten()
+
                 advantages = rollout_data.advantages
                 if self.normalize_advantage:
                     advantages = (
@@ -408,6 +497,28 @@ class MaskableRecurrentPPO(RecurrentPPO):
                     + self.vf_coef * value_loss
                 )
 
+                if (
+                    self._kl_anchor_policy is not None
+                    and kl_coef > 0.0
+                    and rollout_data.ref_log_probs is not None
+                ):
+                    legal = rollout_data.action_masks > 0.5
+                    masked_logits = action_logits.masked_fill(
+                        ~legal, th.finfo(action_logits.dtype).min
+                    )
+                    log_pi = th.log_softmax(masked_logits, dim=-1)
+                    pi = th.softmax(masked_logits, dim=-1)
+                    kl_per_step = (
+                        pi
+                        * (
+                            log_pi.masked_fill(~legal, 0.0)
+                            - rollout_data.ref_log_probs.masked_fill(~legal, 0.0)
+                        )
+                    ).sum(dim=-1)
+                    anchor_kl = th.mean(kl_per_step[mask])
+                    anchor_kl_losses.append(float(anchor_kl.item()))
+                    loss = loss + kl_coef * anchor_kl
+
                 with th.no_grad():
                     log_ratio = log_prob - rollout_data.old_log_prob
                     approx_kl_div = th.mean(
@@ -449,6 +560,8 @@ class MaskableRecurrentPPO(RecurrentPPO):
         )
         self.logger.record("train/value_loss", np.mean(value_losses))
         self.logger.record("train/approx_kl", np.mean(approx_kl_divs))
+        if anchor_kl_losses:
+            self.logger.record("train/anchor_kl", np.mean(anchor_kl_losses))
         self.logger.record("train/clip_fraction", np.mean(clip_fractions))
         self.logger.record("train/loss", loss.item())
         self.logger.record("train/explained_variance", explained_var)

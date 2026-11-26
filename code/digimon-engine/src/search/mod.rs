@@ -39,9 +39,10 @@ pub use determinized::{
     determinized_search, determinized_search_batched, determinized_search_batched_observed,
     determinized_search_sampled, DeterminizationMode, DeterminizedConfig,
 };
-pub use evaluator::{EvalRequest, Evaluation, PolicyValueFn, UniformEvaluator};
+pub use evaluator::{EvalRequest, Evaluation, PolicyValueFn, RecurrentState, UniformEvaluator};
 pub use mcts::{decision_player, Mcts, SearchConfig, SearchResult};
 pub use memoized::MemoizedEvaluator;
+pub use onnx_adapter::load_search_evaluator_for_profile;
 
 /// Opt-in native search timing diagnostics.
 pub mod profiling;

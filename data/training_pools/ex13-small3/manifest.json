@@ -1,0 +1,120 @@
+{
+  "schema": "hybrid-small-pool-v1",
+  "pool_id": "ex13-small3",
+  "source_pool": "data/training_pools/ex13-20261026",
+  "archetypes": [
+    "Examon",
+    "TS Jupitermon",
+    "Three Musketeers"
+  ],
+  "train_decks_per_archetype": 2,
+  "heldout_decks_per_archetype": 2,
+  "total_train_slots": 6,
+  "total_heldout_slots": 6,
+  "source_hashes": {
+    "train_snapshot.json": "13d6fd44a64c9725be77321015204862e34aafe77d63abc76eda34db6320b571",
+    "heldout_snapshot.json": "765c53e6250de416fd7caa966a060bed0aa893a42a1f009eca95b347e7c0987e",
+    "decks.json": "eebf5ef30aebff4236ca1f8adaf8978e19ff58873636d638b1f4604e80129384",
+    "cards.json": "fd481b7203fe86c07ce7774b5ca493795f0c47d6a58024acc79bd65403e8f4f3",
+    "card_admissibility.json": "1b70a03ffab2532843292d58010a22e7da9f217995247214d74d9e3a7efb3654",
+    "mechanics_readiness.json": "8d05cfc910e0f01d43224e70343bd24c476b820cd0b9991c4f29509bbcc801b0"
+  },
+  "output_hashes": {
+    "train_snapshot.json": "2ad080709e624c15a59faa209fc45ced7ed071e6ced09b8c49da620fd1489c15",
+    "heldout_snapshot.json": "1c967275dd582fb305881aac296419e0b156d5e34897d43f625e85972035451b",
+    "decks.json": "4526ce2e86881c13a6d520c0fc6af1fa257da1a1209fb99ea50aec87f77ed557",
+    "heldout_decks.json": "7357a18c03e1d878d5b815599e8a1f971f29d7698f048acc77938c679ea28329"
+  },
+  "lists": {
+    "Examon": {
+      "training": [
+        {
+          "deck_id": "sha256:5ed9b0f13af8340b8ca4be78001d88100b29422939fc96bffa2fa61cf01b43c9",
+          "source": "digilab",
+          "source_deck_id": "digilab_result_118624",
+          "source_url": "https://digimon.digilab.cards/decklist/118624"
+        },
+        {
+          "deck_id": "sha256:d3dba1f3956ffdffc3f3165bbdf1773d26a893a6991fdecc666425c2ab699588",
+          "source": "dcg_nexus",
+          "source_deck_id": "dcg_nexus_bc318528711d",
+          "source_url": "https://dcg-nexus.com/decklist/afc494d2-df25-4474-8284-ebc6868bb4e1"
+        }
+      ],
+      "heldout": [
+        {
+          "deck_id": "sha256:11898ce6502f13e392e406d29fab874cb86c63f3cd0992dfa43c9f7e42fda285",
+          "source": "digilab",
+          "source_deck_id": "digilab_result_118338",
+          "source_url": "https://digimon.digilab.cards/decklist/118338"
+        },
+        {
+          "deck_id": "sha256:e0d5c7a6bba221741efda95033a16cfad99b718d4f0b562936bbddfe181f8929",
+          "source": "dcg_nexus",
+          "source_deck_id": "dcg_nexus_49a7706377be",
+          "source_url": "https://dcg-nexus.com/decklist/4fde97db-2868-4fc9-a753-4f620fefcf39"
+        }
+      ]
+    },
+    "TS Jupitermon": {
+      "training": [
+        {
+          "deck_id": "sha256:2a78b2fe4030bb4baed1b258d645f9af3a489d68201159ae881028b870e6aa0f",
+          "source": "dcg_nexus",
+          "source_deck_id": "dcg_nexus_b7ce8c8ff1d0",
+          "source_url": "https://dcg-nexus.com/decklist/99dc9064-e62e-4ac1-b41a-d5dc74c5300c"
+        },
+        {
+          "deck_id": "sha256:c892e8fb0cad79ca55cf4ad4cdb77117c1b7afb515c78c6b9329fdc67a833666",
+          "source": "dcg_nexus",
+          "source_deck_id": "dcg_nexus_7d60c455d736",
+          "source_url": "https://dcg-nexus.com/decklist/5effd79d-bcad-43fb-a08a-ae885d34bfd1"
+        }
+      ],
+      "heldout": [
+        {
+          "deck_id": "sha256:85fa4558f7841e5341b9846420fc9b1e548a4317c7622e1ef1c006b7f3baacde",
+          "source": "dcg_nexus",
+          "source_deck_id": "dcg_nexus_6b085bd2edf9",
+          "source_url": "https://dcg-nexus.com/decklist/dc2b823e-9009-441c-b971-d5f5f04352e2"
+        },
+        {
+          "deck_id": "sha256:d3895909066453170c724f9841c5948a3219cf0cf2765d002b4069dc89e85f59",
+          "source": "dcg_nexus",
+          "source_deck_id": "dcg_nexus_b7bb9dac920d",
+          "source_url": "https://dcg-nexus.com/decklist/9aebae95-55d7-4f0b-97c7-32d439d97d51"
+        }
+      ]
+    },
+    "Three Musketeers": {
+      "training": [
+        {
+          "deck_id": "sha256:02cff1c487b31b11ec6ceaed86d8161385b240afcdcd14daaffbddf908b5d677",
+          "source": "digilab",
+          "source_deck_id": "digilab_result_119500",
+          "source_url": "https://digimon.digilab.cards/decklist/119500"
+        },
+        {
+          "deck_id": "sha256:49f05630a0a7034965984a1719f1a4264667603c5af2a7d961a655dcdb6322d7",
+          "source": "digilab",
+          "source_deck_id": "digilab_result_126919",
+          "source_url": "https://digimon.digilab.cards/decklist/126919"
+        }
+      ],
+      "heldout": [
+        {
+          "deck_id": "sha256:8a42a5bde20de30b0df20a9d77f1563d3e2607d48ead4cae29edecfbfbea0b32",
+          "source": "digilab",
+          "source_deck_id": "digilab_result_125077",
+          "source_url": "https://digimon.digilab.cards/decklist/125077"
+        },
+        {
+          "deck_id": "sha256:fdaa5ee2278f455ceabcbbba9db9a3998f5c28064d6961859a8eae5495f70942",
+          "source": "dcg_nexus",
+          "source_deck_id": "dcg_nexus_41c97ab01007",
+          "source_url": "https://dcg-nexus.com/decklist/3fe4a8a0-d4b4-484c-b57b-5e8ede27a6c6"
+        }
+      ]
+    }
+  }
+}

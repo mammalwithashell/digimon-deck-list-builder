@@ -120,7 +120,7 @@ class LstmValueWrapper(nn.Module):
     independently of actor state.
     """
 
-    def __init__(self, policy):
+    def __init__(self, policy, value_activation: str = "identity"):
         super().__init__()
         self.features_extractor = policy.features_extractor
         self.vf_features_extractor = getattr(policy, "vf_features_extractor", None)
@@ -137,6 +137,7 @@ class LstmValueWrapper(nn.Module):
             )
         self.mlp_extractor_value = policy.mlp_extractor.value_net
         self.value_net = policy.value_net
+        self.value_activation = value_activation
 
     def forward(
         self,
@@ -150,7 +151,10 @@ class LstmValueWrapper(nn.Module):
         lstm_out, (h_out, c_out) = self.lstm(lstm_in, (h, c))
         lstm_out = lstm_out.squeeze(0)
         latent_vf = self.mlp_extractor_value(lstm_out)
-        return self.value_net(latent_vf), h_out, c_out
+        value = self.value_net(latent_vf)
+        if self.value_activation == "tanh":
+            value = torch.tanh(value)
+        return value, h_out, c_out
 
 
 # ---------------------------------------------------------------------------
@@ -342,7 +346,11 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
         output_names=["logits", "h_out", "c_out"],
         dynamic_axes={
             "obs": {0: "batch"},
+            "h_in": {1: "batch"},
+            "c_in": {1: "batch"},
             "logits": {0: "batch"},
+            "h_out": {1: "batch"},
+            "c_out": {1: "batch"},
         },
         opset_version=17,
         dynamo=False,
@@ -352,8 +360,10 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
     # Companion value graph: same (obs, h, c) signature, threads the
     # CRITIC's own LSTM state (see LstmValueWrapper for why it is a
     # separate file rather than extra outputs on the main graph).
+    from digimon_gym.agents import value_activation
+    activation = value_activation.get(model)
     value_path = Path(output_path).with_suffix(".value.onnx")
-    value_wrapper = LstmValueWrapper(policy)
+    value_wrapper = LstmValueWrapper(policy, activation)
     value_wrapper.eval()
     torch.onnx.export(
         value_wrapper,
@@ -363,7 +373,11 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
         output_names=["value", "h_out", "c_out"],
         dynamic_axes={
             "obs": {0: "batch"},
+            "h_in": {1: "batch"},
+            "c_in": {1: "batch"},
             "value": {0: "batch"},
+            "h_out": {1: "batch"},
+            "c_out": {1: "batch"},
         },
         opset_version=17,
         dynamo=False,
@@ -373,6 +387,25 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
     # Verify round-trip
     write_export_metadata(output_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id), value_head=value_path.name)
     write_export_metadata(value_path, observation_layout, training_contract=validate_checkpoint(model, observation_layout.id))
+    value_semantics = getattr(model, "digimon_value_semantics", None)
+    if value_semantics is not None:
+        import onnx
+        for target_onnx in (Path(output_path), value_path):
+            graph = onnx.load(str(target_onnx))
+            prop = graph.metadata_props.add()
+            prop.key, prop.value = "digimon_value_semantics", value_semantics
+            onnx.save(graph, str(target_onnx))
+            meta_path = Path(f"{target_onnx}.meta.json")
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["value_semantics"] = value_semantics
+            meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+    information = getattr(model, "digimon_information", None)
+    if information is not None:
+        for target_onnx in (Path(output_path), value_path):
+            meta_path = Path(f"{target_onnx}.meta.json")
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            meta["information"] = information
+            meta_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
     _verify_lstm(policy, wrapper, output_path, tensor_size)
     _verify_lstm_value(value_wrapper, str(value_path), policy, tensor_size)
 

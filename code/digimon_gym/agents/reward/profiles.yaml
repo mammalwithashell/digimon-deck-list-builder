@@ -107,6 +107,25 @@ profiles:
         draw: 0.0
 
   # ----------------------------------------------------------------
+  # Strategic pure-terminal profile (±1.0 single-game terminal scale).
+  #
+  # Inherits `_pure_outcome` (every shaping term, quick-win bonus, and
+  # stall penalty explicitly zeroed) and sets single-game `terminal_outcome`
+  # to ±1.0 / 0.0 so single-game PPO value targets match AlphaZero
+  # `selfplay-shards-v1` terminal outcomes `z ∈ {-1, 0, +1}` with zero
+  # critic scale shock on warm-start and zero penalty for multi-turn setup.
+  # ----------------------------------------------------------------
+  terminal_strategic_v1:
+    inherits: _pure_outcome
+    components:
+      - kind: terminal_outcome
+        win_base: 1.0
+        fast_win_bonus_max: 0.0
+        fast_win_par_steps: 200
+        loss: -1.0
+        draw: 0.0
+
+  # ----------------------------------------------------------------
   # Starter 1-6 flat profile — data-calibrated, gentle shaping for the
   # six worldwide starter decks (ST-1..6). Flattened ~10-30x vs the
   # default `gameplay` shape and re-paced for how starters actually win.

@@ -389,6 +389,13 @@ pub fn run_self_play_with_opponents(
         let mut decisions = 0u32;
         let mut non_forced = 0u32;
         let game_first_record = buffer.records.len();
+        evaluator.reset_episode();
+        if let (Some(pool), Some(index)) = (opponents.as_deref_mut(), historical) {
+            pool.evaluators[index].reset_episode();
+            if let Some(Some(policy)) = pool.policies.get_mut(index) {
+                policy.reset();
+            }
+        }
 
         while !game.game_over && decisions < config.decision_cap {
             let pid = decision_player(&game);
@@ -440,6 +447,34 @@ pub fn run_self_play_with_opponents(
                 _ => {}
             }
 
+            if let (Some(index), Some(current)) = (historical, learner) {
+                if current != pid {
+                    if let Some(Some(policy)) =
+                        opponents.as_deref_mut().and_then(|p| p.policies.get_mut(index))
+                    {
+                        let obs =
+                            build_observation_tensor_with_mask(&game, pid, &registry, profile, &mask);
+                        let action = policy.predict(&obs, &mask).map_err(|e| {
+                            format!("game {game_idx} decision {decisions} lstm opponent: {e}")
+                        })? as u16;
+                        if mask.get(action as usize).copied().unwrap_or(0.0) <= 0.5 {
+                            return Err(format!(
+                                "game {game_idx} decision {decisions}: lstm opponent chose illegal action {action}"
+                            ));
+                        }
+                        if trace_decisions {
+                            eprintln!(
+                                "game {game_idx} decision {decisions}: lstm opponent action {action}"
+                            );
+                        }
+                        non_forced += 1;
+                        game.decode_action(action, pid);
+                        decisions += 1;
+                        continue;
+                    }
+                }
+            }
+
             // Budget allocation (search-budget experiments). The full budget
             // belongs to unconstrained Main-phase roots; every other root —
             // a pending selection, the mulligan, breeding, a block/counter/
@@ -477,14 +512,39 @@ pub fn run_self_play_with_opponents(
                 _ => &mut *evaluator,
             };
             if config.policy_only {
-                let obs=build_observation_tensor_with_mask(&game,pid,&registry,profile,&mask);
-                let eval=acting_evaluator.evaluate_batch(&[crate::search::EvalRequest{obs,mask:mask.clone()}]);
-                if eval.len()!=1 || eval[0].policy.len()!=mask.len() ||
-                    eval[0].policy.iter().any(|v|!v.is_finite()) {
+                let obs = build_observation_tensor_with_mask(&game, pid, &registry, profile, &mask);
+                let eval = if acting_evaluator.is_recurrent() {
+                    let st_in = acting_evaluator.root_recurrent_state(pid);
+                    let (ev, _) = acting_evaluator.evaluate_batch_recurrent(
+                        &[crate::search::EvalRequest {
+                            obs: obs.clone(),
+                            mask: mask.clone(),
+                        }],
+                        &[st_in],
+                    );
+                    acting_evaluator.observe_committed_step(pid, &obs, &mask);
+                    ev
+                } else {
+                    acting_evaluator.evaluate_batch(&[crate::search::EvalRequest {
+                        obs,
+                        mask: mask.clone(),
+                    }])
+                };
+                if eval.len() != 1
+                    || eval[0].policy.len() != mask.len()
+                    || eval[0].policy.iter().any(|v| !v.is_finite())
+                {
                     return Err("invalid policy-only evaluator output".into());
                 }
-                let action=legal.iter().copied().fold(legal[0],|best,a|if eval[0].policy[a as usize]>eval[0].policy[best as usize]{a}else{best});
-                game.decode_action(action,pid);decisions+=1;
+                let action = legal.iter().copied().fold(legal[0], |best, a| {
+                    if eval[0].policy[a as usize] > eval[0].policy[best as usize] {
+                        a
+                    } else {
+                        best
+                    }
+                });
+                game.decode_action(action, pid);
+                decisions += 1;
                 continue;
             }
             searched_by_seat[pid as usize] += 1;
@@ -597,31 +657,49 @@ pub fn run_self_play_with_opponents(
                     // The temperature clock covers BOTH actors even when only
                     // the current actor's rows are retained for training.
                     non_forced += 1;
-                    if learner.is_none_or(|current| current == pid) {
+                    let emit_row = learner.is_none_or(|current| current == pid);
+                    let is_rec = match (historical, learner) {
+                        (Some(idx), Some(current)) if current != pid => {
+                            opponents.as_ref().unwrap().evaluators[idx].is_recurrent()
+                        }
+                        _ => evaluator.is_recurrent(),
+                    };
+                    if emit_row || is_rec {
                         let obs = build_observation_tensor_with_mask(
                             &game, pid, &registry, profile, step_mask,
                         );
-                        if buffer.obs_dim == 0 {
-                            buffer.obs_dim = obs.len();
+                        if is_rec {
+                            match (historical, learner) {
+                                (Some(idx), Some(current)) if current != pid => {
+                                    opponents.as_mut().unwrap().evaluators[idx]
+                                        .observe_committed_step(pid, &obs, step_mask);
+                                }
+                                _ => evaluator.observe_committed_step(pid, &obs, step_mask),
+                            }
                         }
-                        // Shards also encode the complete engine legality mask.
-                        // Rejected/backward page moves remain legal with ZERO
-                        // target mass, so fitting can learn not to browse in circles.
-                        let (actions, visits): (Vec<u16>, Vec<u32>) = result
-                            .training_visits(&route[..index], step_mask)
-                            .into_iter()
-                            .unzip();
-                        buffer.records.push(PendingRecord {
-                            obs,
-                            actions,
-                            policy: visits.into_iter().map(|v| v as f32).collect(),
-                            mover: pid,
-                            game_id: game_idx,
-                            policy_weight: if full_search { 1.0 } else { 0.0 },
-                            z: 0.0,
-                            terminated: false,
-                        });
-                        rows_by_seat[pid as usize] += 1;
+                        if emit_row {
+                            if buffer.obs_dim == 0 {
+                                buffer.obs_dim = obs.len();
+                            }
+                            // Shards also encode the complete engine legality mask.
+                            // Rejected/backward page moves remain legal with ZERO
+                            // target mass, so fitting can learn not to browse in circles.
+                            let (actions, visits): (Vec<u16>, Vec<u32>) = result
+                                .training_visits(&route[..index], step_mask)
+                                .into_iter()
+                                .unzip();
+                            buffer.records.push(PendingRecord {
+                                obs,
+                                actions,
+                                policy: visits.into_iter().map(|v| v as f32).collect(),
+                                mover: pid,
+                                game_id: game_idx,
+                                policy_weight: if full_search { 1.0 } else { 0.0 },
+                                z: 0.0,
+                                terminated: false,
+                            });
+                            rows_by_seat[pid as usize] += 1;
+                        }
                     }
                 } else {
                     stats.forced_decisions_total += 1;
@@ -722,6 +800,8 @@ pub fn run_self_play_with_opponents(
             "dirichlet_alpha": config.search.search.dirichlet_alpha,
             "dirichlet_epsilon": config.search.search.dirichlet_epsilon,
             "max_decisions": config.search.search.max_decisions,
+            "macro_substeps": config.search.search.macro_substeps,
+            "macro_substep_min_prior": config.search.search.macro_substep_min_prior,
             "evaluation_batch_size_requested": config.evaluation_batch_size,
             "evaluation_batch_size": if config.search.mode == DeterminizationMode::IsMcts { 1 }
                 else { config.evaluation_batch_size.min(config.search.worlds.max(1).min(config.search.search.simulations.max(1)) as usize) },

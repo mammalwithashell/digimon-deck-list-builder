@@ -74,6 +74,41 @@ pub(crate) fn validate_session_contract(
     )
 }
 
+pub(crate) fn validate_value_session_contract(
+    session: &ort::session::Session,
+    profile: &TensorProfile,
+) -> Result<(), super::InferenceError> {
+    let metadata = session.metadata().map_err(|e| {
+        super::InferenceError::LoadFailed(format!("cannot read value model contract: {e}"))
+    })?;
+    let raw = metadata.custom("digimon_contract").ok_or_else(|| {
+        super::InferenceError::LoadFailed(
+            "missing embedded digimon_contract metadata on companion value model".into(),
+        )
+    })?;
+    ModelContract::parse_and_validate(&raw, profile).map_err(super::InferenceError::LoadFailed)?;
+    validate_outlet(
+        session
+            .inputs()
+            .iter()
+            .find(|v| v.name() == "obs")
+            .map(|v| v.dtype()),
+        profile.tensor_size,
+        "obs",
+    )?;
+    let value_ok = session
+        .outputs()
+        .iter()
+        .find(|v| v.name() == "value")
+        .is_some_and(|v| v.dtype().tensor_type() == Some(ort::value::TensorElementType::Float32));
+    if !value_ok {
+        return Err(super::InferenceError::ShapeMismatch(
+            "value must be a float32 tensor".into(),
+        ));
+    }
+    Ok(())
+}
+
 fn validate_outlet(
     dtype: Option<&ort::value::ValueType>,
     expected: usize,

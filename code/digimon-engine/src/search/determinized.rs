@@ -238,7 +238,8 @@ fn pimc_search(
     };
     let mcts = Mcts::new(registry);
 
-    let mut ref_legal: Option<Vec<u16>> = None;
+    let mut ref_legal: Option<Vec<u16>> =
+        Some(legal_set(&measure("mask", || build_action_mask(canon, viewer))));
     let mut visits: BTreeMap<Vec<u16>, u32> = BTreeMap::new();
     let mut prior_sums: BTreeMap<Vec<u16>, (f64, f64)> = BTreeMap::new();
     let mut weighted_q: BTreeMap<Vec<u16>, f64> = BTreeMap::new();
@@ -630,6 +631,7 @@ fn canonicalize_hidden(root: &Game, viewer: PlayerId) -> Game {
         }
         canon.pending_selection = Some(selection);
     }
+    canon.rebase_main_declare_guard_for_world(root);
     canon
 }
 

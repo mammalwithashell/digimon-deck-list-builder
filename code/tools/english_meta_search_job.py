@@ -186,7 +186,15 @@ def collect_bootstrap(run_dir: Path, games: int, seed: int):
     return directory
 
 
-def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda", teacher_label: str = "greedy"):
+def bootstrap(
+    run_dir: Path,
+    games: int,
+    seed: int,
+    device: str = "cuda",
+    teacher_label: str = "greedy",
+    net_arch: list[int] | None = None,
+    features_dim: int = 128,
+):
     import gymnasium as gym
     import torch
     from sb3_contrib import MaskablePPO
@@ -197,6 +205,7 @@ def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda", teache
     from tools.export_onnx import export_mlp
     torch.set_num_threads(2)
     contract = current_contract(PROFILE)
+    arch = list(net_arch) if net_arch is not None else [128, 128]
 
     class Spaces(gym.Env):
         observation_space = gym.spaces.Box(-10.,20001.,(contract["tensor_size"],),np.float32)
@@ -206,8 +215,8 @@ def bootstrap(run_dir: Path, games: int, seed: int, device: str = "cuda", teache
     if not init.exists():
         model=MaskablePPO("MlpPolicy",Spaces(),n_steps=64,batch_size=64,seed=seed,device="cpu",
             policy_kwargs=dict(features_extractor_class=CardEmbeddingExtractor,
-                features_extractor_kwargs=dict(features_dim=128,embedding_dim=8,tensor_profile_id=PROFILE),
-                net_arch=dict(pi=[128,128],vf=[128,128])))
+                features_extractor_kwargs=dict(features_dim=features_dim,embedding_dim=8,tensor_profile_id=PROFILE),
+                net_arch=dict(pi=arch,vf=arch)))
         model.digimon_contract=contract
         model.save(str(init))
     directory=run_dir / "bootstrap_shards"

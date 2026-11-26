@@ -85,8 +85,13 @@ def search_budget_flags(args) -> list[str]:
     phase budget 64 + playout-cap randomization 0.25/64 (0.27x compute, no
     measurable loss at equal games). `--full-search` turns both off; setting
     `--reduced-sims 0` or `--full-search-fraction 1` turns one off."""
+    macro = getattr(args, "macro_substeps", 0) or 0
+    macro_min_prior = getattr(args, "macro_substep_min_prior", 0.0) or 0.0
+    macro_flags = ["--macro-substeps", str(macro)] if macro > 0 else []
+    if macro > 0 and macro_min_prior > 0.0:
+        macro_flags += ["--macro-substep-min-prior", str(macro_min_prior)]
     if getattr(args, "full_search", False):
-        return []
+        return macro_flags
     flags: list[str] = []
     reduced = getattr(args, "reduced_sims", 0) or 0
     if reduced > 0:
@@ -94,7 +99,7 @@ def search_budget_flags(args) -> list[str]:
     fraction = getattr(args, "full_search_fraction", 1.0)
     if fraction is not None and fraction < 1.0:
         flags += ["--full-search-fraction", str(fraction), "--cheap-sims", str(getattr(args, "cheap_sims", 64))]
-    return flags
+    return flags + macro_flags
 
 
 def run_selfplay_stage(
@@ -435,25 +440,47 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
     print(f"training: warm-start {warm_start_zip}, window = {len(window_dirs)} shard dir(s)", flush=True)
 
     sys.path.insert(0, str(REPO_ROOT / "code"))
-    from digimon_gym.agents.azero_trainer import train as azero_train  # noqa: E402
-
     model_zip = gen_dir / "model.zip"
     model_onnx = gen_dir / "model.onnx"
     t1 = time.time()
-    train_summary = azero_train(
-        init_from=Path(warm_start_zip),
-        shard_dirs=window_dirs,
-        out=model_zip,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        lr=args.lr,
-        value_coef=args.value_coef,
-        device=args.train_device,
-        seed=args.seed + gen,
-        export_onnx=model_onnx,
-        holdout_fraction=getattr(args, "value_holdout_fraction", 0.0),
-        value_activation_name=getattr(args, "value_activation", None),
-    )
+    trainer_kind = getattr(args, "trainer_kind", "mlp")
+    if trainer_kind == "lstm":
+        from digimon_gym.agents.azero_lstm_distill import distill_lstm  # noqa: E402
+
+        train_summary = distill_lstm(
+            shard_dirs=window_dirs,
+            out=model_zip,
+            init_from=Path(warm_start_zip),
+            epochs=args.epochs,
+            seq_batch_size=getattr(args, "seq_batch_size", 16),
+            lr=args.lr,
+            value_coef=args.value_coef,
+            holdout_fraction=getattr(args, "value_holdout_fraction", 0.15),
+            weight_decay=getattr(args, "weight_decay", 0.0),
+            value_label_smoothing=getattr(args, "value_label_smoothing", 0.0),
+            device=args.train_device,
+            seed=args.seed + gen,
+            export_onnx=model_onnx,
+        )
+    else:
+        from digimon_gym.agents.azero_trainer import train as azero_train  # noqa: E402
+
+        train_summary = azero_train(
+            init_from=Path(warm_start_zip),
+            shard_dirs=window_dirs,
+            out=model_zip,
+            epochs=args.epochs,
+            batch_size=args.batch_size,
+            lr=args.lr,
+            value_coef=args.value_coef,
+            device=args.train_device,
+            seed=args.seed + gen,
+            export_onnx=model_onnx,
+            holdout_fraction=getattr(args, "value_holdout_fraction", 0.0),
+            value_activation_name=getattr(args, "value_activation", None),
+            weight_decay=getattr(args, "weight_decay", 0.0),
+            value_label_smoothing=getattr(args, "value_label_smoothing", 0.0),
+        )
     t_train = time.time() - t1
 
     eval_result = {"ok": False, "skipped": True}
@@ -570,6 +597,10 @@ def build_parser() -> argparse.ArgumentParser:
         help="total sims for the cheap value-only searches when --full-search-fraction < 1")
     p.add_argument("--full-search", action="store_true",
         help="disable both budget levers: 320/4-style full search at every root (the pre-2026-10-28 behaviour)")
+    p.add_argument("--macro-substeps", type=int, default=0,
+        help="interior non-combat pending-selection macro-substeps per MCTS expansion (0 = unchanged)")
+    p.add_argument("--macro-substep-min-prior", type=float, default=0.0,
+        help="minimum top prior probability required to auto-advance an interior macro-substep (0.0 = always)")
     p.add_argument("--eval-batch-size", type=int, default=4,
         help="independent PIMC worlds per evaluation batch; 1 is the serial reference")
     p.add_argument("--mode", default="pimc")
@@ -584,9 +615,17 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--window", type=int, default=3, help="sliding-window generations of shards for training")
     p.add_argument("--replay-games-per-generation", type=int,
                    help="cap each source generation at this many games using whole chunks")
+    p.add_argument("--trainer-kind", choices=("mlp", "lstm"), default="mlp",
+                   help="trainer used for AlphaZero fitting: mlp (azero_trainer) or lstm (azero_lstm_distill)")
     p.add_argument("--epochs", type=int, default=2)
     p.add_argument("--batch-size", type=int, default=512)
+    p.add_argument("--seq-batch-size", type=int, default=16,
+                   help="episode sequence batch size when --trainer-kind lstm")
     p.add_argument("--lr", type=float, default=1e-4)
+    p.add_argument("--weight-decay", type=float, default=0.0,
+                   help="AdamW decoupled weight decay (0.0 keeps standard Adam)")
+    p.add_argument("--value-label-smoothing", type=float, default=0.0,
+                   help="shrink training value targets z by (1 - eps); held-out MSE uses raw z")
     p.add_argument("--value-coef", type=float, default=1.0)
     p.add_argument("--value-holdout-fraction", type=float, default=0.0,
                    help="hold out this share of WHOLE games from fitting and save the best held-out epoch")
