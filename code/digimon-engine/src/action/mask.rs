@@ -44,6 +44,15 @@ pub(crate) fn evo_color(raw: u8) -> Option<CardColor> {
 /// Returns 1.0 for legal actions, 0.0 for illegal.
 pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
     let mut mask = vec![0.0f32; ACTION_SPACE_SIZE];
+    build_action_mask_into(game, player_id, &mut mask);
+    mask
+}
+
+/// Populate `mask` (which must have length `ACTION_SPACE_SIZE`) with 1.0 for
+/// legal actions and 0.0 for illegal actions. Clears `mask` before writing.
+pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]) {
+    debug_assert_eq!(mask.len(), ACTION_SPACE_SIZE);
+    mask.fill(0.0);
     let me = game.player(player_id);
     let opp_id = game.next_clockwise(player_id);
     let opp = game.player(opp_id);
@@ -73,7 +82,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // surrender routes through it directly via the server's
             // `/surrender` endpoint + WS "surrender" message, not via the mask.
         }
-        return mask;
+        return;
     }
 
     match game.current_phase {
@@ -81,7 +90,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // Mulligan is sequential: only the currently-deciding player has
             // a non-empty mask. Everyone else sees all zeros.
             if game.mulligan_current_player() != Some(player_id) {
-                return mask;
+                return;
             }
             // Bit 0 = keep (always available for the decider).
             mask[0] = 1.0;
@@ -482,7 +491,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // the forced attacker(s)' attack bits. Mirrors Python
             // action_mask.py:227-280. Falls through to the normal mask
             // above when no forced attacker can act (e.g. all suspended).
-            apply_force_attack_mask_replacement(&mut mask, game, player_id);
+            apply_force_attack_mask_replacement(mask, game, player_id);
         }
 
         GamePhase::Breeding => {
@@ -660,8 +669,6 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
     // it as premature surrender. Removed from the learnable action space. The
     // `Game::concede` primitive still backs human PvP surrender via the
     // server, which does not go through this mask.
-
-    mask
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────
@@ -1120,6 +1127,11 @@ fn apply_force_attack_mask_replacement(
     game: &Game,
     player_id: PlayerId,
 ) {
+    // Fast path: almost all Main-phase masks have no ForceAttack modifier;
+    // avoid allocating an 8.8 KB buffer on every mask call.
+    if !game.modifiers.any_with_type(ModifierType::ForceAttack) {
+        return;
+    }
     // A forced attack restricts the choices that are already legal in Main.
     // Reuse the normal mask so memory, player prohibitions, effective
     // kind, freshness, suspension and target restrictions cannot drift apart.

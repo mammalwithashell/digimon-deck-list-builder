@@ -114,6 +114,10 @@ fn main_may_pay_two_bottom_sources_to_digivolve_the_tamer() {
         r.choose_prompt_card(CARD, None).unwrap();
     }
     r.choose_prompt_card("BT27-026", None).unwrap();
+    // BT27-026's optional [When Digivolving] triggers on Tamer digivolution.
+    if r.pending_selection().is_some() {
+        r.decline_prompt().unwrap();
+    }
     assert_eq!(before, r.memory());
     assert_eq!(
         ids(

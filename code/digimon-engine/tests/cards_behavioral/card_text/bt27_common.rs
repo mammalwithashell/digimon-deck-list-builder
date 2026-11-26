@@ -236,12 +236,18 @@ pub(super) fn tamer_evolution(card: &str, cost: i16, keywords: &[Keyword]) {
     let before = r.memory();
     action(&mut r, 0, encode_digivolve(0, base.index as u16));
     assert_eq!(before - r.memory(), cost);
-    // [When Digivolving] triggers normally on Tamer digivolutions; drain any
-    // resulting prompt so the post-digivolve stack and keywords can be verified.
-    while let Some((player, pick)) = r
-        .pending_selection()
-        .map(|p| (p.selecting_player, p.valid_action_ids[0]))
-    {
+    // [When Digivolving] triggers normally on Tamer digivolutions; decline
+    // optional prompts (so "by deleting 1 of your Digimon" costs do not
+    // self-delete and trigger <Armor Purge>) and drain any mandatory prompts.
+    while let Some((player, pick)) = r.pending_selection().map(|p| {
+        let pass = digimon_engine::action::space::PASS;
+        let pick = if p.valid_action_ids.contains(&pass) {
+            pass
+        } else {
+            p.valid_action_ids[0]
+        };
+        (p.selecting_player, pick)
+    }) {
         action(&mut r, player, pick);
     }
     let stack = &r.game.players[0].battle_area[base.index as usize];

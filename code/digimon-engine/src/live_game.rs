@@ -25,7 +25,6 @@ use serde_json::Value;
 use crate::action::explain::{explain_action, legal_decoded_actions, ActionExplanation};
 use crate::action::space::PASS;
 use crate::card_data::CardData;
-use crate::cards::build_registry;
 use crate::debug_runner::{DebugRunner, DebugRunnerBuilder};
 use crate::enums::{GamePhase, PlayerId};
 use crate::events::GameEvent;
@@ -554,7 +553,10 @@ impl LiveGame {
     /// in the PyO3 bindings, so the CLI / MCP defaults align with what
     /// `pilot_training`, `gauntlet`, and the architect agents use.
     pub fn default_pool() -> HashSet<String> {
-        build_registry().registered_card_ids().into_iter().collect()
+        crate::cards::build_registry_cached()
+            .registered_card_ids()
+            .into_iter()
+            .collect()
     }
 
     // ── view accessors ───────────────────────────────────────────────────

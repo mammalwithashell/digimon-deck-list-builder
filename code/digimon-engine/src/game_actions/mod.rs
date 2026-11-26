@@ -1613,6 +1613,20 @@ impl Game {
     /// trim); the drain's fixpoint loop re-runs it until it returns `false`
     /// or a selection parks. Idempotent on a legal board.
     pub(crate) fn run_state_based_rules_check(&mut self) -> bool {
+        self.run_state_based_rules_check_inner(false).is_some()
+    }
+
+    /// Same as [`Self::run_state_based_rules_check`], but when at least one
+    /// rule-check target is found it captures `loop_signature(LoopSite::RulesCheck)`
+    /// right before applying the rule actions and returns `Some(before_sig)` if
+    /// the check acted (or `None` when nothing needed to act). This avoids
+    /// computing an expensive full-board `loop_signature` on the ~99% of drains
+    /// whose board is already legal.
+    pub(crate) fn run_state_based_rules_check_with_before_sig(&mut self) -> Option<u64> {
+        self.run_state_based_rules_check_inner(true)
+    }
+
+    fn run_state_based_rules_check_inner(&mut self, capture_before_sig: bool) -> Option<u64> {
         // Continuous effects must include new entrants (and removed aura
         // sources) before rule processing reads their effective DP. Callers
         // already restrict this check to completed resolution boundaries.
@@ -1690,39 +1704,52 @@ impl Game {
                         self.players[pid].battle_area[idx].option_state,
                         crate::permanent::OptionState::Standard
                     );
-                if (presents_as_digimon || exposed_option) && self.effective_dp(handle).is_none() {
-                    actions.push((handle, RuleAction::TrashPermanent));
-                    continue;
-                }
-                if self.permanent_is_digimon_for_rules(handle)
-                    && self.effective_dp(handle).unwrap_or(1) <= 0
-                {
-                    actions.push((handle, RuleAction::DeleteZeroDp));
+                let is_digimon_for_rules = self.permanent_is_digimon_for_rules(handle);
+                if presents_as_digimon || exposed_option || is_digimon_for_rules {
+                    let eff_dp = self.effective_dp(handle);
+                    if (presents_as_digimon || exposed_option) && eff_dp.is_none() {
+                        actions.push((handle, RuleAction::TrashPermanent));
+                        continue;
+                    }
+                    if is_digimon_for_rules && eff_dp.unwrap_or(1) <= 0 {
+                        actions.push((handle, RuleAction::DeleteZeroDp));
+                    }
                 }
             }
         }
         // §17-1-3-2-3 / -4 in the breeding area.
-        let breeding_targets: Vec<PlayerId> = (0..self.players.len())
-            .map(|pid| pid as PlayerId)
-            .filter(|&pid| self.breeding_area_is_rule_trash_target(pid))
-            .collect();
+        let mut breeding_targets: Vec<PlayerId> = Vec::new();
+        for pid in 0..self.players.len() {
+            let pid = pid as PlayerId;
+            if self.breeding_area_is_rule_trash_target(pid) {
+                breeding_targets.push(pid);
+            }
+        }
         // §17-1-3-2-5..7 per-host link targets (hosts leaving the area are
         // skipped: their link cards go with them).
-        let leaving: Vec<PermanentHandle> = actions.iter().map(|(h, _)| *h).collect();
-        for (host, target) in self.collect_link_rule_targets() {
-            if leaving.contains(&host) {
-                continue;
-            }
-            actions.push(match target {
-                LinkRuleTarget::Unqualified(cards) => {
-                    (host, RuleAction::TrashUnqualifiedLinks(cards))
+        let link_targets = self.collect_link_rule_targets();
+        if !link_targets.is_empty() {
+            let leaving: Vec<PermanentHandle> = actions.iter().map(|(h, _)| *h).collect();
+            for (host, target) in link_targets {
+                if leaving.contains(&host) {
+                    continue;
                 }
-                LinkRuleTarget::Excess(n) => (host, RuleAction::TrimLinks(n)),
-            });
+                actions.push(match target {
+                    LinkRuleTarget::Unqualified(cards) => {
+                        (host, RuleAction::TrashUnqualifiedLinks(cards))
+                    }
+                    LinkRuleTarget::Excess(n) => (host, RuleAction::TrimLinks(n)),
+                });
+            }
         }
         if actions.is_empty() && breeding_targets.is_empty() {
-            return false;
+            return None;
         }
+        let before_sig = if capture_before_sig {
+            self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck)
+        } else {
+            0
+        };
         actions.sort_by_key(|(h, _)| (h.player, h.index));
 
         // §17-1-3: one simultaneous process. Every trigger it causes is held
@@ -1837,7 +1864,7 @@ impl Game {
             acted = true;
         }
         self.exit_deferred_drain_and_flush();
-        acted
+        acted.then_some(before_sig)
     }
 
     /// Trash a battle-area permanent by rule (§17-1-3-2-1 / -2 / -4): every

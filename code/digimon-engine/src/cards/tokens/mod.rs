@@ -17,7 +17,7 @@ pub fn register(registry: &mut CardEffectRegistry) {
     // movement to the engine; checked event references remain checked there.
     // Bind authority to this stored factory, never to a card-ID allowlist:
     // public insert() replaces the entire record with an opaque entry.
-    registry.effects.insert("TOKEN_PETRIFICATION".into(), RegisteredCardEffect {
+    Arc::make_mut(&mut registry.effects).insert("TOKEN_PETRIFICATION".into(), RegisteredCardEffect {
         factory: Arc::new(GuardedCardEffect(Arc::new(petrification::PetrificationToken), true)),
         compiled_origin: None,
         read_fence_constructible: true,

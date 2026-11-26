@@ -93,6 +93,64 @@ pub struct PackManifest {
     pub required_raw_rust_fns: Vec<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CardPackIndexEntry {
+    pub card_id: String,
+    pub offset: u32,
+    pub len: u32,
+    pub has_raw_declarative: bool,
+    pub max_copies_override: Option<u8>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CardPackEnrichment {
+    pub card_id: String,
+    pub ace_overflow: Option<i32>,
+    pub digixros_aliases: Vec<String>,
+    pub also_treated_as: Vec<String>,
+    pub alt_paths: Vec<CompiledAltPath>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CardPackIndex {
+    pub manifest: PackManifest,
+    pub entries: Vec<CardPackIndexEntry>,
+    pub enrichments: Vec<CardPackEnrichment>,
+}
+
+/// True when `card` carries any `CompiledDeclarativeClause::RawRust` clause on
+/// its main or DUAL faces — mirrors `construction_facts::direct_raw_factory_requests`
+/// so lazy registration knows `read_fence_constructible` without deserializing
+/// the card.
+pub fn card_has_raw_declarative(card: &CompiledCard) -> bool {
+    fn clauses_have_raw(clauses: &[CompiledClause]) -> bool {
+        use CompiledDeclarativeClause as D;
+        clauses.iter().any(|clause| match clause {
+            CompiledClause::Triggered(_) => false,
+            CompiledClause::Declarative(d) => match d {
+                D::RawRust { .. } => true,
+                D::Aura { .. }
+                | D::CostReduction { .. }
+                | D::Replacement { .. }
+                | D::Partition { .. }
+                | D::AceOverflow { .. }
+                | D::GrantKeyword { .. }
+                | D::Delay { .. }
+                | D::LinkRequirement { .. }
+                | D::LinkCondition { .. }
+                | D::UseCostIncrease { .. }
+                | D::Succession { .. }
+                | D::FloodGate { .. }
+                | D::AltPathRegistration { .. } => false,
+            },
+        })
+    }
+    clauses_have_raw(&card.effects)
+        || card.dual.as_ref().is_some_and(|dual| {
+            clauses_have_raw(&dual.digimon.effects) || clauses_have_raw(&dual.option.effects)
+        })
+}
+
 impl CardPack {
     pub fn new(pack_id: impl Into<String>, cards: Vec<CompiledCard>) -> Self {
         Self::from_compiled_cards(pack_id, cards)
@@ -129,6 +187,58 @@ impl CardPack {
         bincode::serialize(self).map_err(|e| format!("bincode serialize failed: {e}"))
     }
 
+    /// Serialize to the exact same `CardPack` bincode byte stream as
+    /// [`Self::to_bytes`], plus a compact sidecar [`CardPackIndex`] recording
+    /// each card's `(offset, len)` byte slice inside `pack_bytes` and the tiny
+    /// startup-enrichment metadata needed without deserializing every card.
+    pub fn to_bytes_with_index(&self) -> Result<(Vec<u8>, Vec<u8>), String> {
+        let mut pack_bytes = Vec::new();
+        bincode::serialize_into(&mut pack_bytes, &self.manifest)
+            .map_err(|e| format!("bincode serialize manifest failed: {e}"))?;
+        let count = self.cards.len() as u64;
+        bincode::serialize_into(&mut pack_bytes, &count)
+            .map_err(|e| format!("bincode serialize card count failed: {e}"))?;
+
+        let mut entries = Vec::with_capacity(self.cards.len());
+        let mut enrichments = Vec::new();
+        for card in &self.cards {
+            let start = u32::try_from(pack_bytes.len())
+                .map_err(|_| "cards.pack exceeded u32 byte offset".to_string())?;
+            bincode::serialize_into(&mut pack_bytes, card)
+                .map_err(|e| format!("bincode serialize card '{}' failed: {e}", card.card))?;
+            let end = u32::try_from(pack_bytes.len())
+                .map_err(|_| "cards.pack exceeded u32 byte length".to_string())?;
+            entries.push(CardPackIndexEntry {
+                card_id: card.card.clone(),
+                offset: start,
+                len: end - start,
+                has_raw_declarative: card_has_raw_declarative(card),
+                max_copies_override: card.deck_rule.as_ref().map(|r| r.max_copies),
+            });
+            if card.ace_overflow.is_some()
+                || !card.digixros_aliases.is_empty()
+                || !card.also_treated_as.is_empty()
+                || !card.alt_paths.is_empty()
+            {
+                enrichments.push(CardPackEnrichment {
+                    card_id: card.card.clone(),
+                    ace_overflow: card.ace_overflow,
+                    digixros_aliases: card.digixros_aliases.clone(),
+                    also_treated_as: card.also_treated_as.clone(),
+                    alt_paths: card.alt_paths.clone(),
+                });
+            }
+        }
+        let index = CardPackIndex {
+            manifest: self.manifest.clone(),
+            entries,
+            enrichments,
+        };
+        let index_bytes = bincode::serialize(&index)
+            .map_err(|e| format!("bincode serialize card pack index failed: {e}"))?;
+        Ok((pack_bytes, index_bytes))
+    }
+
     /// Deserialize only the current compiled layout. The manifest precedes
     /// cards in every supported envelope; inspect it before bincode can decode
     /// enum discriminants using a different CompiledStep layout.
@@ -144,6 +254,21 @@ impl CardPack {
             ));
         }
         bincode::deserialize(bytes).map_err(|e| format!("bincode deserialize failed: {e}"))
+    }
+}
+
+impl CardPackIndex {
+    pub fn from_bytes(bytes: &[u8]) -> Result<Self, String> {
+        let manifest: PackManifest = bincode::deserialize(bytes)
+            .map_err(|e| format!("bincode index manifest deserialize failed: {e}"))?;
+        if manifest.pack_version != PACK_FORMAT_VERSION {
+            return Err(format!(
+                "unsupported pack index format '{}'; expected '{}'; rebuild this card pack",
+                manifest.pack_version, PACK_FORMAT_VERSION,
+            ));
+        }
+        bincode::deserialize(bytes)
+            .map_err(|e| format!("bincode pack index deserialize failed: {e}"))
     }
 }
 

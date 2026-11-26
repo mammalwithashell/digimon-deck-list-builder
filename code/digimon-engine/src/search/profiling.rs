@@ -10,7 +10,14 @@ struct Profile {
 }
 thread_local! { static PROFILE: RefCell<Profile> = RefCell::new(Profile::default()); }
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
+static PROFILING_ACTIVE: AtomicBool = AtomicBool::new(false);
+
 pub fn reset(enabled: bool) {
+    if enabled {
+        PROFILING_ACTIVE.store(true, Ordering::Relaxed);
+    }
     PROFILE.with(|p| {
         *p.borrow_mut() = Profile {
             enabled,
@@ -20,7 +27,11 @@ pub fn reset(enabled: bool) {
 }
 
 pub struct Span(bool, PhantomData<Rc<()>>);
+#[inline]
 pub fn span(name: &'static str) -> Span {
+    if !PROFILING_ACTIVE.load(Ordering::Relaxed) {
+        return Span(false, PhantomData);
+    }
     let enabled = PROFILE.with(|p| {
         let mut p = p.borrow_mut();
         if !p.enabled {

@@ -4,17 +4,112 @@
 
 use std::collections::HashMap;
 use std::path::Path;
+use std::sync::{Arc, OnceLock};
 
 use crate::compile::compile;
 use crate::compiled::CompiledCard;
 use crate::errors::ValidationError;
-use crate::pack::{missing_required_raw_rust_fns, CardPack, PackManifest};
+use crate::pack::{
+    card_has_raw_declarative, missing_required_raw_rust_fns, CardPack, CardPackEnrichment,
+    CardPackIndex, PackManifest,
+};
 use crate::raw_rust_registry::RawRustRegistry;
 use crate::spec::CardSpec;
 
+/// Storage for a single compiled card inside [`CardRegistry`].
+///
+/// Embedded static packs use `Lazy` so process startup only parses the compact
+/// sidecar index (~150 KiB) instead of eagerly materializing all ~4,000
+/// `CompiledCard` trees (~340 MiB); each card is deserialized on first access
+/// and cached lock-free in its `OnceLock`.
+pub enum CardSlot {
+    Eager {
+        card: Arc<CompiledCard>,
+        has_raw_declarative: bool,
+        max_copies_override: Option<u8>,
+    },
+    Lazy {
+        bytes: &'static [u8],
+        has_raw_declarative: bool,
+        max_copies_override: Option<u8>,
+        cell: OnceLock<Arc<CompiledCard>>,
+    },
+}
+
+impl CardSlot {
+    pub fn eager(card: Arc<CompiledCard>) -> Self {
+        let has_raw_declarative = card_has_raw_declarative(&card);
+        let max_copies_override = card.deck_rule.as_ref().map(|r| r.max_copies);
+        Self::Eager {
+            card,
+            has_raw_declarative,
+            max_copies_override,
+        }
+    }
+
+    pub fn lazy(
+        bytes: &'static [u8],
+        has_raw_declarative: bool,
+        max_copies_override: Option<u8>,
+    ) -> Self {
+        Self::Lazy {
+            bytes,
+            has_raw_declarative,
+            max_copies_override,
+            cell: OnceLock::new(),
+        }
+    }
+
+    pub fn has_raw_declarative(&self) -> bool {
+        match self {
+            CardSlot::Eager {
+                has_raw_declarative,
+                ..
+            }
+            | CardSlot::Lazy {
+                has_raw_declarative,
+                ..
+            } => *has_raw_declarative,
+        }
+    }
+
+    pub fn max_copies_override(&self) -> Option<u8> {
+        match self {
+            CardSlot::Eager {
+                max_copies_override,
+                ..
+            }
+            | CardSlot::Lazy {
+                max_copies_override,
+                ..
+            } => *max_copies_override,
+        }
+    }
+
+    pub fn get(&self) -> &CompiledCard {
+        self.get_arc_ref().as_ref()
+    }
+
+    pub fn get_arc(&self) -> Arc<CompiledCard> {
+        Arc::clone(self.get_arc_ref())
+    }
+
+    fn get_arc_ref(&self) -> &Arc<CompiledCard> {
+        match self {
+            CardSlot::Eager { card, .. } => card,
+            CardSlot::Lazy { bytes, cell, .. } => cell.get_or_init(|| {
+                let card: CompiledCard = bincode::deserialize(bytes)
+                    .expect("embedded cards.pack card slice must deserialize");
+                Arc::new(card)
+            }),
+        }
+    }
+}
+
 pub struct CardRegistry {
     pub manifest: PackManifest,
-    cards: HashMap<String, CompiledCard>,
+    cards: HashMap<String, Arc<CardSlot>>,
+    enrichments: Option<Vec<CardPackEnrichment>>,
 }
 
 impl CardRegistry {
@@ -28,7 +123,7 @@ impl CardRegistry {
         for spec in specs {
             match compile(spec) {
                 Ok(c) => {
-                    cards.insert(c.card.clone(), c);
+                    cards.insert(c.card.clone(), Arc::new(CardSlot::eager(Arc::new(c))));
                 }
                 Err(mut errs) => errors.append(&mut errs),
             }
@@ -36,10 +131,52 @@ impl CardRegistry {
         if !errors.is_empty() {
             return Err(errors);
         }
-        let pack = CardPack::from_compiled_cards(pack_id, cards.values().cloned().collect());
+        let pack = CardPack::from_compiled_cards(
+            pack_id,
+            cards.values().map(|c| c.get().clone()).collect(),
+        );
         Ok(Self {
             manifest: pack.manifest,
             cards,
+            enrichments: None,
+        })
+    }
+
+    /// Lazy embedded-pack path: parse only the compact sidecar index and point
+    /// every card slot at its slice inside `pack_bytes` (`cards.pack`).
+    pub fn from_static_indexed_pack(
+        pack_bytes: &'static [u8],
+        index_bytes: &[u8],
+    ) -> Result<Self, String> {
+        let index = CardPackIndex::from_bytes(index_bytes)?;
+        let mut cards = HashMap::with_capacity(index.entries.len());
+        for entry in index.entries {
+            let start = entry.offset as usize;
+            let end = start
+                .checked_add(entry.len as usize)
+                .ok_or_else(|| format!("pack index overflow for '{}'", entry.card_id))?;
+            let slice = pack_bytes.get(start..end).ok_or_else(|| {
+                format!(
+                    "pack index slice {}..{} out of bounds for '{}' (pack len {})",
+                    start,
+                    end,
+                    entry.card_id,
+                    pack_bytes.len()
+                )
+            })?;
+            cards.insert(
+                entry.card_id,
+                Arc::new(CardSlot::lazy(
+                    slice,
+                    entry.has_raw_declarative,
+                    entry.max_copies_override,
+                )),
+            );
+        }
+        Ok(Self {
+            manifest: index.manifest,
+            cards,
+            enrichments: Some(index.enrichments),
         })
     }
 
@@ -77,11 +214,12 @@ impl CardRegistry {
         let cards = pack
             .cards
             .into_iter()
-            .map(|c| (c.card.clone(), c))
+            .map(|c| (c.card.clone(), Arc::new(CardSlot::eager(Arc::new(c)))))
             .collect();
         Self {
             manifest: pack.manifest,
             cards,
+            enrichments: None,
         }
     }
 
@@ -100,8 +238,35 @@ impl CardRegistry {
         Ok(Self::from_pack(pack))
     }
 
+    /// Validate that every `raw_rust` fn required by this pack's manifest is
+    /// registered in `raw_rust`. Allows sharing one cached `CardRegistry`
+    /// without re-deserializing the embedded pack bytes.
+    pub fn validate_raw_registry(&self, raw_rust: &dyn RawRustRegistry) -> Result<(), String> {
+        let missing = missing_required_raw_rust_fns(&self.manifest, raw_rust);
+        if !missing.is_empty() {
+            return Err(format!(
+                "pack '{}' requires missing raw_rust fn(s): {}",
+                self.manifest.pack_id,
+                missing.join(", ")
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn contains(&self, card_id: &str) -> bool {
+        self.cards.contains_key(card_id)
+    }
+
+    /// Return the card's printed `deck_rule.max_copies` override without
+    /// forcing lazy deserialization of the full `CompiledCard`.
+    pub fn max_copies_override(&self, card_id: &str) -> Option<u8> {
+        self.cards
+            .get(card_id)
+            .and_then(|slot| slot.max_copies_override())
+    }
+
     pub fn lookup(&self, card_id: &str) -> Option<&CompiledCard> {
-        self.cards.get(card_id)
+        self.cards.get(card_id).map(|c| c.get())
     }
 
     pub fn len(&self) -> usize {
@@ -112,7 +277,20 @@ impl CardRegistry {
         self.cards.is_empty()
     }
 
+    pub fn enrichments(&self) -> Option<&[CardPackEnrichment]> {
+        self.enrichments.as_deref()
+    }
+
     pub fn iter(&self) -> impl Iterator<Item = (&String, &CompiledCard)> {
+        self.cards.iter().map(|(k, v)| (k, v.get()))
+    }
+
+    pub fn iter_arcs(&self) -> impl Iterator<Item = (&String, Arc<CompiledCard>)> {
+        self.cards.iter().map(|(k, v)| (k, v.get_arc()))
+    }
+
+    /// Iterate lazy card slots without forcing deserialization.
+    pub fn iter_slots(&self) -> impl Iterator<Item = (&String, &Arc<CardSlot>)> {
         self.cards.iter()
     }
 }
@@ -169,6 +347,34 @@ mod tests {
             assert_eq!(reparsed.len(), registry.len());
             for (card_id, card) in registry.iter() {
                 assert_eq!(reparsed.lookup(card_id), Some(card));
+            }
+        });
+    }
+
+    #[test]
+    fn registry_indexed_pack_matches_eager_pack_bytes_and_cards() {
+        run_example_suite_test(|| {
+            let (specs, _) = load_dir_ok(&examples_dir());
+            let registry = CardRegistry::from_specs("indexed-test", &specs).unwrap();
+
+            let pack = CardPack {
+                manifest: registry.manifest.clone(),
+                cards: registry.iter().map(|(_, c)| c.clone()).collect(),
+            };
+            let expected_bytes = pack.to_bytes().unwrap();
+            let (pack_bytes, index_bytes) = pack.to_bytes_with_index().unwrap();
+            assert_eq!(
+                pack_bytes, expected_bytes,
+                "to_bytes_with_index must emit byte-identical cards.pack output"
+            );
+
+            let leaked: &'static [u8] = Box::leak(pack_bytes.into_boxed_slice());
+            let lazy = CardRegistry::from_static_indexed_pack(leaked, &index_bytes).unwrap();
+            assert_eq!(lazy.len(), registry.len());
+            assert!(lazy.enrichments().is_some());
+            for (card_id, card) in registry.iter() {
+                assert!(lazy.contains(card_id));
+                assert_eq!(lazy.lookup(card_id), Some(card));
             }
         });
     }

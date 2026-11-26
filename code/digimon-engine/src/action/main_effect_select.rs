@@ -62,9 +62,11 @@ pub(crate) fn hand_main_match(
     hand_idx: usize,
 ) -> Option<MainEffectMatch> {
     let card = game.player(player_id).hand.get(hand_idx)?;
-    let card_id = card.card_id(&game.card_data);
-    let effects = game.effects_for_card(card_id, card.handle())?;
-    for effect in effects.iter() {
+    let entry = game.effects_entry_for_source(card, false)?;
+    if entry.flags & crate::game::EFFECT_FLAG_MAIN_FROM_HAND == 0 {
+        return None;
+    }
+    for effect in entry.effects.iter() {
         if effect.timing != EffectTiming::MainFromHand {
             continue;
         }
@@ -105,11 +107,13 @@ pub(crate) fn field_main_match(
     let adopted = game.succession_source_indices(perm_handle);
     for (source_index, source) in perm.card_sources.iter().enumerate() {
         let is_adopted = adopted.contains(&source_index);
-        let card_id = source.card_id(&game.card_data);
-        let Some(effects) = game.effects_for_card(card_id, source.handle()) else {
+        let Some(entry) = game.effects_entry_for_source(source, source_index + 1 < stack_size) else {
             continue;
         };
-        for (slot, effect) in effects.iter().enumerate() {
+        if entry.flags & crate::game::EFFECT_FLAG_MAIN_ON_FIELD == 0 {
+            continue;
+        }
+        for (slot, effect) in entry.effects.iter().enumerate() {
             if effect.timing != EffectTiming::MainOnField {
                 continue;
             }
@@ -224,11 +228,12 @@ pub(crate) fn breeding_training_match(game: &Game, player_id: PlayerId) -> Optio
     if !top_data.keywords.contains(&Keyword::Training) || breeding.is_suspended {
         return None;
     }
-    let card_id = top.card_id(&game.card_data);
     let name = game
-        .effects_for_card(card_id, top.handle())
-        .and_then(|effects| {
-            effects
+        .effects_entry_for_source(top, false)
+        .filter(|entry| entry.flags & crate::game::EFFECT_FLAG_MAIN_ON_FIELD != 0)
+        .and_then(|entry| {
+            entry
+                .effects
                 .iter()
                 .find(|e| e.timing == EffectTiming::MainOnField && !e.inherited)
                 .map(|e| e.name.clone())
@@ -246,9 +251,11 @@ pub(crate) fn trash_main_match(
     trash_idx: usize,
 ) -> Option<MainEffectMatch> {
     let card = game.player(player_id).trash.get(trash_idx)?;
-    let card_id = card.card_id(&game.card_data);
-    let effects = game.effects_for_card(card_id, card.handle())?;
-    for effect in effects.iter() {
+    let entry = game.effects_entry_for_source(card, false)?;
+    if entry.flags & crate::game::EFFECT_FLAG_MAIN_FROM_TRASH == 0 {
+        return None;
+    }
+    for effect in entry.effects.iter() {
         if effect.timing != EffectTiming::MainFromTrash {
             continue;
         }

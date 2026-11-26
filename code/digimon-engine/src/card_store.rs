@@ -25,12 +25,33 @@ mod scoped_diagnostic;
 #[cfg(feature = "dsl-yaml-loader")]
 pub use scoped_diagnostic::ScopedDiagnosticStore;
 
+/// Pre-parsed printed keyword slices for one `CardData` row, avoiding repeated
+/// English text parsing on runtime `has_keyword` / declarative queries.
+#[derive(Debug, Clone)]
+pub struct ParsedCardKeywords {
+    pub face: Vec<crate::enums::Keyword>,
+    pub inherited: Vec<crate::enums::Keyword>,
+    pub link: Vec<crate::enums::Keyword>,
+}
+
+impl ParsedCardKeywords {
+    pub(crate) fn from_card_data(cd: &CardData) -> Self {
+        Self {
+            face: crate::game::face_keywords(cd),
+            inherited: crate::game::inherited_keywords(cd),
+            link: crate::game::link_keywords(cd),
+        }
+    }
+}
+
 /// The immutable, enriched card store derived from `all_card_data`. Memoized and
 /// shared; reused only for identical original metadata inputs.
 pub struct SharedCardStore {
     /// Enriched flat store: the DB's cards (in `all_card_data` iteration order)
     /// followed by the absorbed global token rows. Indexed by `data_index`.
     pub data: Arc<Vec<CardData>>,
+    /// Pre-parsed printed keywords parallel to `data`.
+    pub keywords: Arc<Vec<ParsedCardKeywords>>,
     /// `card_id -> data_index` for DB cards and absorbed global token rows.
     pub index: Arc<HashMap<String, usize>>,
     /// Compiled DSL alt-paths keyed by card_id (only the DSL-loader build has it).
@@ -38,12 +59,80 @@ pub struct SharedCardStore {
     pub alt_paths: Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>,
 }
 
+#[derive(Clone)]
+pub(crate) struct CachedCardKeywords {
+    /// Retains an `Arc` to the exact `Vec<CardData>` these keywords were parsed
+    /// from. Because this keeps the original `Arc`'s strong count ≥ 2, ANY
+    /// mutation via `Arc::make_mut(&mut card_store.0)` or `DerefMut` forks a
+    /// new allocation, making `Arc::ptr_eq(&self.0, &kw.origin)` return false.
+    origin: Arc<Vec<CardData>>,
+    entries: Arc<Vec<ParsedCardKeywords>>,
+}
+
 /// `Deref`-transparent handle to the shared card-data vec. `Game.card_data` is a
 /// `CardStore` so the workspace's ~3126 `.card_data` reads (indexing, `.iter()`,
 /// `.len()`, `&card_data` as `&[CardData]`/`&Vec<CardData>`) keep working through
 /// `Deref`, while a clone is an `Arc` refcount bump rather than a ~4000-card copy.
 #[derive(Clone)]
-pub struct CardStore(pub Arc<Vec<CardData>>);
+pub struct CardStore(pub Arc<Vec<CardData>>, pub(crate) Option<CachedCardKeywords>);
+
+impl CardStore {
+    pub(crate) fn from_shared(shared: &SharedCardStore) -> Self {
+        Self(
+            shared.data.clone(),
+            Some(CachedCardKeywords {
+                origin: shared.data.clone(),
+                entries: shared.keywords.clone(),
+            }),
+        )
+    }
+
+    #[inline]
+    fn cached_entry(&self, data_index: usize) -> Option<&ParsedCardKeywords> {
+        let kw = self.1.as_ref()?;
+        if Arc::ptr_eq(&self.0, &kw.origin) {
+            kw.entries.get(data_index)
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    pub(crate) fn face_keywords(
+        &self,
+        data_index: usize,
+    ) -> std::borrow::Cow<'_, [crate::enums::Keyword]> {
+        if let Some(entry) = self.cached_entry(data_index) {
+            std::borrow::Cow::Borrowed(&entry.face)
+        } else {
+            std::borrow::Cow::Owned(crate::game::face_keywords(&self.0[data_index]))
+        }
+    }
+
+    #[inline]
+    pub(crate) fn inherited_keywords(
+        &self,
+        data_index: usize,
+    ) -> std::borrow::Cow<'_, [crate::enums::Keyword]> {
+        if let Some(entry) = self.cached_entry(data_index) {
+            std::borrow::Cow::Borrowed(&entry.inherited)
+        } else {
+            std::borrow::Cow::Owned(crate::game::inherited_keywords(&self.0[data_index]))
+        }
+    }
+
+    #[inline]
+    pub(crate) fn link_keywords(
+        &self,
+        data_index: usize,
+    ) -> std::borrow::Cow<'_, [crate::enums::Keyword]> {
+        if let Some(entry) = self.cached_entry(data_index) {
+            std::borrow::Cow::Borrowed(&entry.link)
+        } else {
+            std::borrow::Cow::Owned(crate::game::link_keywords(&self.0[data_index]))
+        }
+    }
+}
 
 impl std::ops::Deref for CardStore {
     type Target = Vec<CardData>;
@@ -59,6 +148,7 @@ impl std::ops::DerefMut for CardStore {
     /// touches the shared cache. Production play never mutates `card_data`, so it
     /// never forks — it keeps the shared `Arc`.
     fn deref_mut(&mut self) -> &mut Vec<CardData> {
+        self.1 = None;
         std::sync::Arc::make_mut(&mut self.0)
     }
 }
@@ -248,16 +338,24 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
             &mut effective_card_data,
             dsl_registry,
         );
-        alt_path_registry = dsl_registry
-            .iter()
-            .filter_map(|(card_id, compiled)| {
-                if compiled.alt_paths.is_empty() {
-                    None
-                } else {
-                    Some((card_id.clone(), compiled.alt_paths.clone()))
-                }
-            })
-            .collect();
+        alt_path_registry = if let Some(enrichments) = dsl_registry.enrichments() {
+            enrichments
+                .iter()
+                .filter(|e| !e.alt_paths.is_empty())
+                .map(|e| (e.card_id.clone(), e.alt_paths.clone()))
+                .collect()
+        } else {
+            dsl_registry
+                .iter()
+                .filter_map(|(card_id, compiled)| {
+                    if compiled.alt_paths.is_empty() {
+                        None
+                    } else {
+                        Some((card_id.clone(), compiled.alt_paths.clone()))
+                    }
+                })
+                .collect()
+        };
     }
 
     // Assign `data_index` in a DETERMINISTIC order (sorted by card_id), NOT
@@ -292,8 +390,14 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
         data.push(def.to_card_data());
     }
 
+    let keywords: Vec<ParsedCardKeywords> = data
+        .iter()
+        .map(ParsedCardKeywords::from_card_data)
+        .collect();
+
     SharedCardStore {
         data: Arc::new(data),
+        keywords: Arc::new(keywords),
         index: Arc::new(index),
         #[cfg(feature = "dsl-yaml-loader")]
         alt_paths: Arc::new(alt_path_registry),
@@ -307,6 +411,7 @@ mod tests {
     fn empty_store() -> Arc<SharedCardStore> {
         Arc::new(SharedCardStore {
             data: Arc::new(Vec::new()),
+            keywords: Arc::new(Vec::new()),
             index: Arc::new(HashMap::new()),
             #[cfg(feature = "dsl-yaml-loader")]
             alt_paths: Arc::new(HashMap::new()),
@@ -365,5 +470,34 @@ mod tests {
         let rebuilt_ids: Vec<String> = rebuilt.data.iter().map(|c| c.card_id.clone()).collect();
         assert_eq!(rebuilt_ids, ids);
         assert_eq!(*rebuilt.index, index);
+    }
+
+    #[test]
+    fn card_store_keyword_cache_invalidates_on_direct_arc_make_mut_and_deref_mut() {
+        let mut c = crate::debug_runner::make_test_card("KW-TEST-1", "Kw Test");
+        c.effect_text = "＜Blocker＞".to_string();
+        let mut db = HashMap::new();
+        db.insert(c.card_id.clone(), c);
+        let shared = shared_card_store(&db);
+        let idx = shared.index["KW-TEST-1"];
+
+        let mut via_arc = CardStore::from_shared(&shared);
+        assert!(via_arc.face_keywords(idx).contains(&crate::enums::Keyword::Blocker));
+        assert!(!via_arc.face_keywords(idx).contains(&crate::enums::Keyword::Rush));
+
+        // Direct mutation of `.0` via `Arc::make_mut` must fork the Arc and invalidate the cache.
+        Arc::make_mut(&mut via_arc.0)[idx].effect_text = "＜Rush＞".to_string();
+        assert!(via_arc.face_keywords(idx).contains(&crate::enums::Keyword::Rush));
+        assert!(!via_arc.face_keywords(idx).contains(&crate::enums::Keyword::Blocker));
+
+        // Mutation via `DerefMut` must also invalidate the cache without mutating the shared store.
+        let mut via_deref = CardStore::from_shared(&shared);
+        via_deref[idx].inherited_text = "＜Jamming＞".to_string();
+        assert!(via_deref.inherited_keywords(idx).contains(&crate::enums::Keyword::Jamming));
+
+        // Original shared store stays untouched.
+        let fresh = CardStore::from_shared(&shared);
+        assert!(fresh.face_keywords(idx).contains(&crate::enums::Keyword::Blocker));
+        assert!(!fresh.inherited_keywords(idx).contains(&crate::enums::Keyword::Jamming));
     }
 }

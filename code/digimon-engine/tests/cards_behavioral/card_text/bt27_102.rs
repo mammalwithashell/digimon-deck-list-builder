@@ -121,12 +121,9 @@ fn delay_may_digivolve_a_tamer_for_free_after_a_later_battle_deletion() {
     r.accept_optional_trigger().unwrap();
     r.choose_prompt_card(TAMER, None).unwrap();
     r.choose_prompt_card("BT27-026", None).unwrap();
-    // BT27-026's [When Digivolving] triggers normally on Tamer digivolutions.
-    while let Some((player, pick)) = r
-        .pending_selection()
-        .map(|p| (p.selecting_player, p.valid_action_ids[0]))
-    {
-        action(&mut r, player, pick);
+    // BT27-026's optional [When Digivolving] triggers on Tamer digivolution.
+    if r.pending_selection().is_some() {
+        r.decline_prompt().unwrap();
     }
     assert_eq!(r.memory(), before);
     assert_eq!(

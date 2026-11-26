@@ -84,7 +84,7 @@ impl TokenDef {
 /// Registry of token definitions, keyed by canonical name.
 #[derive(Debug, Default, Clone)]
 pub struct TokenRegistry {
-    defs: HashMap<String, TokenDef>,
+    defs: std::sync::Arc<HashMap<String, TokenDef>>,
 }
 
 impl TokenRegistry {
@@ -93,7 +93,7 @@ impl TokenRegistry {
     }
 
     pub fn insert(&mut self, def: TokenDef) {
-        self.defs.insert(def.name.clone(), def);
+        std::sync::Arc::make_mut(&mut self.defs).insert(def.name.clone(), def);
     }
 
     pub fn get(&self, name: &str) -> Option<&TokenDef> {
@@ -117,6 +117,12 @@ impl TokenRegistry {
     pub fn names(&self) -> impl Iterator<Item = &str> {
         self.defs.keys().map(String::as_str)
     }
+}
+
+/// Process-cached default token registry. Cloning returns an `Arc` bump.
+pub fn build_registry_cached() -> TokenRegistry {
+    static CACHED: std::sync::OnceLock<TokenRegistry> = std::sync::OnceLock::new();
+    CACHED.get_or_init(build_registry).clone()
 }
 
 /// Build the default token registry. Currently: Petrification (Medusamon),

@@ -1506,11 +1506,7 @@ impl DebugRunnerBuilder {
 
 #[cfg(feature = "dsl-yaml-loader")]
 fn embedded_dsl_registry() -> Result<&'static digimon_dsl::CardRegistry, String> {
-    static REGISTRY: OnceLock<Result<digimon_dsl::CardRegistry, String>> = OnceLock::new();
-    REGISTRY
-        .get_or_init(crate::dsl_registry::from_embedded)
-        .as_ref()
-        .map_err(Clone::clone)
+    crate::dsl_registry::from_embedded_cached()
 }
 
 #[cfg(feature = "dsl-yaml-loader")]
