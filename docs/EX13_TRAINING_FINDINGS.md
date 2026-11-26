@@ -195,3 +195,14 @@ The [review summary](../openspec/changes/evaluate-frozen-checkpoints-closed-deck
 The [archive catalog](../runs/hetzner-artifact-archive-20261030/index.html) includes restore instructions, file manifests, per-archive hashes and retained terminal-container records. Archived remote paths describe historical execution; their absence is not a new failure and must not trigger a restart. Existing local reports remain readable.
 
 For ongoing operations, use the [training runbook](TRAINING_RUNBOOK.md), [model evaluation guide](MODEL_EVALUATION.md), and [finite-program tasks](../openspec/changes/evaluate-frozen-checkpoints-closed-deck-search/tasks.md). The current evaluation additions above summarize the independently reviewed November 6 evidence.
+
+## Small-Pool Hybrid Search ↔ LSTM PPO Experiment (2026-11-26)
+
+A controlled 5-stage campaign on the frozen 3-archetype pool ([`data/training_pools/ex13-small3/manifest.json`](../data/training_pools/ex13-small3/manifest.json): Examon, TS Jupitermon, Three Musketeers; 6 training + 6 unseen held-out lists) tested pairing macro-substep PIMC-MCTS (`320/4`, `--macro-substeps 16`) with sequence-distilled, KL-anchored clean-reward `MaskableRecurrentPPO` (`terminal_strategic_v1`, `kl_coef = 0.03`, `AutoAdvanceForcedWrapper`):
+
+- **Strongest standalone policy (`lstm_ppo_r1`):** `99.7%` (`359–1`, 95% CI `[99.2%, 100.0%]`) vs `greedy`, `76.9%` (`277–83`, `[72.8%, 81.1%]`) vs `development_v1`, `59.7%` vs `Gen3`, and `58.1%` vs `Gen6_hybrid` across 360-game seat-balanced unseen held-out policy evaluations.
+- **Complementary search lift:** Adding `320/4` search to `Gen6_hybrid` flipped its head-to-head against policy-only `lstm_ppo_r1` from `41.9%` to `80.0%` (`144–36`, `[74.4%, 85.6%]`), and sparring against `lstm_ppo_r1` prevented the Examon `<Training>` value-head collapse seen in pure-search `Gen6_control` (`8/8` vs `0/8` exam seeds passing at `macro=0`).
+- **Determinization fix:** Fixed `canonicalize_hidden` in `code/digimon-engine/src/search/determinized.rs` to rebase `main_declare_guard` onto canonicalized worlds and seed `ref_legal` from the root mask (`0` truncations and `0` mask panics across `4,050` self-play + `7,560` held-out games).
+
+Full tables, per-archetype breakdowns, search-exam curves, and next steps are documented in [2026-11-26-ex13-small3-hybrid-search-lstm-ppo.md](superpowers/research/2026-11-26-ex13-small3-hybrid-search-lstm-ppo.md).
+
