@@ -8,19 +8,18 @@ use digimon_dsl::raw_rust_registry::RawRustRegistry;
 use digimon_dsl::CardRegistry;
 use std::path::Path;
 
-// Embedded pack blob, produced by build.rs.
+// Embedded pack blob + compact sidecar offset index, produced by build.rs.
 static CARDS_PACK: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/cards.pack"));
+static CARDS_INDEX: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/cards.idx"));
 
-/// Load the card registry from the bytes embedded at build time.
+/// Load the card registry lazily from the bytes embedded at build time.
 pub fn from_embedded() -> Result<CardRegistry, String> {
-    load_embedded_pack_with_stack()
+    CardRegistry::from_static_indexed_pack(CARDS_PACK, CARDS_INDEX)
 }
 
-/// Process-cached `from_embedded()`. The embedded pack is static, so parse it
-/// (~4000 cards) once and share a `&'static` reference instead of re-parsing on
-/// every `Game::new` — a per-episode construction cost that dominated training
-/// wall-time (training games are short, so the engine is rebuilt constantly).
-/// Read-only after parse (callers only enrich/iterate), so sharing is safe.
+/// Process-cached `from_embedded()`. The embedded pack is static, so parse the
+/// compact sidecar index once and share a `&'static` reference; individual
+/// `CompiledCard` trees deserialize lazily on first access.
 pub fn from_embedded_cached() -> Result<&'static CardRegistry, String> {
     static CACHE: std::sync::OnceLock<Result<CardRegistry, String>> = std::sync::OnceLock::new();
     CACHE
@@ -34,26 +33,9 @@ pub fn from_embedded_cached() -> Result<&'static CardRegistry, String> {
 pub fn from_embedded_with_raw_registry(
     raw_rust: &dyn RawRustRegistry,
 ) -> Result<CardRegistry, String> {
-    std::thread::scope(|scope| {
-        let handle = std::thread::Builder::new()
-            .stack_size(16 * 1024 * 1024)
-            .spawn_scoped(scope, || {
-                CardRegistry::from_pack_bytes_with_raw_registry(CARDS_PACK, raw_rust)
-            })
-            .map_err(|e| format!("spawn DSL pack loader: {e}"))?;
-        handle
-            .join()
-            .map_err(|_| "DSL pack loader panicked".to_string())?
-    })
-}
-
-fn load_embedded_pack_with_stack() -> Result<CardRegistry, String> {
-    std::thread::Builder::new()
-        .stack_size(16 * 1024 * 1024)
-        .spawn(|| CardRegistry::from_pack_bytes(CARDS_PACK))
-        .map_err(|e| format!("spawn DSL pack loader: {e}"))?
-        .join()
-        .map_err(|_| "DSL pack loader panicked".to_string())?
+    let registry = from_embedded()?;
+    registry.validate_raw_registry(raw_rust)?;
+    Ok(registry)
 }
 
 /// Load the card registry from a cache-directory pack file — used by

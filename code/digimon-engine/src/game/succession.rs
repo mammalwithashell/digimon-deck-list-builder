@@ -46,17 +46,18 @@ impl crate::game::Game {
         let base = card
             .option_use_cost(&self.card_data)
             .unwrap_or_else(|| card.play_cost(&self.card_data)) as i32;
-        let card_id = card.card_id(&self.card_data).to_string();
         let increase: i32 = self
-            .effects_for_card(&card_id, card.handle())
-            .map(|effects| {
+            .effects_entry_by_index(card.data_index, card.handle())
+            .filter(|entry| entry.flags & super::EFFECT_FLAG_USE_COST_INCREASE != 0)
+            .map(|entry| {
                 let ctx = crate::effect_context::EffectReadContext::new(
                     self,
                     card.handle(),
                     None,
                     player,
                 );
-                effects
+                entry
+                    .effects
                     .iter()
                     .filter_map(|e| e.use_cost_increase_fn.as_ref())
                     .map(|f| f(&ctx))
@@ -83,13 +84,15 @@ impl crate::game::Game {
             return Vec::new();
         }
         let top = perm.top_card();
-        let top_id = top.card_id(&self.card_data).to_string();
         let top_handle = top.handle();
-        let Some(effects) = self.effects_for_card(&top_id, top_handle) else {
+        let Some(entry) = self.effects_entry_for_source(top, false) else {
             return Vec::new();
         };
+        if entry.flags & super::EFFECT_FLAG_SUCCESSION == 0 {
+            return Vec::new();
+        }
         let mut out = Vec::new();
-        for effect in effects.iter() {
+        for effect in entry.effects.iter() {
             let Some(filter) = effect.succession_filter.as_ref() else {
                 continue;
             };

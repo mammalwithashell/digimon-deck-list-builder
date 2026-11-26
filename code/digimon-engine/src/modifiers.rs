@@ -101,6 +101,71 @@ impl Default for ModifierPayload {
     }
 }
 
+impl std::hash::Hash for ModifierPayload {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self).hash(state);
+        match self {
+            Self::None => {}
+            Self::ProtectedSourceCards(cards) => cards.hash(state),
+            Self::Traits { add, replace } => {
+                add.hash(state);
+                replace.hash(state);
+            }
+            Self::Name { value, base } => {
+                value.hash(state);
+                base.hash(state);
+            }
+            Self::SourceNameAliases { level_lte } => level_lte.hash(state),
+            Self::Colors { value, base } => {
+                value.hash(state);
+                base.hash(state);
+            }
+            Self::DigiXrosNames { aliases } => aliases.hash(state),
+            Self::Dp { value, base, origin } => {
+                value.hash(state);
+                base.hash(state);
+                origin.hash(state);
+            }
+            Self::SecurityAttack { delta, invert } => {
+                delta.hash(state);
+                invert.hash(state);
+            }
+            Self::EndTurnMinMemory { value } => value.hash(state),
+            Self::LinkCost { delta } => delta.hash(state),
+            Self::LinkMax { delta } => delta.hash(state),
+            Self::LevelForAssembly { value } => value.hash(state),
+            Self::SynthIdentity { kind, level, colors, traits, dp } => {
+                kind.hash(state);
+                level.hash(state);
+                colors.hash(state);
+                traits.hash(state);
+                dp.hash(state);
+            }
+            Self::AdditiveSynthIdentity { kind, level, colors, traits, dp } => {
+                kind.hash(state);
+                level.hash(state);
+                colors.hash(state);
+                traits.hash(state);
+                dp.hash(state);
+            }
+            Self::LevelOverride { value, delta } => {
+                value.hash(state);
+                delta.hash(state);
+            }
+            Self::DnaMaterialIdentity { result_name, level, name, result_scope } => {
+                result_name.hash(state);
+                level.hash(state);
+                name.hash(state);
+                result_scope
+                    .map(|scope| match scope {
+                        digimon_dsl::compiled::CompiledDnaMaterialResultScope::OwnHand => 1u8,
+                    })
+                    .hash(state);
+            }
+        }
+    }
+}
+
 /// A single modifier entry.
 ///
 /// `Clone` since 2026-06-18 (make-engine-cloneable task 1.2): the only
@@ -156,14 +221,14 @@ pub struct ModifierEntry {
     pub install_order: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EffectControllerFilter {
     Any,
     OpponentOnly,
     OwnOnly,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct EffectImmunityFilter {
     pub source_kind: Option<EffectSourceKind>,
     pub controller: EffectControllerFilter,
@@ -1033,22 +1098,68 @@ impl ModifierRegistry {
     /// Materialized declaratives are the tick's *output* and are excluded.
     pub fn nonmaterialized_digest(&self) -> u64 {
         use std::hash::{Hash, Hasher};
+        #[derive(Default)]
+        struct FastHasher(u64);
+        impl FastHasher {
+            #[inline]
+            fn mix(&mut self, word: u64) {
+                self.0 = (self.0.rotate_left(5) ^ word).wrapping_mul(0x517cc1b727220a95);
+            }
+        }
+        impl Hasher for FastHasher {
+            #[inline]
+            fn finish(&self) -> u64 {
+                self.0
+            }
+            #[inline]
+            fn write(&mut self, mut bytes: &[u8]) {
+                while bytes.len() >= 8 {
+                    self.mix(u64::from_ne_bytes(bytes[..8].try_into().unwrap()));
+                    bytes = &bytes[8..];
+                }
+                if !bytes.is_empty() {
+                    let mut buf = [0u8; 8];
+                    buf[..bytes.len()].copy_from_slice(bytes);
+                    self.mix(u64::from_ne_bytes(buf));
+                }
+            }
+            #[inline]
+            fn write_u8(&mut self, i: u8) {
+                self.mix(i as u64);
+            }
+            #[inline]
+            fn write_u16(&mut self, i: u16) {
+                self.mix(i as u64);
+            }
+            #[inline]
+            fn write_u32(&mut self, i: u32) {
+                self.mix(i as u64);
+            }
+            #[inline]
+            fn write_u64(&mut self, i: u64) {
+                self.mix(i);
+            }
+            #[inline]
+            fn write_usize(&mut self, i: usize) {
+                self.mix(i as u64);
+            }
+        }
         let mut sum: u64 = 0;
         for (handle, entries) in &self.permanent_modifiers {
             for e in entries {
                 if e.materialized_declarative {
                     continue;
                 }
-                let mut h = std::collections::hash_map::DefaultHasher::new();
+                let mut h = FastHasher::default();
                 handle.hash(&mut h);
                 e.modifier.hash(&mut h);
                 e.value.hash(&mut h);
-                format!("{:?}", e.payload).hash(&mut h);
+                e.payload.hash(&mut h);
                 e.expiry.hash(&mut h);
                 e.source_permanent.hash(&mut h);
                 e.source_player.hash(&mut h);
-                format!("{:?}", e.effect_immunity_filter).hash(&mut h);
-                format!("{:?}", e.disable_effect_timing).hash(&mut h);
+                e.effect_immunity_filter.hash(&mut h);
+                e.disable_effect_timing.hash(&mut h);
                 if e.affecting_source_identity.is_some() { e.affecting_source_identity.hash(&mut h); }
                 if e.immunity_excluded_source.is_some() { e.immunity_excluded_source.hash(&mut h); }
                 e.install_order.hash(&mut h);
@@ -1060,13 +1171,13 @@ impl ModifierRegistry {
                 if e.materialized_declarative {
                     continue;
                 }
-                let mut h = std::collections::hash_map::DefaultHasher::new();
+                let mut h = FastHasher::default();
                 handle.hash(&mut h);
                 e.keyword.hash(&mut h);
                 e.expiry.hash(&mut h);
                 e.source_permanent.hash(&mut h);
                 e.source_player.hash(&mut h);
-                format!("{:?}", e.affecting_source_kind).hash(&mut h);
+                e.affecting_source_kind.hash(&mut h);
                 if e.affecting_source_identity.is_some() { e.affecting_source_identity.hash(&mut h); }
                 e.install_order.hash(&mut h);
                 sum = sum.wrapping_add(h.finish());
@@ -1077,15 +1188,15 @@ impl ModifierRegistry {
                 if e.materialized_declarative {
                     continue;
                 }
-                let mut h = std::collections::hash_map::DefaultHasher::new();
+                let mut h = FastHasher::default();
                 player.hash(&mut h);
                 e.modifier.hash(&mut h);
                 e.value.hash(&mut h);
-                format!("{:?}", e.payload).hash(&mut h);
+                e.payload.hash(&mut h);
                 e.expiry.hash(&mut h);
                 e.source_permanent.hash(&mut h);
                 e.source_player.hash(&mut h);
-                format!("{:?}", e.effect_immunity_filter).hash(&mut h);
+                e.effect_immunity_filter.hash(&mut h);
                 e.install_order.hash(&mut h);
                 sum = sum.wrapping_add(h.finish());
             }
@@ -1093,7 +1204,7 @@ impl ModifierRegistry {
         // The `<Progress>` shield changes what `get` returns for the attacker,
         // so a declarative condition reading its DP must see a rebuild.
         {
-            let mut h = std::collections::hash_map::DefaultHasher::new();
+            let mut h = FastHasher::default();
             "progress_shield".hash(&mut h);
             self.progress_shield.hash(&mut h);
             sum = sum.wrapping_add(h.finish());

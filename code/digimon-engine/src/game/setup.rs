@@ -170,7 +170,7 @@ impl Game {
         // synthetic token `CardData` rows are now absorbed into the shared card
         // store by `card_store::build_shared_card_store` (deck-independent), so
         // the per-game absorption loop is gone.
-        let token_registry = crate::token_registry::build_registry();
+        let token_registry = crate::token_registry::build_registry_cached();
 
         let mut game = Self {
             projected_world_reads_guarded: false,
@@ -194,7 +194,7 @@ impl Game {
             game_over: false,
             winner: None,
             terminal_outcome_reason: None,
-            card_data: crate::card_store::CardStore(shared.data.clone()),
+            card_data: crate::card_store::CardStore::from_shared(&shared),
             #[cfg(feature = "dsl-yaml-loader")]
             alt_path_registry: shared.alt_paths.clone(),
             modifiers: ModifierRegistry::new(),

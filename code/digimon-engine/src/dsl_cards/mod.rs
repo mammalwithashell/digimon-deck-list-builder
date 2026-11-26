@@ -42,7 +42,7 @@ use crate::enums::{Expiry, ModifierType};
 use crate::modifiers::ModifierPayload;
 
 pub struct DslCardEffect {
-    compiled: Arc<CompiledCard>,
+    compiled: Arc<digimon_dsl::registry::CardSlot>,
     raw: Arc<EngineRawRustRegistry>,
 }
 
@@ -52,18 +52,28 @@ impl DslCardEffect {
     }
 
     pub fn new_with_raw(compiled: Arc<CompiledCard>, raw: Arc<EngineRawRustRegistry>) -> Self {
+        Self {
+            compiled: Arc::new(digimon_dsl::registry::CardSlot::eager(compiled)),
+            raw,
+        }
+    }
+
+    pub fn new_slot_with_raw(
+        compiled: Arc<digimon_dsl::registry::CardSlot>,
+        raw: Arc<EngineRawRustRegistry>,
+    ) -> Self {
         Self { compiled, raw }
     }
 
     pub fn compiled(&self) -> &CompiledCard {
-        &self.compiled
+        self.compiled.get()
     }
 
     /// Return the ACE overflow threshold for this card, if any.
     /// Engine ACE integration reads this value to check whether a
     /// Digimon can overflow memory during an attack.
     pub fn ace_overflow(&self) -> Option<i32> {
-        self.compiled.ace_overflow
+        self.compiled.get().ace_overflow
     }
 }
 
@@ -138,8 +148,9 @@ impl CardEffect for DslCardEffect {
             CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
         };
 
+        let compiled = self.compiled.get();
         let mut out = Vec::new();
-        if let Some(identity) = &self.compiled.identity {
+        if let Some(identity) = &compiled.identity {
             for source_alias in &identity.source_name_aliases {
                 let level_lte = source_alias.level_lte;
                 out.push(
@@ -162,7 +173,7 @@ impl CardEffect for DslCardEffect {
                 );
             }
         }
-        for path in &self.compiled.alt_paths {
+        for path in &compiled.alt_paths {
             // Only <Blast Digivolve> ([Hand] [Counter]) gets the counter-window
             // marker: the `marker: true` form of `burst_digivolve`, and Blast DNA.
             // A printed [Burst Digivolve] (BT13-020/060, BT25-104, BT26-050) is
@@ -180,7 +191,7 @@ impl CardEffect for DslCardEffect {
                 );
             }
         }
-        let option_use_requirement = option_use_requirement_for_card(&self.compiled);
+        let option_use_requirement = option_use_requirement_for_card(compiled);
         // Assemble the full clause list. For a DUAL card this is the top-level
         // `effects:` PLUS the per-face `dual.digimon.effects` /
         // `dual.option.effects` (`G-DSL-DUAL-PER-FACE-EFFECTS`). Each entry
@@ -203,15 +214,15 @@ impl CardEffect for DslCardEffect {
             CompiledCardKind,
             Option<Arc<CompiledPredicate>>,
         )> = Vec::new();
-        for (i, clause) in self.compiled.effects.iter().enumerate() {
+        for (i, clause) in compiled.effects.iter().enumerate() {
             clauses.push((
                 i,
                 clause,
-                self.compiled.kind,
+                compiled.kind,
                 option_use_requirement.clone(),
             ));
         }
-        if let Some(dual) = self.compiled.dual.as_ref() {
+        if let Some(dual) = compiled.dual.as_ref() {
             const FACE_OFFSET: usize = 64;
             for (i, clause) in dual.digimon.effects.iter().enumerate() {
                 // Digimon face: lower as a Digimon, never as an Option — no
@@ -715,7 +726,7 @@ impl CardEffect for DslCardEffect {
         use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
 
         let mut fallback: Option<Arc<Vec<CompiledPredicate>>> = None;
-        for clause in &self.compiled.effects {
+        for clause in &self.compiled.get().effects {
             let CompiledClause::Declarative(CompiledDeclarativeClause::Partition {
                 scope,
                 sources,
@@ -780,7 +791,7 @@ pub fn register_dsl_cards_with_raw(
     dsl_registry: &DslCardRegistry,
     raw: Arc<EngineRawRustRegistry>,
 ) {
-    for (card_id, compiled) in dsl_registry.iter() {
-        effect_registry.insert_compiled(card_id, Arc::new(compiled.clone()), raw.clone());
+    for (card_id, slot) in dsl_registry.iter_slots() {
+        effect_registry.insert_compiled_slot(card_id, Arc::clone(slot), raw.clone());
     }
 }

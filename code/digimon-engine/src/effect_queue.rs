@@ -1584,14 +1584,28 @@ impl Game {
     }
 
     fn capture_queued_effect_identities(&mut self) {
-        let pending: Vec<_> = self.effect_queue.iter().map(|q| {
-            (q.source_identity.is_none(), q.source_permanent)
-        }).collect();
-        let captured: Vec<_> = pending.iter().map(|(needed, source)| {
-            if *needed { Some(source.and_then(|h| self.source_move_anchor(h))) } else { None }
-        }).collect();
+        if !self.effect_queue.iter().any(|q| q.source_identity.is_none()) {
+            return;
+        }
+        let pending: Vec<_> = self
+            .effect_queue
+            .iter()
+            .map(|q| (q.source_identity.is_none(), q.source_permanent))
+            .collect();
+        let captured: Vec<_> = pending
+            .iter()
+            .map(|(needed, source)| {
+                if *needed {
+                    Some(source.and_then(|h| self.source_move_anchor(h)))
+                } else {
+                    None
+                }
+            })
+            .collect();
         for (q, identity) in self.effect_queue.iter_mut().zip(captured) {
-            if let Some(identity) = identity { q.source_identity = Some(identity); }
+            if let Some(identity) = identity {
+                q.source_identity = Some(identity);
+            }
         }
     }
 
@@ -1615,17 +1629,33 @@ impl Game {
         // while its trigger was parked is deleted by the rules check first,
         // so the trigger's source is gone when activation is attempted).
         // Outermost entries only; nested drains are mid-effect (Q6/Q13/Q14).
+        let mut pre_rules_check_clean = false;
         if self.effect_drain_depth == 1 && self.pending_selection.is_none() && !self.game_over {
             // §15-4-3-3: the finished effect's window triggers are released
             // first, so the rule check's own triggers pend with them.
             self.release_event_window_triggers();
-            self.run_state_based_rules_check();
+            pre_rules_check_clean = !self.run_state_based_rules_check();
         }
-        self.drain_effect_queue_inner();
+        let fast_empty_queue = pre_rules_check_clean
+            && self.effect_queue.is_empty()
+            && !self.option_body_pending
+            && !self.until_condition_dirty
+            && self.security_resolution.as_ref().is_none_or(|state| {
+                state.phase != crate::selection::SecurityPhase::SecuritySkillDrain
+            })
+            && self.pending_hand_discard.is_none()
+            && self.pending_deck_discards.is_empty()
+            && self.pending_deck_add.is_none()
+            && self.pending_added_sources.is_empty();
+        if fast_empty_queue {
+            self.effect_chain_depth = 0;
+        } else {
+            self.drain_effect_queue_inner();
+        }
         // §1-2-2: the game ends when a player wins or loses -- a §18-3-2
         // infinite-loop draw, a §1-2-6 win/lose effect, a deck-out -- and no
         // flush or rules processing runs after it.
-        if self.effect_drain_depth == 1 && !self.game_over {
+        if self.effect_drain_depth == 1 && !self.game_over && !fast_empty_queue {
             // Fallback flushes. The windows are normally released at the top
             // of the drain loop as soon as the effect that opened them has
             // finished (`release_event_window_triggers`, §15-4-3-2); these
@@ -1712,7 +1742,7 @@ impl Game {
             }
             let mut guard: u16 = 0;
             loop {
-            self.capture_queued_effect_identities();
+                self.capture_queued_effect_identities();
                 if self.pending_selection.is_some() || self.game_over {
                     break;
                 }
@@ -1727,10 +1757,9 @@ impl Game {
                 // next pass. Without this, such a stable state would spin
                 // until the §18-3 loop watch declared a draw that no loop
                 // exists for.
-                let before = self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck);
-                if !self.run_state_based_rules_check() {
+                let Some(before) = self.run_state_based_rules_check_with_before_sig() else {
                     break;
-                }
+                };
                 guard += 1;
                 if self.loop_step_ends_game(crate::game::infinite_loop::LoopSite::RulesCheck, guard)
                 {
@@ -1743,7 +1772,8 @@ impl Game {
                     self.drain_effect_queue_inner();
                 }
                 if self.pending_selection.is_none()
-                    && self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck) == before
+                    && self.loop_signature(crate::game::infinite_loop::LoopSite::RulesCheck)
+                        == before
                 {
                     break;
                 }
@@ -3423,9 +3453,24 @@ impl Game {
             return;
         }
         let top = perm.top_card();
-        let card_id = top.card_id(&self.card_data).to_string();
+        let top_data_index = top.data_index;
         let source_card = top.handle();
-        let top_source_kind = self.effect_source_kind_for_handle(source_card);
+        let top_source_kind = {
+            let id = perm.synth_identity(&self.card_data, &self.modifiers, handle);
+            if (id.kind == CardKind::Digimon && id.retained_kind == Some(CardKind::Tamer))
+                || (id.kind == CardKind::Tamer && id.retained_kind == Some(CardKind::Digimon))
+            {
+                EffectSourceKind::DigimonAndTamer
+            } else {
+                source_kind_for_card_kind(self.card_data[top_data_index].card_kind)
+            }
+        };
+        let has_linked_cards = !perm.linked_cards.is_empty();
+        let self_is_training = matches!(
+            perm.option_state,
+            crate::permanent::OptionState::Training { .. }
+        );
+        let stack_len = perm.card_sources.len();
 
         let tp = self.turn_player();
         let is_turn_player = handle.player == tp;
@@ -3495,7 +3540,7 @@ impl Game {
             });
         }
 
-        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
+        if let Some(effects) = self.effects_for_card_by_index(top_data_index, source_card) {
             for (slot, effect) in effects.iter().enumerate() {
                 if !timing_flag_matches(effect, timing) {
                     continue;
@@ -3522,8 +3567,9 @@ impl Game {
                 if effect.inherited {
                     continue;
                 }
+                let card_id = self.card_data[top_data_index].card_id.clone();
                 self.push_effect_with_identity(QueuedEffect {
-                source_identity: None,
+                    source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
                     // An Option-side effect activated from a Digimon face is an
@@ -3542,7 +3588,7 @@ impl Game {
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
-                    card_id: card_id.clone(),
+                    card_id,
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
@@ -3623,8 +3669,9 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
+                let card_id = self.card_data[top_data_index].card_id.clone();
                 self.push_effect_with_identity(QueuedEffect {
-                source_identity: None,
+                    source_identity: None,
                     source_card,
                     source_permanent: Some(handle),
                     source_kind: top_source_kind,
@@ -3641,7 +3688,7 @@ impl Game {
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
-                    card_id: card_id.clone(),
+                    card_id,
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,
@@ -3656,69 +3703,68 @@ impl Game {
         // Phase 8 Task 4: sideways inheritance from linked cards. Snapshot
         // linked-card identity first to drop the `perm` borrow before
         // iterating (effects_for_card borrows &self).
-        let linked_sources: Vec<(String, crate::card_source::CardHandle, EffectSourceKind)> = {
-            let perm = self
-                .players
-                .get(handle.player as usize)
-                .and_then(|p| p.battle_area.get(handle.index as usize));
-            match perm {
-                Some(p) => p
-                    .linked_cards
-                    .iter()
-                    .map(|c| {
-                        (
-                            c.card_id(&self.card_data).to_string(),
-                            c.handle(),
-                            EffectSourceKind::Digimon,
-                        )
-                    })
-                    .collect(),
-                None => Vec::new(),
-            }
-        };
-        for (linked_card_id, linked_source, linked_source_kind) in linked_sources {
-            let Some(effects) = self.effects_for_card(&linked_card_id, linked_source) else {
-                continue;
+        if has_linked_cards {
+            let linked_sources: Vec<(usize, crate::card_source::CardHandle, EffectSourceKind)> = {
+                let perm = self
+                    .players
+                    .get(handle.player as usize)
+                    .and_then(|p| p.battle_area.get(handle.index as usize));
+                match perm {
+                    Some(p) => p
+                        .linked_cards
+                        .iter()
+                        .map(|c| (c.data_index, c.handle(), EffectSourceKind::Digimon))
+                        .collect(),
+                    None => Vec::new(),
+                }
             };
-            for (slot, effect) in effects.iter().enumerate() {
-                // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's ESS
-                // triggered clause fires from its HOST. Accept BOTH the
-                // `.linked()` convention (BT25-101) AND the `.inherited()`
-                // convention (BT25-093's `scope: inherited` [When Attacking]
-                // delete): a link card behaves as an inherited-style source. A
-                // clause is `.linked()` XOR `.inherited()`, so this never
-                // double-enqueues. (The top-card scan above and the below-top
-                // `card_sources` scan never touch `linked_cards`, so there is
-                // no cross-pass overlap either.)
-                if !(effect.linked || effect.inherited) {
+            for (linked_data_index, linked_source, linked_source_kind) in linked_sources {
+                let Some(effects) =
+                    self.effects_for_card_by_index(linked_data_index, linked_source)
+                else {
                     continue;
+                };
+                for (slot, effect) in effects.iter().enumerate() {
+                    // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's ESS
+                    // triggered clause fires from its HOST. Accept BOTH the
+                    // `.linked()` convention (BT25-101) AND the `.inherited()`
+                    // convention (BT25-093's `scope: inherited` [When Attacking]
+                    // delete): a link card behaves as an inherited-style source. A
+                    // clause is `.linked()` XOR `.inherited()`, so this never
+                    // double-enqueues. (The top-card scan above and the below-top
+                    // `card_sources` scan never touch `linked_cards`, so there is
+                    // no cross-pass overlap either.)
+                    if !(effect.linked || effect.inherited) {
+                        continue;
+                    }
+                    if !timing_flag_matches(effect, timing) {
+                        continue;
+                    }
+                    let linked_card_id = self.card_data[linked_data_index].card_id.clone();
+                    self.push_effect_with_identity(QueuedEffect {
+                        source_identity: None,
+                        source_card: linked_source,
+                        source_permanent: Some(handle),
+                        source_kind: linked_source_kind,
+                        attribution_source_card: None,
+                        attribution_source_kind: None,
+                        bypass_once_per_turn: false,
+                        controller: handle.player,
+                        timing,
+                        trigger_context: trigger_context.clone(),
+                        effect_slot: slot as u8,
+                        is_optional: effect.optional,
+                        is_turn_player,
+                        card_id: linked_card_id,
+                        allow_below_top_liveness: false,
+                        dna_origin_context: self.current_dna_origin,
+                        granted_effect_id: None,
+                        keyword_effect: None,
+                        trigger_batch: 0,
+                        pending_processing: None,
+                        trash_zone_generation: None,
+                    });
                 }
-                if !timing_flag_matches(effect, timing) {
-                    continue;
-                }
-                self.push_effect_with_identity(QueuedEffect {
-                source_identity: None,
-                source_card: linked_source,
-                    source_permanent: Some(handle),
-                    source_kind: linked_source_kind,
-                    attribution_source_card: None,
-                    attribution_source_kind: None,
-                    bypass_once_per_turn: false,
-                    controller: handle.player,
-                    timing,
-                    trigger_context: trigger_context.clone(),
-                    effect_slot: slot as u8,
-                    is_optional: effect.optional,
-                    is_turn_player,
-                    card_id: linked_card_id.clone(),
-                    allow_below_top_liveness: false,
-                    dna_origin_context: self.current_dna_origin,
-                    granted_effect_id: None,
-                    keyword_effect: None,
-                    trigger_batch: 0,
-                    pending_processing: None,
-                    trash_zone_generation: None,
-                });
             }
         }
 
@@ -3737,83 +3783,92 @@ impl Game {
         // Skipping the scan when `self_is_training` keeps Training's own
         // OnTrainingTrash firing single-shot from `move_from_breeding`'s
         // direct `TriggerSource::Permanent(training_handle)` dispatch.
-        let self_is_training = self
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|p| {
-                matches!(
-                    p.option_state,
-                    crate::permanent::OptionState::Training { .. }
-                )
-            })
-            .unwrap_or(false);
         if !self_is_training {
-            let training_sources: Vec<(String, crate::card_source::CardHandle, EffectSourceKind)> = {
-                let p = match self.players.get(handle.player as usize) {
-                    Some(p) => p,
-                    None => return,
-                };
-                let source_top_card = p
-                    .battle_area
-                    .get(handle.index as usize)
-                    .map(|perm| perm.top_card().handle());
-                p.battle_area
-                    .iter()
-                    .filter_map(|perm| {
-                        if let crate::permanent::OptionState::Training { trained, .. } =
-                            perm.option_state
-                        {
-                            let training_applies = trained
-                                .map_or(true, |binding| source_top_card == Some(binding.top_card));
-                            if training_applies {
-                                let top = perm.top_card();
-                                return Some((
-                                    top.card_id(&self.card_data).to_string(),
-                                    top.handle(),
-                                    source_kind_for_card_kind(top.card_kind(&self.card_data)),
-                                ));
-                            }
-                        }
-                        None
+            let has_training = self
+                .players
+                .get(handle.player as usize)
+                .is_some_and(|p| {
+                    p.battle_area.iter().any(|perm| {
+                        matches!(
+                            perm.option_state,
+                            crate::permanent::OptionState::Training { .. }
+                        )
                     })
-                    .collect()
-            };
-            for (training_card_id, training_source, training_source_kind) in training_sources {
-                let Some(effects) = self.effects_for_card(&training_card_id, training_source)
-                else {
-                    continue;
-                };
-                for (slot, effect) in effects.iter().enumerate() {
-                    if !effect.inherited {
+                });
+            if has_training {
+                let training_sources: Vec<(usize, crate::card_source::CardHandle, EffectSourceKind)> =
+                    {
+                        let p = match self.players.get(handle.player as usize) {
+                            Some(p) => p,
+                            None => return,
+                        };
+                        let source_top_card = p
+                            .battle_area
+                            .get(handle.index as usize)
+                            .map(|perm| perm.top_card().handle());
+                        p.battle_area
+                            .iter()
+                            .filter_map(|perm| {
+                                if let crate::permanent::OptionState::Training { trained, .. } =
+                                    perm.option_state
+                                {
+                                    let training_applies = trained.map_or(true, |binding| {
+                                        source_top_card == Some(binding.top_card)
+                                    });
+                                    if training_applies {
+                                        let top = perm.top_card();
+                                        return Some((
+                                            top.data_index,
+                                            top.handle(),
+                                            source_kind_for_card_kind(
+                                                top.card_kind(&self.card_data),
+                                            ),
+                                        ));
+                                    }
+                                }
+                                None
+                            })
+                            .collect()
+                    };
+                for (training_data_index, training_source, training_source_kind) in training_sources
+                {
+                    let Some(effects) =
+                        self.effects_for_card_by_index(training_data_index, training_source)
+                    else {
                         continue;
+                    };
+                    for (slot, effect) in effects.iter().enumerate() {
+                        if !effect.inherited {
+                            continue;
+                        }
+                        if !timing_flag_matches(effect, timing) {
+                            continue;
+                        }
+                        let training_card_id = self.card_data[training_data_index].card_id.clone();
+                        self.push_effect_with_identity(QueuedEffect {
+                            source_identity: None,
+                            source_card: training_source,
+                            source_permanent: Some(handle),
+                            source_kind: training_source_kind,
+                            attribution_source_card: None,
+                            attribution_source_kind: None,
+                            bypass_once_per_turn: false,
+                            controller: handle.player,
+                            timing,
+                            trigger_context: trigger_context.clone(),
+                            effect_slot: slot as u8,
+                            is_optional: effect.optional,
+                            is_turn_player,
+                            card_id: training_card_id,
+                            allow_below_top_liveness: false,
+                            dna_origin_context: self.current_dna_origin,
+                            granted_effect_id: None,
+                            keyword_effect: None,
+                            trigger_batch: 0,
+                            pending_processing: None,
+                            trash_zone_generation: None,
+                        });
                     }
-                    if !timing_flag_matches(effect, timing) {
-                        continue;
-                    }
-                    self.push_effect_with_identity(QueuedEffect {
-                source_identity: None,
-                source_card: training_source,
-                        source_permanent: Some(handle),
-                        source_kind: training_source_kind,
-                        attribution_source_card: None,
-                        attribution_source_kind: None,
-                        bypass_once_per_turn: false,
-                        controller: handle.player,
-                        timing,
-                        trigger_context: trigger_context.clone(),
-                        effect_slot: slot as u8,
-                        is_optional: effect.optional,
-                        is_turn_player,
-                        card_id: training_card_id.clone(),
-                        allow_below_top_liveness: false,
-                        dna_origin_context: self.current_dna_origin,
-                        granted_effect_id: None,
-                        keyword_effect: None,
-                        trigger_batch: 0,
-                        pending_processing: None,
-                        trash_zone_generation: None,
-                    });
                 }
             }
         }
@@ -3831,8 +3886,11 @@ impl Game {
         // dispatches its top-scope effects through the carrier. Same entry
         // shape; `run_queued_effect_inner`'s liveness gate re-checks the card
         // is still the adopted one at activation time.
+        if stack_len <= 1 {
+            return;
+        }
         let adopted = self.succession_source_indices(handle);
-        let inherited_sources: Vec<(String, CardHandle, EffectSourceKind, bool)> = {
+        let inherited_sources: Vec<(usize, CardHandle, EffectSourceKind, bool)> = {
             let Some(perm) = self
                 .players
                 .get(handle.player as usize)
@@ -3840,17 +3898,17 @@ impl Game {
             else {
                 return;
             };
-            let stack_len = perm.card_sources.len();
+            let cur_stack_len = perm.card_sources.len();
             perm.card_sources
                 .iter()
                 .enumerate()
-                .take(stack_len.saturating_sub(1))
+                .take(cur_stack_len.saturating_sub(1))
                 // CR 4.3 4-7-9: face-down sources have no card information.
                 // Filter after enumerate so Succession keeps physical indices.
                 .filter(|(_, c)| !c.face_down)
                 .map(|(i, c)| {
                     (
-                        c.card_id(&self.card_data).to_string(),
+                        c.data_index,
                         c.handle(),
                         EffectSourceKind::Digimon,
                         adopted.contains(&i),
@@ -3858,10 +3916,11 @@ impl Game {
                 })
                 .collect()
         };
-        for (source_card_id, inherited_source, inherited_source_kind, is_adopted) in
+        for (source_data_index, inherited_source, inherited_source_kind, is_adopted) in
             inherited_sources
         {
-            let Some(effects) = self.effects_for_card(&source_card_id, inherited_source) else {
+            let Some(effects) = self.effects_for_card_by_index(source_data_index, inherited_source)
+            else {
                 continue;
             };
             for (slot, effect) in effects.iter().enumerate() {
@@ -3871,9 +3930,10 @@ impl Game {
                 if !timing_flag_matches(effect, timing) {
                     continue;
                 }
+                let source_card_id = self.card_data[source_data_index].card_id.clone();
                 self.push_effect_with_identity(QueuedEffect {
-                source_identity: None,
-                source_card: inherited_source,
+                    source_identity: None,
+                    source_card: inherited_source,
                     source_permanent: Some(handle),
                     source_kind: inherited_source_kind,
                     attribution_source_card: None,
@@ -3885,7 +3945,7 @@ impl Game {
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
-                    card_id: source_card_id.clone(),
+                    card_id: source_card_id,
                     allow_below_top_liveness: true,
                     dna_origin_context: self.current_dna_origin,
                     granted_effect_id: None,

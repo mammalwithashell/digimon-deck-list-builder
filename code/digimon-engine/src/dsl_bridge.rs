@@ -117,6 +117,23 @@ pub fn enrich_card_data_with_dsl_alt_paths(
     registry: &digimon_dsl::CardRegistry,
 ) -> usize {
     let mut inserted = 0;
+    if let Some(enrichments) = registry.enrichments() {
+        for e in enrichments {
+            let Some(card) = cards.get_mut(&e.card_id) else {
+                continue;
+            };
+            card.ace_overflow = e.ace_overflow;
+            card.digixros_aliases = e.digixros_aliases.clone();
+            card.also_treated_as = e.also_treated_as.clone();
+            for dna_cost in e.alt_paths.iter().filter_map(compiled_dna_cost) {
+                if !card.dna_costs.contains(&dna_cost) {
+                    card.dna_costs.push(dna_cost);
+                    inserted += 1;
+                }
+            }
+        }
+        return inserted;
+    }
     for (card_id, compiled) in registry.iter() {
         let Some(card) = cards.get_mut(card_id) else {
             continue;

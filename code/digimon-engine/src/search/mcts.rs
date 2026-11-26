@@ -543,7 +543,12 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
     let mut forced_steps = 0u32;
     while !game.game_over && forced_steps < cap {
         let pid = decision_player(game);
-        mask = measure("mask", || build_action_mask(game, pid));
+        if mask.len() != crate::action::ACTION_SPACE_SIZE {
+            mask.resize(crate::action::ACTION_SPACE_SIZE, 0.0);
+        }
+        measure("mask", || {
+            crate::action::build_action_mask_into(game, pid, &mut mask)
+        });
         let mut only_action = None;
         let mut legal_count = 0u32;
         for (i, &m) in mask.iter().enumerate() {
@@ -556,14 +561,14 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
             }
         }
         if legal_count != 1 {
-            break;
+            return mask;
         }
         measure("step", || {
             game.decode_action(only_action.expect("single legal action"), pid)
         });
-        mask.clear(); // state changed; recompute (or terminal)
         forced_steps += 1;
     }
+    mask.clear();
     mask
 }
 
@@ -572,12 +577,20 @@ pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
 /// `N(s)` the sum of the node's edge visits (+1 so the very first pick is
 /// still prior-driven). Deterministic first-max tie-break.
 fn select_edge(node: &Node, c_puct: f32, unvisited_q: f32) -> usize {
-    let stats: Vec<(f32, u32, f32)> = node
-        .edges
-        .iter()
-        .map(|e| (e.prior, e.visits, edge_q(e.w, e.visits, unvisited_q)))
-        .collect();
-    puct_argmax_q(&stats, c_puct)
+    let total: u32 = node.edges.iter().map(|e| e.visits).sum();
+    let sqrt_total = ((total + 1) as f32).sqrt();
+    let mut best = 0usize;
+    let mut best_score = f32::NEG_INFINITY;
+    for (i, e) in node.edges.iter().enumerate() {
+        let q = edge_q(e.w, e.visits, unvisited_q);
+        let u = c_puct * e.prior * sqrt_total / (1.0 + e.visits as f32);
+        let score = q + u;
+        if score > best_score {
+            best_score = score;
+            best = i;
+        }
+    }
+    best
 }
 
 /// Mean action value of an edge in its node mover's frame; `unvisited_q`
