@@ -31752,30 +31752,22 @@
       "untested_constructs": []
     },
     "EX11-022": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
-      "untested_constructs": [
-        "verb:substitute_replacement"
-      ]
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
     },
     "EX11-023": {
-      "admissible": false,
+      "admissible": true,
       "dsl": true,
       "has_card_test": true,
       "needs_card_test": true,
-      "reason": "untested_lowering",
-      "reasons": [
-        "untested_lowering"
-      ],
-      "untested_constructs": [
-        "verb:substitute_replacement"
-      ]
+      "reason": null,
+      "reasons": [],
+      "untested_constructs": []
     },
     "EX11-024": {
       "admissible": true,
@@ -47408,20 +47400,20 @@
     }
   },
   "counts": {
-    "admissible": 1812,
+    "admissible": 1814,
     "diverged_no_quirk": 0,
     "failed_verdict": 26,
     "registered": 4629,
     "unregistered": 0,
     "untested_card": 32,
-    "untested_lowering": 2759
+    "untested_lowering": 2757
   },
-  "generated_at": "2026-11-26T18:54:22+00:00",
+  "generated_at": "2026-11-26T20:52:16+00:00",
   "sources": {
     "behavioral_test_modules_sha256": "8884726a66bff35a3c88a51306380f6c476199551498d153d2fbf33e5c9e0324",
     "card_registry_sha256": "f7c6f1ec2253fc5b9435b3b24cef8223200cc79f1fc4be51336b0f693e319800",
     "exam_verdicts_sha256": "cd28b3154e124a8fbaff072704288cdc01f8db202f1888f14f7f5ec11394a143",
-    "lowering_coverage_sha256": "b85ccd44fd677ef300d95606afd17994c3b47bd2245108225ec60432bfa94c7c",
+    "lowering_coverage_sha256": "239440b22ec1517a2478b055aa61486829e0f4e19d6d4aca444cea9d23ec5dcc",
     "validated_cards_dsl_sha256": "488c63ab22192e34e0a641acd19c3ff5eeabbd082bdebd1e986c7004346179ee",
     "validated_cards_sha256": "c1ca1b49d7c58d7ab9e1ab29ca05b5f06e075e19acdde6aca4494da54d318a05"
   },
