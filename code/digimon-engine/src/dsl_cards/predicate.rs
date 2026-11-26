@@ -2516,16 +2516,14 @@ fn eval_event_fields(
         // a Tamer owned by the observer ("effects trash cards from under YOUR
         // Tamers"). The host handle's `player` is its controller; its top card's
         // kind must be Tamer.
-        let host = rctx
-            .game
-            .current_trigger_context
-            .as_ref()
-            .and_then(|t| t.event_host_permanent);
-        let is_own_tamer = host
-            .filter(|h| h.player == rctx.player)
-            .and_then(|h| rctx.game.player(h.player).battle_area.get(h.index as usize))
-            .map(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
-            .unwrap_or(false);
+        // The host may have left and its slot may hold another permanent, so
+        // read the event's captured host card and controller.
+        let trigger = rctx.game.current_trigger_context.as_ref();
+        let is_own_tamer = trigger
+            .filter(|t| t.event_host_permanent.is_some_and(|h| h.player == rctx.player))
+            .and_then(|t| t.event_host_card)
+            .and_then(|card| rctx.game.card_data_for_handle(card))
+            .is_some_and(|data| data.card_kind == CardKind::Tamer);
         if is_own_tamer != want {
             return false;
         }
@@ -3680,6 +3678,19 @@ fn eval_card_fields(
         Some(d) => d,
         None => return false,
     };
+    if formula_target.is_none() {
+        if let Some(want) = pred.has_on_deletion_effect {
+            let has_effect = rctx.game.effects_for_card(&data.card_id, card).is_some_and(|effects| {
+                effects.iter().any(|effect| {
+                    effect.timing == crate::enums::EffectTiming::OnDeletion
+                        && effect.can_be_refired()
+                })
+            });
+            if has_effect != want {
+                return false;
+            }
+        }
+    }
     // §4-6-3: a DUAL card placed on the field -- the TOP card of a battle-area
     // or breeding-area permanent, i.e. the permanent itself -- is treated as a
     // Digimon and can't be referenced as an Option card, whatever the caller
@@ -4518,17 +4529,6 @@ fn can_card_digivolve_onto_waiving(
     // alone is insufficient: both the host and its controller must currently
     // be allowed to digivolve. Match the controller used by the DSL commit,
     // which can differ from the player owning the initiating effect.
-    if rctx
-        .game
-        .modifiers
-        .has(target, crate::enums::ModifierType::CannotDigivolve)
-        || rctx.game.modifiers.player_has(
-            target.player,
-            crate::enums::ModifierType::CannotDigivolveDigimonByEffect,
-        )
-    {
-        return false;
-    }
     let Some(candidate) = rctx.game.card_source_for_handle(card) else {
         return false;
     };
@@ -4537,7 +4537,11 @@ fn can_card_digivolve_onto_waiving(
     } else {
         rctx.game.all_digivolve_routes_for_card(candidate, target)
     };
-    routes.iter().any(|route| !route.app_fusion)
+    routes.iter().any(|route| {
+        !route.app_fusion && rctx.game.digivolve_route_passes_prohibitions(
+            target, target.player, crate::enums::PlaySource::ByEffect, route.as_tamer,
+        )
+    })
 }
 
 /// `this_card_can_digivolve_onto` — permanent-subject probe: can the effect's

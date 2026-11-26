@@ -1,0 +1,67 @@
+card: BT27-048
+name: "Stegomon"
+kind: digimon
+level: 4
+color: [green, purple]
+cost: 5
+dp: 6000
+traits: [Stegosaur, "Kurata's Army", Bio, Dinosaur]
+form: Armor Form
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
+  - kind: digivolve
+    from: { kind: tamer, trait_has: "Kurata's Army" }
+    source_treated_as: tamer
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    text: "＜Armor Purge＞"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may suspend 1 Digimon. Then, by choosing 1 of your Digimon, delete the chosen Digimon, and 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends."
+    process:
+      - select_any_permanent:
+          optional: true
+          continue_on_decline: true
+          bind_as: suspend_target
+          filter: { kind: digimon, is_unsuspended: true }
+          prompt: "You may suspend 1 Digimon"
+      - suspend: { target: suspend_target }
+      - select_own_permanent:
+          optional: true
+          continue_on_decline: true
+          bind_as: sacrifice
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to delete"
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter: { any_of: [{ kind: digimon }, { kind: tamer }] }
+                prompt: "Choose 1 opposing Digimon or Tamer that can't unsuspend"
+            - delete_permanent: { target: sacrifice }
+            - add_modifier:
+                target: victim
+                modifier: CannotUnsuspend
+                expiry: end_of_opponents_turn
+                value: 1
+      - if:
+          condition:
+            all_of:
+              - not: { binding_present: sacrifice }
+              - not: { binding_present: suspend_target }
+          then:
+            - refund_opt: {}

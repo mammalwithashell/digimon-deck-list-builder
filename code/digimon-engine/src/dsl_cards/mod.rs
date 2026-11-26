@@ -726,7 +726,14 @@ impl CardEffect for DslCardEffect {
         use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
 
         let mut fallback: Option<Arc<Vec<CompiledPredicate>>> = None;
-        for clause in &self.compiled.get().effects {
+        let compiled = self.compiled.get();
+        let clauses = compiled.effects.iter().chain(
+            compiled
+                .dual
+                .iter()
+                .flat_map(|dual| &dual.digimon.effects),
+        );
+        for clause in clauses {
             let CompiledClause::Declarative(CompiledDeclarativeClause::Partition {
                 scope,
                 sources,

@@ -63,6 +63,7 @@ fn setup_yaml(same_turn: bool, yaml: &str) -> DebugRunner {
     let req = |color| DnaRequirement {
         level: 6,
         card_colors: vec![color],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };

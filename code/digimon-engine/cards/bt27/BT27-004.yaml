@@ -1,0 +1,43 @@
+# Source: data/card_bundles/BT27-004.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Black/BT27_004.cs
+#   (OnEnterFieldAnyone, inherited, OPT, optional; another own permanent whose
+#   top card ContainsCardName "Chessmon"; DigivolveIntoHandOrTrashCard -2).
+card: BT27-004
+name: Kapurimon
+kind: digi_egg
+level: 2
+color: [black]
+traits: [Lesser, DATA SQUAD]
+form: In-Training
+
+effects:
+  - text: "[Your Turn] [Once Per Turn] When any of your other Digimon with [Chessmon] in their names are played, this Digimon may digivolve into a Digimon card with [Chessmon] in its name in the hand with the cost reduced by 2."
+    scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_name_contains: Chessmon
+        - event_target_is_source: false
+    summary: "[Inherited][Your Turn][Once Per Turn] When another own [Chessmon]-named Digimon is played, this Digimon may digivolve into a [Chessmon]-named hand card with the cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Chessmon
+              - can_digivolve_onto_with_cost: { target: source, cost: { reduce: 2 } }
+          prompt: "Digivolve into a Digimon card with [Chessmon] in its name with the cost reduced by 2"
+      - if:
+          condition: { binding_present: evo }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evo
+                cost: { reduce: 2 }

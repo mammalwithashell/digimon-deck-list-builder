@@ -17,7 +17,9 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, PlaySource};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType, PlaySource};
+use digimon_engine::modifiers::ModifierEntry;
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
@@ -304,6 +306,24 @@ fn accept_suspends_and_applies_reduction_once() {
         r.game.player_digivolve_cost_reducers.is_empty(),
         "single-fire reducer consumed after a successful application"
     );
+}
+
+#[test]
+fn immune_digimon_cannot_pay_the_player_scoped_reducer() {
+    let (mut r, base) = green_digivolve_runner(std::sync::Arc::new(ArmsGreenDigivolveReducer));
+    r.play(0, 0);
+    let source = PermanentHandle { player: 0, index: 1 };
+    r.game.players[0].battle_area[source.index as usize].is_suspended = true;
+    let payer = PermanentHandle { player: 0, index: base as u8 };
+    r.game.modifiers.add(payer, ModifierEntry::simple(
+        ModifierType::CannotBeAffected, 1, Expiry::Permanent, 0,
+    ));
+    let before = r.memory();
+
+    assert!(r.game.digivolve_from_hand(0, 0, base, PlaySource::ByDigivolve));
+    assert!(r.game.pending_selection.is_none());
+    assert!(!r.game.players[0].battle_area[base].is_suspended);
+    assert_eq!(r.memory(), before - 4);
 }
 
 /// Declining the prompt keeps the full digivolution cost and leaves the

@@ -1,0 +1,99 @@
+# Source: data/card_bundles/BT27-066.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Black/BT27_066.cs
+#   (shared On Play / On Deletion: one target takes N separate De-Digivolve 1
+#   instances, N = other own [Chessmon] Digimon; skipped when N = 0; then a
+#   mandatory delete of a play cost 5 or lower opposing Digimon).
+card: BT27-066
+name: RookChessmon
+kind: digimon
+level: 5
+color: [black, yellow]
+cost: 7
+dp: 7000
+traits: [Puppet, DATA SQUAD]
+form: Ultimate
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      level_eq: 4
+      any_color: true
+      any_of:
+        - name_contains: Chessmon
+        - trait_has: DATA SQUAD
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    text: "＜Reboot＞"
+    keyword: Reboot
+  - kind: grant_keyword
+    text: "＜Blocker＞"
+    keyword: Blocker
+
+  - when: [on_play, on_deletion]
+    text: "[On Play] [On Deletion] To 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for each of your other Digimon with [Chessmon] in their names. Then, delete 1 of your opponent's Digimon with a play cost of 5 or less."
+    summary: "[On Play] [On Deletion] To 1 of your opponent's Digimon, <De-Digivolve 1> for each of your other Digimon with [Chessmon] in their names. Then, delete 1 of your opponent's Digimon with a play cost of 5 or less"
+    process:
+      - if:
+          condition:
+            all_of:
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [battle_area]
+                    kind: digimon
+                    name_contains: Chessmon
+                    other: true
+                  n: 1
+              - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: dedigi_target
+                filter: { kind: digimon }
+                prompt: "<De-Digivolve 1> 1 of your opponent's Digimon for each of your other [Chessmon] Digimon"
+            - de_digivolve:
+                target: dedigi_target
+                stop_at_level: 3
+                amount_fn:
+                  base: 0
+                  per:
+                    card_count_in_zone:
+                      of: you
+                      zone: battle_area
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - name_contains: Chessmon
+                          - not: { is_source: true }
+                  delta: 1
+      - if:
+          condition:
+            any_permanent: { of: opponent, zone: [battle_area], kind: digimon, play_cost_lte: 5 }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: doomed
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - play_cost_lte: 5
+                prompt: "Delete 1 of your opponent's Digimon with a play cost of 5 or less"
+            - delete_permanent: { target: doomed }
+
+  - scope: inherited
+    text: "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon."
+    when: on_opponent_attack
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "[Inherited][Opponent's Turn][OPT] When an opponent's Digimon attacks, you may change the attack target to this Digimon"
+    process:
+      - redirect_attack_target: { optional: false, new_target: source }

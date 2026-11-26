@@ -36,10 +36,8 @@
 #   PLAYER-level GainCanNotDigivolve + GainCanNotUnsuspend over "opponent's
 #   Digimon/Tamer that IsSuspended" (evaluated continuously) until the end of
 #   the opponent's turn.
-#   → suspend pick + player-level CannotUnsuspend (a player lock only ever
-#   matters to suspended cards) + `add_modifier { continuous: true }` over
-#   "opponent's suspended Digimon/Tamers" for CannotDigivolve (a floating mass
-#   modifier re-scanned every tick, so later-suspended permanents are covered).
+#   → suspend pick + continuous modifiers over the opponent's suspended
+#   Digimon and Tamers, including permanents suspended later.
 
 card: BT26-050
 name: "Rosemon: Burst Mode"
@@ -200,11 +198,18 @@ effects:
           bind_as: ms
           body:
             - suspend: { target: ms }
-      - add_player_modifier:
-          target_player: opponent
+      - add_modifier:
+          target:
+            all_of:
+              - of: opponent
+              - is_suspended: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
           modifier: CannotUnsuspend
           value: 1
           expiry: end_of_opponents_turn
+          continuous: true
       # Continuous: re-applied every tick to whatever of theirs is suspended
       # NOW (a Digimon that suspends later in the window — e.g. by attacking —
       # is also locked), matching DCGO's permanentCondition(IsSuspended).
@@ -217,6 +222,12 @@ effects:
                   - kind: digimon
                   - kind: tamer
           modifier: CannotDigivolve
+          value: 1
+          expiry: end_of_opponents_turn
+          continuous: true
+      - add_modifier:
+          target: { of: opponent, is_suspended: true, kind: tamer }
+          modifier: CannotDigivolveAsTamer
           value: 1
           expiry: end_of_opponents_turn
           continuous: true

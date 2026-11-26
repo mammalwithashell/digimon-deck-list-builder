@@ -1,3 +1,13 @@
+## Credit a fixed reduction only for an actual deletion payment [G-DSL-FIXED-DELETION-COST-RECEIPT]
+
+- **Status:** Resolved for battle-area Digimon. BT27-076 and BT27-079 use `delete_for_cost_reduction: { target, fixed_amount }`; BT27-075 uses the separate breeding-area payment from PR #793.
+- **Requirement:** The chosen permanent must actually be deleted before the play receives the fixed reduction, even if a deletion replacement can prevent the payment.
+- **Implementation:** `delete_for_cost_reduction` credits the fixed amount or, if omitted, the target's play cost, only after confirming the selected Digimon's deletion receipt.
+
+## Place multiple hidden deck cards under a permanent in one event [G-DSL-CONCEALED-DECK-TO-SOURCE-BATCH]
+
+- **Status:** Resolved in PR #791. BT27-098's all-turns deletion observer uses `place_deck_top_under: { of: you, count: 2, target: source, face_down: true }` after the Tamer pays the suspension cost.
+- **Implementation:** Moves the hidden deck prefix directly to the bottom of the stack as one source-placement batch, without revealing it.
 ## G-DSL-LINK-REQUIREMENT-MET-BY-SELF — resolved 2026-11-24
 
 Logimon (BT25-052)'s [Main] [Once Per Turn] link was offered on every board.

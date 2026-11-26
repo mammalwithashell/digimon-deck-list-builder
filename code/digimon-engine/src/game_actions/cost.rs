@@ -217,7 +217,7 @@ impl Game {
                     cost_delta,
                     accumulated_reduction,
                     &processed,
-                    &key,
+                    &candidate,
                 );
             let source_kind = self.effect_source_kind_for_handle(key.source_card);
             let accept_key = key.clone();
@@ -448,6 +448,7 @@ impl Game {
         target: PermanentHandle,
         hand_index: usize,
         source: PlaySource,
+        as_tamer: bool,
     ) -> Option<bool> {
         let card = self.player(acting_player).hand.get(hand_index)?.handle();
         self.try_prompt_digivolve_reducer_chain(
@@ -461,6 +462,7 @@ impl Game {
             },
             source,
             None,
+            as_tamer,
         )
     }
 
@@ -471,6 +473,7 @@ impl Game {
         cost_target: CostTargetContext,
         source: PlaySource,
         effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
+        as_tamer: bool,
     ) -> Option<bool> {
         self.try_prompt_digivolve_reducer_chain_mode(
             acting_player,
@@ -478,6 +481,7 @@ impl Game {
             cost_target,
             source,
             effect,
+            as_tamer,
             false,
         )
     }
@@ -489,10 +493,11 @@ impl Game {
         cost_target: CostTargetContext,
         source: PlaySource,
         effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
+        as_tamer: bool,
         affordability_probe: bool,
     ) -> Option<bool> {
         self.try_prompt_digivolve_reducer_operation(acting_player, target, cost_target,
-            source, effect, None, affordability_probe)
+            source, effect, None, as_tamer, affordability_probe)
     }
 
     pub(crate) fn try_prompt_dna_digivolve_reducer_chain(
@@ -503,7 +508,7 @@ impl Game {
         affordability_probe: bool,
     ) -> Option<bool> {
         self.try_prompt_digivolve_reducer_operation(declaration.player, target, cost_target,
-            PlaySource::ByEffect, None, Some(declaration), affordability_probe)
+            PlaySource::ByEffect, None, Some(declaration), false, affordability_probe)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -515,6 +520,7 @@ impl Game {
         source: PlaySource,
         effect: Option<super::digivolve::EffectDigivolveCostChoiceState>,
         dna_effect: Option<super::effect_dna::EffectDnaHandDeclaration>,
+        as_tamer: bool,
         affordability_probe: bool,
     ) -> Option<bool> {
         // CR 3-4-7-6: HPD, Digisorption and ordinary would-evolve payment
@@ -537,7 +543,7 @@ impl Game {
             .player_digivolve_cost_reducers
             .iter()
             .enumerate()
-            .filter(|(_, reducer)| reducer.qualifies(acting_player, target, &top_colors))
+            .filter(|(_, reducer)| !as_tamer && reducer.qualifies(acting_player, target, &top_colors))
             .map(|(index, reducer)| DigivolveReducerChoice::Player {
                 index,
                 reducer: reducer.clone(),
@@ -1412,7 +1418,7 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         accumulated: crate::game_actions::PlayCostAdjustments,
         processed: &[CostReductionKey],
-        key: &CostReductionKey,
+        candidate: &CostReductionCandidate,
     ) -> bool {
         if matches!(cost_delta, crate::enums::CostDelta::Free) {
             return false;
@@ -1432,7 +1438,7 @@ impl Game {
             .map(|transaction| transaction.final_cost() as i32)
             .unwrap_or(base);
         let mut done = processed.to_vec();
-        done.push(key.clone());
+        done.push(candidate.key.clone());
         let others: i32 = self
             .collect_before_pay_cost_reducers(player_id, Some(target), &done, CostReductionKind::Play)
             .iter()
@@ -1443,10 +1449,7 @@ impl Game {
         if self.payer_can_pay(payer, cost.max(0)) {
             return false;
         }
-        let own = self
-            .inspect_cost_reduction_candidate(key, Some(target))
-            .unwrap_or(0);
-        self.payer_can_pay(payer, (cost - own).max(0))
+        self.payer_can_pay(payer, (cost - candidate.amount).max(0))
     }
 
     /// The Option-use sibling of [`Self::play_cost_reducer_needed`]: the
@@ -1554,6 +1557,11 @@ impl Game {
             };
             let Some(effect) = effects.get(key.effect_slot as usize) else {
                 continue;
+            };
+            let amount = if cost_kind == CostReductionKind::Play {
+                amount + effect.known_payment_reduction
+            } else {
+                amount
             };
             // CR 4.3 7-1-1 vs 9-1-1: a "would be played" reducer never
             // answers an Option use, a "would use" reducer never a play.

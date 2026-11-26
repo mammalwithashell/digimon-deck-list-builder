@@ -816,6 +816,11 @@ BT26-103 missing_text 2
 BT26-103 missing_text 3
 BT26-103 missing_text 4
 BT26-103 missing_text 5
+BT27-028 optional_without_may 0
+BT27-028 optional_without_may 1
+BT27-031 optional_without_may 0
+BT27-034 optional_without_may 5
+BT27-034 optional_without_may 6
 BT3-105 missing_text 0
 BT3-109 missing_text 0
 BT4-072 missing_text 0
@@ -1373,6 +1378,9 @@ LM-064 text_not_printed 2
 LM-065 text_not_printed 0
 LM-065 text_not_printed 1
 LM-065 text_not_printed 2
+LM-067 text_not_printed 2
+LM-067 text_not_printed 5
+LM-068 text_not_printed 3
 P-035 missing_text 0
 P-035 missing_text 1
 P-037 missing_text 0

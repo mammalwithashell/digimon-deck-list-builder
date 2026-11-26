@@ -284,16 +284,6 @@ pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]
                         player: player_id,
                         index: f as u8,
                     };
-                    // §4.7b CANNOT_DIGIVOLVE — suppress the bit if the
-                    // base permanent carries an active CannotDigivolve
-                    // modifier. Python's `{'digivolving_card': card}`
-                    // discriminant is not carried in Rust (§4.7x).
-                    if game
-                        .modifiers
-                        .has(base_handle, ModifierType::CannotDigivolve)
-                    {
-                        continue;
-                    }
                     if game
                         .normal_digivolve_route_for_hand_card(player_id, h, base_handle)
                         .is_some()

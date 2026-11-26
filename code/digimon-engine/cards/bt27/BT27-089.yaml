@@ -1,0 +1,94 @@
+# Source: data/card_bundles/BT27-089.md (official Bandai text + Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Blue/BT27_089.cs
+#   (OnAddHand by an opposing-hand effect: 3-way choice "suspend and place" /
+#   "only suspend" / "no"; after a successful suspend, protect 1 Gaogamon).
+# Q&A: without suspending, the part after "After" is not processed.
+card: BT27-089
+name: Thomas H. Norstein
+kind: tamer
+color: [blue]
+cost: 3
+traits: [DATA SQUAD]
+
+effects:
+  - text: "[Start of Your Main Phase] By placing 1 Digimon card with [Gaomon] or [Gaogamon] in its name from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          all_of:
+            - kind: digimon
+            - any_of:
+                - name_contains: Gaomon
+                - name_contains: Gaogamon
+        n: 1
+    summary: "[Start of Your Main Phase] By placing 1 [Gaomon]/[Gaogamon] Digimon card from your hand face down under this Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: stash
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Gaomon
+                  - name_contains: Gaogamon
+          prompt: "Place 1 [Gaomon]/[Gaogamon] Digimon card from your hand face down under this Tamer"
+      - if:
+          condition: { binding_present: stash }
+          then:
+            - place_selected_card_under_tamer:
+                card: stash
+                tamer: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - text: "[All Turns] When effects add to your opponent's hand, by suspending this Tamer, you may place the top card of your deck face down under this Tamer. After, 1 of your Digimon with [Gaogamon] in its name can't be deleted in battle for the turn."
+    when: on_add_to_hand
+    optional: true
+    active_when: { all_turns: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_add_to_hand_player: opponent
+        - event_is_effect_initiated: true
+    summary: "[All Turns] When effects add to your opponent's hand, by suspending this Tamer, you may place your deck top face down under it. After, 1 of your [Gaogamon] Digimon can't be deleted in battle for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: place_choice
+                labels: ["Place the top card face down under this Tamer", "Don't place"]
+                prompt: "Place the top card of your deck face down under this Tamer?"
+            - if:
+                condition: { equals: [place_choice, 0] }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: source
+                      face_down: true
+      - select_own_permanent:
+          optional: false
+          bind_as: protected
+          filter: { kind: digimon, name_contains: Gaogamon }
+          prompt: "1 of your Digimon with [Gaogamon] in its name can't be deleted in battle for the turn"
+      - add_modifier:
+          target: protected
+          modifier: CannotBeDestroyedByBattle
+          value: 1
+          expiry: end_of_turn
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

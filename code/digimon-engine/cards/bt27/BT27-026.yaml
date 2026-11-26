@@ -1,0 +1,84 @@
+card: BT27-026
+name: "Thunderbirdmon"
+kind: digimon
+level: 4
+color: [blue, purple]
+cost: 5
+dp: 6000
+traits: ["Giant Bird", "Kurata's Army", Bio]
+form: Armor Form
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
+  - kind: digivolve
+    from: { kind: tamer, trait_has: "Kurata's Army" }
+    source_treated_as: tamer
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+    text: "＜Armor Purge＞"
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    text: "[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may trash any 2 digivolution cards from your opponent's Digimon. Then, by choosing 1 of your Digimon, delete the chosen Digimon and 1 of their Digimon can't suspend until their turn ends."
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              kind: digimon
+              zone: [battle_area]
+              source_count: { filter: {}, at_least: 1 }
+          then:
+            - select_effect_choice:
+                bind_as: strip
+                labels: ["Trash 2 digivolution cards", "Don't trash"]
+                prompt: "You may trash any 2 digivolution cards from your opponent's Digimon"
+            - if:
+                condition: { equals: [strip, 0] }
+                then:
+                  - select_opponent_sources:
+                      min: 2
+                      max: 2
+                      clamp_to_available: true
+                      filter: { host_kind_is: digimon }
+                      bind_as: sources
+                      prompt: "Choose digivolution cards to trash"
+                      then:
+                        - trash_selected_sources: { source_refs: sources }
+      - select_own_permanent:
+          optional: true
+          continue_on_decline: true
+          bind_as: sacrifice
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to delete"
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter: { kind: digimon }
+                prompt: "Choose 1 opposing Digimon that can't suspend"
+            - delete_permanent: { target: sacrifice }
+            - add_modifier:
+                target: victim
+                modifier: CannotSuspend
+                expiry: end_of_opponents_turn
+                value: 1
+      - if:
+          condition:
+            all_of:
+              - not: { binding_present: sacrifice }
+              - not: { binding_present: sources }
+          then:
+            - refund_opt: {}

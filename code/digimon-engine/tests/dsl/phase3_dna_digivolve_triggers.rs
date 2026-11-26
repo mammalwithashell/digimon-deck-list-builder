@@ -38,6 +38,7 @@ fn red_level_req(level: u8) -> DnaRequirement {
     DnaRequirement {
         level,
         card_colors: vec![CardColor::Red],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     }

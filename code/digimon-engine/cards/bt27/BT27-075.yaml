@@ -1,0 +1,57 @@
+card: BT27-075
+name: "ProtoGizmon"
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 3000
+traits: ["Kurata's Army"]
+form: Rookie
+attribute: Unknown
+
+effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    optional: true
+    amount: 2
+    text: "When this card would be played, by deleting 1 of your level 2 Digimon in the breeding area, reduce the cost by 2."
+    pay_cost:
+      - select_own_breeding_permanent:
+          optional: false
+          bind_as: payer
+          filter: { kind: digimon, level_eq: 2 }
+          prompt: "Choose your level 2 Digimon in the breeding area to delete"
+      - pay_breeding_deletion: { target: payer }
+
+  - kind: grant_keyword
+    keyword: Blocker
+    text: "＜Blocker＞"
+  - kind: flood_gate
+    modifier: CannotDigivolve
+    target: { is_source_permanent: true }
+    text: "[All Turns] This Digimon can't digivolve."
+  - when: on_deletion
+    optional: true
+    condition:
+      count_gte:
+        filter: { owner: you, zone: [trash], name_contains: Gizmon }
+        n: 2
+    text: "[On Deletion] By returning 2 cards with [Gizmon] in their names from your trash to the bottom of the deck, you may play 1 [Gizmon: AT] from your trash without paying the cost."
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 2
+          max: 2
+          optional_zero: false
+          filter: { name_contains: Gizmon }
+          bind_as: returns
+          prompt: "Choose 2 [Gizmon] cards to return to the bottom of your deck"
+      - return_trash_list_to_deck_bottom: { of: you, cards: returns }
+      - select_trash:
+          of: you
+          optional: true
+          bind_as: gizmon
+          filter: { kind: digimon, name_is: "Gizmon: AT", can_play_from_effect_without_cost: true }
+          prompt: "You may play 1 [Gizmon: AT] from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: gizmon }

@@ -1,0 +1,36 @@
+card: BT27-046
+name: Armalizamon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 5000
+traits: [Reptile, Glowing Dawn, BEATBREAK]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+  - kind: digivolve
+    from: { any_color: true, level_eq: 3, trait_has: Glowing Dawn }
+    cost: 2
+
+effects:
+  - text: "[Security] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with [Tomoro Tenma] in its name from your hand without paying the cost."
+    when: [on_security, when_digivolving]
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: tamer
+          filter: { kind: tamer, name_contains: "Tomoro Tenma", can_play_from_effect_without_cost: true }
+          prompt: You may play a Tamer with Tomoro Tenma in its name
+      - play_from_hand_free: { of: you, hand_index: tamer }
+  - text: "＜Piercing＞ (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)"
+    kind: grant_keyword
+    scope: inherited
+    keyword: Piercing

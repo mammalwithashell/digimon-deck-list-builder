@@ -310,6 +310,7 @@ fn dna_accounts_for_lost_body_and_still_chooses_an_efficient_route() {
     let requirement = DnaRequirement {
         level: 3,
         card_colors: vec![CardColor::Red],
+        name_is: String::new(),
         name_contains: String::new(),
         text_contains: String::new(),
     };

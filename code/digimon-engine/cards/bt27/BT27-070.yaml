@@ -1,0 +1,82 @@
+card: BT27-070
+name: "Craniamon (X Antibody)"
+kind: dual
+level: 6
+dp: 13000
+cost: 5
+color: [black]
+traits: [Holy Warrior, X Antibody, Royal Knight]
+form: Mega
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, name_is: Craniamon }
+    cost: 2
+dual:
+  digimon:
+    level: 6
+    dp: 13000
+    colors: [black]
+    traits: [Holy Warrior, X Antibody, Royal Knight]
+    effects:
+      - { text: "＜Reboot＞", kind: grant_keyword, keyword: Reboot }
+      - { text: "＜Blocker＞", kind: grant_keyword, keyword: Blocker }
+      - text: "[All Turns] When any of your Digimon would leave the battle area, by suspending this Digimon, they don't leave."
+        kind: replacement
+        trigger: when_would_leave_battle_area
+        optional: true
+        active_when: { replacement_subject_is_mine: true, kind: digimon, source_is_unsuspended: true }
+        process:
+          - suspend_and_cancel_all_matching_leaves:
+              target: source
+              filter: { replacement_subject_is_mine: true, kind: digimon }
+      - text: "[All Turns] [Once Per Turn] When this Digimon suspends, you may delete all of your opponent's lowest DP Digimon. Then, by trashing 1 [Craniamon] or [X Antibody] from this Digimon's digivolution cards, activate 1 [Main] effect on this card's Option side."
+        when: on_suspend
+        trigger_if: { event_permanent_is_source: true }
+        once_per_turn: true
+        process:
+          - select_effect_choice:
+              labels: ["Delete the lowest DP Digimon", "Do not delete"]
+              bind_as: delete_choice
+              prompt: "You may delete all opponent Digimon with the lowest DP"
+          - if:
+              condition: { equals: [delete_choice, 0] }
+              then:
+                - delete_all_permanents:
+                    over: { of: opponent, zone: [battle_area], kind: digimon }
+                    selector: lowest_dp
+          - select_own_sources:
+              target: source
+              bind_as: payment
+              min: 0
+              max: 1
+              filter: { any_of: [{ name_is: Craniamon }, { name_is: X Antibody }] }
+              prompt: "Trash a [Craniamon] or [X Antibody] digivolution card"
+          - trash_selected_sources_as_cost: { source_refs: payment, min_count: 1 }
+          - if:
+              condition: { not: { binding_present: payment } }
+              then:
+                - refund_opt: {}
+          - refire_effect: { source: source, timing: option_main, optional: false }
+  option:
+    use_cost: 5
+    colors: [black]
+    arts_digivolve: true
+    effect_text: "[Main] Until your opponent's turn ends, 1 of your Digimon with ＜Blocker＞ isn't affected by their Digimon effects and gets +5000 DP. Then, 1 of your Digimon may unsuspend."
+    effects:
+      - text: "[Main] Until your opponent's turn ends, 1 of your Digimon with ＜Blocker＞ isn't affected by their Digimon effects and gets +5000 DP. Then, 1 of your Digimon may unsuspend."
+        when: main
+        process:
+          - select_own_permanent:
+              optional: false
+              bind_as: protected
+              filter: { kind: digimon, has_keyword: Blocker }
+              prompt: "Choose a Digimon with Blocker to protect and give +5000 DP"
+          - grant_effect_immunity: { target: protected, source_kind: digimon, source_controller: opponent, expiry: end_of_opponents_turn }
+          - add_dp_modifier: { target: protected, value: 5000, expiry: end_of_opponents_turn }
+          - select_own_permanent:
+              optional: true
+              bind_as: ready
+              filter: { kind: digimon, is_suspended: true }
+              prompt: "You may unsuspend 1 of your Digimon"
+          - unsuspend: { target: ready }

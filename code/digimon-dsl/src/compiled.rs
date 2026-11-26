@@ -1976,6 +1976,7 @@ pub enum CompiledStep {
     /// credit. `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
     DeleteForCostReduction {
         target: CompiledBindingRef,
+        fixed_amount: Option<u16>,
     },
     DeleteBoundPermanents {
         binding: String,
@@ -3445,6 +3446,16 @@ pub enum CompiledStep {
     },
     /// Public reveal only; the cards stay in their original security stack.
     RevealSecurity { of: CompiledPlayerRef },
+    /// Appended to preserve existing pack tags.
+    PlaceDeckTopUnder {
+        of: CompiledPlayerRef,
+        count: u8,
+        target: CompiledBindingRef,
+        face_down: bool,
+    },
+    PayBreedingDeletion { target: CompiledBindingRef },
+    TrashFieldOption { target: CompiledBindingRef },
+    SuspendAsCost { target: CompiledBindingRef },
 }
 
 /// Compiled per-zone filter overrides for `select_union_zone`. Each `Some`
@@ -3675,6 +3686,16 @@ mod tests {
         let bytes = bincode::serialize(&original).expect("bincode serialize");
         let reparsed: CompiledCard = bincode::deserialize(&bytes).expect("bincode deserialize");
         assert_eq!(original, reparsed);
+    }
+
+    #[test]
+    fn variable_and_fixed_deletion_credit_round_trip_through_bincode() {
+        let steps = [None, Some(4)].map(|fixed_amount| CompiledStep::DeleteForCostReduction {
+            target: CompiledBindingRef::Named("payment".into()),
+            fixed_amount,
+        });
+        let bytes = bincode::serialize(&steps).unwrap();
+        assert_eq!(steps, bincode::deserialize::<[CompiledStep; 2]>(&bytes).unwrap());
     }
 
     #[test]

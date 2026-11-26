@@ -502,16 +502,24 @@ fn cannot_suspend_filters_alliance_ally_candidates() {
         .add_card(digimon("ATK", 5000, vec![Keyword::Alliance]))
         .add_card(digimon("ALLY", 4000, Vec::new()))
         .add_card(digimon("ALLY2", 4000, Vec::new()))
+        .add_card(digimon("IMMUNE", 4000, Vec::new()))
         .start();
 
     let atk = r.place_on_field(0, "ATK", Some(0));
     let locked_ally = r.place_on_field(0, "ALLY", Some(0));
     let free_ally = r.place_on_field(0, "ALLY2", Some(0));
+    let immune_ally = r.place_on_field(0, "IMMUNE", Some(0));
 
     lock(
         &mut r,
         locked_ally,
         ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
+    lock(
+        &mut r,
+        immune_ally,
+        ModifierType::CannotBeAffected,
         Expiry::Permanent,
     );
 

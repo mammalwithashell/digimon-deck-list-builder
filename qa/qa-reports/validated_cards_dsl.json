@@ -17126,6 +17126,19 @@
       "notes": "inherited [When Attacking][OPT] [NSo] carrier trashes 1 card to delete a level 3 Digimon; outer confirm + declinable pick. Synthetic-board behavioural tests; printed-clause oracle exam not run.",
       "integration_verification": "limited"
     },
+    "BT27-103": {
+      "card_name": "Alphamon: Ouryuken",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Alphamon / Chronicle",
+      "report": "bt27-alphamon-xantibody",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_103.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "notes": "Local card-text tests cover two-material Arts acceptance, both decline points, no matching pair, ordinary DNA Recovery and attack restriction, both Option Main branches, continuation after source removal, and specified Partition materials. Live integration and exhaustive interaction coverage were not verified."
+    },
     "EX11-001": {
       "card_name": "Koromon",
       "status": "IMPLEMENTED",
@@ -17622,6 +17635,327 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_104.rs",
       "test_count": 6,
       "integration_verification": "limited"
+    },
+    "BT27-017": {
+      "card_name": "Spinomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_017.rs"
+    },
+    "BT27-026": {
+      "card_name": "Thunderbirdmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-026.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_026.rs"
+    },
+    "BT27-038": {
+      "card_name": "Quetzalmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-038.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_038.rs"
+    },
+    "BT27-048": {
+      "card_name": "Stegomon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_048.rs"
+    },
+    "BT27-055": {
+      "card_name": "Lotosmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_055.rs"
+    },
+    "BT27-071": {
+      "card_name": "Darkdramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_071.rs"
+    },
+    "BT27-075": {
+      "card_name": "ProtoGizmon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_075.rs"
+    },
+    "BT27-076": {
+      "card_name": "Gizmon: AT",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-076.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_076.rs"
+    },
+    "BT27-079": {
+      "card_name": "Gizmon: XT",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-079.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_079.rs"
+    },
+    "BT27-092": {
+      "card_name": "Nanami, Kouki, & Ivan",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-092.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_092.rs"
+    },
+    "BT27-098": {
+      "card_name": "Akihiro Kurata",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_098.rs"
+    },
+    "BT27-102": {
+      "card_name": "Bio Hybrid Digivolution",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Kurata's Army",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_102.rs"
+    },
+    "LM-066": {
+      "card_name": "Zephagamon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-066.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_066.rs",
+      "test_count": 5,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Piercing/Vortex/Blocker, Rule trait [Bird Dragon]; WD/WA OPT optional unsuspend 1 Digimon then may battle; [All Turns][OPT] leave-field replacement by suspending 1 Digimon (not own effects). Option: suspend-2 cost -2, CannotUnsuspend until their turn ends, then bottom-deck 1 per 2 suspended Digimon."
+    },
+    "LM-067": {
+      "card_name": "Gundramon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_067.rs",
+      "test_count": 4,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Reboot/Blocker/Fragment(3); WD/Counter OPT reveal 6 play-or-use 1 cost<=6 [Three Musketeers]-text card free, rest bottom; WD/WA trash up to 3 [Three Musketeers] sources, delete 1 cost<=7 per card. Option: Use Req, <De-Digivolve 3> 3 Digimon, may place 1 [Three Musketeers] card from hand/trash as bottom source."
+    },
+    "LM-068": {
+      "card_name": "HeavyMetaldramon",
+      "validated_date": "2026-11-23",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "LM-09 Distancia Cero — dual cards",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_068.rs",
+      "test_count": 7,
+      "patterns": [
+        "dual"
+      ],
+      "notes": "Dual. Digimon: Security A.+1; WD/End of Attack hand<=4 play lv<=4 Evil/Dark Dragon/Evil Dragon from trash free; WD/On Deletion trash 2 then may activate Option-side [Main]. Option: [Trash][Your Turn] on ally Evil-family attack, hand<=4, use from trash cost -3 (engine: trash-scoped OnAllyAttack enqueue); [Main] delete 1 with level >= hand size."
+    },
+    "BT27-044": {
+      "card_name": "Gekkomon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_044.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, green BEATBREAK cost reduction and breeding exclusion, inherited your-turn +2000 DP."
+    },
+    "BT27-046": {
+      "card_name": "Armalizamon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_046.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, matching Tamer from hand on digivolution or before security battle, Tamer count and decline, inherited Piercing."
+    },
+    "BT27-050": {
+      "card_name": "Monarchlizamon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-050.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_050.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, hand main placing Armalizamon beneath Gekkomon, suspend and paid unsuspend prevention, inherited Glowing Dawn attack unsuspend and once per turn."
+    },
+    "BT27-052": {
+      "card_name": "Atratusmon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_052.rs",
+      "test_count": 7,
+      "notes": "Printed digivolution routes including the costless namesake, three-level Assembly, keywords, shared battle activation, simultaneous trigger order, paid play from materials and free use from hand."
+    },
+    "BT27-056": {
+      "card_name": "Pristimon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-056.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_056.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, black BEATBREAK cost reduction and breeding exclusion, inherited Reboot."
+    },
+    "BT27-058": {
+      "card_name": "Wolvermon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-058.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_058.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, matching Tamer from hand on digivolution or before security battle, Tamer count and decline, inherited Blocker."
+    },
+    "BT27-064": {
+      "card_name": "Bearcatmon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_064.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, hand main placing Wolvermon beneath Pristimon, De-Digivolve and paid forced attack, inherited payment after attack redirection."
+    },
+    "BT27-067": {
+      "card_name": "Artiomon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_067.rs",
+      "test_count": 5,
+      "notes": "Printed digivolution routes, Raid, Piercing, Engage, optional once-per-turn departure replacement, redirection and source-trash Option attribution, Option body, use requirement and Arts Digivolve."
+    },
+    "BT27-073": {
+      "card_name": "Chiropmon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-073.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_073.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, purple BEATBREAK cost reduction and breeding exclusion, inherited attack draw and discard once per turn."
+    },
+    "BT27-077": {
+      "card_name": "NightChiropmon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_077.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, matching Tamer from hand on digivolution or before security battle, Tamer count and decline, inherited Retaliation."
+    },
+    "BT27-080": {
+      "card_name": "ScourgeChiropmon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-080.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_080.rs",
+      "test_count": 4,
+      "notes": "Printed digivolution routes, hand main placing NightChiropmon beneath Chiropmon, bounded deletion and paid Rush/Piercing, inherited free play from trash and decline."
+    },
+    "BT27-082": {
+      "card_name": "Nosferamon",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-082.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_082.rs",
+      "test_count": 6,
+      "notes": "Printed digivolution routes, Execute and Ascension, lowest-level security deletion and deletion fallback, paid Option activation, use requirement and Arts Digivolve."
+    },
+    "BT27-091": {
+      "card_name": "Tomoro Tenma",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-091.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_091.rs",
+      "test_count": 3,
+      "notes": "Main-phase BEATBREAK payment to the bottom of old sources, draw and memory, suspend trigger to stash a card, and free security play."
+    },
+    "BT27-094": {
+      "card_name": "Reina Sakuya",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-094.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_094.rs",
+      "test_count": 4,
+      "notes": "Memory set at turn start, attack stash and suspension alternatives, opponent-turn four-source payment and free black BEATBREAK Option from hand, and free security play."
+    },
+    "BT27-097": {
+      "card_name": "Makoto Kuonji",
+      "validated_date": "2026-11-23",
+      "report": "bt27-reina-glowing-dawn-card-text",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
+      "archetype": "Reina Sakuya / Glowing Dawn",
+      "yaml_path": "code/digimon-engine/cards/bt27/BT27-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/card_text/bt27_097.rs",
+      "test_count": 4,
+      "notes": "Memory set at turn start, attack stash and suspension alternatives, own-turn four-source payment and discounted purple BEATBREAK Option from trash, and free security play."
     }
   }
 }

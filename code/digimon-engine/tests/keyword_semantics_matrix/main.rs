@@ -97,6 +97,7 @@ fn keyword_for_id(keyword_id: &str) -> Keyword {
         "MindLink" => Keyword::MindLink,
         "Training" => Keyword::Training,
         "ArtsDigivolve" => Keyword::ArtsDigivolve,
+        "ArtsDnaDigivolve" => Keyword::ArtsDnaDigivolve,
         "Ascension" => Keyword::Ascension,
         other => panic!("no representative Keyword mapping for matrix row {other}"),
     }

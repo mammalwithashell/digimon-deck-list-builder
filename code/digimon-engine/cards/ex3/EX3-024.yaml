@@ -40,7 +40,7 @@ effects:
             any_of: [{ name_contains: Dramon }, { name_contains: Examon }]
           optional: true
           prompt: "Suspend 1 of your Dramon or Examon Digimon to make your opponent attack"
-      - suspend: { target: cost_target }
+      - suspend: { target: cost_target, cost: true }
       # Check the actual selected permanent's state, not an attempted-suspend flag.
       # Q3400: the cost is still payable while an attack is already in progress.
       - if:
@@ -80,7 +80,7 @@ effects:
             any_of: [{ name_contains: Dramon }, { name_contains: Examon }]
           optional: true
           prompt: "Suspend 1 of your Dramon or Examon Digimon to make your opponent attack"
-      - suspend: { target: cost_target }
+      - suspend: { target: cost_target, cost: true }
       # Check the actual selected permanent's state, not an attempted-suspend flag.
       # Q3400: the cost is still payable while an attack is already in progress.
       - if:
@@ -106,4 +106,3 @@ effects:
                       attacker: attacker
                       targets: any
                       prompt: "Attack with the selected Digimon"
-

@@ -1,0 +1,46 @@
+# Source: data/card_bundles/BT27-025.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Blue/BT27_025.cs
+card: BT27-025
+name: Gawappamon
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 5000
+traits: [Cyborg, DATA SQUAD, Aquatic]
+form: Champion
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, level_eq: 3, trait_has: DATA SQUAD }
+    cost: 2
+
+effects:
+  - text: "[On Play] [When Digivolving] 1 of your Digimon can't be deleted in battle until your opponent's turn ends. If played by effects, it also gains ＜Blocker＞."
+    when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 of your Digimon can't be deleted in battle until your opponent's turn ends; if played by effects, it also gains <Blocker>"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: guarded
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon that can't be deleted in battle until your opponent's turn ends"
+      - add_modifier:
+          target: guarded
+          modifier: CannotBeDestroyedByBattle
+          value: 1
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { played_by_effect: true }
+          then:
+            - grant_keyword:
+                target: guarded
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+
+  - text: "＜Evade＞"
+    kind: grant_keyword
+    scope: inherited
+    keyword: Evade
+    summary: "[Inherited] <Evade>"

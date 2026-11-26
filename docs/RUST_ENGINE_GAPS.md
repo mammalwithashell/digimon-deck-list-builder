@@ -1,3 +1,22 @@
+## Digivolution from a Tamer without treating it as a Digimon [G-ENGINE-TAMER-BASE-AS-TAMER]
+
+- **Status:** Resolved in PR #788. Used by BT27-017, BT27-026, BT27-038, BT27-048, BT27-055, BT27-071, BT27-092 and BT27-102.
+- **Requirement:** A card can use a printed, trait-gated Tamer base in the main phase and also when instructed by an effect. The Tamer is not treated as a Digimon for this procedure. Per the BT27 Q&A, it does not dispatch `WhenDigivolving` or normal Digimon-digivolved observers and is not blocked by a restriction on Digimon digivolving.
+- **Implementation:** A route with `source_treated_as: tamer` keeps the base a Tamer in the hand-action and effect-driven paths. The stack and draw resolve without dispatching Digimon digivolution triggers. The BT27 card-text tests exercise the six direct routes and the Main and Delay effects from BT27-092 and BT27-102.
+
+## Breeding-area deletion as an interactive fixed play-cost payment [G-ENGINE-BREEDING-DELETION-PAYMENT]
+
+- **Status:** Resolved in PR #793. Used by BT27-075.
+- **Requirement:** Offer the level 2 Digimon in the breeding area and grant the fixed reduction only after the chosen deletion succeeds.
+- **Implementation:** `select_own_breeding_permanent` and `pay_breeding_deletion` preserve the selected card's identity across the pending selection and apply the fixed reduction only if that Digimon is deleted.
+## Arts Digivolve with DNA materials — resolved
+
+`G-ARTS-DNA-MATERIALS`: BT27-103 specifies that two Digimon may DNA digivolve
+into the pending DUAL Option after its main effect resolves. The
+`ArtsDnaDigivolve` Option keyword opens two optional field selections using
+the card's DNA recipes. Accepting both commits a standard DNA digivolution
+from the pending Option; declining either discards the used Option.
+
 ## Player-directed forced attacks — resolved 2026-11-09
 
 `force_attack.affects_player: true` implements an instruction to the selected
@@ -1838,6 +1857,11 @@ Items where the existing primitive **likely works** but no behavioral test cover
   - A4 â€” `trash_bottom_face_down_source` helper + `trash_bottom_face_down_source_under_tamer` DSL verb. The helper does not honor `ImmuneFromStackTrashing` (voluntary cost, not involuntary peeling).
   - A5 â€” Tamer-host `OnDigivolutionCardTrashed` dispatch coverage confirmed.
   The placement + cost-form trash + DSL predicate trio called out as "what's missing" in this entry is now closed. The engine/DSL API surface is documented in `docs/RUST_ENGINE_API.md` (Â§ Placement, Â§ Track E zone-movement DSL verbs, Â§ DSL Tamer Face-Down Stash Substrate). The remaining ST-23/ST-24 gaps (Phases Câ€“F of the fix-plan: the Option-lifecycle exit, unified play-or-use, `BeforePayCost` selection-bearing `pay_cost_fn`, and the cost-reduction target-card predicate trigger â€” each filed as its own entry below) are NOT addressed by Phase A and remain open. The ðŸ”´ BLOCKING severity now applies only to those residual non-substrate gaps. `event_host_permanent_is_source` closed on 2026-05-23; see `qa/resolved-gaps.md`.
+
+### Place multiple concealed deck cards under one permanent [G-DSL-CONCEALED-DECK-TO-SOURCE-BATCH]
+
+- **Resolved:** BT27-094, BT27-096, BT27-097, and BT27-098 can place the top two cards of their controller's deck face down in one source-add batch with `place_deck_top_under: { of: you, count: 2, target: source, face_down: true }`. The target can also be an earlier permanent pick. See `tests/dsl/place_as_bottom_source_deck_top.rs`.
+- **Order (Bandai Q6413):** Place the deck-top card first, then each subsequent card below it. No ordering prompt is needed.
 
 ### Move existing field-Option face-down under chosen own permanent (new Option-lifecycle exit, distinct from trash)
 - **Status:** âœ… CLOSED (2026-06-15). `Game::move_field_option_under_permanent(option, target, face_down)` + the `EffectContext::move_self_option_under_permanent(target, face_down)` wrapper (`option_lifecycle.rs` / `effect_context/action/lifecycle.rs`) pop the field Option's top `CardSource` and push it (optionally face-down) under the chosen own permanent's digivolution stack, firing NEITHER `OnOptionTrashed` (the lifecycle is "moved", not "trashed") NOR `OnDigivolutionCardTrashed` (no source is trashed). The target is resolved by stable top-card identity before the Option removal so battle-area index shifts don't misroute. DSL verb `move_self_option_under_permanent: { target, face_down: true }` (default `face_down: true`). Driver ST23-15 e-Pulse ships IMPLEMENTED (`cards/st23/ST23-15.yaml`, `tests/cards_behavioral/st23/st23_15.rs` 7/7); ST24-15 DNA Charge uses the same substrate. The `<Draw 1>` + memory gain run after a successful relocate; the relocate is declinable (DCGO `canNoSelect: true`).
@@ -5906,6 +5930,7 @@ no dedicated clause test in `dna_result_new_card.rs`.
 
 ### An unpayable optional processing condition is still offered, and accepting it runs the effect for free  [G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED] — RESOLVED (2026-10-17, 82a2bf29c)
 
+- **Suspend-payment follow-up:** `suspend: { target: ..., cost: true }` marks a suspension that must succeed before the remaining steps resolve. Selected suspend payments in `pay_cost` and a suspension immediately before `cancel_replacement` use the same gate. Already-suspended, protected, and effect-immune permanents are excluded from those cost picks, not from ordinary suspension effects. If the selected permanent cannot be suspended at resolution, the reward or discount is not granted.
 - **Deletion-payment follow-up (2026-10-27):** selected `delete_permanent` followed by `cancel_replacement` now uses the existing exact physical deletion receipt before preventing the original departure. The shared selection/preflight path rejects effect immunity and passive deletion restrictions only for this payment shape; ordinary effect targets remain selectable. Printed extrema are computed first, so an immune lowest-DP Digimon does not make a higher-DP one payable. Optional prevention and redirection remain executable attempts, but neither an undeleted payer nor a deleted substitute pays the condition. Regressions in `tests/replacements/deletion_payment.rs` cover EX11-012 Medusamon, BT24-018 Styracomon, clone continuations, controller attribution, and the unchanged seed-44524201 diagnostic recording through action 93. This closes the observed zero-DP Medusamon/immune Petrification Token loop; non-deletion replacement costs keep their existing handling.
 - **Rule:** §15-7-4 (Ver. 4.3, **reversed** from 3.6) "If executing an optional processing condition's contents isn't possible, then the player can't choose to execute them. (Example: … "[When Attacking] By trashing your top security card, 1 of your opponent's Digimon gets -5000 DP for the turn," and the player doesn't have even 1 security card, then they can't choose to execute that condition's contents.)" §15-8-4-4-1: an activation-type effect with an optional processing condition can only be declared while the condition can be performed. §15-7-2: if the condition isn't executed, nothing after it is. Owner ruling 2026-10-10 #6: never offer a trigger whose condition can't be paid. Ver. 3.6 let the player choose the unpayable condition; the engine still behaves that way.
 - **Ours:** a printed "by X, Y" clause is `optional: true` with X as its leading steps; nothing marks X as the condition, so neither the prompt nor the mask asks whether X can be executed.

@@ -155,10 +155,12 @@ pub enum StepSpec {
 
     // Field / permanent
     DeletePermanent(TargetArg),
+    TrashFieldOption(TargetArg),
     /// `delete_for_cost_reduction: { target: <binding> }` — delete AS A COST and
-    /// reduce the in-flight cost by the deleted permanent's printed play cost.
+    /// reduce the in-flight cost by a fixed amount or the deleted permanent's
+    /// printed play cost.
     /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
-    DeleteForCostReduction(TargetArg),
+    DeleteForCostReduction(DeleteForCostReductionArgs),
     PaySourcePrefix(PaySourcePrefixArgs),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
     /// `delete_permanents: { targets: [<binding>, ...] }` — delete several
@@ -187,11 +189,13 @@ pub enum StepSpec {
     /// batch delete (EX9-074 Kimeramon Branch B).
     DeleteOnePerOpponentColor(DeleteOnePerOpponentColorArgs),
     TrashBreedingPermanent(TrashBreedingPermanentArgs),
+    /// Delete a selected breeding-area Digimon as a required payment.
+    PayBreedingDeletion(TargetArg),
     ReturnAllToHand(DeleteAllPermanentsArgs),
     ReturnAllToDeck(ReturnAllToDeckArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
-    Suspend(TargetArg),
+    Suspend(SuspendArgs),
     /// Pay one actual suspension, then prevent all matching members of this event.
     SuspendAndCancelAllMatchingLeaves(SuspendAllPreventionArgs),
     Unsuspend(TargetArg),
@@ -199,6 +203,8 @@ pub enum StepSpec {
     PlaceOnSecurity(PlaceOnSecurityArgs),
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
+    /// Move the top cards of a deck together to the bottom of a permanent's stack.
+    PlaceDeckTopUnder(PlaceDeckTopUnderArgs),
     /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05): place a card as
     /// `target`'s TOP digivolution source — inserted directly beneath the
     /// active top card (DCGO `Permanent.AddDigivolutionCardsTop`, which
@@ -665,6 +671,7 @@ impl Serialize for StepSpec {
             StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
+            StepSpec::TrashFieldOption(v) => kv!(s, "trash_field_option", v),
             StepSpec::PaySourcePrefix(v) => kv!(s, "pay_source_prefix", v),
             StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
@@ -674,6 +681,7 @@ impl Serialize for StepSpec {
                 kv!(s, "delete_one_per_opponent_color", v)
             }
             StepSpec::TrashBreedingPermanent(v) => kv!(s, "trash_breeding_permanent", v),
+            StepSpec::PayBreedingDeletion(v) => kv!(s, "pay_breeding_deletion", v),
             StepSpec::ReturnAllToHand(v) => kv!(s, "return_all_to_hand", v),
             StepSpec::ReturnAllToDeck(v) => kv!(s, "return_all_to_deck", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
@@ -685,6 +693,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
+            StepSpec::PlaceDeckTopUnder(v) => kv!(s, "place_deck_top_under", v),
             StepSpec::PlaceAsTopSource(v) => kv!(s, "place_as_top_source", v),
             StepSpec::PlaceTopSourceAsBottom(v) => kv!(s, "place_top_source_as_bottom", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
@@ -975,6 +984,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
+            "trash_field_option" => StepSpec::TrashFieldOption(map.next_value()?),
             "pay_source_prefix" => StepSpec::PaySourcePrefix(map.next_value()?),
             "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
@@ -984,6 +994,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 StepSpec::DeleteOnePerOpponentColor(map.next_value()?)
             }
             "trash_breeding_permanent" => StepSpec::TrashBreedingPermanent(map.next_value()?),
+            "pay_breeding_deletion" => StepSpec::PayBreedingDeletion(map.next_value()?),
             "return_all_to_hand" => StepSpec::ReturnAllToHand(map.next_value()?),
             "return_all_to_deck" => StepSpec::ReturnAllToDeck(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
@@ -995,6 +1006,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
+            "place_deck_top_under" => StepSpec::PlaceDeckTopUnder(map.next_value()?),
             "place_as_top_source" => StepSpec::PlaceAsTopSource(map.next_value()?),
             "place_top_source_as_bottom" => StepSpec::PlaceTopSourceAsBottom(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
@@ -1244,11 +1256,13 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "choose_from_reveal",
                         "order_remainder",
                         "delete_permanent",
+                        "trash_field_option",
                         "delete_for_cost_reduction",
                         "delete_bound_permanents",
                         "delete_permanents",
                         "delete_one_per_opponent_color",
                         "trash_breeding_permanent",
+                        "pay_breeding_deletion",
                         "return_all_to_hand",
                         "return_all_to_deck",
                         "return_to_hand",
@@ -1260,6 +1274,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_on_security",
                         "play_token",
                         "place_as_bottom_source",
+                        "place_deck_top_under",
                         "place_as_top_source",
                         "place_top_source_as_bottom",
                         "trash_top_source",
@@ -1888,6 +1903,24 @@ fn is_zero_u8(n: &u8) -> bool {
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeleteForCostReductionArgs {
+    pub target: BindingRef,
+    /// Fixed reduction, credited only after deletion. Omit to use the target's play cost.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fixed_amount: Option<u16>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SuspendArgs {
+    pub target: BindingRef,
+    /// Require an actual suspension before continuing the effect.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub cost: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2629,6 +2662,16 @@ pub struct PlaceAsBottomSourceArgs {
     /// trash/hand index bound by the upstream select step.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_placed_as: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceDeckTopUnderArgs {
+    pub of: PlayerRef,
+    pub count: u8,
+    pub target: BindingRef,
+    #[serde(default)]
+    pub face_down: bool,
 }
 
 /// Args for `place_as_top_source` — same shape as

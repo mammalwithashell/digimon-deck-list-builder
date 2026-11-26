@@ -78,7 +78,7 @@ effects:
       - if:
           condition: { binding_present: suspend_cost }
           then:
-            - suspend: { target: suspend_cost }
+            - suspend: { target: suspend_cost, cost: true }
             - if:
                 condition: { effect_suspended_any_own_digimon: true }
                 then:

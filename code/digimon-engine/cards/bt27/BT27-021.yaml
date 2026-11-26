@@ -1,0 +1,43 @@
+card: BT27-021
+name: "Dracomon (X Antibody)"
+kind: digimon
+level: 3
+color: [blue, red, green]
+cost: 4
+dp: 3000
+traits: [Dragon, X Antibody]
+form: Rookie
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, name_is: Dracomon }
+    cost: 0
+
+effects:
+  - text: "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Examon] in its text and 1 such Option card among them to the hand. Return the rest to the bottom of the deck."
+    when: [on_play, when_digivolving]
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - { bind_as: digimon, min: 1, max: 1, filter: { kind: digimon, in_text_contains: Examon } }
+            - { bind_as: option, min: 1, max: 1, filter: { kind: option, in_text_contains: Examon } }
+          prompt: "Add 1 Digimon and 1 Option with [Examon] in their text"
+      - add_to_hand_from_reveal: { of: you, card: digimon }
+      - add_to_hand_from_reveal: { of: you, card: option }
+      - place_remainder_on_deck: { of: you, position: bottom }
+  - text: "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+    when: end_of_your_turn
+    scope: inherited
+    optional: true
+    process:
+      - may_dna_digivolve_now:
+          partner_filter: { of: you, kind: digimon }
+          target_filter: { of: you, kind: digimon }
+          cost: 0
+          ignore_requirements: false
+          optional: true
+          prompt: "DNA digivolve this Digimon and another of your Digimon"

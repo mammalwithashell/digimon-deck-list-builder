@@ -1518,9 +1518,17 @@ impl Game {
     /// Flushing afterwards lets the rules check delete a ≤0-DP ally BEFORE its
     /// parked OnSuspend observers activate (judge Q24).
     pub(crate) fn apply_alliance_ally(&mut self, attacker: PermanentHandle, ally: PermanentHandle) {
+        if !self.alliance_ally_candidates(attacker).contains(&ally.index)
+            || attacker.player != ally.player
+        {
+            return;
+        }
         let attacker_player = attacker.player;
         self.enter_deferred_drain();
-        self.suspend_with_cause(ally, true);
+        if !self.suspend_with_cause(ally, true) {
+            self.exit_deferred_drain_and_flush();
+            return;
+        }
         let ally_dp = self.effective_dp(ally).unwrap_or(0);
         self.modifiers.add(
             attacker,
@@ -1570,6 +1578,10 @@ impl Game {
                 !player.battle_area[i as usize].is_suspended
                     && self.permanent_is_digimon_for_rules(h)
                     && !self.modifiers.has(h, ModifierType::CannotSuspend)
+                    && self.effect_can_affect_from(
+                        h, attacker.player, crate::enums::EffectSourceKind::Digimon,
+                        self.permanent_effect_identity(attacker),
+                    )
             })
             .collect()
     }

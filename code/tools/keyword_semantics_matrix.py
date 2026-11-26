@@ -112,6 +112,18 @@ EXTENSION_ROWS = [
         "rule": "4-20",
         "source": "engine_extension",
     },
+    {
+        "keyword_id": "ArtsDnaDigivolve",
+        "display": "<Arts Digivolve>",
+        "kind": "optional",
+        "type_when": "DUAL card used as an Option; replaces the post-use trash (§4-20)",
+        "semantics": (
+            "Instead of the pending-processing trash, two of your Digimon "
+            "may DNA digivolve into the DUAL card using its DNA requirements."
+        ),
+        "rule": "4-20",
+        "source": "engine_extension",
+    },
 ]
 
 

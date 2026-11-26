@@ -20,7 +20,8 @@ pub(crate) fn selection_pays_deletion(
     let Some(name) = bind_as else { return false };
     let mut following = then.iter().chain(tail);
     matches!((following.next(), following.next()),
-        (Some(CompiledStep::DeletePermanent { target }), Some(CompiledStep::CancelReplacement))
+        (Some(CompiledStep::DeleteForCostReduction { target, fixed_amount: Some(_) }), _)
+        | (Some(CompiledStep::DeletePermanent { target }), Some(CompiledStep::CancelReplacement))
         if matches!(target,
             CompiledBindingRef::Named(n) | CompiledBindingRef::Binding(n)
             | CompiledBindingRef::Permanent(n) | CompiledBindingRef::OfPermanent(n) if n == name))

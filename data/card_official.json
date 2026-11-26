@@ -94781,18 +94781,119 @@
     },
     "LM-066": {
       "card_id": "LM-066",
-      "digivolve_costs": [],
-      "text_sections": []
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "D",
+      "dp": "13000",
+      "form": "Mega",
+      "attribute": "Data",
+      "type": "Magic Knight/Vortex Warriors/LIBERATOR",
+      "dual_colors": "Green",
+      "dual_cost": "6",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Play cost 11 or higher w/[Vortex Warriors] trait: Cost 2"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Piercing＞ ＜Vortex＞ ＜Blocker＞ [When Digivolving] [When Attacking] [Once Per Turn] You may unsuspend 1 Digimon. Then, this Digimon may battle 1 of your opponent's Digimon. [All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by suspending 1 Digimon, it doesn't leave. (Rule) Trait: Has [Bird Dragon] Type."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "When this card would be used, by suspending 2 Digimon, reduce the cost by 2. [Main] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends. Then, for every 2 suspended Digimon, return 1 of their Digimon to the bottom of the deck."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Play cost 11 or higher w/[Vortex Warriors] trait: Cost 2"
     },
     "LM-067": {
       "card_id": "LM-067",
-      "digivolve_costs": [],
-      "text_sections": []
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "D",
+      "dp": "13000",
+      "form": "Mega",
+      "attribute": "Virus",
+      "type": "Machine/Three Musketeers/Titan/TS",
+      "dual_colors": "Black",
+      "dual_cost": "6",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 4"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Reboot＞ ＜Blocker＞ ＜Fragment 《3》＞ [When Digivolving] [Counter] [Once Per Turn] Reveal the top 6 cards of your deck. You may play or use 1 play or use cost 6 or lower [Three Musketeers] text card among them without paying the cost. Return the rest to the bottom of the deck. [When Digivolving] [When Attacking] By trashing up to 3 [Three Musketeers] text cards from any of your Digimon's digivolution cards, for each one trashed, delete 1 of your opponent's play cost 7 or lower Digimon."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "＜Use Req. ([Three Musketeers] in text)＞ (Specified cards let you ignore color requirements.) [Main] ＜De-Digivolve 3＞ 3 of your opponent's Digimon. Then, you may place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Three Musketeers] in text or w/[TS] trait: Cost 4"
     },
     "LM-068": {
       "card_id": "LM-068",
-      "digivolve_costs": [],
-      "text_sections": []
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "colors": "Purple Red",
+      "play_cost": "D",
+      "dp": "13000",
+      "form": "Mega",
+      "attribute": "Virus",
+      "type": "Evil Dragon/LIBERATOR",
+      "dual_colors": "Purple",
+      "dual_cost": "6",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.5 w/[Dark Dragon]/[Evil Dragon] trait: Cost 4"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Security A. +1＞ [When Digivolving] [End of Attack] If your hand has 4 or fewer cards, you may play 1 level 4 or lower Digimon card with the [Evil], [Dark Dragon] or [Evil Dragon] trait from your trash to the field without paying the cost. [When Digivolving] [On Deletion] Trash 2 cards in your hand. Then, you may activate 1 [Main] effect on this card's Option side."
+        },
+        {
+          "label": "DUAL Effect",
+          "text": "{Trash} [Your Turn] When one of your [Evil], [Dark Dragon] or [Evil Dragon] trait Digimon attacks, if your hand has 4 or fewer cards, you may use this card with the cost reduced by 3. [Main] Delete 1 of your opponent's Digimon with a level as high as the number of cards in your hand or higher."
+        },
+        {
+          "label": "DUAL Rule",
+          "text": "＜Arts Digivolve＞ (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.5 w/[Dark Dragon]/[Evil Dragon] trait: Cost 4"
     },
     "P-001": {
       "card_id": "P-001",

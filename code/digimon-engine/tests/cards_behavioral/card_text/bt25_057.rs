@@ -188,10 +188,10 @@ fn dual_main_grants_rush_security_attack_and_five_thousand_dp_until_opponents_tu
     assert_eq!(r.dp_of(target), Some(7000));
     assert!(r.game.has_keyword(target, Keyword::Rush));
     assert_eq!(r.game.security_attack_keyword_bonus(target), 1);
-    next_turn(&mut r);
+    advance_turn(&mut r);
     assert_eq!(r.dp_of(target), Some(7000));
     assert!(r.game.has_keyword(target, Keyword::Rush));
-    next_turn(&mut r);
+    advance_turn(&mut r);
     assert_eq!(r.dp_of(target), Some(2000));
     assert!(!r.game.has_keyword(target, Keyword::Rush));
     assert_eq!(r.game.security_attack_keyword_bonus(target), 0);

@@ -196,11 +196,10 @@ pub enum ResumeSelectKind {
         of_player: PlayerId,
         post: Option<SecurityPostAction>,
     },
-    /// Own breeding-area permanent select. The single breeding permanent is
-    /// reconstructed from game state (not decoded from `action_id`); binds a
-    /// `BreedingPermanentSelectionRef`.
+    /// Own breeding-area permanent select, pinned to the offered top card.
     BreedingPermanent {
         of_player: PlayerId,
+        card: CardHandle,
     },
     /// Both-battle-area permanent select (`select_any_permanent`). The
     /// candidate `(action_id, handle)` pairs are captured at install time
@@ -1868,7 +1867,7 @@ mod tests {
             .hand(0, &["TEST-RESUME"])
             .memory(0)
             .start();
-        runner.place_in_breeding(0, "TEST-RESUME");
+        let breeding = runner.place_in_breeding(0, "TEST-RESUME");
         let action_id =
             crate::action::space::encode_breeding_select(0).expect("breeding select action id");
         let source_card;
@@ -1901,7 +1900,10 @@ mod tests {
                         controller: 0,
                         override_pin: None,
                     },
-                    select_kind: ResumeSelectKind::BreedingPermanent { of_player: 0 },
+                    select_kind: ResumeSelectKind::BreedingPermanent {
+                        of_player: 0,
+                        card: breeding.card,
+                    },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
                     outer_conts: Vec::new(),

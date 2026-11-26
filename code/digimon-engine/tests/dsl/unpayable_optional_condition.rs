@@ -27,12 +27,112 @@
 
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
+    encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, GamePhase};
+use digimon_engine::enums::{CardKind, EffectSourceKind, EffectTiming, GamePhase, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
+use digimon_engine::Expiry;
+
+const SUSPEND_PAYMENT: &str = r#"
+card: T-SUSPEND-PAY
+name: Suspension Cost Tester
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    process:
+      - select_any_permanent:
+          bind_as: payer
+          optional: true
+          filter: { kind: digimon, other: true }
+          prompt: "By suspending 1 other Digimon, gain 1 memory"
+      - suspend: { target: payer, cost: true }
+      - gain_memory: 1
+  - when: when_digivolving
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: target }
+      - gain_memory: 1
+"#;
+
+#[test]
+fn suspend_payment_only_offers_permanents_the_effect_can_suspend() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(SUSPEND_PAYMENT)
+        .unwrap()
+        .add_card(make_test_card("FILL", "Filler"))
+        .memory(3)
+        .start();
+    let source = r.place_on_field(0, "T-SUSPEND-PAY", Some(0));
+    let tapped = r.place_on_field(0, "FILL", Some(0));
+    let locked = r.place_on_field(0, "FILL", Some(0));
+    let immune = r.place_on_field(1, "FILL", Some(0));
+    let legal = r.place_on_field(1, "FILL", Some(0));
+    r.game.players[0].battle_area[tapped.index as usize].is_suspended = true;
+    r.game.modifiers.add(locked, ModifierEntry::simple(
+        ModifierType::CannotSuspend, 1, Expiry::EndOfTurn, 0,
+    ));
+    r.game.modifiers.add(immune, ModifierEntry::cannot_be_affected_by_opponents_source_kind(
+        EffectSourceKind::Digimon, Expiry::EndOfTurn, 1,
+    ));
+    let before = r.memory();
+    r.game.enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(source));
+    r.game.drain_effect_queue();
+
+    let legal_action = encode_attack(1, legal.index as u16);
+    assert_eq!(
+        r.pending_selection_view().unwrap().valid_action_ids,
+        vec![legal_action],
+    );
+    r.execute_action(0, legal_action).unwrap();
+    assert!(r.game.players[1].battle_area[legal.index as usize].is_suspended);
+    assert_eq!(r.memory(), before + 1);
+
+    r.game.enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(source));
+    r.game.drain_effect_queue();
+    assert!(r.pending_selection_view().is_none());
+    assert_eq!(r.memory(), before + 1, "no suspension, no reward");
+
+    r.game.enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(source));
+    r.game.drain_effect_queue();
+    let immune_action = encode_attack(0, immune.index as u16);
+    assert!(r.pending_selection_view().unwrap().valid_action_ids.contains(&immune_action));
+    r.execute_action(0, immune_action).unwrap();
+    assert!(!r.game.players[1].battle_area[immune.index as usize].is_suspended);
+    assert_eq!(r.memory(), before + 2, "ordinary effects still resolve as much as possible");
+}
+
+#[test]
+fn suspension_cost_rechecks_payment_after_the_pick_was_offered() {
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(SUSPEND_PAYMENT)
+        .unwrap()
+        .add_card(make_test_card("FILL", "Filler"))
+        .memory(3)
+        .start();
+    let source = r.place_on_field(0, "T-SUSPEND-PAY", Some(0));
+    let payer = r.place_on_field(1, "FILL", Some(0));
+    let before = r.memory();
+    r.game.enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(source));
+    r.game.drain_effect_queue();
+    let action = r.pending_selection_view().unwrap().valid_action_ids[0];
+    r.game.modifiers.add(payer, ModifierEntry::simple(
+        ModifierType::CannotSuspend, 1, Expiry::EndOfTurn, 1,
+    ));
+
+    r.execute_action(0, action).unwrap();
+    assert!(!r.game.players[1].battle_area[payer.index as usize].is_suspended);
+    assert_eq!(r.memory(), before);
+}
 
 /// "[On Play] <Draw 1>." and "[On Play] By trashing 1 card in your hand,
 /// gain 1 memory." -- two simultaneous triggers of one player; the second's

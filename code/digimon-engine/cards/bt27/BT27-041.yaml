@@ -1,0 +1,95 @@
+# Source: data/card_bundles/BT27-041.md (official Bandai text).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Yellow/BT27_041.cs
+card: BT27-041
+name: BishopChessmon
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 7
+dp: 7000
+traits: [Puppet, DATA SQUAD]
+form: Ultimate
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from:
+      level_eq: 4
+      any_color: true
+      any_of:
+        - name_contains: Chessmon
+        - trait_has: DATA SQUAD
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    text: "＜Barrier＞"
+    keyword: Barrier
+  - kind: grant_keyword
+    text: "＜Ascension＞"
+    keyword: Ascension
+
+  - when: [on_play, when_digivolving]
+    text: "[On Play] [When Digivolving] Until your opponent's turn ends, give 1 of their Digimon ＜Security A. -1＞, and for each of your Digimon with [Chessmon] in their names, -3000 DP."
+    condition:
+      any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+    summary: "[On Play] [When Digivolving] Until your opponent's turn ends, give 1 of their Digimon <Security A. -1>, and for each of your Digimon with [Chessmon] in their names, -3000 DP"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: weakened
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon <Security A. -1> and -3000 DP for each of your [Chessmon] Digimon"
+      - add_modifier:
+          target: weakened
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: weakened
+          modifier: ChangeDp
+          value:
+            base: 0
+            per:
+              card_count_in_zone:
+                of: you
+                zone: battle_area
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: Chessmon
+            delta: -3000
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    text: "[All Turns] [Once Per Turn] When any of your other Digimon with [Chessmon] in their names are deleted, 1 of your opponent's Digimon gets -5000 DP for the turn."
+    when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[Inherited][All Turns][OPT] When any of your other [Chessmon] Digimon are deleted, 1 of your opponent's Digimon gets -5000 DP for the turn"
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_target_name_contains: Chessmon
+        - event_permanent_is_source: false
+    condition:
+      any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: shrunk
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
+      - add_modifier:
+          target: shrunk
+          modifier: ChangeDp
+          value: -5000
+          expiry: end_of_turn

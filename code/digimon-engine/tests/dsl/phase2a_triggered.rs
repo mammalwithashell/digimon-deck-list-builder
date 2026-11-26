@@ -184,6 +184,38 @@ fn triggered_clause_emits_one_effect_per_timing() {
 }
 
 #[test]
+fn end_of_all_turns_triggers_for_the_controller_and_opponent_turns() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(
+            r#"
+card: TST-END-ALL
+name: End of All Turns Observer
+kind: tamer
+color: [purple]
+cost: 3
+effects:
+  - when: end_of_all_turns
+    process:
+      - trash_from_top: { of: you, count: 1 }
+"#,
+        )
+        .unwrap()
+        .add_card(make_test_card("F", "Filler"))
+        .deck(0, &["F"; 10])
+        .deck(1, &["F"; 10])
+        .start();
+    runner.place_on_field(0, "TST-END-ALL", None);
+    assert!(runner.game.players[0].trash.is_empty());
+
+    for (turn_player, trash_count) in [(0, 1), (1, 2)] {
+        assert_eq!(runner.game.turn_player(), turn_player);
+        runner.pass_turn();
+        assert_eq!(runner.game.players[0].trash.len(), trash_count);
+    }
+    assert!(runner.game.players[1].trash.is_empty());
+}
+
+#[test]
 fn triggered_clause_with_multiple_timings_emits_one_effect_each() {
     let mut c = fixture_on_play_gain_memory(1);
     if let CompiledClause::Triggered(t) = &mut c.effects[0] {

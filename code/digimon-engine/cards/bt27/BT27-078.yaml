@@ -1,0 +1,56 @@
+# Source: data/card_bundles/BT27-078.md (official Bandai text).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Purple/BT27_078.cs
+card: BT27-078
+name: Peckmon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 6000
+traits: [Avian, DATA SQUAD]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, level_eq: 3, trait_has: DATA SQUAD }
+    cost: 2
+
+effects:
+  - text: "[On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Keenan Crier] from your hand without paying the cost."
+    when: [on_play, when_digivolving]
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    summary: "[On Play][When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Keenan Crier] from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: keenan
+          optional: true
+          filter:
+            all_of:
+              - name_is: "Keenan Crier"
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 [Keenan Crier] from your hand without paying the cost"
+      - if:
+          condition: { binding_present: keenan }
+          then:
+            - play_from_hand_free: { of: you, hand_index: keenan }
+
+  - text: "[On Deletion] Your opponent trashes 1 card in their hand."
+    scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Your opponent trashes 1 card in their hand"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                optional: false
+                of: opponent
+                bind_as: discarded
+                filter: {}
+                prompt: "Trash 1 card in your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }

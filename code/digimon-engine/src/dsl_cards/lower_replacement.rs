@@ -96,7 +96,13 @@ pub fn lower_with_raw_and_slot(
 ) -> Option<Effect> {
     let timing = lookup_replacement_trigger(trigger)?;
     let label = format!("Replacement: {trigger}");
-    let process: Arc<[CompiledStep]> = Arc::from(process);
+    let mut steps = process.to_vec();
+    for (index, pair) in process.windows(2).enumerate() {
+        if let [CompiledStep::Suspend { target }, CompiledStep::CancelReplacement] = pair {
+            steps[index] = CompiledStep::SuspendAsCost { target: target.clone() };
+        }
+    }
+    let process: Arc<[CompiledStep]> = Arc::from(steps);
     let mut runtime = StepRuntime::new(raw);
 
     let mut builder = new_when_would_builder(card, timing)?;
@@ -154,7 +160,8 @@ pub fn lower_with_raw_and_slot(
     // payability guard as the triggered path (`leading_cost_guard`).
     // G-ENGINE-UNPAYABLE-OPTIONAL-CONDITION-OFFERED.
     let cost_guard = if optional {
-        crate::dsl_cards::lower_triggered::leading_cost_guard(&process)
+        use crate::dsl_cards::lower_triggered::{leading_cost_guard, CostGuard};
+        leading_cost_guard(&process).filter(|guard| !matches!(guard, CostGuard::SuspendChosen { .. }))
     } else {
         None
     };
@@ -593,18 +600,21 @@ fn required_selection_step_has_candidate(
         CompiledStep::SelectOwnPermanent {
             filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings,
-            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers)),
+            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers),
+            super::step::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), then, tail)),
         CompiledStep::SelectOpponentPermanent {
             filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => {
             let opponent = ctx.game.next_clockwise(ctx.player);
             has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings,
-                super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers))
+                super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers),
+                super::step::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), then, tail))
         }
         CompiledStep::SelectAnyPermanent {
             filter, selector, bind_as, then, offer_unpayable_deletion_payers, ..
         } => has_matching_permanent(ctx, None, filter, *selector, bindings,
-            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers)),
+            super::step::deletion_payment::filters_unpayable_payers(bind_as.as_deref(), then, tail, *offer_unpayable_deletion_payers),
+            super::step::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), then, tail)),
         CompiledStep::SelectHand { of, filter, .. } => {
             has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings)
         }
@@ -918,6 +928,7 @@ fn has_matching_permanent(
     selector: Option<CompiledFieldSelector>,
     bindings: &Bindings,
     deletion_payment: bool,
+    suspend_payment: bool,
 ) -> bool {
     let mut handles = Vec::new();
     let players: Box<dyn Iterator<Item = PlayerId>> = if let Some(player) = player {
@@ -947,6 +958,7 @@ fn has_matching_permanent(
     handles.into_iter().any(|handle| {
         matches_selected_field(ctx, handle, selector, selected)
             && (!deletion_payment || super::step::deletion_payment::can_pay(ctx, handle))
+            && (!suspend_payment || super::step::permanent_mutations::can_pay_suspend(ctx, handle))
     })
 }
 

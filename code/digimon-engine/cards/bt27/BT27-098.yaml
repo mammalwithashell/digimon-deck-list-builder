@@ -1,0 +1,40 @@
+card: BT27-098
+name: "Akihiro Kurata"
+kind: tamer
+color: [purple]
+cost: 4
+traits: ["Kurata's Army"]
+
+effects:
+  - when: on_any_deletion
+    trigger_if: { event_target_kind: digimon }
+    optional: true
+    condition: { source_is_unsuspended: true }
+    text: "[All Turns] When any Digimon are deleted, by suspending this Tamer, you may place the top 2 cards of your deck face down under this Tamer."
+    process:
+      - activation_cost: { suspend_self: true }
+      - place_deck_top_under: { of: you, count: 2, target: source, face_down: true }
+
+  - when: end_of_all_turns
+    optional: true
+    condition: { face_down_sources_under_tamers_gte: 5 }
+    text: "[End of All Turns] By trashing 5 bottom face-down cards from under any of your Tamers, you may play 1 Digimon card with [Gizmon] or [Belphemon] in its name from your hand or trash without paying the cost. After, place this Tamer as its bottom digivolution card."
+    process:
+      - trash_bottom_face_down_sources_under_tamers: { of: you, count: 5 }
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: gizmon
+          filter:
+            kind: digimon
+            any_of: [{ name_contains: Gizmon }, { name_contains: Belphemon }]
+            can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [Gizmon] or [Belphemon] Digimon from your hand or trash"
+      - play_union_bound_free: { binding: gizmon, bind_as: played }
+      - place_as_bottom_source: { source: source, target: played }
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}

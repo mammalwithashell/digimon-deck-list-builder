@@ -60,6 +60,16 @@ fn bind_selected_breeding_permanent(
     game: &mut crate::game::Game, bindings: &mut Bindings, name: &str,
     selected: crate::selection::BreedingPermanentSelectionRef,
 ) {
+    if !game
+        .player(selected.player)
+        .breeding_area
+        .as_ref()
+        .and_then(|p| p.card_sources.last())
+        .is_some_and(|top| top.handle() == selected.card)
+    {
+        bindings.clear_for_merge(name);
+        return;
+    }
     let handle = PermanentHandle {
         player: selected.player, index: crate::action::space::BREEDING_TARGET as u8,
     };
@@ -240,6 +250,7 @@ pub(crate) struct CompiledFieldFilter {
     selector: Option<CompiledFieldSelector>,
     selected: SelectedField,
     deletion_payment: bool,
+    suspend_payment: bool,
 }
 impl CompiledFieldFilter {
     pub(crate) fn matches(&self, ctx: &EffectContext<'_>, handle: PermanentHandle) -> bool {
@@ -249,6 +260,7 @@ impl CompiledFieldFilter {
         eval_predicate_with_bindings(&self.predicate, &read, PredicateSubject::Permanent(handle), Some(&self.bindings))
             && matches_selected_field(ctx.game, handle, self.selector, self.selected)
             && (!self.deletion_payment || super::deletion_payment::can_pay(&read, handle))
+            && (!self.suspend_payment || super::permanent_mutations::can_pay_suspend(&ctx.as_read(), handle))
     }
 }
 
@@ -323,23 +335,24 @@ pub(crate) fn run_tail_preserving_trigger_context(
     cb_ctx.game.effect_source_permanent = cb_ctx.source_permanent;
     cb_ctx.game.current_trigger_context = trigger_context;
     run_steps_with_runtime(tail, cb_ctx, bindings, runtime);
-    if cb_ctx.cost_unpayable {
-        cb_ctx.game.effect_source_player = previous_source.0;
-        cb_ctx.game.effect_source_card = previous_source.1;
-        cb_ctx.game.effect_source_permanent = previous_source.2;
-        cb_ctx.source_permanent = previous_permanent;
-        cb_ctx.game.current_trigger_context = previous;
-        return;
-    }
     // Overlay this resolution's bindings onto the parked outer tail so
     // binding-gated siblings after a nested select see the pick.
-    crate::dsl_cards::step::drain_dsl_outer_tail_with_bindings(cb_ctx, Some(bindings));
+    if !cb_ctx.cost_unpayable {
+        crate::dsl_cards::step::drain_dsl_outer_tail_with_bindings(cb_ctx, Some(bindings));
+    }
     // Publish the freshest bindings of this resolution for any WRAPPED outer
     // tail (`wrap_pending_selection_with_tail` composed around this callback)
     // â€” its wrap-time snapshot predates the pick this resolution just made.
     // The wrapper clears the channel before invoking us and takes it right
     // after, so the value never leaks across resolutions.
-    cb_ctx.game.dsl_resolved_tail_bindings = Some(bindings.clone());
+    if cb_ctx.cost_unpayable {
+        cb_ctx.game.dsl_clause_aborted = true;
+        if let Some((tail, _, _)) = cb_ctx.game.dsl_outer_tail.take() {
+            super::cleanup_aborted_steps(cb_ctx.game, &tail);
+        }
+    } else {
+        cb_ctx.game.dsl_resolved_tail_bindings = Some(bindings.clone());
+    }
     cb_ctx.game.effect_source_player = previous_source.0;
     cb_ctx.game.effect_source_card = previous_source.1;
     cb_ctx.game.effect_source_permanent = previous_source.2;
@@ -764,17 +777,7 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
-                ResumeSelectKind::BreedingPermanent { of_player } => {
-                    // The single breeding permanent is reconstructed from state
-                    // (mirrors ctx.select_own_breeding_permanent), not decoded.
-                    let Some(card) = game
-                        .player(of_player)
-                        .breeding_area
-                        .as_ref()
-                        .map(|p| p.top_card().handle())
-                    else {
-                        return;
-                    };
+                ResumeSelectKind::BreedingPermanent { of_player, card } => {
                     let selection_ref = crate::selection::BreedingPermanentSelectionRef {
                         player: of_player,
                         card,
@@ -5797,12 +5800,7 @@ fn resolve_count_bound(
 ) -> u8 {
     let value = match max {
         CompiledCountBound::Literal(n) => i32::from(*n),
-        CompiledCountBound::Formula(formula) => ctx
-            .source_permanent
-            .map(|target| {
-                formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
-            })
-            .unwrap_or(0),
+        CompiledCountBound::Formula(formula) => formula_value(formula, ctx, bindings),
     };
     // Count bounds are u8 values, not the old ten-card UI presentation cap.
     // The selector separately checks physical candidate/action reachability.
@@ -6513,7 +6511,10 @@ fn install_select_own_permanent(
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
     let deletion_payment = super::deletion_payment::filters_unpayable_payers(
         bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
+    let suspend_payment =
+        super::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), &[], &tail);
     if candidates.is_empty() {
+        ctx.cost_unpayable |= suspend_payment;
         return;
     }
 
@@ -6543,7 +6544,8 @@ fn install_select_own_permanent(
         &prompt,
         optional,
         CompiledFieldFilter { predicate: filter, bindings: filter_bindings, selector,
-            selected: selected_field, deletion_payment },
+            selected: selected_field, deletion_payment,
+            suspend_payment },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -6552,6 +6554,9 @@ fn install_select_own_permanent(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    if ctx.game.pending_selection.is_none() {
+        ctx.cost_unpayable |= suspend_payment;
+    }
     // `continue_on_decline: true` â€” PASS leaves the binding unresolved and the
     // clause CONTINUES (DCGO's declined SelectPermanentEffect resolves with an
     // empty list and the coroutine carries on), so binding-gated follow-ups
@@ -7566,7 +7571,10 @@ fn install_select_opponent_permanent(
     let selected_field = select_field_extreme(ctx.game, &candidates, selector);
     let deletion_payment = super::deletion_payment::filters_unpayable_payers(
         bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
+    let suspend_payment =
+        super::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), &[], &tail);
     if candidates.is_empty() {
+        ctx.cost_unpayable |= suspend_payment;
         return;
     }
 
@@ -7594,7 +7602,8 @@ fn install_select_opponent_permanent(
         &prompt,
         optional,
         CompiledFieldFilter { predicate: filter, bindings: filter_bindings, selector,
-            selected: selected_field, deletion_payment },
+            selected: selected_field, deletion_payment,
+            suspend_payment },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -7603,6 +7612,9 @@ fn install_select_opponent_permanent(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    if ctx.game.pending_selection.is_none() {
+        ctx.cost_unpayable |= suspend_payment;
+    }
     // `continue_on_decline: true` â€” PASS leaves the binding unresolved and
     // CONTINUES the clause (same semantic the hand/trash selects carry; DCGO's
     // declined SelectPermanentEffect resolves with an empty list and the
@@ -7739,10 +7751,12 @@ fn install_select_any_permanent(
     let selected_field = select_field_extreme(ctx.game, &handles, selector);
     let deletion_payment = super::deletion_payment::filters_unpayable_payers(
         bind_as.as_deref(), &[], &tail, offer_unpayable_payers);
+    let suspend_payment = super::permanent_mutations::selection_pays_suspend(bind_as.as_deref(), &[], &tail);
     let candidates: Vec<(u16, PermanentHandle)> = handles
         .into_iter()
         .filter(|handle| matches_selected_field(ctx.game, *handle, selector, selected_field))
         .filter(|handle| !deletion_payment || super::deletion_payment::can_pay(&ctx.as_read(), *handle))
+        .filter(|handle| !suspend_payment || super::permanent_mutations::can_pay_suspend(&ctx.as_read(), *handle))
         .map(|handle| {
             (
                 encode_attack(handle.player as u16, handle.index as u16),
@@ -7752,6 +7766,7 @@ fn install_select_any_permanent(
         .collect();
 
     if candidates.is_empty() {
+        ctx.cost_unpayable |= suspend_payment;
         return;
     }
 
@@ -9646,6 +9661,16 @@ fn install_select_own_breeding_permanent(
     bindings: Bindings,
     runtime: StepRuntime,
 ) {
+    let Some(card) = ctx
+        .game
+        .player(ctx.player)
+        .breeding_area
+        .as_ref()
+        .and_then(|p| p.card_sources.last())
+        .map(|top| top.handle())
+    else {
+        return;
+    };
     let success_tail = Arc::new(success_tail);
     let decline_tail = Arc::new(decline_tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
@@ -9731,6 +9756,7 @@ fn install_select_own_breeding_permanent(
                 },
                 select_kind: crate::resume::ResumeSelectKind::BreedingPermanent {
                     of_player: player,
+                    card,
                 },
                 bind_as: bind_as_for_resume,
                 inner_tail: success_tail_for_resume,

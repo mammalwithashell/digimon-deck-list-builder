@@ -70,7 +70,7 @@ pub fn lower_with_formula(
     condition: Option<CompiledPredicate>,
     once_per_turn: bool,
     amount_fn: Option<CompiledFormula>,
-    pay_cost: Vec<CompiledStep>,
+    mut pay_cost: Vec<CompiledStep>,
     raw: Arc<EngineRawRustRegistry>,
     optional: bool,
     when_playing_this: bool,
@@ -89,6 +89,11 @@ pub fn lower_with_formula(
     let when_any_ally_played = when_any_ally_played.map(Arc::new);
     let when_any_ally_digivolves_into = when_any_ally_digivolves_into.map(Arc::new);
     let amount_fn = amount_fn.map(Arc::new);
+    for step in &mut pay_cost {
+        if let CompiledStep::Suspend { target } = step {
+            *step = CompiledStep::SuspendAsCost { target: target.clone() };
+        }
+    }
     let pay_cost: Arc<[CompiledStep]> = Arc::from(pay_cost);
     let runtime = StepRuntime::new(raw);
     let amount_runtime = runtime.clone();
@@ -148,6 +153,18 @@ pub fn lower_with_formula(
             !crate::dsl_cards::lower_triggered::body_first_step_is_declinable(pay_cost.as_ref())
         })
         .and_then(crate::dsl_cards::lower_triggered::first_step_candidate_guard);
+    let (deletion_cost_filter, pay_cost_fixed_deletion_credit) = match pay_cost.as_ref() {
+        [CompiledStep::SelectOwnPermanent { filter, bind_as, then, selector: None, .. },
+         deletion @ CompiledStep::DeleteForCostReduction { fixed_amount: Some(amount), .. }]
+            if then.is_empty()
+                && super::step::deletion_payment::selection_pays_deletion(
+                    bind_as.as_deref(), then, std::slice::from_ref(deletion),
+                ) =>
+        {
+            (Some(filter.clone()), i32::from(*amount))
+        }
+        _ => (None, 0),
+    };
     let prefix_guard = pay_cost.first().and_then(|s| match s {
         CompiledStep::PaySourcePrefix {
             host_filter,
@@ -157,6 +174,15 @@ pub fn lower_with_formula(
         _ => None,
     });
     builder = builder.condition(move |rctx| {
+        if let Some(filter) = &deletion_cost_filter {
+            if !(0..rctx.game.player(rctx.player).battle_area.len()).any(|index| {
+                let payer = PermanentHandle { player: rctx.player, index: index as u8 };
+                eval_predicate(filter, rctx, PredicateSubject::Permanent(payer))
+                    && super::step::deletion_payment::can_pay(rctx, payer)
+            }) {
+                return false;
+            }
+        }
         if let Some((filter, minimum)) = &prefix_guard {
             if !crate::dsl_cards::step::source_prefix_payment::is_payable(rctx, filter, *minimum) {
                 return false;
@@ -329,6 +355,7 @@ pub fn lower_with_formula(
         }
     }
     let mut effect = builder.build();
+    effect.known_payment_reduction = pay_cost_fixed_deletion_credit;
     // "would be PLAYED" answers a play cost only, never an Option use (CR 4.3
     // 7-1-1 vs 9-1-1). The DSL lowering re-scopes a `when_any_ally_used`
     // reducer (passed here as the same target predicate) to Option uses.
@@ -367,7 +394,7 @@ fn pay_cost_is_self_suspend(pay_cost: &[CompiledStep]) -> bool {
     use digimon_dsl::compiled::CompiledBindingRef;
     matches!(
         pay_cost,
-        [CompiledStep::Suspend { target }]
+        [CompiledStep::SuspendAsCost { target }]
             if matches!(target, CompiledBindingRef::Source | CompiledBindingRef::SelfRef)
     )
 }

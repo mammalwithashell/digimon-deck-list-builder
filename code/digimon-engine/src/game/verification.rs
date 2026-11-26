@@ -111,6 +111,9 @@ impl Game {
                     resume.window_started,
                 ),
             );
+            if resume.as_tamer {
+                debug_field(&mut h, "would_digivolve_as_tamer", &true);
+            }
             // Hash the referenced entries' local positions rather than the
             // allocator token, so equivalent clones/transpositions agree.
             if let Some((identity_order, no_dp_order)) = resume.treated_identity_orders {
@@ -760,6 +763,11 @@ fn write_resume_stack(
             .next()
             .unwrap_or("");
         field(hasher, "resume.frame", variant);
+        if let crate::resume::ResumeFrame::ArtsDigivolveSelection(state) = frame {
+            if let Some(first) = state.dna_first {
+                debug_field(hasher, "resume.arts_dna_first", &first);
+            }
+        }
         if let crate::resume::ResumeFrame::RunTail {
             bind_as,
             inner_tail,
@@ -1350,7 +1358,7 @@ effects:
         let identity=r.game.capture_digivolve_host_identity(host);
         r.game.effect_digivolve_scopes.push(EffectDigivolveScope{
             declaration:EffectDigivolveCostChoiceState{acting_player:0,source_ref:CardSourceRef::Hand(0,0),result_card:card,source_carrier_top:None,source_carrier_identity:None,target_player:0,target_zone:crate::enums::Zone::BattleArea,target_top:top,target_identity:identity,dna_origin:None,cost_delta:CostDelta::Free,waiver:DigivolveRequirementWaiver::None,source:PlaySource::ByEffect,printed_costs:vec![],effect_source_player:Some(0),trigger_context:None,result_clause:None,outer_conts:vec![cont]},
-            identity:crate::game::PendingWouldDigivolveResume{window_started:true,host_identity:identity,treated_identity_orders:None,player:0,permanent:host,card,effective_cost:0,app_fusion:false,burst:None}});
+            identity:crate::game::PendingWouldDigivolveResume{window_started:true,host_identity:identity,treated_identity_orders:None,player:0,permanent:host,card,effective_cost:0,app_fusion:false,as_tamer:false,burst:None}});
         r
     }
     fn rewrite_scope_marker(g:&mut Game,new:u64){

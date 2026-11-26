@@ -121,7 +121,7 @@ effects:
       - if:
           condition: { binding_present: susp }
           then:
-            - suspend: { target: susp }
+            - suspend: { target: susp, cost: true }
             - add_modifier:
                 continuous: true
                 target:

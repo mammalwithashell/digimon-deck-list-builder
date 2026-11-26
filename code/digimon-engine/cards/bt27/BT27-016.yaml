@@ -1,0 +1,89 @@
+card: BT27-016
+name: "Jesmon (X Antibody)"
+kind: dual
+level: 6
+dp: 12000
+cost: 5
+color: [red, white]
+traits: [Holy Warrior, X Antibody, Royal Knight]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { any_color: true, name_is: Jesmon }
+    cost: 1
+
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [red, white]
+    traits: [Holy Warrior, X Antibody, Royal Knight]
+    effects:
+      - { text: "＜Progress＞", kind: grant_keyword, keyword: Progress }
+      - { text: "＜Piercing＞", kind: grant_keyword, keyword: Piercing }
+      - { text: "＜Engage＞", kind: grant_keyword, keyword: Engage }
+      - text: "[When Digivolving] [When Attacking] [Once Per Turn] This Digimon gets +6000 DP until your opponent's turn ends. Then, by returning 1 of your other Digimon or 1 [Jesmon] or [X Antibody] from this Digimon's digivolution cards to the bottom of the deck, activate 1 [Main] effect on this card's Option side."
+        when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        process:
+          - add_dp_modifier: { target: source, value: 6000, expiry: end_of_opponents_turn }
+          - select_effect_choice:
+              labels: ["Return another Digimon", "Return a digivolution card", "Don't return a card"]
+              legal_when:
+                - any_permanent: { of: you, kind: digimon, other: true }
+                - self_source_count: { filter: { any_of: [{ name_is: Jesmon }, { name_is: X Antibody }] }, op: gte, value: 1 }
+                - {}
+              bind_as: payment_kind
+              prompt: "Choose a card to return to the bottom of the deck"
+          - if:
+              condition: { equals: [payment_kind, 0] }
+              then:
+                - select_own_permanent:
+                    optional: false
+                    bind_as: returned
+                    filter: { kind: digimon, other: true }
+                    prompt: "Return 1 of your other Digimon to the bottom of the deck"
+                - return_to_deck: { target: returned, position: bottom }
+          - if:
+              condition: { equals: [payment_kind, 1] }
+              then:
+                - select_union_zone:
+                    of: you
+                    optional: false
+                    zones: [material]
+                    material_of: source
+                    bind_as: returned_source
+                    filter: { any_of: [{ name_is: Jesmon }, { name_is: X Antibody }] }
+                    prompt: "Return a [Jesmon] or [X Antibody] digivolution card to the bottom of the deck"
+                - return_union_bound_to_deck: { binding: returned_source, position: bottom }
+          - if:
+              condition: { effect_returned_any_card: true }
+              then:
+                - refire_effect: { source: source, timing: option_main, optional: false }
+  option:
+    use_cost: 5
+    colors: [white]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        any_of: [{ kind: digimon }, { kind: tamer }]
+        in_text_contains: Huckmon
+    arts_digivolve: true
+    effect_text: "[Main] By placing 1 of your opponent's lowest DP Digimon as the bottom security card, trash their top security card."
+    effects:
+      - text: "[Main] By placing 1 of your opponent's lowest DP Digimon as the bottom security card, trash their top security card."
+        when: main
+        process:
+          - select_opponent_permanent:
+              optional: true
+              bind_as: victim
+              selector: lowest_dp
+              filter: { kind: digimon }
+              prompt: "Place an opponent Digimon with the lowest DP at the bottom of security"
+          - place_on_security: { source: { permanent: victim }, of: opponent, position: bottom, bind_placed_as: placed }
+          - if:
+              condition: { binding_present: placed }
+              then:
+                - trash_top_security: { of: opponent }

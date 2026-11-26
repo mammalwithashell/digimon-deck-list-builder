@@ -141,7 +141,21 @@ pub fn enrich_card_data_with_dsl_alt_paths(
         card.ace_overflow = compiled.ace_overflow;
         card.digixros_aliases = compiled.digixros_aliases.clone();
         card.also_treated_as = compiled.also_treated_as.clone();
-        for dna_cost in compiled_dna_costs(compiled) {
+        if let (Some(dual), Some(compiled_dual)) = (&mut card.dual, &compiled.dual) {
+            if compiled_dual.option.keywords.iter().any(|kw| kw == "ArtsDnaDigivolve")
+                && !dual.option.keywords.contains(&crate::enums::Keyword::ArtsDnaDigivolve)
+            {
+                dual.option.keywords.push(crate::enums::Keyword::ArtsDnaDigivolve);
+            }
+        }
+        let authored: Vec<_> = compiled_dna_costs(compiled).collect();
+        for dna_cost in &authored {
+            let legacy = legacy_dna_cost(dna_cost);
+            if &legacy != dna_cost && !authored.contains(&legacy) {
+                card.dna_costs.retain(|cost| cost != &legacy);
+            }
+        }
+        for dna_cost in authored {
             if !card.dna_costs.contains(&dna_cost) {
                 card.dna_costs.push(dna_cost);
                 inserted += 1;
@@ -149,6 +163,17 @@ pub fn enrich_card_data_with_dsl_alt_paths(
         }
     }
     inserted
+}
+
+fn legacy_dna_cost(cost: &DnaCost) -> DnaCost {
+    let mut legacy = cost.clone();
+    for requirement in [&mut legacy.requirement1, &mut legacy.requirement2] {
+        let name = std::mem::take(&mut requirement.name_is);
+        if requirement.name_contains.is_empty() {
+            requirement.name_contains = name;
+        }
+    }
+    legacy
 }
 
 fn compiled_dna_costs(card: &CompiledCard) -> impl Iterator<Item = DnaCost> + '_ {
@@ -213,11 +238,8 @@ fn compiled_dna_requirement(pred: &CompiledPredicate) -> Option<DnaRequirement> 
     Some(DnaRequirement {
         level: pred.level_eq.unwrap_or(0),
         card_colors,
-        name_contains: pred
-            .name_contains
-            .clone()
-            .or_else(|| pred.name_is.clone())
-            .unwrap_or_default(),
+        name_is: pred.name_is.clone().unwrap_or_default(),
+        name_contains: pred.name_contains.clone().unwrap_or_default(),
         text_contains: pred.in_text_contains.clone().unwrap_or_default(),
     })
 }

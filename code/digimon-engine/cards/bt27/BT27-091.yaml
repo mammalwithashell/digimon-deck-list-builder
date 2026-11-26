@@ -1,0 +1,47 @@
+card: BT27-091
+name: Tomoro Tenma
+kind: tamer
+color: [green]
+cost: 3
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  - text: "[Start of Your Main Phase] By placing 1 [BEATBREAK] trait card from your hand face down under this Tamer, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    optional: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], trait_has: BEATBREAK }
+        n: 1
+    process:
+      - select_hand:
+          optional: false
+          of: you
+          bind_as: stash
+          filter: { trait_has: BEATBREAK }
+          prompt: Place 1 BEATBREAK card face down under this Tamer
+      - place_as_bottom_source: { source: stash, target: source, face_down: true }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+  - text: "[All Turns] When any Digimon suspend, by suspending this Tamer, you may place the top card of your deck face down under this Tamer."
+    when: on_suspend
+    condition: { source_is_unsuspended: true, can_change_orientation: true }
+    trigger_if: { event_target_kind: digimon }
+    process:
+      - select_effect_choice:
+          bind_as: choice
+          labels: [Suspend and place the top card, Only suspend, "Don't suspend"]
+          prompt: Will you suspend this Tamer to stash the top card?
+      - if:
+          condition: { not: { equals: [choice, 2] } }
+          then:
+            - suspend: { target: source }
+            - if:
+                condition: { equals: [choice, 0], source_is_unsuspended: false }
+                then:
+                  - place_as_bottom_source: { source: { deck_top: you }, target: source, face_down: true }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    process:
+      - play_from_security: {}

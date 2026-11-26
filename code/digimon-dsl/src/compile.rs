@@ -3267,6 +3267,9 @@ fn compile_step(
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashFieldOption(a) => CompiledStep::TrashFieldOption {
+            target: compile_binding_ref(&a.target),
+        },
         S::PaySourcePrefix(a) => {
             if a.minimum == 0 || a.minimum > i64::MAX as u64 {
                 errors.push(ValidationError {
@@ -3283,6 +3286,7 @@ fn compile_step(
         }
         S::DeleteForCostReduction(a) => CompiledStep::DeleteForCostReduction {
             target: compile_binding_ref(&a.target),
+            fixed_amount: a.fixed_amount,
         },
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),
@@ -3308,6 +3312,9 @@ fn compile_step(
         S::TrashBreedingPermanent(a) => CompiledStep::TrashBreedingPermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::PayBreedingDeletion(a) => CompiledStep::PayBreedingDeletion {
+            target: compile_binding_ref(&a.target),
+        },
         S::ReturnAllToHand(a) => CompiledStep::ReturnAllToHand { over: compile_predicate(&a.over, &format!("{prefix}.over"), card_id, errors), selector: a.selector.map(compile_field_selector) },
         S::ReturnAllToDeck(a) => {
             if !matches!(a.position,crate::step::StackPosition::Top|crate::step::StackPosition::Bottom) {
@@ -3322,6 +3329,9 @@ fn compile_step(
             target: compile_binding_ref(&a.target),
             position: compile_stack_position(a.position),
             include_sources: a.include_sources,
+        },
+        S::Suspend(a) if a.cost => CompiledStep::SuspendAsCost {
+            target: compile_binding_ref(&a.target),
         },
         S::Suspend(a) => CompiledStep::Suspend {
             target: compile_binding_ref(&a.target),
@@ -3454,6 +3464,12 @@ fn compile_step(
             target: compile_binding_ref(&a.target),
             face_down: a.face_down,
             bind_placed_as: a.bind_placed_as.clone(),
+        },
+        S::PlaceDeckTopUnder(a) => CompiledStep::PlaceDeckTopUnder {
+            of: compile_player_ref(a.of),
+            count: a.count,
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
         },
         S::PlaceAsTopSource(a) => CompiledStep::PlaceAsTopSource {
             source: compile_binding_ref(&a.source),
@@ -4889,7 +4905,7 @@ fn compile_step(
             card: compile_binding_ref(&a.card),
             timing: if matches!(
                 a.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving" | "on_deletion"
             ) {
                 a.timing.clone()
             } else {
@@ -4897,7 +4913,7 @@ fn compile_step(
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.refire_card_effect.timing"),
                     message: format!(
-                        "refire_card_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        "unsupported refire_card_effect timing: {}",
                         a.timing
                     ),
                 });

@@ -136,6 +136,8 @@ impl Game {
                 *total += amount;
                 if self.pending_selection.is_some() {
                     total.pending_reduction = Some(amount);
+                } else if let Some(extra) = self.pending_cost_reduction_amount_override.take() {
+                    *total += extra;
                 }
             }
             return;
@@ -263,6 +265,24 @@ impl Game {
                     key.source_permanent = Some(current);
                 }
                 self.record_cost_reducer_activation(&key);
+            }
+        }
+    }
+
+    pub(crate) fn reject_parked_play_reduction(&mut self, source: CardHandle) {
+        for hook in self.after_selection_resume_hooks.0.iter_mut().rev() {
+            if let crate::resume::AfterSelectionHook::PlayCostContinuation {
+                accumulated_reduction,
+                processed,
+                ..
+            } = hook
+            {
+                if processed.last().is_some_and(|key| key.source_card == source) {
+                    if let Some(amount) = accumulated_reduction.pending_reduction.take() {
+                        accumulated_reduction.reduction -= amount;
+                    }
+                    break;
+                }
             }
         }
     }

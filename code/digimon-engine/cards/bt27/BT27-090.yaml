@@ -1,0 +1,87 @@
+# BT27-090 Spencer Damon — Tamer, Yellow, Cost 4. Traits: DATA SQUAD.
+# Source: data/card_bundles/BT27-090.md (official Bandai text + Q&A).
+# DCGO: Assets/Scripts/CardEffect/BT27/Yellow/BT27_090.cs — optional placement
+# under a played matching Digimon, then a mandatory pick of 1 own Digimon that
+# gets opponent-scoped return-to-hand/deck + stacked-card-trash immunity.
+# Q&A: "can't trash stacked cards" also stops De-Digivolve (it trashes the top
+# stacked cards) — `grant_stack_protection_from_opponent_effects` bundles it.
+card: BT27-090
+name: Spencer Damon
+kind: tamer
+color: [yellow]
+cost: 4
+traits: [DATA SQUAD]
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[All Turns] When any of your Digimon with [Leomon] in their names or the [Boss] or [DATA SQUAD] trait are played, by placing this Tamer as any of those Digimon's bottom digivolution card, your opponent's effects can't return 1 of your Digimon to hands or decks, or trash its stacked cards until their turn ends."
+    when: on_ally_played
+    optional: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_name_contains: Leomon
+            - event_target_trait_has: Boss
+            - event_target_trait_has: DATA SQUAD
+    summary: "[All Turns] When your [Leomon]-named / [Boss] / [DATA SQUAD] Digimon is played, by placing this Tamer as its bottom digivolution card, opponent's effects can't return 1 of your Digimon to hand/deck or trash its stacked cards until their turn ends"
+    process:
+      - select_zone_cards:
+          zones: [battle_area]
+          filter: { is_source_card: true, card_in_zone: [battle_area] }
+          min: 1
+          max: 1
+          bind_as: spencer
+          prompt: "Place this Tamer as the played Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: spencer }
+          then:
+            - place_cards_as_bottom_sources: { cards: spencer, target: event_target }
+            - select_own_permanent:
+                optional: false
+                bind_as: protected
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon: opponent's effects can't return it to hand or deck, or trash its stacked cards, until their turn ends"
+            - add_modifier:
+                target: protected
+                modifier: CannotBeReturnedToHand
+                value: 1
+                expiry: end_of_opponents_turn
+                opponent_only: true
+            - add_modifier:
+                target: protected
+                modifier: CannotBeReturnedToDeck
+                value: 1
+                expiry: end_of_opponents_turn
+                opponent_only: true
+            - grant_stack_protection_from_opponent_effects:
+                target: protected
+                expiry: end_of_opponents_turn
+
+  - text: "[All Turns] This Digimon with [Leomon] in its name or the [Boss] or [DATA SQUAD] trait gets +3000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_of:
+            - source_name_contains: Leomon
+            - source_permanent_trait_has: Boss
+            - source_permanent_trait_has: DATA SQUAD
+    target: {}
+    dp_modifier: 3000
+    summary: "[Inherited][All Turns] This [Leomon]-named / [Boss] / [DATA SQUAD] Digimon gets +3000 DP"
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

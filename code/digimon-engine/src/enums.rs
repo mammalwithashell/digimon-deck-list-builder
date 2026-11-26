@@ -714,6 +714,9 @@ pub enum Keyword {
     /// rescued from trash to the TOP of the owner's security stack
     /// (`AddSecurityCard(card, toTop: true)`). BT25-034, BT25-040.
     Ascension,
+
+    /// Arts Digivolve whose printed replacement uses a DNA recipe.
+    ArtsDnaDigivolve,
 }
 
 impl Keyword {
@@ -1079,6 +1082,8 @@ pub enum ModifierType {
     /// attackers, non-Option Security effects, and security-removal timings
     /// are unaffected. Appended to preserve existing modifier IDs.
     DoesNotActivateOptionSecurityEffects,
+    /// Supplement to `CannotDigivolve` when the restriction also names Tamers.
+    CannotDigivolveAsTamer,
 }
 
 /// When a modifier expires.

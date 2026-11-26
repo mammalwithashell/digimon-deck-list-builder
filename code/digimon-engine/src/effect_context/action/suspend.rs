@@ -25,15 +25,19 @@ use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
     /// Suspend a permanent and fire `OnSuspend` observers.
-    /// Delegates to `Game::suspend` — the canonical single-target chokepoint.
+    /// Delegates to the canonical single-target suspension.
     pub fn suspend(&mut self, target: PermanentHandle) {
+        self.try_suspend(target);
+    }
+
+    pub(crate) fn try_suspend(&mut self, target: PermanentHandle) -> bool {
         if !self.can_affect_permanent(target) {
-            return;
+            return false;
         }
         // Effect-context suspends are effect-initiated by definition —
         // tags the OnSuspend event for `event_is_effect_initiated`
         // ("when an EFFECT suspends…", G-SUSPEND-EFFECT-INITIATED).
-        self.game.suspend_with_cause(target, true);
+        self.game.suspend_with_cause(target, true)
     }
 
     /// Pay the source permanent's suspend-self activation cost.
@@ -70,8 +74,7 @@ impl<'a> EffectContext<'a> {
         if self.game.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
-        self.suspend(handle);
-        true
+        self.try_suspend(handle)
     }
 
     /// Unsuspend a permanent and fire `OnUnsuspend` observers.

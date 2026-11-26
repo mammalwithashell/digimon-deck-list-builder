@@ -55,6 +55,7 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "ImmunityToOpponentEffects" => ModifierType::ImmunityToOpponentEffects,
         "DontBattleSecurityDigimon" => ModifierType::DontBattleSecurityDigimon,
         "CannotDigivolve" => ModifierType::CannotDigivolve,
+        "CannotDigivolveAsTamer" => ModifierType::CannotDigivolveAsTamer,
         "CanOnlyDigivolveInto" => ModifierType::CanOnlyDigivolveInto,
         "ChangeColor" => ModifierType::ChangeColor,
         "AddColor" => ModifierType::AddColor,
@@ -177,6 +178,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::ImmunityToOpponentEffects
         | ModifierType::DontBattleSecurityDigimon
         | ModifierType::CannotDigivolve
+        | ModifierType::CannotDigivolveAsTamer
         | ModifierType::CanOnlyDigivolveInto
         | ModifierType::ChangeColor
         | ModifierType::AddColor
@@ -299,6 +301,7 @@ mod tests {
             ModifierType::ImmunityToOpponentEffects,
             ModifierType::DontBattleSecurityDigimon,
             ModifierType::CannotDigivolve,
+            ModifierType::CannotDigivolveAsTamer,
             ModifierType::CanOnlyDigivolveInto,
             ModifierType::ChangeColor,
             ModifierType::AddColor,

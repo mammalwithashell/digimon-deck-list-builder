@@ -1,0 +1,37 @@
+# Source: data/card_bundles/BT27-002.md (official Bandai text and Q&A).
+# DCGO C# reference: DCGO2 Assets/Scripts/CardEffect/BT27/Blue/BT27_002.cs
+#   (skippable source pick, paid play at GetCostItself - 1).
+card: BT27-002
+name: Chapmon
+kind: digi_egg
+level: 2
+color: [blue]
+traits: [Lesser, DATA SQUAD]
+form: In-Training
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] You may play 1 level 4 or lower [Aquatic] or [DATA SQUAD] trait Digimon card from this Digimon's digivolution cards with the cost reduced by 1."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][Once Per Turn] You may play 1 Lv.4 or lower [Aquatic]/[DATA SQUAD] Digimon from this Digimon's digivolution cards with the cost reduced by 1"
+    process:
+      - select_material:
+          of_permanent: source
+          bind_as: played_source
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Aquatic
+                  - trait_has: DATA SQUAD
+          prompt: "Play 1 level 4 or lower [Aquatic]/[DATA SQUAD] Digimon card from this Digimon's digivolution cards with the cost reduced by 1"
+      - if:
+          condition: { binding_present: played_source }
+          then:
+            - play_from_materials:
+                target: source
+                source_index: played_source
+                cost_delta: { reduce: 1 }

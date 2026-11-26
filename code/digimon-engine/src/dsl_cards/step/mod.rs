@@ -874,7 +874,7 @@ fn run_steps_with_runtime_inner(
         // so a "By trashing X, Y" cost does not run Y when X was declined.
         // The flag is scoped to the `on_decline` invocation by
         // `effect_queue::resolve_generic_selection` (save+restore).
-        if ctx.game.dsl_clause_aborted {
+        if ctx.cost_unpayable || ctx.game.dsl_clause_aborted {
             cleanup_aborted_steps(ctx.game, &steps[i..]);
             return RunOutcome::Synchronous;
         }

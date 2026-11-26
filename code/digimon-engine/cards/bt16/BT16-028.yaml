@@ -173,7 +173,7 @@ effects:
                   - kind: digimon
                   - kind: tamer
           prompt: "By suspending 1 opponent Digimon or Tamer, unsuspend 1 of your Digimon"
-      - suspend: { target: suspend_cost }
+      - suspend: { target: suspend_cost, cost: true }
       - if:
           condition: { binding_present: suspend_cost }
           then:

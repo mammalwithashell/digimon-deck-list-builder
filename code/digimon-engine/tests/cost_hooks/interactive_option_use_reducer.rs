@@ -18,7 +18,8 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::CardKind;
+use digimon_engine::enums::{CardKind, Expiry, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
@@ -329,6 +330,55 @@ fn interactive_option_use_reducer_no_reduction_when_unpayable() {
         3,
         "unpayable reducer → full Option use cost 3 paid, no reduction credited"
     );
+}
+
+#[test]
+fn option_reduction_requires_the_selected_digimon_to_be_suspended() {
+    let yaml = r#"
+card: SUSPEND-REDUCER
+name: Suspend Reducer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_any_ally_used: { kind: option }
+    amount: 2
+    pay_cost:
+      - select_any_permanent:
+          bind_as: payer
+          optional: false
+          filter: { kind: digimon, of: opponent }
+          prompt: "Suspend 1 of your opponent's Digimon to reduce the cost"
+      - suspend: { target: payer }
+"#;
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(plain_option("OPT"))
+        .add_card(make_filler("PAYER"))
+        .hand(0, &["OPT"])
+        .memory(10)
+        .start();
+    r.register_effect("OPT", std::sync::Arc::new(OptionMainNoop));
+    r.place_on_field(0, "SUSPEND-REDUCER", Some(0));
+    let payer = r.place_on_field(1, "PAYER", Some(0));
+    let before = r.memory();
+
+    assert!(matches!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending));
+    let action = r.pending_selection().unwrap().valid_action_ids[0];
+    r.game.modifiers.add(
+        payer,
+        ModifierEntry::simple(ModifierType::CannotSuspend, 1, Expiry::EndOfTurn, 1),
+    );
+    r.game.resolve_selection(0, action).unwrap();
+
+    assert!(r.pending_selection().is_none());
+    assert!(!r.game.players[1].battle_area[payer.index as usize].is_suspended);
+    assert_eq!(r.memory(), before - 3);
 }
 
 /// DECLINE (soft-lock regression guard): an OPTIONAL interactive Option-use
