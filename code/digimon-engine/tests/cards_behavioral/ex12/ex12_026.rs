@@ -256,6 +256,52 @@ fn ex12_026_on_play_trashes_bottom_two_sources_then_locks_attack_and_block() {
 }
 
 #[test]
+fn ex12_026_on_play_skips_source_trash_pick_when_opponent_digimon_have_no_sources() {
+    use digimon_engine::selection::SelectionKind;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-026 YAML loads")
+        .add_card(plain_digimon("OPP-A", CardColor::Blue, 4, 5000))
+        .add_card(plain_digimon("OPP-B", CardColor::Blue, 4, 5000))
+        .hand(0, &[CARD_ID])
+        .memory(10)
+        .start();
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
+    let _opp_b = runner.place_on_field(1, "OPP-B", Some(0));
+
+    let play_slot = hand_index(&runner, 0, CARD_ID);
+    runner.play(0, play_slot).expect("play EX12-026");
+
+    // DCGO EX12_026.cs:48-56 gates the first pick on DigivolutionCards.Count >= 1:
+    // with only sourceless opponent Digimon, step 1 is skipped and the very first
+    // selection is step 2 (the attack/block lock).
+    let pending = runner
+        .pending_selection()
+        .expect("lock selection should open immediately");
+    assert_eq!(pending.kind, SelectionKind::OppField);
+    assert!(
+        pending.prompt.contains("1 or fewer sources"),
+        "expected lock prompt directly when all opponent Digimon have 0 sources, got {:?}",
+        pending.prompt
+    );
+
+    select_first_non_pass(&mut runner);
+    assert!(
+        runner.pending_selection().is_none(),
+        "no second prompt after answering the lock pick"
+    );
+    assert!(
+        runner.modifiers().has(opp_a, ModifierType::CannotAttack),
+        "locked target cannot attack"
+    );
+    assert!(
+        runner.modifiers().has(opp_a, ModifierType::CannotBlock),
+        "locked target cannot block"
+    );
+}
+
+#[test]
 fn ex12_026_inherited_when_attacking_draws_if_hand_has_7_or_fewer_cards() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -276,4 +322,51 @@ fn ex12_026_inherited_when_attacking_draws_if_hand_has_7_or_fewer_cards() {
 
     assert_eq!(runner.game.players[0].hand.len(), hand_before + 1);
     assert!(hand_contains(&runner, 0, "DRAW"));
+}
+
+#[test]
+fn ex12_026_inherited_attack_hand_test_is_a_processing_condition_and_stays_orderable() {
+    use digimon_engine::selection::SelectionKind;
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-026 YAML loads")
+        .dsl_card("EX12-024")
+        .expect("EX12-024 YAML loads")
+        .add_card(plain_digimon("CARRIER", CardColor::Blue, 3, 3000))
+        .add_card(plain_digimon("DRAW", CardColor::Blue, 3, 3000))
+        .add_card(plain_digimon("SEC", CardColor::Blue, 3, 3000))
+        .add_card(plain_digimon("FILL", CardColor::Blue, 3, 3000))
+        .hand(0, &["FILL"; 8])
+        .deck(0, &["DRAW"; 4])
+        .security(1, &["SEC"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+    let carrier = runner.place_stack(0, &[CARD_ID, "EX12-024", "CARRIER"]);
+    runner.attack_player(carrier, 1, false);
+
+    let pending = runner
+        .pending_selection()
+        .expect("both inherited [When Attacking] effects are orderable");
+    assert_eq!(pending.kind, SelectionKind::TriggerOrder);
+    let ex12_026_action = pending
+        .effect_choices
+        .as_ref()
+        .and_then(|choices| choices.iter().find(|c| c.label.starts_with(CARD_ID)))
+        .map(|c| c.action_id)
+        .expect("EX12-026 entry must be in TriggerOrder at 8 hand cards");
+    let hand_before = runner.game.players[0].hand.len();
+    runner
+        .execute_action(0, ex12_026_action)
+        .expect("choose EX12-026");
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before + 1,
+        "8 cards in hand: EX12-026 draws nothing (only sibling EX12-024 draws)"
+    );
+    assert_eq!(
+        runner.game.opt_used(carrier),
+        1,
+        "EX12-026's OPT stays unspent after unmet hand count"
+    );
 }

@@ -762,12 +762,17 @@ impl Game {
     /// offered; `false` when none qualifies (the synchronous scan then handles
     /// the rest as before).
     ///
-    /// Mirrors `try_prompt_interactive_digivolve_cost_reducer`. Handles the
-    /// first qualifying interactive reducer NOT yet offered for this use
-    /// (`interactive_option_use_reducers_processed`) and records it there;
-    /// `play_option_core` calls again until none is left, so Armalizamon
-    /// (BT25-049) and Tomoro Tenma (BT25-090) both apply, in battle-area
-    /// order, as each of DCGO's reducers does.
+    /// Mirrors `try_prompt_interactive_digivolve_cost_reducer`. Collects every
+    /// qualifying interactive Option-use reducer not yet offered for this use
+    /// (`interactive_option_use_reducers_processed`):
+    /// - When 2+ interactive reducers qualify simultaneously (e.g. two copies
+    ///   of Tomoro Tenma BT25-090, or Armalizamon BT25-049 + Tomoro Tenma),
+    ///   installs a `SelectionKind::TriggerOrder` menu so the player chooses
+    ///   which `BeforePayCost` reducer activates first (CR 4.3 §15-4-3; DCGO
+    ///   `MultipleSkills`).
+    /// - When exactly 1 interactive reducer remains, opens the accept/decline
+    ///   gate (when optional and not needed) or runs its `pay_cost` directly.
+    /// `play_option_core` calls again until none is left.
     pub(super) fn try_prompt_interactive_option_use_cost_reducer(
         &mut self,
         player_id: PlayerId,
@@ -782,14 +787,119 @@ impl Game {
             &[],
             CostReductionKind::OptionUse,
         );
-        let Some(candidate) = candidates.into_iter().find(|c| {
-            c.pay_cost_interactive
-                && c.has_pay_cost
-                && !self.interactive_option_use_reducers_processed.contains(&c.key)
-        }) else {
+        let interactive: Vec<CostReductionCandidate> = candidates
+            .into_iter()
+            .filter(|c| {
+                c.pay_cost_interactive
+                    && c.has_pay_cost
+                    && !self.interactive_option_use_reducers_processed.contains(&c.key)
+            })
+            .collect();
+        if interactive.is_empty() {
             return false;
-        };
+        }
 
+        if interactive.len() > 1 {
+            let can_decline_all = interactive.iter().all(|c| c.optional)
+                && !self.option_use_any_interactive_reducer_needed(
+                    player_id,
+                    cost_target,
+                    cost_policy,
+                );
+            let previous_phase = self.current_phase;
+            self.current_phase = GamePhase::EffectChoice;
+            let choice_keys: Vec<CostReductionKey> =
+                interactive.iter().map(|c| c.key.clone()).collect();
+            let first_key = choice_keys[0].clone();
+            let valid_action_ids: Vec<u16> = (0..interactive.len())
+                .map(|i| crate::action::space::HAND_EFFECT_START + i as u16)
+                .collect();
+            let effect_choices: Vec<crate::selection::EffectChoiceEntry> = interactive
+                .iter()
+                .enumerate()
+                .map(|(i, c)| crate::selection::EffectChoiceEntry {
+                    count_choice: None,
+                    label: format!("{} (-{})", c.label, c.amount),
+                    action_id: crate::action::space::HAND_EFFECT_START + i as u16,
+                    source_card: Some(c.key.source_card),
+                    source_kind: Some(self.effect_source_kind_for_handle(c.key.source_card)),
+                    timing: Some(crate::enums::EffectTiming::BeforePayCost),
+                    is_optional: c.optional,
+                    keyword: None,
+                    observation_metadata: Default::default(),
+                })
+                .collect();
+            let cb_keys = choice_keys.clone();
+            let decline_keys = choice_keys.clone();
+            let target_source_kind = self.effect_source_kind_for_handle(cost_target.card);
+            self.pending_selection = Some(PendingSelection {
+                card_choice: None,
+                zone_owner: None,
+                kind: SelectionKind::TriggerOrder,
+                selecting_player: player_id,
+                previous_phase,
+                valid_action_ids,
+                is_optional: can_decline_all,
+                prompt: "Choose which Option-use cost reduction effect to activate".to_string(),
+                effect_choices: Some(effect_choices),
+                source_card: cost_target.card,
+                source_permanent: None,
+                source_kind: target_source_kind,
+                callback: Box::new(move |game: &mut Game, action_id: u16| {
+                    let idx = action_id
+                        .saturating_sub(crate::action::space::HAND_EFFECT_START)
+                        as usize;
+                    let Some(chosen_key) = cb_keys.get(idx).cloned() else {
+                        let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
+                        return;
+                    };
+                    if !game.interactive_option_use_reducers_processed.contains(&chosen_key) {
+                        game.interactive_option_use_reducers_processed
+                            .push(chosen_key.clone());
+                    }
+                    let parked = game.run_interactive_option_use_reducer_pay_cost(
+                        chosen_key,
+                        cost_target,
+                        player_id,
+                        source,
+                        mode,
+                        cost_policy,
+                    );
+                    if !parked {
+                        let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
+                    }
+                }),
+                on_decline: can_decline_all.then(|| {
+                    Box::new(move |game: &mut Game| {
+                        for k in &decline_keys {
+                            if !game.interactive_option_use_reducers_processed.contains(k) {
+                                game.interactive_option_use_reducers_processed.push(k.clone());
+                            }
+                        }
+                        let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
+                    }) as crate::selection::DeclineCallback
+                }),
+            });
+            self.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![
+                    crate::resume::ResumeFrame::InteractiveOptionUseCostReductionPrompt(
+                        InteractiveOptionUseCostReductionPromptState {
+                            player_id,
+                            cost_target,
+                            source,
+                            mode,
+                            cost_policy,
+                            key: first_key,
+                            choices: choice_keys,
+                            outer_conts: Vec::new(),
+                        },
+                    ),
+                ],
+            });
+            return true;
+        }
+
+        let candidate = interactive.into_iter().next().unwrap();
         let key = candidate.key.clone();
         let source_kind = self.effect_source_kind_for_handle(key.source_card);
 
@@ -858,6 +968,7 @@ impl Game {
                             mode,
                             cost_policy,
                             key,
+                            choices: Vec::new(),
                             outer_conts: Vec::new(),
                         },
                     ),
@@ -884,8 +995,61 @@ impl Game {
     pub(crate) fn run_interactive_option_use_cost_reduction_prompt_step(
         &mut self,
         state: InteractiveOptionUseCostReductionPromptState,
+        action_id: u16,
         is_pass: bool,
     ) {
+        if !state.choices.is_empty() {
+            if is_pass {
+                for k in state.choices {
+                    if !self.interactive_option_use_reducers_processed.contains(&k) {
+                        self.interactive_option_use_reducers_processed.push(k);
+                    }
+                }
+                let _ = self.play_option_core(
+                    state.player_id,
+                    state.source,
+                    Some(state.mode),
+                    state.cost_policy,
+                );
+                return;
+            }
+            let idx =
+                action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+            let Some(chosen_key) = state.choices.get(idx).cloned() else {
+                let _ = self.play_option_core(
+                    state.player_id,
+                    state.source,
+                    Some(state.mode),
+                    state.cost_policy,
+                );
+                return;
+            };
+            if !self
+                .interactive_option_use_reducers_processed
+                .contains(&chosen_key)
+            {
+                self.interactive_option_use_reducers_processed
+                    .push(chosen_key.clone());
+            }
+            let parked = self.run_interactive_option_use_reducer_pay_cost(
+                chosen_key,
+                state.cost_target,
+                state.player_id,
+                state.source,
+                state.mode,
+                state.cost_policy,
+            );
+            if !parked {
+                let _ = self.play_option_core(
+                    state.player_id,
+                    state.source,
+                    Some(state.mode),
+                    state.cost_policy,
+                );
+            }
+            return;
+        }
+
         if is_pass {
             let _ = self.play_option_core(
                 state.player_id,

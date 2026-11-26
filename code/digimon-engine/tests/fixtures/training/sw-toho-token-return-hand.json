@@ -235,11 +235,23 @@
     {
       "action_id": 100,
       "is_game_over": false,
-      "memory_after": 4,
+      "memory_after": -4,
       "memory_before": -4,
       "phase": "SelectTarget",
       "player_id": 1,
       "step": 22,
+      "turn": 4,
+      "winner_id": null
+    },
+    {
+      "action_id": 62,
+      "is_game_over": false,
+      "memory_after": 4,
+      "memory_before": -4,
+      "migration_note": "EX12-002 Mococomon now uses optional:true + outer_prompt:true (DCGO EX12_002.cs:18,35-51; BT21-001 idiom), restoring the outer Yes/No decline at step 23 before Turn 4 ends",
+      "phase": "SelectEffectChoice",
+      "player_id": 1,
+      "step": 23,
       "turn": 4,
       "winner_id": null
     },
@@ -1699,5 +1711,5 @@
     "timestamp": "2026-10-28T03:18:57+00:00"
   },
   "tensor_snapshots_count": 0,
-  "total_actions": 131
+  "total_actions": 132
 }

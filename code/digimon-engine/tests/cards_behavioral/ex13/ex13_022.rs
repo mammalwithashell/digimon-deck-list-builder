@@ -519,3 +519,61 @@ fn ex13_022_full_area_does_not_spend_the_shared_once_per_turn() {
     let view = hand_prompt(&mut runner).expect("OPT still available");
     assert!(offered(&runner, &view, "VEE-TAMER"));
 }
+
+/// Activation gate (DCGO EX13_022.cs:181-183 `CanUnsuspend`): if another
+/// simultaneous trigger unsuspends the carrier before EX13-022's queued
+/// inherited `on_suspend` trigger resolves (as in Nov24#g4 step 64-66 where
+/// EX13-023 unsuspends itself first), EX13-022's inherited unsuspend must NOT
+/// be offered because the carrier is already unsuspended.
+#[test]
+fn ex13_022_inherited_unsuspend_does_not_activate_if_carrier_already_unsuspended() {
+    struct UnsuspendOnSuspend;
+    impl digimon_engine::effect::CardEffect for UnsuspendOnSuspend {
+        fn effects(
+            &self,
+            card: digimon_engine::card_source::CardHandle,
+        ) -> Vec<digimon_engine::effect::Effect> {
+            vec![digimon_engine::effect::Effect::on_suspend(card)
+                .name("Unsuspend suspended permanent")
+                .process(|ctx| {
+                    if let Some(h) = ctx.event_permanent() {
+                        ctx.game.players[h.player as usize].battle_area[h.index as usize]
+                            .is_suspended = false;
+                    }
+                })
+                .build()]
+        }
+    }
+
+    let (mut runner, h) = carrier("VEEDRAMON-X");
+    runner.register_effect("PLAIN-TAMER", std::sync::Arc::new(UnsuspendOnSuspend));
+    runner.place_on_field(0, "PLAIN-TAMER", Some(0));
+
+    // Suspending the Veedramon carrier queues both PLAIN-TAMER and EX13-022 inherited.
+    runner.game.suspend(h);
+    let view = runner
+        .pending_selection_view()
+        .expect("TriggerOrder must open with both OnSuspend triggers");
+    assert_eq!(view.kind, SelectionKind::TriggerOrder);
+    let pick_helper = view
+        .effect_choices
+        .as_ref()
+        .expect("TriggerOrder choices")
+        .iter()
+        .find(|c| c.label.starts_with("PLAIN-TAMER "))
+        .expect("PLAIN-TAMER trigger present")
+        .action_id;
+
+    // Resolve PLAIN-TAMER first so the carrier is now unsuspended.
+    runner
+        .execute_action(view.selecting_player, pick_helper)
+        .expect("resolve PLAIN-TAMER first");
+    assert!(!suspended(&runner, h), "carrier is now unsuspended");
+
+    // EX13-022's inherited trigger must be skipped (carrier can no longer unsuspend).
+    assert!(
+        runner.pending_selection().is_none(),
+        "already-unsuspended carrier must not offer EX13-022's inherited unsuspend: {:?}",
+        runner.pending_selection()
+    );
+}

@@ -7,7 +7,8 @@
 //! This fixture pins the YAML path. The lowerer must surface the Olympos XII
 //! target pick and, when that target has both eligible timings, the effect
 //! choice pick. The chosen effect then runs with carrier = target Digimon and
-//! source attribution = Homeros.
+//! source attribution = target Digimon (CR 4.3 §15-15-7; DCGO BT24_102.cs:241
+//! `SetIsDigimonEffect(true)`).
 
 use std::sync::{Arc, Mutex};
 
@@ -187,7 +188,7 @@ fn bt24_102_end_of_turn_refire_surfaces_target_then_effect_choice() {
 
     let homeros = runner.place_on_field(0, "BT24-102", Some(0));
     let target = runner.place_on_field(0, "OLYMPOS-TARGET", Some(0));
-    let homeros_card = runner.top_card(homeros);
+    let target_card = runner.top_card(target);
 
     enqueue_homeros_eot(&mut runner, homeros);
     accept_homeros_gate(&mut runner);
@@ -239,8 +240,8 @@ fn bt24_102_end_of_turn_refire_surfaces_target_then_effect_choice() {
     assert_eq!(runner.memory(), 2, "chosen On Play effect must resolve");
     assert_eq!(
         *seen.lock().unwrap(),
-        vec![(homeros_card, Some(target))],
-        "refired effect must use Homeros as source and selected Digimon as carrier"
+        vec![(target_card, Some(target))],
+        "refired effect must attribute source and carrier to the selected Olympos XII Digimon (CR 4.3 §15-15-7)"
     );
     assert!(
         runner.pending_selection().is_none(),
@@ -721,10 +722,11 @@ effects:
 }
 
 /// BT24-041 Minervamon end to end under Homeros's refire: the ONE printed
-/// effect runs once with Minervamon as the carrier and Homeros as the source;
-/// its optional "may play" pick stays optional and plays the Iliad card.
+/// effect runs once with Minervamon as both carrier and source (CR 4.3
+/// §15-15-7; DCGO BT24_102.cs:241 `SetIsDigimonEffect(true)`); its optional
+/// "may play" pick stays optional and plays the Iliad card.
 #[test]
-fn bt24_102_refires_minervamons_single_effect_with_homeros_as_source() {
+fn bt24_102_refires_minervamons_single_effect_with_target_attribution() {
     let mut iliad = make_test_card("ILIAD-3", "Iliad Rookie");
     iliad.card_kind = CardKind::Digimon;
     iliad.level = Some(3);
@@ -744,6 +746,7 @@ fn bt24_102_refires_minervamons_single_effect_with_homeros_as_source() {
         .start();
     let homeros = runner.place_on_field(0, "BT24-102", Some(0));
     let minervamon = runner.place_on_field(0, "BT24-041", Some(0));
+    let minervamon_card = runner.top_card(minervamon);
     runner.add_to_hand(0, "ILIAD-3");
     enqueue_homeros_eot(&mut runner, homeros);
     accept_homeros_gate(&mut runner);
@@ -755,6 +758,10 @@ fn bt24_102_refires_minervamons_single_effect_with_homeros_as_source() {
     assert_eq!(record.carrier, minervamon);
     let pending = runner.pending_selection().expect("Minervamon's own optional hand pick");
     assert_eq!(pending.kind, SelectionKind::Hand, "no effect choice precedes it");
+    assert_eq!(
+        pending.source_card, minervamon_card,
+        "refired selection is attributed to Minervamon, not Homeros"
+    );
     assert!(pending.is_optional, "'You may play 1 ...' stays optional");
     let play = pending
         .valid_action_ids
@@ -769,5 +776,26 @@ fn bt24_102_refires_minervamons_single_effect_with_homeros_as_source() {
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "ILIAD-3"),
         "the refired effect played the hand card"
+    );
+}
+
+#[test]
+fn bt24_102_suspended_copy_does_not_trigger_when_sibling_is_unsuspended() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-102 YAML parses")
+        .add_card(make_filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(0)
+        .start();
+    let suspended_homeros = runner.place_on_field(0, "BT24-102", Some(0));
+    let _unsuspended_homeros = runner.place_on_field(0, "BT24-102", Some(0));
+    runner.game.players[0].battle_area[suspended_homeros.index as usize].is_suspended = true;
+
+    enqueue_homeros_eot(&mut runner, suspended_homeros);
+    assert!(
+        runner.pending_selection().is_none(),
+        "an already-suspended Homeros must not trigger just because a sibling Homeros is unsuspended"
     );
 }

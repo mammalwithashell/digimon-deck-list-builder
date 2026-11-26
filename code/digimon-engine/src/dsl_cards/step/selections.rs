@@ -1676,7 +1676,7 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::InteractiveOptionUseCostReductionPrompt(mut state) => {
             let outer_conts = std::mem::take(&mut state.outer_conts);
-            game.run_interactive_option_use_cost_reduction_prompt_step(state, is_pass);
+            game.run_interactive_option_use_cost_reduction_prompt_step(state, action_id, is_pass);
             run_outer_conts(game, outer_conts);
         }
         ResumeFrame::AllianceSelection(state) => {

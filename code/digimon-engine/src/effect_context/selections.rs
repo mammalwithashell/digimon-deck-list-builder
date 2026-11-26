@@ -3649,13 +3649,31 @@ impl UnionZoneFilters<'_> {
         }
     }
 
+    fn includes_breeding_carrier(&self) -> bool {
+        match self {
+            Self::Opaque { .. } => false,
+            Self::Compiled { carrier, .. } => carrier.is_some_and(|predicate| {
+                predicate
+                    .zone
+                    .contains(&digimon_dsl::compiled::CompiledZone::Breeding)
+            }),
+        }
+    }
+
     fn carrier_matches(&self, game: &Game, handle: PermanentHandle) -> bool {
         match self {
             Self::Opaque { carrier, .. } => carrier.is_none_or(|filter|
                 checked_selection_filter(game, || filter(game, handle))),
-            Self::Compiled { read, carrier, bindings, .. } => carrier.is_none_or(|predicate|
-                crate::dsl_cards::predicate::eval_predicate_with_bindings(predicate, read,
-                    crate::dsl_cards::predicate::PredicateSubject::Permanent(handle), *bindings)),
+            Self::Compiled { read, carrier, bindings, .. } => carrier.is_none_or(|predicate| {
+                let subject = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+                    crate::dsl_cards::predicate::PredicateSubject::BreedingPermanent(handle.player)
+                } else {
+                    crate::dsl_cards::predicate::PredicateSubject::Permanent(handle)
+                };
+                crate::dsl_cards::predicate::eval_predicate_with_bindings(
+                    predicate, read, subject, *bindings,
+                )
+            }),
         }
     }
 }
@@ -3690,7 +3708,7 @@ fn union_zone_candidates_impl(
         let material_carriers: Vec<PermanentHandle> = if let Some(carrier) = material_of {
             vec![carrier]
         } else {
-            player
+            let mut carriers: Vec<PermanentHandle> = player
                 .battle_area
                 .iter()
                 .enumerate()
@@ -3717,7 +3735,25 @@ fn union_zone_candidates_impl(
                 // Drasil_7D6] top card). Only applies to the broad
                 // `material_of: None` scan; a pinned carrier above bypasses this.
                 .filter(|handle| filters.carrier_matches(game, *handle))
-                .collect()
+                .collect();
+            // CR 4.3 §3-4-7-4 ("on the field" = battle area + breeding area):
+            // when `material_carrier_filter` explicitly includes `breeding`
+            // (e.g. EX11-053 Omekamon's "[King Drasil_7D6]s on the field"),
+            // include the owner's breeding permanent via BREEDING_TARGET.
+            if filters.includes_breeding_carrier() {
+                if let Some(breeding) = player.breeding_area.as_ref() {
+                    if breeding.card_sources.len() > 1 {
+                        let handle = PermanentHandle {
+                            player: of_player,
+                            index: crate::action::space::BREEDING_TARGET as u8,
+                        };
+                        if filters.carrier_matches(game, handle) {
+                            carriers.push(handle);
+                        }
+                    }
+                }
+            }
+            carriers
         };
         for carrier in material_carriers {
             let Some(perm) = material_carrier_permanent(game, carrier) else {

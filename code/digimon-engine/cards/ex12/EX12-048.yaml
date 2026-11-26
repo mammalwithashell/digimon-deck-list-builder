@@ -86,10 +86,10 @@ effects:
         - replacement_cause: own_effect
     summary: "[All Turns] When this would leave other than by your effects, play up to 2 level 5 [Gokuumon-text]/[SW] sources free"
     process:
-      - select_material:
+      - select_materials:
           of_permanent: replacement_subject
-          bind_as: first_source
-          optional: true
+          max: 2
+          optional_zero: true
           filter:
             all_of:
               - kind: digimon
@@ -97,24 +97,10 @@ effects:
               - any_of:
                   - in_text_contains: Gokuumon
                   - trait_has: SW
-          prompt: "Play 1 level 5 [Gokuumon-text]/[SW] source"
+              - can_play_from_effect_without_cost: true
+          bind_as: played_sources
+          prompt: "Play up to 2 level 5 [Gokuumon-text]/[SW] sources"
       - play_from_materials:
           target: replacement_subject
-          source_index: first_source
-          cost_delta: free
-      - select_material:
-          of_permanent: replacement_subject
-          bind_as: second_source
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - level_eq: 5
-              - any_of:
-                  - in_text_contains: Gokuumon
-                  - trait_has: SW
-          prompt: "Play another level 5 [Gokuumon-text]/[SW] source"
-      - play_from_materials:
-          target: replacement_subject
-          source_index: second_source
+          source_index: played_sources
           cost_delta: free

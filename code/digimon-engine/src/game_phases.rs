@@ -916,10 +916,11 @@ impl Game {
         candidate: PermanentHandle,
     ) -> bool {
         self.is_specified_overclock_cost(player, overclock_index, candidate)
-            && !crate::replacement::deletion_passively_prevented(
+            && !crate::replacement::deletion_passively_prevented_by(
                 self,
                 candidate,
-                crate::replacement::ReplacementCause::Cost,
+                crate::replacement::ReplacementCause::OwnEffect,
+                Some(player),
             )
     }
 
@@ -1242,14 +1243,34 @@ impl Game {
         let cost_identity = self.capture_digivolve_host_identity(sacrifice_handle);
         let receipt = self.open_deletion_receipt();
 
+        // §16-34-1 / §16-34-3 / §15-4-3-2: <Overclock>'s cost deletion and
+        // mandatory attack declaration are one continuous effect body. Hold
+        // deletion-triggered effects (`<Fortitude>`, `[On Deletion]`,
+        // `OnAnyDeletion`) in a deferred-drain scope until the attack is
+        // declared so they pool simultaneously with `[When Attacking]` instead
+        // of interrupting `<Overclock>` before its attack declaration (DCGO
+        // `CardEffectCommons.OverclockProcess`).
+        // §16-34-1 / §16-34-3: <Overclock>'s cost deletion is performed by the
+        // controller's own effect (DCGO `OverclockProcess` passes the owner's
+        // `activateClass`, so `IsOwnerEffect` is true). Use
+        // `ReplacementCause::OwnEffect` with `effect_source_player = Some(state.player)`
+        // so "other than by your effects" replacements (`<Scapegoat>`,
+        // `EX9-032` / `EX11-022` inherited) do not spuriously interrupt it,
+        // while cause-agnostic replacements (`<Armor Purge>`) still fire and
+        // `current_deletion_event_cause_override` still reports `Overclock` to
+        // `[On Deletion]` observers.
+        self.enter_deferred_drain();
         let previous_cause = self.current_deletion_event_cause_override;
+        let previous_source_player = self.effect_source_player;
         self.current_deletion_event_cause_override =
             Some(crate::trigger_context::EventCause::Overclock);
+        self.effect_source_player = Some(state.player);
         let _ = self.delete_permanents_batch_with_receipt(
             vec![sacrifice_handle],
-            crate::replacement::ReplacementCause::Cost,
+            crate::replacement::ReplacementCause::OwnEffect,
             Some(receipt),
         );
+        self.effect_source_player = previous_source_player;
         self.current_deletion_event_cause_override = previous_cause;
 
         let parked = crate::game::ParkedOverclockAttack {
@@ -1260,20 +1281,60 @@ impl Game {
             cost_receipt: receipt,
         };
         if self.pending_selection.is_some() || self.pending_attack.is_some() {
-            // A decision parked inside the deletion (an optional replacement
-            // such as <Armor Purge>, or a deletion trigger), or an attack is
-            // in progress (§11-2-4): the attack is queued behind them and
-            // re-checks the receipt when it is declared
-            // (`resume_pending_overclock_attack`). Queued, never overwritten:
-            // each paid cost keeps its mandatory attack (§16-34-3). The pool's
-            // other entries still resolve before it (the open §11-1-4
-            // ordering half of G-ENGINE-OVERCLOCK-COST-REPLACEMENT-PARKS-AFTER-POOL).
+            // A replacement parked inside the deletion (e.g. <Armor Purge>),
+            // or an attack is already in progress (§11-2-4): queue the attack
+            // behind it. When the replacement completes,
+            // `complete_deletion_batch_after_replacements` resumes this
+            // receipt BEFORE Stage 5 flushes deletion triggers / the rest of
+            // the end-of-turn pool (§11-1-4, §16-34-3). Queued, never
+            // overwritten: each paid cost keeps its mandatory attack.
             self.parked_overclock_attacks.push(parked);
+            self.exit_deferred_drain_and_flush();
             return;
         }
 
         if self.take_deletion_receipt_matching(receipt, state.player, cost_identity, None) {
             self.resume_overclock_attack(state.player, state.source_card, state.opponent);
+        }
+        self.exit_deferred_drain_and_flush();
+        if self.pending_attack.is_some()
+            && self.pending_selection.is_none()
+            && self.effect_queue.is_empty()
+        {
+            self.advance_pending_attack();
+        }
+    }
+
+    /// If the front entry of `parked_overclock_attacks` belongs to `receipt`
+    /// (a cost deletion whose replacement just resolved inside
+    /// `complete_deletion_batch_after_replacements`), pop it and declare its
+    /// attack while still inside the deletion's deferred-drain scope, BEFORE
+    /// Stage 5 flushes deletion triggers and the rest of the end-of-turn pool
+    /// (§11-1-4, §15-4-3-2, §16-34-3).
+    pub(crate) fn resume_parked_overclock_attack_for_receipt(&mut self, receipt: u64) {
+        if self.game_over || self.pending_selection.is_some() || self.pending_attack.is_some() {
+            return;
+        }
+        let Some(pos) = self
+            .parked_overclock_attacks
+            .iter()
+            .position(|p| p.cost_receipt == receipt)
+        else {
+            return;
+        };
+        // Preserve FIFO activation order across multiple parked Overclocks:
+        // only resume here when this receipt is the front entry.
+        if pos != 0 {
+            return;
+        }
+        let parked = self.parked_overclock_attacks.remove(0);
+        if self.take_deletion_receipt_matching(
+            parked.cost_receipt,
+            parked.player,
+            parked.cost_identity,
+            None,
+        ) {
+            self.resume_overclock_attack(parked.player, parked.source_card, parked.opponent);
         }
     }
 

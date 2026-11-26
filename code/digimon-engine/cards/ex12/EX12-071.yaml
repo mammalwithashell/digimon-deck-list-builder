@@ -40,6 +40,7 @@ effects:
       all_of:
         - all_turns: true
         - event_target_owner: you
+        - event_card_kind: digimon
         - event_card_trait_has: SW
     summary: "[All Turns] When your [SW] Digimon is played, Delay: 1 [SW] Digimon may digivolve into [Saneiketsu] in hand free"
     process:

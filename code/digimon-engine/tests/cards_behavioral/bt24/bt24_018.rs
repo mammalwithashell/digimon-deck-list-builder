@@ -147,24 +147,33 @@ fn bt24_018_keyword_grants_are_progress_piercing_blocker_armor_purge() {
     }
 }
 
-/// Clause (e) is a triggered clause on WhenDigivolving that is optional.
+/// Clause (e) is a SINGLE non-optional WhenDigivolving triggered clause whose
+/// two printed "may" sub-actions (trash security, then unsuspend) are handled
+/// sequentially inside its body (DCGO BT24_018.cs:73-173; no TriggerOrder).
 #[test]
-fn bt24_018_has_when_digivolving_clause_that_is_optional() {
+fn bt24_018_has_single_when_digivolving_clause() {
     let card = compiled("BT24-018");
 
-    let clause = card
+    let clauses: Vec<_> = card
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenDigivolving) => {
+                Some(t)
+            }
             _ => None,
         })
-        .find(|t| t.when.contains(&CompiledTiming::WhenDigivolving));
+        .collect();
 
-    let clause = clause.expect("WhenDigivolving triggered clause (e) must exist");
+    assert_eq!(
+        clauses.len(),
+        1,
+        "BT24-018 must compile as a single [When Digivolving] clause, not two split triggers"
+    );
+    let clause = clauses[0];
     assert!(
-        clause.optional,
-        "clause (e) must be optional (card text says 'may')"
+        !clause.optional,
+        "outer [When Digivolving] trigger is mandatory (sub-actions carry independent optionality)"
     );
     assert_eq!(
         clause.scope,
@@ -225,8 +234,8 @@ fn bt24_018_has_would_leave_battle_area_replacement_clause() {
 
 // ─── SECTION 2 — Clause (e): [When Digivolving] unsuspend + blocked trash ────
 
-/// Clause (e) sub-clause (b): when BT24-018 digivolves while suspended, the
-/// optional [When Digivolving] prompt installs and is declinable.
+/// Clause (e) sub-clause (b): when BT24-018 digivolves while suspended (with no
+/// opponent security), the Yes/No unsuspend prompt installs directly.
 #[test]
 fn bt24_018_when_digivolving_installs_optional_prompt() {
     let mut runner = bt24_018_clause_e_runner();
@@ -242,14 +251,20 @@ fn bt24_018_when_digivolving_installs_optional_prompt() {
 
     let view = runner
         .pending_selection_view()
-        .expect("clause (e) optional prompt must install");
-    assert!(
-        view.is_optional,
-        "[When Digivolving] 'may unsuspend' must be declinable"
+        .expect("clause (e) unsuspend Yes/No prompt must install");
+    assert_eq!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "[When Digivolving] 'may unsuspend' installs a Yes/No EffectChoice"
+    );
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "Yes/No unsuspend prompt exposes 2 branches"
     );
 }
 
-/// Clause (e) sub-clause (b): accepting the optional prompt unsuspends BT24-018.
+/// Clause (e) sub-clause (b): accepting Yes (branch 0) unsuspends BT24-018.
 #[test]
 fn bt24_018_when_digivolving_accept_unsuspends_self() {
     let mut runner = bt24_018_clause_e_runner();
@@ -262,7 +277,7 @@ fn bt24_018_when_digivolving_accept_unsuspends_self() {
     );
     runner.game.drain_effect_queue();
 
-    // Accept the optional prompt → unsuspend body runs.
+    // Accept "Yes" (branch 0) → unsuspend body runs.
     resolve_first_pending(&mut runner);
     runner.auto_resolve().ok();
 
@@ -272,8 +287,7 @@ fn bt24_018_when_digivolving_accept_unsuspends_self() {
     );
 }
 
-/// Clause (e) sub-clause (b): declining the optional prompt leaves BT24-018
-/// suspended.
+/// Clause (e) sub-clause (b): choosing "No" (branch 1) leaves BT24-018 suspended.
 #[test]
 fn bt24_018_when_digivolving_decline_leaves_suspended() {
     let mut runner = bt24_018_clause_e_runner();
@@ -286,26 +300,32 @@ fn bt24_018_when_digivolving_decline_leaves_suspended() {
     );
     runner.game.drain_effect_queue();
 
-    // Decline the optional prompt → unsuspend body is skipped.
-    pass_pending(&mut runner);
+    // Choose "No" (branch 1) → unsuspend body is skipped.
+    let (player, no_action) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Yes/No unsuspend selection installed");
+        (pending.selecting_player, pending.valid_action_ids[1])
+    };
+    runner
+        .game
+        .resolve_selection(player, no_action)
+        .expect("choosing No resolves");
     runner.auto_resolve().ok();
 
     assert!(
         runner.game.players[0].battle_area[styracomon.index as usize].is_suspended,
-        "declining [When Digivolving] must leave BT24-018 suspended"
+        "choosing No on [When Digivolving] unsuspend must leave BT24-018 suspended"
     );
 }
 
 /// Clause (e) sub-clause (a) "You may trash any 1 of your opponent's security
-/// cards" — G-TRASH-SELECTED-SECURITY resolved 2026-05-21. The
-/// `trash_selected_security` DSL verb consumes a `select_security` binding and
-/// `EffectContext::trash_security_card` trashes that exact card by stable
-/// handle, so any security position — not just the top — can be chosen.
-///
-/// Clause (e) is modelled as two `when_digivolving` clauses (trash, then
-/// unsuspend) so each printed "may" keeps its own optionality; firing both
-/// installs a harmless `TriggerOrder` prompt (the two actions are independent,
-/// so the order never changes the outcome). The test drives every prompt.
+/// cards" — G-TRASH-SELECTED-SECURITY resolved 2026-05-21. With a single merged
+/// `[When Digivolving]` clause, firing it opens `SelectionKind::Security`
+/// directly (no `TriggerOrder`), and when Styracomon is already unsuspended no
+/// unsuspend prompt follows.
 #[test]
 fn bt24_018_when_digivolving_trash_chosen_opponent_security() {
     let mut runner = DebugRunner::builder()
@@ -330,37 +350,105 @@ fn bt24_018_when_digivolving_trash_chosen_opponent_security() {
     );
     runner.game.drain_effect_queue();
 
-    // Drive every prompt, picking valid_action_ids[0] throughout — for the
-    // trash `select_security` that is the BOTTOM (index-0, non-top) security
-    // card, proving an arbitrary security position can be trashed.
-    let mut saw_security_prompt = false;
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let (player, action, is_security) = {
-            let p = runner.game.pending_selection.as_ref().unwrap();
-            (
-                p.selecting_player,
-                p.valid_action_ids[0],
-                matches!(p.kind, SelectionKind::Security),
-            )
-        };
-        if is_security {
-            saw_security_prompt = true;
-        }
-        runner.game.resolve_selection(player, action).ok();
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
+    let first = runner
+        .pending_selection_view()
+        .expect("single [When Digivolving] clause must open Security directly");
+    assert_eq!(
+        first.kind,
+        SelectionKind::Security,
+        "must not park a TriggerOrder between split sub-clauses (got: {first:?})"
+    );
+    assert!(first.is_optional, "security trash is 'you may'");
+
+    // Pick valid_action_ids[0] — the BOTTOM (index-0, non-top) security card.
+    resolve_first_pending(&mut runner);
+    runner.game.drain_effect_queue();
 
     assert!(
-        saw_security_prompt,
-        "the trash clause must install a security-stack selection over the \
-         opponent's 3 cards"
+        runner.pending_selection_view().is_none(),
+        "already-unsuspended Styracomon must not open an unsuspend prompt"
     );
     assert_eq!(
         runner.security_count(1),
         2,
         "exactly 1 opponent security card was trashed via trash_selected_security"
+    );
+}
+
+/// Regression for `Nov24#g13` step 69: single `[When Digivolving]` clause opens
+/// `SelectionKind::Security` first (no TriggerOrder), and then — whether the
+/// player trashed a security card OR declined via PASS — still offers the
+/// Yes/No unsuspend prompt when Styracomon is suspended.
+#[test]
+fn bt24_018_when_digivolving_single_clause_runs_trash_then_unsuspend_independently() {
+    // Case 1: decline security trash (PASS) → still offered Yes/No unsuspend → Yes unsuspends.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-018")
+        .expect("BT24-018 YAML loads")
+        .add_card(make_digimon("SEC", 1000, &[]))
+        .deck(0, &["SEC"; 5])
+        .deck(1, &["SEC"; 5])
+        .security(1, &["SEC", "SEC"])
+        .start();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    runner.game.players[0].battle_area[styracomon.index as usize].is_suspended = true;
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(styracomon),
+    );
+    runner.game.drain_effect_queue();
+
+    let sec_view = runner.pending_selection_view().expect("security prompt");
+    assert_eq!(sec_view.kind, SelectionKind::Security);
+    assert!(sec_view.is_optional);
+    pass_pending(&mut runner);
+
+    assert_eq!(runner.security_count(1), 2, "declining security trash leaves 2 security");
+    let unsusp_view = runner
+        .pending_selection_view()
+        .expect("declining security trash must still offer unsuspend when suspended");
+    assert_eq!(unsusp_view.kind, SelectionKind::EffectChoice);
+    assert_eq!(unsusp_view.valid_action_ids.len(), 2);
+    resolve_first_pending(&mut runner);
+    runner.auto_resolve().ok();
+    assert!(
+        !runner.game.players[0].battle_area[styracomon.index as usize].is_suspended,
+        "choosing Yes must unsuspend Styracomon even after declining security trash"
+    );
+
+    // Case 2: trash security card → then Yes/No unsuspend runs before OnOpponentSecurityRemoved drains.
+    let mut runner2 = DebugRunner::builder()
+        .dsl_card("BT24-018")
+        .expect("BT24-018 YAML loads")
+        .add_card(make_digimon("SEC", 1000, &[]))
+        .deck(0, &["SEC"; 5])
+        .deck(1, &["SEC"; 5])
+        .security(1, &["SEC", "SEC"])
+        .start();
+    let styracomon2 = runner2.place_on_field(0, "BT24-018", Some(0));
+    runner2.game.players[0].battle_area[styracomon2.index as usize].is_suspended = true;
+
+    runner2.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(styracomon2),
+    );
+    runner2.game.drain_effect_queue();
+
+    let sec_view2 = runner2.pending_selection_view().expect("security prompt");
+    assert_eq!(sec_view2.kind, SelectionKind::Security);
+    resolve_first_pending(&mut runner2);
+
+    assert_eq!(runner2.security_count(1), 1, "1 opponent security trashed");
+    let unsusp_view2 = runner2
+        .pending_selection_view()
+        .expect("unsuspend Yes/No prompt must follow security trash");
+    assert_eq!(unsusp_view2.kind, SelectionKind::EffectChoice);
+    resolve_first_pending(&mut runner2);
+    runner2.auto_resolve().ok();
+    assert!(
+        !runner2.game.players[0].battle_area[styracomon2.index as usize].is_suspended,
+        "choosing Yes after trashing security must unsuspend Styracomon"
     );
 }
 

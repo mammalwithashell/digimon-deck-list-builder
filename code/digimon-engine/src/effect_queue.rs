@@ -338,8 +338,10 @@ impl Game {
         // (`is_source`, source-carrier rebinding) must still resolve to the
         // Digimon the effect was borrowed from, not to nothing.
         let source_identity = Some(self.source_move_anchor(effect.source));
-        let allow_below_top_liveness = effect.timing == EffectTiming::OnDeletion
-            && self.top_card_handle(effect.source) != Some(effect.source_card);
+        let allow_below_top_liveness = self.top_card_handle(effect.source)
+            != Some(effect.source_card)
+            && (effect.timing == EffectTiming::OnDeletion
+                || self.is_adopted_source_card(effect.source, effect.source_card));
         QueuedEffect {
             source_identity,
             source_card: effect.source_card,
@@ -3046,7 +3048,7 @@ impl Game {
     /// than `.map(top_card())` — `Permanent::top_card()` asserts non-empty,
     /// which is correct for direct accesses but wrong for handle-resolution
     /// scans across all battle-area slots.
-    fn top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
+    pub(crate) fn top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
         if handle.index == BREEDING_TARGET as u8 {
             return self
                 .players
@@ -3647,17 +3649,38 @@ impl Game {
         // `<Alliance>` / `<Raid>`: EVERY registry grant (runtime
         // `grant_keyword` included, which installs no body for them) is
         // dispatched here — see `keyword_trigger_dispatched_from_registry`.
+        //
+        // CR 4.3 §16-22: multiple instances of `<Alliance>` stack and each
+        // triggers independently on attack (whether granted multiple times by
+        // runtime effects or combined with a printed / aura `<Alliance>`).
+        // Handle `Keyword::Alliance` without deduplicating runtime grants.
+        aura_keywords.retain(|k| *k != crate::enums::Keyword::Alliance);
         for keyword in self.modifiers.granted_keywords(handle) {
-            if crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword)
+            if keyword != crate::enums::Keyword::Alliance
+                && crate::cards::keyword_effects::keyword_trigger_dispatched_from_registry(keyword)
                 && !aura_keywords.contains(&keyword)
             {
                 aura_keywords.push(keyword);
             }
         }
-        for keyword in aura_keywords {
-            if self.has_keyword_from_card_sources(handle, keyword) {
-                continue;
-            }
+        let mut registry_keywords: Vec<crate::enums::Keyword> = aura_keywords
+            .into_iter()
+            .filter(|&keyword| !self.has_keyword_from_card_sources(handle, keyword))
+            .collect();
+        if self
+            .modifiers
+            .has_materialized_declarative_keyword(handle, crate::enums::Keyword::Alliance)
+            && !self.has_keyword_from_card_sources(handle, crate::enums::Keyword::Alliance)
+        {
+            registry_keywords.push(crate::enums::Keyword::Alliance);
+        }
+        let runtime_alliance_count = self
+            .modifiers
+            .runtime_granted_keyword_count(handle, crate::enums::Keyword::Alliance);
+        for _ in 0..runtime_alliance_count {
+            registry_keywords.push(crate::enums::Keyword::Alliance);
+        }
+        for keyword in registry_keywords {
             let effects =
                 crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card);
             for (slot, effect) in effects.iter().enumerate() {

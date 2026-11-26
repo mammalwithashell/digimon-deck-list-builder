@@ -1432,11 +1432,12 @@ impl Game {
             card.play_cost(&self.card_data),
             cost_delta,
         ));
-        let base = self
+        let material_delta = self
             .pending_digixros_transaction
             .as_ref()
-            .map(|transaction| transaction.final_cost() as i32)
-            .unwrap_or(base);
+            .map(|transaction| transaction.selected_cost_delta() as i32)
+            .unwrap_or(0);
+        let base = (base + material_delta).max(0);
         let mut done = processed.to_vec();
         done.push(candidate.key.clone());
         let others: i32 = self
@@ -1445,7 +1446,7 @@ impl Game {
             .filter(|c| c.assignment.is_none())
             .map(|c| c.amount)
             .sum();
-        let cost = i32::from(accumulated.final_cost(base, 0)) - others;
+        let cost = i32::from(accumulated.final_cost(base, material_delta)) - others;
         if self.payer_can_pay(payer, cost.max(0)) {
             return false;
         }
@@ -1506,6 +1507,50 @@ impl Game {
             .inspect_cost_reduction_candidate(key, Some(cost_target))
             .unwrap_or(0);
         self.payer_can_pay(payer, (cost - own).max(0))
+    }
+
+    /// True when declining ALL remaining interactive Option-use reducers would
+    /// leave the Option unaffordable, whereas applying them can make it
+    /// affordable (CR 4.3 1-3-11-3). Used to gate `is_optional` on the
+    /// multi-reducer simultaneous-trigger ordering prompt.
+    pub(crate) fn option_use_any_interactive_reducer_needed(
+        &self,
+        player_id: PlayerId,
+        cost_target: CostTargetContext,
+        cost_policy: OptionCostPolicy,
+    ) -> bool {
+        let Some(card) = self.card_source_for_handle(cost_target.card) else {
+            return false;
+        };
+        let printed = i32::from(self.option_use_cost(card, player_id));
+        let base = match cost_policy {
+            OptionCostPolicy::Pay => printed,
+            OptionCostPolicy::Reduce(n) => printed - i32::from(n),
+            OptionCostPolicy::Free | OptionCostPolicy::Fixed(_) => return false,
+        };
+        let remaining = self.collect_before_pay_cost_reducers(
+            player_id,
+            Some(cost_target),
+            &self.interactive_option_use_reducers_processed,
+            CostReductionKind::OptionUse,
+        );
+        let sync_mandatory: i32 = remaining
+            .iter()
+            .filter(|c| c.assignment.is_none() && !c.optional && !c.pay_cost_interactive)
+            .map(|c| c.amount)
+            .sum();
+        let cost_without_interactive =
+            base - self.pending_interactive_option_use_reduction - sync_mandatory;
+        let payer = self.effect_source_player.unwrap_or(player_id);
+        if self.payer_can_pay(payer, cost_without_interactive.max(0)) {
+            return false;
+        }
+        let remaining_interactive: i32 = remaining
+            .iter()
+            .filter(|c| c.assignment.is_none() && c.pay_cost_interactive && c.has_pay_cost)
+            .map(|c| c.amount)
+            .sum();
+        self.payer_can_pay(payer, (cost_without_interactive - remaining_interactive).max(0))
     }
 
     pub(crate) fn collect_before_pay_cost_reducers(

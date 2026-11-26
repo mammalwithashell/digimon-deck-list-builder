@@ -38,6 +38,11 @@ pub enum ReplacementCause {
     /// observers gated on "outside of a battle" (e.g. BT17-095's `[All Turns]`,
     /// `none_of: [replacement_cause: battle]`) fire on a DigiXros departure.
     DigiXros,
+    /// A state-based rule-processing removal (e.g. CR 4.3 §17-1-3-2-2 0-DP
+    /// deletion). Distinct from `OwnEffect`/`OpponentEffect` so replacements
+    /// gated on "other than by your effects" (e.g. BT18-063 Beetlemon) still
+    /// fire while "by an opponent's effect" replacements do not.
+    Rule,
 }
 
 /// What's about to happen — a permanent leaving the field, a card being

@@ -186,15 +186,15 @@ fn bt20_102_clause_e_is_end_of_your_turn_optional_opt() {
 // Section 2 — Clause (d) boardwipe + return (pure DSL): behavioral
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// The boardwipe clause is now PURE DSL (migrated 2026-05-20 — the raw_rust
-// escape `bt20_102_boardwipe_and_return` was removed). The clause `condition:`
-// (`self_digivolution_sources_contain_name`) gates the whole clause:
-//   - When no qualifying name is in stack: the clause never fires (no
-//     selection prompt, no deletion, no return).
-//   - When a qualifying name IS in stack: the process steps run — two
-//     `select_*_permanent` protect-picks, a `for_each` delete of every
-//     unprotected Digimon, then a `select_opponent_permanent` + `return_to_deck`
-//     bottom.
+// The boardwipe portion is gated on `self_digivolution_sources_contain_name`
+// inside an inline `if:` step, while the period-separated second sentence
+// ("Then, return 1 of your opponent's Digimon to the bottom of the deck.") runs
+// unconditionally (DCGO BT20_102.cs:90-177,226-313):
+//   - When no qualifying name is in stack: the boardwipe does NOT fire (no
+//     protect picks, no deletion), and only the return-to-deck-bottom pick
+//     installs when the opponent has a Digimon.
+//   - When a qualifying name IS in stack: both protect picks + `for_each`
+//     delete run first, followed by the return-to-deck-bottom pick.
 //
 // The stack-condition check uses G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY
 // (resolved). The "delete all OTHER Digimon" exclusion uses a `for_each` whose
@@ -471,26 +471,51 @@ fn bt20_102_on_play_no_boardwipe_when_no_omnimon_in_stack() {
     runner.place_on_field(0, "BT20-102", None);
     runner.fire_on_play(0, 0);
 
-    // The clause `condition` (`self_digivolution_sources_contain_name`)
-    // fails — no Omnimon / X Antibody in the (empty) source list — so the
-    // board-wipe never runs and no selection prompt installs.
+    // The inline `if` (`self_digivolution_sources_contain_name`) fails — no
+    // Omnimon / X Antibody in the (empty) source list — so the board-wipe does
+    // NOT run. The separate sentence "Then, return 1 of your opponent's
+    // Digimon to the bottom of the deck." still runs unconditionally.
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("unconditional return-to-deck prompt must install when opp has Digimon");
+    assert_eq!(pending.kind, SelectionKind::OppField);
+    assert!(
+        pending.prompt.contains("bottom of their deck"),
+        "prompt must be the return-to-deck prompt (NOT the boardwipe protect prompt), got: {}",
+        pending.prompt
+    );
+    let action = pending.valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(0, action)
+        .expect("resolve return-to-deck");
+
     assert!(
         runner.pending_kind().is_none(),
-        "bare BT20-102 (no digivolution source) must NOT satisfy the \
-         'Omnimon/X Antibody in digivolution cards' condition — no board-wipe \
-         prompt should install"
+        "no further prompt after return-to-deck resolves"
     );
-    // Both opponent Digimon must still be on the field (no deletion).
+    // One opp Digimon returned to deck bottom; the other survives (no wipe/trash).
     assert_eq!(
         runner.game.players[1].battle_area.len(),
-        2,
-        "no opponent Digimon should be deleted when the stack condition fails"
+        1,
+        "only 1 opp Digimon should be bottom-decked; the other must survive with no wipe"
+    );
+    assert!(
+        runner.game.players[1].trash.is_empty(),
+        "no opponent Digimon should be deleted/trashed when the stack condition fails"
+    );
+    assert_eq!(
+        runner.game.players[1].deck.len(),
+        6,
+        "returned opponent Digimon must be placed at the bottom of opponent's deck"
     );
 }
 
 /// G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY (RESOLVED): companion
-/// positive — a BT20-102 on top of a NON-Omnimon, non-X-Antibody source
-/// also fails the condition (the source name does not match either).
+/// negative — a BT20-102 on top of a NON-Omnimon, non-X-Antibody source
+/// skips the boardwipe and runs only the unconditional return-to-deck-bottom.
 #[test]
 fn bt20_102_on_play_no_boardwipe_when_unrelated_source_in_stack() {
     let mut opp1 = make_test_card("TEST-OPP-1", "OppDigimon1");
@@ -521,15 +546,161 @@ fn bt20_102_on_play_no_boardwipe_when_unrelated_source_in_stack() {
     runner.place_stack(0, &["TEST-PLAIN-SOURCE", "BT20-102"]);
     runner.fire_on_play(0, 0);
 
+    // Boardwipe skipped; unconditional return-to-deck-bottom installs directly.
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("unconditional return-to-deck prompt must install");
+    assert_eq!(pending.kind, SelectionKind::OppField);
+    assert!(
+        pending.prompt.contains("bottom of their deck"),
+        "expected return-to-deck prompt, got: {}",
+        pending.prompt
+    );
+    let action = pending.valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(0, action)
+        .expect("resolve return-to-deck");
+
+    assert!(runner.game.players[1].battle_area.is_empty());
+    assert!(
+        runner.game.players[1].trash.is_empty(),
+        "opponent Digimon was returned to deck bottom, not deleted"
+    );
+    assert_eq!(runner.game.players[1].deck.len(), 6);
+}
+
+/// Without Omnimon/X-Antibody in sources AND with no opponent Digimon on the
+/// battle area, neither the wipe nor the return-to-deck prompt installs.
+#[test]
+fn bt20_102_on_play_no_prompt_when_no_omnimon_source_and_no_opp_digimon() {
+    let filler = make_test_card("DECK-PAD", "Filler");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-102.yaml"))
+        .expect("BT20-102 YAML parses")
+        .add_card(filler)
+        .memory(10)
+        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .start();
+
+    runner.place_on_field(0, "BT20-102", None);
+    runner.fire_on_play(0, 0);
+
     assert!(
         runner.pending_kind().is_none(),
-        "BT20-102 with only a non-Omnimon/non-X-Antibody source must NOT \
-         satisfy the digivolution-cards condition"
+        "no prompt should install when stack condition fails and opponent has no Digimon"
     );
+}
+
+/// Simultaneous boardwipe: `delete_all_permanents` deletes all unprotected
+/// Digimon in ONE batch (matching DCGO `DestroyPermanentsClass` and CR), so a
+/// plural leave replacement like EX13-024 (`[All Turns][OPT] When any of your
+/// [Dracomon]/[Examon]-text Digimon would leave, by suspending 1, they don't
+/// leave`) protects BOTH unprotected matching Digimon with a single activation.
+#[test]
+fn bt20_102_on_play_boardwipe_deletes_simultaneously_so_plural_replacement_saves_both() {
+    let mut base = make_test_card("TEST-OMNIMON-SOURCE", "Omnimon");
+    base.level = Some(6);
+    base.dp = Some(12000);
+
+    // Two [Dracomon]-text Digimon matching EX13-024's replacement filter
+    // (same fixture pattern as `ex13_024.rs`).
+    let mut draco1 = make_test_card("DRACO-1", "Dracomon Alpha");
+    draco1.level = Some(4);
+    draco1.dp = Some(5000);
+
+    let mut draco2 = make_test_card("DRACO-2", "Dracomon Beta");
+    draco2.level = Some(4);
+    draco2.dp = Some(5000);
+
+    let filler = make_test_card("DECK-PAD", "Filler");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-102.yaml"))
+        .expect("BT20-102 YAML parses")
+        .dsl_card("EX13-024")
+        .expect("EX13-024 loads")
+        .add_card(base)
+        .add_card(draco1)
+        .add_card(draco2)
+        .add_card(filler)
+        .memory(10)
+        .deck(0, &["DECK-PAD"; 5])
+        .deck(1, &["DECK-PAD"; 5])
+        .start();
+
+    // P1 has 3 Digimon: EX13-024 (slot 0, protected), DRACO-1 (slot 1), DRACO-2 (slot 2).
+    runner.place_on_field(1, "EX13-024", Some(0));
+    runner.place_on_field(1, "DRACO-1", Some(0));
+    runner.place_on_field(1, "DRACO-2", Some(0));
+
+    // P0 has BT20-102 over an Omnimon source so the boardwipe fires.
+    runner.place_stack(0, &["TEST-OMNIMON-SOURCE", "BT20-102"]);
+    runner.fire_on_play(0, 0);
+
+    // Step 1: P0 saves P1's EX13-024 (slot 0), leaving DRACO-1 & DRACO-2 unprotected.
+    let save_opp0 = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("opp protect prompt")
+        .valid_action_ids[0];
+    runner.game.resolve_selection(0, save_opp0).expect("save opp slot 0");
+
+    // Step 2: P0 saves own BT20-102 (if prompted).
+    if runner.pending_kind() == Some(SelectionKind::OwnField) {
+        let save_own = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
+        runner.game.resolve_selection(0, save_own).expect("save own BT20-102");
+    }
+
+    // Step 3: Simultaneous batch triggers P1's EX13-024 replacement ONCE for both
+    // DRACO-1 and DRACO-2. Accept the replacement and suspend one of them.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "EX13-024 replacement prompt must open for the simultaneous wipe batch"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("P1 accepts EX13-024 replacement");
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField),
+        "EX13-024 must ask P1 which [Dracomon]/[Examon]-text Digimon to suspend"
+    );
+    let suspend_pick = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != digimon_engine::action::space::PASS)
+        .expect("at least one matching [Dracomon]/[Examon]-text Digimon to suspend");
+    runner
+        .game
+        .resolve_selection(1, suspend_pick)
+        .expect("P1 suspends 1 matching Digimon");
+
+    // Both DRACO-1 and DRACO-2 must survive the wipe (all 3 P1 Digimon still on field).
     assert_eq!(
         runner.game.players[1].battle_area.len(),
-        1,
-        "no opponent Digimon should be deleted when the stack condition fails"
+        3,
+        "simultaneous wipe must allow EX13-024's single OPT activation to save BOTH DRACO-1 and DRACO-2"
+    );
+    assert!(
+        runner.game.players[1].trash.is_empty(),
+        "neither DRACO-1 nor DRACO-2 may be deleted"
     );
 }
 

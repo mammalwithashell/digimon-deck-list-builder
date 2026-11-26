@@ -136,22 +136,33 @@ fn bt20_083_has_blocker_grant_and_low_security_on_play_digivolve() {
         })
         .expect("low-security On Play digivolve clause exists");
 
-    assert!(on_play.optional, "printed digivolve says 'may'");
-    assert_eq!(
+    assert!(
+        !on_play.optional,
+        "printed 'may' is carried by the optional select_hand (no separate outer OptionalSkill gate, matching BT20_083.cs:58)"
+    );
+    assert!(
         on_play
             .condition
             .as_ref()
-            .and_then(|predicate| predicate.security_count_lte.clone()),
-        Some(CompiledDpConstraint::Literal(1)),
+            .is_some_and(|predicate| {
+                predicate.security_count_lte == Some(CompiledDpConstraint::Literal(1))
+                    || predicate
+                        .all_of
+                        .iter()
+                        .any(|p| p.security_count_lte == Some(CompiledDpConstraint::Literal(1)))
+            }),
         "On Play clause is gated to 1 or fewer own security"
     );
     assert!(
         on_play.process.iter().any(|step| matches!(
             step,
-            CompiledStep::SelectHand { filter, .. }
-                if filter.name_is.as_deref() == Some("Omnimon (X Antibody)")
+            CompiledStep::SelectHand {
+                optional: true,
+                filter,
+                ..
+            } if filter.name_is.as_deref() == Some("Omnimon (X Antibody)")
         )),
-        "On Play must select [Omnimon (X Antibody)] from hand"
+        "On Play must expose an optional [Omnimon (X Antibody)] hand selection"
     );
     assert!(
         on_play.process.iter().any(|step| matches!(
@@ -559,5 +570,111 @@ fn bt20_083_has_the_name_x_antibody_in_hand_and_as_a_digivolution_card() {
         runner.game.players[0].battle_area[0].card_sources[0]
             .contains_card_name("X Antibody", &runner.game.card_data),
         "as a digivolution card"
+    );
+}
+
+#[test]
+fn bt20_083_on_play_opens_optional_hand_pick_directly_and_digivolves() {
+    let mut omni_x = make_test_card("TEST-OMNI-X", "Omnimon (X Antibody)");
+    omni_x.card_kind = CardKind::Digimon;
+    omni_x.level = Some(7);
+    omni_x.dp = Some(16000);
+    let filler = make_test_card("FILL", "Filler");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(omni_x)
+        .add_card(filler)
+        .hand(0, &["BT20-083", "TEST-OMNI-X"])
+        .security(0, &["FILL"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    runner.play(0, 0).expect("Omekamon plays");
+
+    let pending = runner
+        .pending_selection_view()
+        .expect("optional hand selection opens directly");
+    assert_eq!(
+        pending.kind,
+        SelectionKind::Hand,
+        "must open Hand directly without an outer Replacement gate (BT20_083.cs:58)"
+    );
+    assert!(pending.is_optional, "hand selection carries the printed 'may'");
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PASS as usize],
+        1.0,
+        "PASS must be legal to decline the optional digivolve"
+    );
+
+    let pick = pending
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .expect("Omnimon (X Antibody) card action must be offered");
+    runner.execute_action(0, pick).expect("digivolve into Omnimon (X Antibody)");
+
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        runner.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "TEST-OMNI-X",
+        "BT20-083 digivolved into [Omnimon (X Antibody)] for free ignoring requirements"
+    );
+    assert_eq!(
+        runner.game.memory, 5,
+        "only BT20-083's play cost (5) was paid; digivolution cost was 0"
+    );
+}
+
+#[test]
+fn bt20_083_on_play_can_decline_hand_pick_and_skips_when_no_omnimon_x_in_hand() {
+    let mut omni_x = make_test_card("TEST-OMNI-X", "Omnimon (X Antibody)");
+    omni_x.card_kind = CardKind::Digimon;
+    omni_x.level = Some(7);
+    let filler = make_test_card("FILL", "Filler");
+
+    // 1. With [Omnimon (X Antibody)] in hand, PASS declines cleanly.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(omni_x)
+        .add_card(filler.clone())
+        .hand(0, &["BT20-083", "TEST-OMNI-X"])
+        .security(0, &["FILL"])
+        .deck(0, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    runner.play(0, 0).expect("Omekamon plays");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    runner.execute_action(0, PASS).expect("decline digivolve");
+    assert!(runner.pending_selection().is_none());
+    assert_eq!(
+        runner.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT20-083"
+    );
+
+    // 2. Without [Omnimon (X Antibody)] in hand, no prompt opens at all.
+    let mut runner_empty = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(filler)
+        .hand(0, &["BT20-083", "FILL"])
+        .security(0, &["FILL"])
+        .deck(0, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+
+    runner_empty.play(0, 0).expect("Omekamon plays");
+    assert!(
+        runner_empty.pending_selection().is_none(),
+        "no On Play prompt should open when hand has no [Omnimon (X Antibody)]"
     );
 }

@@ -289,16 +289,15 @@ fn bt13_007_inherited_gains_memory_when_royal_knight_option_placed() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT13-007")
         .expect("BT13-007 must load from embedded DSL pack")
-        // The inherited effect lives on a source UNDER King Drasil, so put a
-        // Royal Knight beneath it to source the observer.
-        .add_card(royal_knight("RK-SRC"))
         .add_card(rk_option)
         .add_card(plain_option)
         .memory(5)
         .start();
 
     runner.place_in_breeding(0, "BT13-007");
-    add_breeding_source(&mut runner, 0, "RK-SRC");
+    // The inherited effect lives on a BT13-007 digivolution card beneath the
+    // top King Drasil (DCGO BT13_007.cs:472 `SetIsInheritedEffect(true)`).
+    add_breeding_source(&mut runner, 0, "BT13-007");
     runner.game.turn_player_idx = 0;
     runner.game.enter_main_phase();
 
@@ -322,5 +321,147 @@ fn bt13_007_inherited_gains_memory_when_royal_knight_option_placed() {
         runner.memory(),
         before_rk + 1,
         "placing a Royal Knight Option must gain 1 memory via the inherited observer"
+    );
+}
+
+#[test]
+fn bt13_007_lone_top_egg_without_inherited_source_does_not_gain_memory() {
+    let mut rk_option = make_test_card("RK-OPTION", "RK-OPTION");
+    rk_option.card_kind = CardKind::Option;
+    rk_option.traits = vec!["Royal Knight".to_string()];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-007")
+        .expect("BT13-007 must load from embedded DSL pack")
+        .add_card(royal_knight("RK-SRC"))
+        .add_card(rk_option)
+        .memory(5)
+        .start();
+
+    runner.place_in_breeding(0, "BT13-007");
+    add_breeding_source(&mut runner, 0, "RK-SRC");
+    runner.game.turn_player_idx = 0;
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    let rk = make_source(&mut runner, 0, "RK-OPTION");
+    runner.game.install_field_option_as_ordinary(rk, 0);
+    runner.auto_resolve().ok();
+    assert_eq!(
+        runner.memory(),
+        before,
+        "a top BT13-007 with no BT13-007 digivolution card has no inherited +1 memory observer"
+    );
+}
+
+#[test]
+fn bt13_007_three_inherited_copies_in_breeding_each_gain_one_memory() {
+    let mut rk_option = make_test_card("RK-OPTION", "RK-OPTION");
+    rk_option.card_kind = CardKind::Option;
+    rk_option.traits = vec!["Royal Knight".to_string()];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-007")
+        .expect("BT13-007 must load from embedded DSL pack")
+        .add_card(rk_option)
+        .memory(0)
+        .start();
+
+    runner.place_in_breeding(0, "BT13-007");
+    // 3 BT13-007 digivolution cards beneath the top King Drasil (g17 Turn 5 shape).
+    add_breeding_source(&mut runner, 0, "BT13-007");
+    add_breeding_source(&mut runner, 0, "BT13-007");
+    add_breeding_source(&mut runner, 0, "BT13-007");
+    runner.game.turn_player_idx = 0;
+    runner.game.enter_main_phase();
+
+    let before = runner.memory();
+    let rk1 = make_source(&mut runner, 0, "RK-OPTION");
+    runner.game.install_field_option_as_ordinary(rk1, 0);
+    runner.auto_resolve().ok();
+    assert_eq!(
+        runner.memory(),
+        before + 3,
+        "3 inherited BT13-007 copies in breeding must each gain 1 memory (+3 total)"
+    );
+
+    // OPT per inherited copy: a second Royal Knight Option placed this turn gains 0.
+    let after_first = runner.memory();
+    let rk2 = make_source(&mut runner, 0, "RK-OPTION");
+    runner.game.install_field_option_as_ordinary(rk2, 0);
+    runner.auto_resolve().ok();
+    assert_eq!(
+        runner.memory(),
+        after_first,
+        "each inherited BT13-007 copy is [Once Per Turn]"
+    );
+}
+
+/// [Breeding][Start of Your Main Phase] "Reveal the top card of your Digi-Egg
+/// deck, then place that card and all of your [Royal Knight] trait Digimon as
+/// this Digimon's bottom digivolution cards."
+///
+/// Only [Royal Knight] trait **Digimon** are tucked (DCGO BT13_007.cs:314
+/// `IsPermanentExistsOnOwnerBattleAreaDigimon`); placed [Royal Knight] Option
+/// cards on the battle area (e.g. BT20-100) must remain on the field.
+#[test]
+fn bt13_007_start_main_does_not_tuck_royal_knight_options() {
+    let mut rk_option = make_test_card("RK-OPTION", "RK-OPTION");
+    rk_option.card_kind = CardKind::Option;
+    rk_option.traits = vec!["Royal Knight".to_string()];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-007")
+        .expect("BT13-007 must load from embedded DSL pack")
+        .add_card(digi_egg("NEXT-EGG"))
+        .add_card(royal_knight_digimon("RK-DIGIMON", 11))
+        .add_card(rk_option)
+        .digitama(0, &["NEXT-EGG"])
+        .start();
+
+    runner.place_in_breeding(0, "BT13-007");
+    runner.place_on_field(0, "RK-DIGIMON", Some(0));
+    let opt = make_source(&mut runner, 0, "RK-OPTION");
+    runner.game.install_field_option_as_ordinary(opt, 0);
+
+    runner.game.enter_main_phase();
+    runner
+        .auto_resolve()
+        .expect("BT13-007 start-main body should resolve");
+
+    let field_ids: Vec<_> = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        field_ids,
+        vec!["RK-OPTION"],
+        "[Royal Knight] Option cards on the battle area must NOT be tucked under King Drasil"
+    );
+
+    let breeding = runner
+        .game
+        .player(0)
+        .breeding_area
+        .as_ref()
+        .expect("King Drasil remains in breeding");
+    let stack_ids: Vec<_> = breeding
+        .card_sources
+        .iter()
+        .map(|source| source.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        stack_ids.len(),
+        3,
+        "only NEXT-EGG and RK-DIGIMON should be tucked under BT13-007 (got: {stack_ids:?})"
+    );
+    assert!(
+        stack_ids.iter().any(|id| id == "NEXT-EGG")
+            && stack_ids.iter().any(|id| id == "RK-DIGIMON")
+            && !stack_ids.iter().any(|id| id == "RK-OPTION"),
+        "King Drasil stack should contain NEXT-EGG and RK-DIGIMON, never RK-OPTION (got: {stack_ids:?})"
     );
 }

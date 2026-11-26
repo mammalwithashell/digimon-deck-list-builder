@@ -1764,6 +1764,30 @@ impl ModifierRegistry {
         out
     }
 
+    /// Count of currently-applying runtime (non-declarative) grants of
+    /// `keyword` on `target` (CR 4.3 §16-22: multiple `<Alliance>` grants
+    /// stack and each triggers independently on attack).
+    pub fn runtime_granted_keyword_count(
+        &self,
+        target: PermanentHandle,
+        keyword: Keyword,
+    ) -> usize {
+        self.applying_keywords(target)
+            .filter(|entry| !entry.materialized_declarative && entry.keyword == keyword)
+            .count()
+    }
+
+    /// Whether `target` has at least one currently-applying materialized
+    /// declarative aura grant of `keyword`.
+    pub fn has_materialized_declarative_keyword(
+        &self,
+        target: PermanentHandle,
+        keyword: Keyword,
+    ) -> bool {
+        self.applying_keywords(target)
+            .any(|entry| entry.materialized_declarative && entry.keyword == keyword)
+    }
+
     /// Keywords granted to `target` by a MATERIALIZED DECLARATIVE aura and by
     /// nothing else — the `G-ENGINE-AURA-GRANT-NO-TRIGGER` scan set.
     ///

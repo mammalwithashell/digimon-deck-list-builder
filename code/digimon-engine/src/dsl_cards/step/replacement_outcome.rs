@@ -319,7 +319,7 @@ fn paid_prevention_profile(ctx:&EffectContext<'_>)->Option<(digimon_dsl::compile
     let (card,id,slot,keyword)=c.replacement_paid_prevention.as_ref()?;
     let (cause,player)=c.replacement_deletion_cause?;
     let cause=match cause {R::Battle=>C::Battle,R::OwnEffect|R::DigiXros=>C::OwnEffect,R::OpponentEffect=>C::OpponentEffect,
-        R::SecurityCheck=>C::SecurityCheck,R::Cost=>C::Cost,R::Overclock=>C::Overclock};
+        R::SecurityCheck=>C::SecurityCheck,R::Cost|R::Rule=>C::Cost,R::Overclock=>C::Overclock};
     let effects=match keyword {
         Some(k)=>std::sync::Arc::new(crate::cards::keyword_effects::keyword_to_auto_effect(*k,*card)),
         None=>ctx.game.effects_for_card(id,*card)?,

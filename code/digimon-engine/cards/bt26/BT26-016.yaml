@@ -116,6 +116,7 @@ effects:
           zone: trash
           min: 0
           max: 3
+          optional_zero: true
           filter: {}
           bind_as: own_back
           prompt: "Return cards in your trash to the bottom of the deck (3 in total across both trashes) for <Recovery +1>"

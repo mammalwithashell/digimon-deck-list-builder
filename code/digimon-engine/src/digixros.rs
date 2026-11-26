@@ -781,9 +781,20 @@ impl Game {
         player: PlayerId,
         hand_index: usize,
     ) -> Option<DigiXrosTransaction> {
+        let card = self.player(player).hand.get(hand_index)?;
+        self.build_digixros_transaction_for_card(player, card)
+    }
+
+    /// Build the inert transaction context for any physical card's first
+    /// authored DigiXros (or cast-time assembly) path, regardless of origin
+    /// zone (CR §16-14 / DCGO `CardController.cs:1475-1481`).
+    pub(crate) fn build_digixros_transaction_for_card(
+        &self,
+        player: PlayerId,
+        card: &crate::card_source::CardSource,
+    ) -> Option<DigiXrosTransaction> {
         #[cfg(feature = "dsl-yaml-loader")]
         {
-            let card = self.player(player).hand.get(hand_index)?;
             let card_id = card.card_id(&self.card_data);
             // A printed [DigiXros] recipe and a non-DigiXros cast-time
             // assembly (BT15-102) share the transaction substrate; the
@@ -869,7 +880,7 @@ impl Game {
         }
         #[cfg(not(feature = "dsl-yaml-loader"))]
         {
-            let _ = (player, hand_index);
+            let _ = (player, card);
             None
         }
     }
@@ -908,9 +919,10 @@ impl Game {
             index: idx as u8,
         };
         let perm = self.player_mut(player).battle_area.remove(idx);
-        if self.security_resolution.is_some() {
-            self.shift_effect_queue_after_battle_area_remove(player, idx as u8);
-        }
+        self.modifiers
+            .shift_after_battle_area_remove(player, idx as u8);
+        self.shift_pending_attack_after_battle_area_remove(player, idx as u8);
+        self.shift_effect_queue_after_battle_area_remove(player, idx as u8);
         // Removing from `battle_area` shifts every later permanent (same player)
         // down by one, invalidating any captured handle with a higher index — in
         // particular the parked replacement's / pending selection's
@@ -954,7 +966,7 @@ impl Game {
     /// Decrement captured `source_permanent` handles (parked replacement +
     /// pending selection) that referenced a `battle_area` slot AFTER
     /// `removed_index` for `player`, so they survive a `battle_area.remove`.
-    fn fixup_source_handles_after_battle_removal(&mut self, player: PlayerId, removed_index: u8) {
+    pub(crate) fn fixup_source_handles_after_battle_removal(&mut self, player: PlayerId, removed_index: u8) {
         let shift = |h: &mut PermanentHandle| {
             if h.player == player && h.index > removed_index {
                 h.index -= 1;

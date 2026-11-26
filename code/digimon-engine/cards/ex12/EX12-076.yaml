@@ -59,6 +59,10 @@ effects:
     summary: "[On Play][When Digivolving] All opponent Digimon get -3000 DP for each source color"
     process:
       - add_modifier:
+          # CONTINUOUS blanket effect (CR 4.3 §15-6-3-2; DCGO EX12_076.cs:76-80
+          # `ChangeDigimonDPPlayerEffect` UntilEachTurnEnd): applies to opponent
+          # Digimon entering later in the same turn (e.g. via <Decode>).
+          continuous: true
           target:
             of: opponent
             zone: [battle_area]

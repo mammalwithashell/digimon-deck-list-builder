@@ -65,6 +65,13 @@ pub enum Row {
     /// actually run at some point in the recording?) from unmeasurable into
     /// measured. Added post-v1; absent in recordings predating this hook.
     EffectActivation(EffectActivationRow),
+    /// Recorder 0.2.0 `board_indexes` (`CardSource.CardIndex` of each permanent's
+    /// top card in `board_p0` / `board_p1` order), correlated to an `action` or
+    /// `selection` row by `step`. Populated either from a standalone
+    /// `"type": "board_indexes"` row or extracted at parse time from inline
+    /// `board_indexes_p0` / `board_indexes_p1` fields on `action`/`selection`
+    /// JSON objects so `ActionRow` and `SelectionRow` keep their struct shape.
+    BoardIndexes(BoardIndexesRow),
     /// Terminal row — exactly one per recording, the last line.
     GameEnd(GameEnd),
     /// Tolerated escape hatch — captures rows whose `type` is unrecognized
@@ -636,6 +643,17 @@ pub struct InitialStateRow {
     pub memory: Option<i32>,
 }
 
+/// Per-step DCGO `CardSource.CardIndex` listing parallel to `board_p0` /
+/// `board_p1` (MelonLoader recorder 0.2.0 `board_indexes`, Core.cs `BoardsJson`).
+/// Extracted from inline `board_indexes_p0` / `board_indexes_p1` on `action` /
+/// `selection` rows by [`parse_jsonl`], or parsed directly as a standalone row.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BoardIndexesRow {
+    pub step: u32,
+    pub board_indexes_p0: Vec<i32>,
+    pub board_indexes_p1: Vec<i32>,
+}
+
 /// Terminal row payload.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameEnd {
@@ -696,6 +714,29 @@ impl std::fmt::Display for SchemaError {
 
 impl std::error::Error for SchemaError {}
 
+/// Extract inline `board_indexes_p0` / `board_indexes_p1` from an `action` or
+/// `selection` JSON object into a correlated [`BoardIndexesRow`], when both
+/// arrays of integers and `step` are present.
+fn extract_inline_board_indexes(val: &serde_json::Value) -> Option<BoardIndexesRow> {
+    let ty = val.get("type")?.as_str()?;
+    if ty != "action" && ty != "selection" {
+        return None;
+    }
+    let step = u32::try_from(val.get("step")?.as_u64()?).ok()?;
+    let parse_vec = |key: &str| -> Option<Vec<i32>> {
+        val.get(key)?
+            .as_array()?
+            .iter()
+            .map(|v| v.as_i64().and_then(|n| i32::try_from(n).ok()))
+            .collect()
+    };
+    Some(BoardIndexesRow {
+        step,
+        board_indexes_p0: parse_vec("board_indexes_p0")?,
+        board_indexes_p1: parse_vec("board_indexes_p1")?,
+    })
+}
+
 /// Parse a JSONL recording into a structured [`RecordingV1`].
 ///
 /// Validates: first row is `game_start`, last row is `game_end`, schema
@@ -709,11 +750,19 @@ pub fn parse_jsonl(text: &str) -> Result<RecordingV1, SchemaError> {
         if trimmed.is_empty() {
             continue;
         }
-        let row: Row = serde_json::from_str(trimmed).map_err(|e| SchemaError::InvalidJson {
+        let val: serde_json::Value = serde_json::from_str(trimmed).map_err(|e| SchemaError::InvalidJson {
+            line: i + 1,
+            message: e.to_string(),
+        })?;
+        let inline_board_indexes = extract_inline_board_indexes(&val);
+        let row: Row = serde_json::from_value(val).map_err(|e| SchemaError::InvalidJson {
             line: i + 1,
             message: e.to_string(),
         })?;
         rows.push(row);
+        if let Some(bi) = inline_board_indexes {
+            rows.push(Row::BoardIndexes(bi));
+        }
     }
 
     // Pop the leading game_start.
@@ -1235,5 +1284,30 @@ this is not json
         let t: FrameTarget = serde_json::from_str(r#"{"player":0,"frame":3}"#).unwrap();
         assert_eq!(t.card_index_source, None);
         assert_eq!(serde_json::to_string(&t).unwrap(), r#"{"player":0,"frame":3}"#);
+    }
+
+    #[test]
+    fn inline_board_indexes_on_action_and_selection_extract_to_board_indexes_rows() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"bi","timestamp":"t","my_player_id":0,"is_ai":false,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":null}
+{"type":"action","step":4,"actor":1,"action_id":445,"phase":"Main","source":"main_phase","board_p0":["ST20-02","EX13-073","EX13-073"],"board_p1":["ST24-05"],"board_indexes_p0":[11,9,13],"board_indexes_p1":[60]}
+{"type":"selection","step":5,"actor":1,"prompt":"SelectPermanentEffect","phase":"Main","board_p0":["ST20-02","EX13-073","EX13-073"],"board_p1":["BT26-044"],"board_indexes_p0":[11,9,13],"board_indexes_p1":[74],"targets":[{"player":0,"frame":1,"card_index":9,"card_index_source":"recorder"}]}
+{"type":"game_end","winner":0,"reason":"win","total_steps":6}
+"#;
+        let rec = parse_jsonl(txt).expect("parse");
+        let extracted: Vec<&BoardIndexesRow> = rec
+            .rows
+            .iter()
+            .filter_map(|r| match r {
+                Row::BoardIndexes(b) => Some(b),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(extracted.len(), 2);
+        assert_eq!(extracted[0].step, 4);
+        assert_eq!(extracted[0].board_indexes_p0, vec![11, 9, 13]);
+        assert_eq!(extracted[0].board_indexes_p1, vec![60]);
+        assert_eq!(extracted[1].step, 5);
+        assert_eq!(extracted[1].board_indexes_p0, vec![11, 9, 13]);
+        assert_eq!(extracted[1].board_indexes_p1, vec![74]);
     }
 }
