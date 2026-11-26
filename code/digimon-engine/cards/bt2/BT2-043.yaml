@@ -1,0 +1,19 @@
+card: BT2-043
+name: Agumon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Reptile]
+form: Rookie
+attribute: Vaccine
+
+effects:
+  - text: "[Your Turn] This Digimon gets +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][Your Turn] This Digimon gets +1000 DP"

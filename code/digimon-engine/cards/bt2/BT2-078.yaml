@@ -1,0 +1,38 @@
+card: BT2-078
+name: WereGarurumon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Beastkin]
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] You may delete 1 of your other Digimon to unsuspend this Digimon."
+    scope: inherited
+    when: when_attacking
+    optional: true
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        other: true
+    summary: "[Inherited][When Attacking][OPT] You may delete 1 of your other Digimon to unsuspend this Digimon"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: sacrifice
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Delete 1 of your other Digimon"
+      - delete_permanent: { target: sacrifice }
+      - if:
+          condition: { effect_deleted_any_own_digimon: true }
+          then:
+            - unsuspend: { target: source }

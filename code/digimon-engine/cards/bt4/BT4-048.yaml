@@ -1,0 +1,38 @@
+card: BT4-048
+name: WarGreymon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: [Dragonkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] You may add the top card of your security stack to your hand to unsuspend this Digimon and have 1 of your opponent's Digimon get -6000 DP for the turn."
+    when: when_attacking
+    optional: true
+    outer_prompt: true
+    once_per_turn: true
+    condition: { security_count_gte: 1 }
+    summary: "[When Attacking][OPT] May add top security to hand to unsuspend this Digimon and give 1 opponent Digimon -6000 DP for the turn"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - if:
+          condition: { effect_added_any_card_to_hand: true }
+          then:
+            - unsuspend: { target: source }
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to get -6000 DP for the turn"
+            - add_dp_modifier:
+                target: target
+                value: -6000
+                expiry: end_of_turn

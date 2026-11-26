@@ -1,0 +1,49 @@
+card: BT4-059
+name: Lilamon
+kind: digimon
+level: 5
+color: [green]
+cost: 8
+dp: 7000
+traits: [Fairy]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - text: "[Main] ＜Digi-Burst 2＞ (You may trash 2 of this Digimon's digivolution cards to activate the effect below.) ・Suspend 1 of your opponent's Digimon."
+    when: main_on_field
+    summary: "[Main] <Digi-Burst 2> Suspend 1 of your opponent's Digimon"
+    process:
+      - digi_burst:
+          count: 2
+          bind_as: burst_sources
+          prompt: "Choose 2 digivolution cards under this Digimon to trash for <Digi-Burst 2>"
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: suspend_target
+                filter: { kind: digimon }
+                prompt: "Suspend 1 of your opponent's Digimon"
+            - suspend: { target: suspend_target }
+
+  - text: "[When Attacking] If you have a Tamer in play, suspend 1 of your opponent's Digimon."
+    scope: inherited
+    when: when_attacking
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+    summary: "[Inherited][When Attacking] If you have a Tamer in play, suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: suspend_target
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: suspend_target }

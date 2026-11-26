@@ -310,6 +310,8 @@ pub fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
         ModifierType::CannotAttackPlayer => "CannotAttackPlayer",
         ModifierType::CannotBlock => "CannotBlock",
         ModifierType::CannotBeBlocked => "CannotBeBlocked",
+        ModifierType::CannotBeBlockedByNoSources => "CannotBeBlockedByNoSources",
+        ModifierType::DigisorptionMaySuspendOpponent => "DigisorptionMaySuspendOpponent",
         ModifierType::CannotCounter => "CannotCounter",
         ModifierType::CannotSuspend => "CannotSuspend",
         ModifierType::CannotUnsuspend => "CannotUnsuspend",

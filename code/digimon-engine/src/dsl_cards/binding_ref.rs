@@ -54,6 +54,16 @@ pub fn resolve_binding_ref(
             permanent.card_sources.last().map(|card| ResolvedBinding::Card(card.handle()))
         }
         CompiledBindingRef::Carrier => ctx.source_permanent.map(ResolvedBinding::Permanent),
+        CompiledBindingRef::AttackTarget => ctx
+            .game
+            .pending_attack
+            .as_ref()
+            .and_then(|atk| match atk.effective_target {
+                crate::selection::AttackTarget::Digimon(defender) => {
+                    Some(ResolvedBinding::Permanent(defender))
+                }
+                _ => None,
+            }),
         // The permissive sibling of `Permanent(name)`: the battle-area permanent
         // that currently carries the played card, even after it was buried
         // under a digivolve (BT16-084's delayed "return it to the hand").

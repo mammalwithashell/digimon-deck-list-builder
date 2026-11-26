@@ -1,0 +1,25 @@
+card: BT1-081
+name: HerculesKabuterimon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 10000
+form: Mega
+attribute: Vaccine
+traits: [Insectoid]
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[End of Attack] [Twice Per Turn] You can unsuspend this Digimon by decreasing your memory by 3."
+    when: end_of_attack
+    optional: true
+    max_per_turn: 2
+    summary: "[End of Attack] [Twice Per Turn] You may lose 3 memory to unsuspend this Digimon"
+    process:
+      - lose_memory: 3
+      - unsuspend: { target: source }

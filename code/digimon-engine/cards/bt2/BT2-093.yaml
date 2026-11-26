@@ -1,0 +1,70 @@
+card: BT2-093
+name: Shield of the Just
+kind: option
+color: [red]
+cost: 6
+
+effects:
+  - text: "[Main] Delete 1 of your opponent's Digimon with 5000 DP or less. If you have a red Tamer in play, delete 1 of your opponent's Digimon with 8000 DP or less instead."
+    when: main
+    summary: "[Main] Delete 1 opponent Digimon with 5000 DP or less (8000 DP or less if you have a red Tamer)"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              color_is: red
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 8000
+                prompt: "Choose 1 of your opponent's Digimon with 8000 DP or less to delete"
+            - delete_permanent: { target: target }
+          else:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 5000
+                prompt: "Choose 1 of your opponent's Digimon with 5000 DP or less to delete"
+            - delete_permanent: { target: target }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              color_is: red
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 8000
+                prompt: "Choose 1 of your opponent's Digimon with 8000 DP or less to delete"
+            - delete_permanent: { target: target }
+          else:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 5000
+                prompt: "Choose 1 of your opponent's Digimon with 5000 DP or less to delete"
+            - delete_permanent: { target: target }

@@ -1,0 +1,26 @@
+card: BT1-066
+name: Tentomon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Vaccine
+traits: [Insectoid]
+
+effects:
+  - text: "[When Attacking] Suspend 1 of your opponent's Digimon with 3000 DP or less."
+    scope: inherited
+    when: when_attacking
+    summary: "[When Attacking] Suspend 1 of your opponent's Digimon with 3000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Suspend 1 of your opponent's Digimon with 3000 DP or less"
+      - suspend: { target: victim }

@@ -1,0 +1,23 @@
+card: BT1-083
+name: GranKuwagamon
+kind: digimon
+level: 6
+color: [green]
+cost: 13
+dp: 11000
+form: Mega
+attribute: Free
+traits: [Insectoid]
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[Your Turn] This Digimon gets +4000 DP."
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 4000
+    summary: "[Your Turn] This Digimon gets +4000 DP"

@@ -1,0 +1,28 @@
+card: BT1-067
+name: Palmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Data
+traits: [Vegetation]
+
+effects:
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 level 4 Digimon card among them to your hand. Place the rest at the bottom of the deck in any order."
+    when: on_play
+    summary: "[On Play] Reveal top 3; add 1 level 4 Digimon to hand; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 4
+          prompt: "Add 1 level 4 Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

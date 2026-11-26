@@ -1,0 +1,31 @@
+card: BT4-089
+name: Plutomon
+kind: digimon
+level: 6
+color: [purple]
+cost: 13
+dp: 12000
+traits: [Shaman]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+
+effects:
+  - text: "[When Digivolving] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, you may use a purple Option card with a memory cost of 6 or less in your hand without paying its memory cost."
+    when: when_digivolving
+    summary: "[When Digivolving] <Draw 2>, then you may use 1 purple Option card with cost 6 or less from your hand without paying its memory cost"
+    process:
+      - draw: { of: you, count: 2 }
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - color_is: purple
+              - play_cost_lte: 6
+          prompt: "You may use 1 purple Option card with a cost of 6 or less from your hand without paying its memory cost"

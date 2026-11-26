@@ -1,0 +1,34 @@
+card: BT2-101
+name: Cherry Blast
+kind: option
+color: [green]
+cost: 4
+
+effects:
+  - text: "[Main] Suspend all of your opponent's Digimon with 6000 DP or less."
+    when: main
+    summary: "[Main] Suspend all of your opponent's Digimon with 6000 DP or less"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            dp_lte: 6000
+          bind_as: opp_digimon
+          body:
+            - suspend: { target: opp_digimon }
+
+  - text: "[Security] Activate this card's [Main] effect."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effect"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            dp_lte: 6000
+          bind_as: opp_digimon
+          body:
+            - suspend: { target: opp_digimon }

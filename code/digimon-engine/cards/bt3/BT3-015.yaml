@@ -1,0 +1,35 @@
+card: BT3-015
+name: MetalGreymon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 7000
+form: Ultimate
+attribute: Virus
+traits: [Cyborg]
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[When Digivolving] You may return 1 level 7 Digimon with the [Virus] trait from your trash to your hand."
+    when: when_digivolving
+    summary: "[When Digivolving] You may return 1 level 7 [Virus] Digimon from your trash to your hand"
+    process:
+      - select_trash:
+          of: you
+          optional: true
+          bind_as: recovered
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 7
+              - attribute_is: Virus
+          prompt: "You may return 1 level 7 Digimon with the [Virus] attribute from your trash to your hand"
+      - if:
+          condition: { binding_present: recovered }
+          then:
+            - add_to_hand_from_trash: { of: you, card: recovered }

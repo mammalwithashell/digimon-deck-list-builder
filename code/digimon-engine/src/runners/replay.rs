@@ -3094,11 +3094,12 @@ fn effect_footprint_parts(game: &Game) -> Vec<(&'static str, u64)> {
         (
             "the turn counters",
             digest(format!(
-                "{:?}|{:?}|{:?}|{:?}|{}",
+                "{:?}|{:?}|{:?}|{:?}|{:?}|{}",
                 game.n_digivolutions,
                 game.n_dna_digivolutions,
                 game.n_digivolve_driven_attacks,
                 game.digimon_attacks_this_turn,
+                game.digivolutions_this_turn,
                 game.turn_player_idx
             )),
         ),

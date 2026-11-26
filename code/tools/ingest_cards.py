@@ -114,6 +114,9 @@ DUAL_OPTION_COLOR_OVERRIDES = {
     "LM-066": ["Green"],             # Zephagamon (card Green)
     "LM-067": ["Black"],             # Gundramon (card Black)
     "LM-068": ["Purple"],            # HeavyMetaldramon (card Purple/Red)
+    # ST-25 & ST-26 (2026-11-26) — from the official Bandai DB "DUAL Color" field.
+    "ST25-05": ["Red"],              # Rubeusdramon / Burning Drive (card Red)
+    "ST26-05": ["Blue"],             # Yukinamon / Ice Beast Caricatures (card Blue)
 }
 
 RARITY_MAP = {

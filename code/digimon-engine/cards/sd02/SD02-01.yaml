@@ -1,0 +1,23 @@
+card: SD02-01
+name: Viximon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Lesser, ALYSION]
+form: In-Training
+
+effects:
+  - scope: inherited
+    text: "[When Attacking] [Once Per Turn] If this Digimon has the [ALYSION] trait, trash the bottom digivolution card of 1 of your opponent's Digimon."
+    when: when_attacking
+    once_per_turn: true
+    condition: { trait_has: ALYSION }
+    summary: "Inherited [When Attacking][OPT] If this Digimon has [ALYSION] trait, trash the bottom digivolution card of 1 opposing Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom digivolution card of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 1 }

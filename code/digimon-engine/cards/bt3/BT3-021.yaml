@@ -1,0 +1,16 @@
+card: BT3-021
+name: Veemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Free
+traits: [Mini Dragon]
+
+effects:
+  - text: "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)"
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"

@@ -1,0 +1,41 @@
+card: BT2-017
+name: WarGrowlmon
+kind: digimon
+level: 5
+color: [red]
+cost: 8
+dp: 8000
+form: Ultimate
+attribute: Virus
+traits: [Cyborg]
+
+effects:
+  - text: "[When Digivolving] If you have a red Tamer in play, delete 1 of your opponent's Digimon with 3000 DP or less."
+    when: when_digivolving
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        color_is: red
+    summary: "[When Digivolving] If you have a red Tamer, delete 1 opponent Digimon with 3000 DP or less"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon, dp_lte: 3000 }
+          prompt: "Delete 1 of your opponent's Digimon with 3000 DP or less"
+      - delete_permanent: { target: victim }
+
+  - text: "[Your Turn] While there are 5 or more cards in your opponent's trash, this Digimon gets +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_gte:
+            filter: { of: opponent, zone: [trash] }
+            n: 5
+    target: { is_source_permanent: true }
+    dp_modifier: 1000
+    summary: "[Inherited][Your Turn] While opponent has 5+ cards in trash, this Digimon gets +1000 DP"

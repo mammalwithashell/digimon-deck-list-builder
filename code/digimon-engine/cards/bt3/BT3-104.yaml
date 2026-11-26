@@ -1,0 +1,91 @@
+card: BT3-104
+name: Positron Laser
+kind: option
+color: [green]
+cost: 6
+
+effects:
+  - text: "[Main] Up to 2 of your opponent's Digimon can't attack or block until the end of your opponent's next turn. Then, if you have a blue Digimon in play, return 1 of your opponent's suspended Digimon to their hand."
+    when: main_from_hand
+    summary: "[Main] Up to 2 opponent's Digimon can't attack or block until end of opponent's next turn; if you have a blue Digimon, return 1 opponent's suspended Digimon to hand"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 0
+          max: 2
+          optional_zero: true
+          filter: { kind: digimon }
+          bind_as: locked_targets
+          prompt: "Choose up to 2 of your opponent's Digimon that can't attack or block"
+      - per_selected:
+          selection: locked_targets
+          bind_as: tgt
+          body:
+            - add_modifier:
+                target: { binding: tgt }
+                modifier: CannotAttack
+                value: 1
+                expiry: end_of_opponents_next_turn
+            - add_modifier:
+                target: { binding: tgt }
+                modifier: CannotBlock
+                value: 1
+                expiry: end_of_opponents_next_turn
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              color_is: blue
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: bounced
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - is_suspended: true
+                prompt: "Choose 1 of your opponent's suspended Digimon to return to its owner's hand"
+            - return_to_hand: { target: bounced }
+
+  - text: "[Security] Up to 2 of your opponent's Digimon can't attack for the turn. Then, if you have a blue Digimon in play, return 1 of your opponent's suspended Digimon to its owner's hand."
+    when: on_security
+    summary: "[Security] Up to 2 opponent's Digimon can't attack for the turn; if you have a blue Digimon, return 1 opponent's suspended Digimon to hand"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          min: 0
+          max: 2
+          optional_zero: true
+          filter: { kind: digimon }
+          bind_as: locked_targets
+          prompt: "Choose up to 2 of your opponent's Digimon that can't attack for the turn"
+      - per_selected:
+          selection: locked_targets
+          bind_as: tgt
+          body:
+            - add_modifier:
+                target: { binding: tgt }
+                modifier: CannotAttack
+                value: 1
+                expiry: end_of_turn
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              color_is: blue
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: bounced
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - is_suspended: true
+                prompt: "Choose 1 of your opponent's suspended Digimon to return to its owner's hand"
+            - return_to_hand: { target: bounced }

@@ -1,0 +1,32 @@
+card: BT1-102
+name: Blade of the True
+kind: option
+color: [yellow]
+cost: 2
+
+effects:
+  - text: "[Main] ＜Draw 1＞ (Draw 1 card from your deck.) for every 2 security cards you have."
+    when: main_from_hand
+    summary: "[Main] Draw 1 for every 2 security cards you have"
+    process:
+      - draw:
+          of: you
+          count:
+            floor_div:
+              - base: 0
+                per: { card_count_in_zone: { of: you, zone: security } }
+                delta: 1
+              - 2
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - draw:
+          of: you
+          count:
+            floor_div:
+              - base: 0
+                per: { card_count_in_zone: { of: you, zone: security } }
+                delta: 1
+              - 2

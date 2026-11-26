@@ -1,0 +1,61 @@
+card: BT4-114
+name: AncientGarurumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 13000
+traits: [Ancient Animal, Ten Warriors]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 5
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] Unsuspend up to 2 of your Digimon with [Garurumon] in their names (other than [KendoGarurumon]) or [Hybrid] trait."
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] Unsuspend up to 2 of your [Garurumon]-named or [Hybrid]-trait Digimon"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max: 2
+          optional_zero: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: "Garurumon"
+                  - trait_has: "Hybrid"
+          bind_as: targets
+          prompt: "Unsuspend up to 2 of your Digimon with [Garurumon] in their names or [Hybrid] trait"
+      - per_selected:
+          selection: targets
+          bind_as: t
+          body:
+            - unsuspend: { target: t }
+
+  - text: "[On Deletion] You may play 1 blue level 4 or below Digimon card with the [Hybrid] trait from your hand without paying its memory cost."
+    when: on_deletion
+    summary: "[On Deletion] You may play 1 blue Lv.4 or lower [Hybrid]-trait Digimon card from your hand without paying its cost"
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: hybrid_card
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: blue
+              - level_lte: 4
+              - trait_has: "Hybrid"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 blue level 4 or lower [Hybrid] Digimon card from your hand without paying its cost"
+      - if:
+          condition: { binding_present: hybrid_card }
+          then:
+            - play_from_hand_free: { of: you, hand_index: hybrid_card }

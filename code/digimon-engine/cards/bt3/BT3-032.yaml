@@ -1,0 +1,10 @@
+card: BT3-032
+name: Armadillomon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 4000
+form: Rookie
+attribute: Free
+traits: [Mammal]

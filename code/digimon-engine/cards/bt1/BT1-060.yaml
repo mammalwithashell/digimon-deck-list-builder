@@ -1,0 +1,32 @@
+card: BT1-060
+name: MagnaAngemon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 6000
+form: Ultimate
+attribute: Vaccine
+traits: [Archangel]
+
+effects:
+  - text: "[On Play] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)"
+    when: on_play
+    summary: "[On Play] <Recovery +1 (Deck)>"
+    process:
+      - recover: { of: you, count: 1 }
+
+  - text: "[Your Turn] For every 3 cards in your security stack, this Digimon gets +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    dp_modifier:
+      multiply:
+        - floor_div:
+            - base: 0
+              per: { card_count_in_zone: { zone: security, of: you } }
+              delta: 1
+            - 3
+        - 1000
+    summary: "[Your Turn] For every 3 cards in your security stack, this Digimon gets +1000 DP"

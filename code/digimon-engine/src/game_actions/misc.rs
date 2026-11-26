@@ -339,6 +339,8 @@ impl Game {
         if let Some(prepared) = self.prepare_source_play_if_registered(declaration) {
             return if prepared { PlayFromHandCostResult::Pending } else { PlayFromHandCostResult::Failed };
         }
+        let prev_from_trash = self.pending_play_from_trash;
+        self.pending_play_from_trash = matches!(origin, PendingWouldPlayOrigin::Trash { .. });
         let committed = self.commit_play_from_hand_card_no_replace(
             player_id,
             target_card,
@@ -349,6 +351,7 @@ impl Game {
             origin.source_play_receipt(),
             matches!(origin, PendingWouldPlayOrigin::SecurityTop { .. } | PendingWouldPlayOrigin::SecurityRecorded { .. } | PendingWouldPlayOrigin::SecurityAt { .. }),
         );
+        self.pending_play_from_trash = prev_from_trash;
         self.pending_digixros_transaction = None;
         committed
             .map(PlayFromHandCostResult::Played)

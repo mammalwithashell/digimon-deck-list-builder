@@ -1,0 +1,22 @@
+card: BT2-054
+name: Gotsumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 3000
+traits: [Rock]
+form: Rookie
+attribute: Data
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[When Attacking] Lose 2 memory."
+    when: when_attacking
+    summary: "[When Attacking] Lose 2 memory"
+    process:
+      - lose_memory: 2

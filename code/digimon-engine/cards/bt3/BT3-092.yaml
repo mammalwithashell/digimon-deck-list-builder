@@ -1,0 +1,30 @@
+card: BT3-092
+name: MaloMyotismon
+kind: digimon
+level: 6
+color: [purple]
+cost: 13
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Demon Lord]
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[All Turns] When another Digimon is deleted, gain 1 memory for each Digimon deleted."
+    when: on_any_deletion
+    active_when: { all_turns: true }
+    trigger_if:
+      event_target_kind: digimon
+      event_target_is_source: false
+    summary: "[All Turns] When another Digimon is deleted, gain 1 memory per Digimon deleted"
+    process:
+      - gain_memory_fn:
+          formula:
+            base: 0
+            per: event_deleted_digimon_count
+            delta: 1

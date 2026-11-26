@@ -1,0 +1,21 @@
+card: BT1-092
+name: Nuclear Laser
+kind: option
+color: [red]
+cost: 3
+
+effects:
+  - text: "[Main] ＜Draw 2＞ (Draw 2 cards from your deck.) Then 1 of your Digimon gets +2000 DP for the turn."
+    when: main_from_hand
+    summary: "[Main] Draw 2, then 1 of your Digimon gets +2000 DP for the turn"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +2000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 2000
+          expiry: end_of_turn

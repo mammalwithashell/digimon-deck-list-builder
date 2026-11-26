@@ -1,0 +1,34 @@
+card: BT1-100
+name: Grace Cross Freezer
+kind: option
+color: [blue]
+cost: 4
+
+effects:
+  - text: "[Main] Until the end of your opponent's next turn, their Digimon with no digivolution cards can't attack."
+    when: main_from_hand
+    summary: "[Main] Until end of opponent's next turn, opponent's Digimon with no digivolution cards can't attack"
+    process:
+      - add_modifier:
+          continuous: true
+          target:
+            of: opponent
+            kind: digimon
+            materials_count_lte: 0
+          modifier: CannotAttack
+          value: 0
+          expiry: end_of_opponents_turn
+
+  - text: "[Security] Your opponent's Digimon with no digivolution cards can't attack for the turn."
+    when: on_security
+    summary: "[Security] Opponent's Digimon with no digivolution cards can't attack for the turn"
+    process:
+      - add_modifier:
+          continuous: true
+          target:
+            of: opponent
+            kind: digimon
+            materials_count_lte: 0
+          modifier: CannotAttack
+          value: 0
+          expiry: end_of_turn

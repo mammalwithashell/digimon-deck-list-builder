@@ -114,12 +114,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             single_fire,
             target_color,
             suspend_cost,
+            from_level,
+            to_level,
         } => {
             ctx.arm_player_digivolve_cost_reducer(
                 *amount,
                 *single_fire,
                 target_color.map(compiled_color_to_card_color),
                 *suspend_cost,
+                *from_level,
+                *to_level,
             );
             true
         }

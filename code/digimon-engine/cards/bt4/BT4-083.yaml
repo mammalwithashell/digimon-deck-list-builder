@@ -1,0 +1,29 @@
+card: BT4-083
+name: Cerberusmon
+kind: digimon
+level: 5
+color: [purple]
+cost: 6
+dp: 6000
+traits: [Dark Animal]
+form: Ultimate
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+
+effects:
+  - text: "[On Deletion] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, trash 1 card in your hand."
+    when: on_deletion
+    summary: "[On Deletion] <Draw 2>, then trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          of: you
+          optional: false
+          bind_as: discarded
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discarded }

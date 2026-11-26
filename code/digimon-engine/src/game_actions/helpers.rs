@@ -86,8 +86,11 @@ impl Game {
         removed: CardSource,
         host_card: crate::card_source::CardHandle,
     ) {
-        let cause =
-            crate::trigger_context::EventCause::from(self.infer_effect_cause(fire_target.player));
+        let cause = if self.pending_digi_burst_source_trash {
+            crate::trigger_context::EventCause::DigiBurst
+        } else {
+            crate::trigger_context::EventCause::from(self.infer_effect_cause(fire_target.player))
+        };
         self.trash_source_and_fire_with_cause(trash_owner, fire_target, removed, host_card, cause);
     }
 

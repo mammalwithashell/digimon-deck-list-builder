@@ -1,0 +1,10 @@
+card: BT1-057
+name: Sirenmon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 5
+dp: 6000
+form: Ultimate
+attribute: Data
+traits: [Shaman]

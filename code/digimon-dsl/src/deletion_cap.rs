@@ -252,8 +252,17 @@ fn mark_step(step: &mut CompiledStep, deleted: &BTreeSet<String>) {
 /// `all_of` / `any_of`; a `not` subtree is left alone (`not { dp_lte }` is a
 /// DP floor, not a maximum).
 pub fn mark_predicate(pred: &mut CompiledPredicate) {
-    if pred.dp_lte.is_some() {
-        pred.dp_lte_deletion_cap = true;
+    if let Some(cap) = &pred.dp_lte {
+        let is_non_numeric_ref = matches!(
+            cap,
+            crate::compiled::CompiledDpConstraint::Formula(
+                crate::compiled::CompiledFormula::SourceDp
+                    | crate::compiled::CompiledFormula::BindingDp(_)
+            )
+        );
+        if !is_non_numeric_ref {
+            pred.dp_lte_deletion_cap = true;
+        }
     }
     for p in pred.all_of.iter_mut().chain(pred.any_of.iter_mut()) {
         mark_predicate(p);
@@ -282,5 +291,28 @@ mod tests {
         mark_predicate(&mut p);
         assert!(p.all_of[0].dp_lte_deletion_cap);
         assert!(!p.not.as_ref().unwrap().dp_lte_deletion_cap);
+    }
+
+    #[test]
+    fn mark_predicate_skips_non_numeric_dp_ref() {
+        let mut source_dp = CompiledPredicate {
+            dp_lte: Some(CompiledDpConstraint::Formula(
+                crate::compiled::CompiledFormula::SourceDp,
+            )),
+            ..CompiledPredicate::default()
+        };
+        let mut binding_dp = CompiledPredicate {
+            dp_lte: Some(CompiledDpConstraint::Formula(
+                crate::compiled::CompiledFormula::BindingDp("ref_mon".to_string()),
+            )),
+            ..CompiledPredicate::default()
+        };
+        let mut numeric = capped(4000);
+        mark_predicate(&mut source_dp);
+        mark_predicate(&mut binding_dp);
+        mark_predicate(&mut numeric);
+        assert!(!source_dp.dp_lte_deletion_cap);
+        assert!(!binding_dp.dp_lte_deletion_cap);
+        assert!(numeric.dp_lte_deletion_cap);
     }
 }

@@ -1,0 +1,26 @@
+card: BT4-112
+name: "Hell's Gate"
+kind: option
+color: [purple]
+cost: 6
+
+effects:
+  - text: "[Main] Delete 1 of your opponent's level 6 or higher Digimon."
+    when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's level 6 or higher Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Delete 1 of your opponent's level 6 or higher Digimon"
+      - delete_permanent: { target: victim }
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

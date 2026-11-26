@@ -1,0 +1,31 @@
+card: BT3-075
+name: Craniamon
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 12000
+form: Mega
+attribute: Vaccine
+traits: [Holy Warrior, Royal Knight]
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[All Turns] None of your Digimon with ＜Blocker＞ can be deleted by your opponent's effects."
+    kind: replacement
+    timing: when_would_be_deleted
+    optional: false
+    active_when:
+      all_of:
+        - all_turns: true
+        - replacement_subject_is_mine: true
+        - replacement_cause: opponent_effect
+        - kind: digimon
+        - has_keyword: Blocker
+    summary: "[All Turns] Your Digimon with <Blocker> can't be deleted by opponent's effects"
+    process:
+      - cancel_replacement: {}

@@ -1,0 +1,21 @@
+card: BT2-040
+name: Ophanimon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 11000
+traits: [Throne, Three Great Angels]
+form: Mega
+attribute: Vaccine
+
+effects:
+  - text: "[On Deletion] Place this card on top of your security stack face down."
+    when: on_deletion
+    summary: "[On Deletion] Place this card on top of your security stack face down"
+    process:
+      - place_on_security:
+          of: you
+          source: { card: event_card }
+          position: top
+          face_up: false

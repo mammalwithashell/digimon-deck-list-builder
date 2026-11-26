@@ -1,0 +1,32 @@
+card: BD01-10
+name: Kanata Hondo
+kind: tamer
+color: [red]
+cost: 3
+traits: [ALYSION]
+
+effects:
+  - when: start_of_your_main_phase
+    text: "[Start of Your Main Phase] If you have a red Digimon with the [ALYSION] trait, gain 1 memory."
+    condition:
+      any_permanent: { of: you, zone: [battle_area], kind: digimon, color_is: red, trait_has: ALYSION }
+    summary: "[Start of Your Main Phase] If you have a red [ALYSION] Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - kind: aura
+    text: "[Your Turn] All of your red Digimon with the [ALYSION] trait get +1000 DP."
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+      color_is: red
+      trait_has: ALYSION
+    dp_modifier: 1000
+    summary: "[Your Turn] All of your red [ALYSION] Digimon get +1000 DP"
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}

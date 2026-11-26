@@ -1,0 +1,28 @@
+{
+  "index": 4608,
+  "norm_id": 0.2304,
+  "card_id": "SD01-01",
+  "card_index": 1,
+  "card_name_eng": "Tokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "SD01_01",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Lesser",
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [ALYSION] trait gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

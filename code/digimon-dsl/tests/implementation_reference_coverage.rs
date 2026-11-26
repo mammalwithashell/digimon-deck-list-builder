@@ -93,7 +93,7 @@ fn top_card_references_and_runtime_finalizers_preserve_binding_roles() {
         CompiledStep::FieldSourceFinalize { receipt: 7, bind_as: "CREATED".into(), source_anchor: Some((0, 42)),
             source_breeding: false, rebind: vec![("EXISTING".into(), (1, 99))] },
         CompiledStep::WithSimultaneousPlaySubject { binding: "SUBJECT".into(), body: vec![
-            CompiledStep::TrashSelectedSourcesAsCost { source_refs: "PAYMENT".into(), min_count: Some(2) },
+            CompiledStep::TrashSelectedSourcesAsCost { source_refs: "PAYMENT".into(), min_count: Some(2), is_digi_burst: false },
             CompiledStep::PaySourcePrefix { host_filter: CompiledPredicate {
                 binding_present: Some("NESTED".into()), ..Default::default()
             }, minimum: 39, optional: false },

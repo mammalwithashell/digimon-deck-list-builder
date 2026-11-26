@@ -1,0 +1,46 @@
+card: BT4-088
+name: DanDevimon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+traits: [Fallen Angel]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+
+effects:
+  - text: "[Opponent's Turn] [Once Per Turn] When a card is removed from your security stack, trash the top card of your opponent's security stack."
+    when: on_own_security_removed
+    active_when: { opponents_turn: true }
+    once_per_turn: true
+    summary: "[Opponent's Turn][Once Per Turn] When a card is removed from your security stack, trash the top card of your opponent's security stack"
+    process:
+      - trash_top_security: { of: opponent }
+
+  - text: "[On Deletion] Your opponent trashes 2 cards in their hand."
+    when: on_deletion
+    summary: "[On Deletion] Your opponent trashes 2 cards in their hand"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_hand:
+                of: opponent
+                optional: false
+                bind_as: discard1
+                filter: {}
+                prompt: "Trash 1st card from your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discard1 }
+            - select_hand:
+                of: opponent
+                optional: false
+                bind_as: discard2
+                filter: {}
+                prompt: "Trash 2nd card from your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discard2 }

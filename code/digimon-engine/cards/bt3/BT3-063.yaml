@@ -1,0 +1,28 @@
+card: BT3-063
+name: Sukamon
+kind: digimon
+level: 4
+color: [black]
+cost: 3
+dp: 1000
+form: Champion
+attribute: Virus
+traits: [Abnormal]
+
+effects:
+  - text: "[On Deletion] Reveal the top 3 cards of your deck. You may play 1 [Chuumon] among them without paying its memory cost. Place the remaining cards on the bottom of your deck in any order."
+    when: on_deletion
+    summary: "[On Deletion] Reveal top 3; may play 1 [Chuumon] free; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Chuumon
+          prompt: "You may play 1 [Chuumon] without paying its memory cost"
+      - play_from_revealed_free: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

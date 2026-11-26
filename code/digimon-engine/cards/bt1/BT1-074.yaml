@@ -1,0 +1,28 @@
+card: BT1-074
+name: Togemon
+kind: digimon
+level: 4
+color: [green]
+cost: 6
+dp: 5000
+form: Champion
+attribute: Data
+traits: [Vegetation]
+
+effects:
+  - text: "[When Digivolving] Reveal 3 cards from the top of your deck. Add 1 level 5 or higher Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+    when: when_digivolving
+    summary: "[When Digivolving] Reveal top 3; add 1 level 5 or higher Digimon to hand; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 5
+          prompt: "Add 1 level 5 or higher Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

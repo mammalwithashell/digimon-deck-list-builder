@@ -1,0 +1,32 @@
+card: BT2-081
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Data
+traits: [Cyborg]
+
+effects:
+  - text: "[When Attacking] You may play 1 purple level 3 Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+    when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may play 1 purple level 3 Digimon from your trash free; its [On Play] effects don't activate"
+    process:
+      - select_trash:
+          of: you
+          optional: false
+          bind_as: revived
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - level_eq: 3
+              - can_play_from_effect_without_cost: true
+          prompt: "Play 1 purple level 3 Digimon card from your trash without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived
+          suppress_on_play: true

@@ -1,0 +1,25 @@
+card: BT2-046
+name: MetalTyrannomon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 6000
+traits: [Cyborg]
+form: Ultimate
+attribute: Virus
+
+effects:
+  - text: "[Your Turn] When this Digimon deletes one of your opponent's level 6 or higher Digimon in battle, unsuspend this Digimon."
+    scope: inherited
+    when: on_any_deletion
+    active_when: { your_turn: true }
+    condition: { source_deleted_battle_opponent: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_target_level_gte: 6
+    summary: "[Inherited][Your Turn] When this Digimon deletes an opponent's Lv.6 or higher Digimon in battle, unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }

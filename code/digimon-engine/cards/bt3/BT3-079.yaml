@@ -1,0 +1,18 @@
+card: BT3-079
+name: Tsukaimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Virus
+traits: [Mammal]
+
+effects:
+  - text: "[On Deletion] Gain 1 memory."
+    scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Gain 1 memory"
+    process:
+      - gain_memory: 1

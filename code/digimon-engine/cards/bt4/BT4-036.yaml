@@ -1,0 +1,10 @@
+card: BT4-036
+name: Falcomon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 2
+dp: 5000
+form: Rookie
+attribute: Vaccine
+traits: [Avian]

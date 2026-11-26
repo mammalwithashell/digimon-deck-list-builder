@@ -1,0 +1,34 @@
+card: BT4-061
+name: BanchoLeomon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 11000
+traits: [Beastkin, Boss]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 3
+
+effects:
+  - text: "[On Deletion] Suspend up to 2 of your opponent's Digimon."
+    when: on_deletion
+    summary: "[On Deletion] Suspend up to 2 of your opponent's Digimon"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          filter: { kind: digimon }
+          bind_as: targets
+          optional_zero: true
+          prompt: "Suspend up to 2 of your opponent's Digimon"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - suspend: { target: target }

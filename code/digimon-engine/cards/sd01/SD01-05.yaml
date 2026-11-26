@@ -1,0 +1,31 @@
+card: SD01-05
+name: Rubeusdramon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Dragon Warrior, ALYSION]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    text: "＜Piercing＞"
+    keyword: Piercing
+
+  - when: when_digivolving
+    text: "[When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less."
+    summary: "[When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon, dp_lte: 6000 }
+          prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+      - delete_permanent: { target: victim }

@@ -1,0 +1,25 @@
+card: BT2-033
+name: Agumon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 3000
+traits: [Dinosaur]
+attribute: Vaccine
+
+effects:
+  - text: "[When Attacking] If you have 3 or more yellow Tamers in play, ＜Draw 1＞ (Draw 1 card from your deck.)"
+    scope: inherited
+    when: when_attacking
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [battle_area]
+          kind: tamer
+          color_is: yellow
+        n: 3
+    summary: "[Inherited][When Attacking] If you have 3 or more yellow Tamers in play, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,44 @@
+card: BT2-077
+name: Kimeramon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Data
+traits: [Composite]
+
+effects:
+  - text: "[On Play] You may delete one of your other Digimon to delete 1 of your opponent's level 5 or lower Digimon."
+    when: on_play
+    optional: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        other: true
+    summary: "[On Play] You may delete 1 of your other Digimon to delete 1 of your opponent's level 5 or lower Digimon"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: sacrifice
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Delete 1 of your other Digimon"
+      - delete_permanent: { target: sacrifice }
+      - if:
+          condition: { effect_deleted_any_own_digimon: true }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+            - delete_permanent: { target: victim }

@@ -1,0 +1,18 @@
+card: BT2-015
+name: Garudamon
+kind: digimon
+level: 5
+color: [red]
+cost: 6
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Birdkin]
+
+effects:
+  - text: "[When Attacking] When this Digimon attacks a player, ＜Draw 1＞ (Draw 1 card from your deck.)"
+    when: when_attacking
+    condition: { event_target_is_player: true }
+    summary: "[When Attacking] When attacking a player, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

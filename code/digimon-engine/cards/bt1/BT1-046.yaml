@@ -1,0 +1,21 @@
+card: BT1-046
+name: Kudamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+form: Rookie
+attribute: Vaccine
+traits: [Holy Beast]
+
+effects:
+  - text: "[When Attacking] If you have 4 or less cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)."
+    when: when_attacking
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 4
+    summary: "[When Attacking] If you have 4 or fewer cards in your hand, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

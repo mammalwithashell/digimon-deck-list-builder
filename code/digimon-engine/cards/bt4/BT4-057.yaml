@@ -1,0 +1,21 @@
+card: BT4-057
+name: GrapLeomon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 6000
+form: Ultimate
+attribute: Vaccine
+traits: [Beastkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 2
+
+effects:
+  - text: "[When Attacking] Gain 1 memory."
+    when: when_attacking
+    summary: "[When Attacking] Gain 1 memory"
+    process:
+      - gain_memory: 1

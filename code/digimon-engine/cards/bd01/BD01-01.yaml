@@ -1,0 +1,18 @@
+card: BD01-01
+name: Tokomon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser, ALYSION]
+form: In-Training
+
+effects:
+  - scope: inherited
+    text: "[Your Turn] Raise the limit of the DP deletion effect for this Digimon with the [ALYSION] trait by +1000."
+    kind: aura
+    target: {}
+    active_when: { your_turn: true, trait_has: ALYSION }
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 1000
+    summary: "Inherited [Your Turn] Add 1000 to this [ALYSION] Digimon's DP deletion effect's maximum"

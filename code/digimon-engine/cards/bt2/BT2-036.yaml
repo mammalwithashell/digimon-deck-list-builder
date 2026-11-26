@@ -1,0 +1,46 @@
+card: BT2-036
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 3000
+traits: [Holy Beast]
+form: Champion
+attribute: Vaccine
+
+effects:
+  - text: "[On Play] If you have a purple Digimon in play, 1 of your opponent's Digimon gets -4000 DP for the turn."
+    when: on_play
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: purple
+    summary: "[On Play] If you have a purple Digimon in play, 1 of your opponent's Digimon gets -4000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -4000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: -4000
+          expiry: end_of_turn
+
+  - text: "[Your Turn] When one of your other Digimon is deleted, this Digimon gets +3000 DP for the turn."
+    when: on_any_deletion
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+    summary: "[Your Turn] When one of your other Digimon is deleted, this Digimon gets +3000 DP for the turn"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_turn

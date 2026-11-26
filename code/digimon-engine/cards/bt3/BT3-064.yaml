@@ -1,0 +1,24 @@
+card: BT3-064
+name: TiaLudomon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+form: Champion
+attribute: Data
+traits: [Armor, Legend-Arms]
+
+effects:
+  - text: "[When Attacking] If this Digimon is level 7, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)"
+    scope: inherited
+    when: when_attacking
+    condition: { level_eq: 7 }
+    summary: "[Inherited][When Attacking] If level 7, <De-Digivolve 1> 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"
+      - de_digivolve: { target: target, amount: 1 }

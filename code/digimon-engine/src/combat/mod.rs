@@ -2449,6 +2449,13 @@ impl Game {
             if self.modifiers.has(h, ModifierType::CannotBlock) {
                 continue;
             }
+            if self
+                .modifiers
+                .has(attacker, ModifierType::CannotBeBlockedByNoSources)
+                && perm.card_sources.len() <= 1
+            {
+                continue;
+            }
             // 12-1-4: "A block can't be performed using a Digimon that
             // can't suspend" — blocking suspends the blocker. (DCGO
             // `Permanent.CanBlock` → `!CanSuspend`, Permanent.cs:2140.)
@@ -4819,7 +4826,13 @@ impl Game {
         // `IBattle.CompareStats`: `HasIceclad || CompareDigivolutionCards`.
         let iceclad_active = comparison == BattleComparison::DigivolutionCards
             || self.has_keyword(attacker, crate::enums::Keyword::Iceclad)
-            || self.has_keyword(defender, crate::enums::Keyword::Iceclad);
+            || self.has_keyword(defender, crate::enums::Keyword::Iceclad)
+            || self
+                .modifiers
+                .has(attacker, crate::enums::ModifierType::BattleCompareDigivolutionCards)
+            || self
+                .modifiers
+                .has(defender, crate::enums::ModifierType::BattleCompareDigivolutionCards);
 
         let (a_value, d_value) = if iceclad_active {
             // `card_sources.len()` includes the top card itself. DCGO's

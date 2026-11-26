@@ -1,0 +1,45 @@
+card: BT4-091
+name: "Chaosmon: Valdur Arm"
+kind: digimon
+level: 7
+color: [white]
+cost: 15
+dp: 14000
+traits: [Unique]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 6
+
+effects:
+  - text: "[When Digivolving] Activate the following effect twice. ・1 of your opponent's Digimon gets -7000 DP for the turn."
+    when: when_digivolving
+    summary: "[When Digivolving] Twice: 1 of your opponent's Digimon gets -7000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target_1
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -7000 DP for the turn (1st activation)"
+      - add_dp_modifier:
+          target: target_1
+          value: -7000
+          expiry: end_of_turn
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target_2
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -7000 DP for the turn (2nd activation)"
+      - add_dp_modifier:
+          target: target_2
+          value: -7000
+          expiry: end_of_turn
+
+  - text: "[On Deletion] Gain 3 memory."
+    when: on_deletion
+    summary: "[On Deletion] Gain 3 memory"
+    process:
+      - gain_memory: 3

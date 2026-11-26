@@ -1,0 +1,41 @@
+card: BT4-096
+name: Izzy Izumi
+kind: tamer
+color: [black]
+cost: 4
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[On Play] Reveal the top 3 cards of your deck. If all of them are black, gain 1 memory. Place the cards at the top of the deck in any order."
+    when: on_play
+    summary: "[On Play] Reveal top 3 cards of your deck; if all are black, gain 1 memory; place them on top of your deck in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - if:
+          condition:
+            all_of:
+              - count_gte:
+                  filter: { of: you, zone: [reveal] }
+                  n: 1
+              - not:
+                  count_gte:
+                    filter:
+                      of: you
+                      zone: [reveal]
+                      not: { color_is: black }
+                    n: 1
+          then:
+            - gain_memory: 1
+      - place_remainder_on_deck: { of: you, position: top }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

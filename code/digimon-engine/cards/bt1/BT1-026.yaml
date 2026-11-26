@@ -1,0 +1,15 @@
+card: BT1-026
+name: Breakdramon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 11000
+traits: [Machine Dragon]
+form: Mega
+attribute: Virus
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing

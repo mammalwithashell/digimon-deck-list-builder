@@ -373,6 +373,7 @@ pub struct CompiledPredicate {
     pub color_only: Option<Vec<CompiledColor>>,
     pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub color_matches_binding: Option<String>,
+    pub name_matches_binding: Option<String>,
     /// G-RETURNED-CARD-COLOR-BINDING — true when the candidate shares a color
     /// with a card this effect returned to deck (`returned_to_deck` log).
     pub color_matches_returned_card: Option<bool>,
@@ -677,6 +678,11 @@ pub struct CompiledPredicate {
     pub all_turns: Option<bool>,
     pub can_hatch: Option<CompiledPlayerRef>,
     pub digimon_attacked_this_turn: Option<CompiledPlayerRef>,
+    pub digivolved_this_turn: Option<CompiledPlayerRef>,
+    #[serde(default)]
+    pub in_phase: Option<CompiledTurnPhase>,
+    #[serde(default)]
+    pub attack_target_matches: Option<Box<CompiledPredicate>>,
     /// "If during an attack" — true while `Game::pending_attack` is set.
     /// G-DSL-DURING-ATTACK.
     #[serde(default)]
@@ -702,6 +708,8 @@ pub struct CompiledPredicate {
     /// sources) is ≥ N. G-DSL-EVENT-TARGET-SOURCE-COUNT.
     #[serde(default)]
     pub event_target_stack_size_gte: Option<u8>,
+    #[serde(default)]
+    pub event_target_materials_count_lte: Option<CompiledDpConstraint>,
     pub event_target_level_eq: Option<u8>,
     pub event_target_level_lte: Option<CompiledDpConstraint>,
     pub event_target_level_gte: Option<CompiledDpConstraint>,
@@ -721,6 +729,8 @@ pub struct CompiledPredicate {
     pub event_target_is_player: Option<bool>,
     pub event_target_is_source: Option<bool>,
     pub event_target_was_self: Option<bool>,
+    #[serde(default)]
+    pub event_target_name_matches_source: Option<bool>,
     pub attack_target_change_reason: Option<String>,
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
@@ -776,6 +786,8 @@ pub struct CompiledPredicate {
     pub event_target_has_same_level_source: Option<bool>,
     pub event_target_digivolved_from_kind: Option<CompiledCardKind>,
     pub event_cause: Option<CompiledEventCause>,
+    #[serde(default)]
+    pub event_played_from_trash: Option<bool>,
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
     pub replacement_subject_is_mine: Option<bool>,
@@ -930,6 +942,7 @@ pub enum CompiledEventCause {
     SecurityRemoval,
     Cost,
     Rule,
+    DigiBurst,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1252,6 +1265,7 @@ pub enum CompiledPerSelector {
     /// Distinct rules colors (synth identity) of the effect carrier.
     /// G-DSL-SOURCE-STACK-UNION-COLOR-COUNT (BT8-084).
     SourceRulesColorCount,
+    EventDeletedDigimonCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1396,6 +1410,8 @@ pub enum CompiledDeclarativeClause {
         /// `ModifierPayload::Name { value, base: false }`. Used by
         /// `CanOnlyDigivolveInto` (judge-quiz Q3, EX10-020).
         modifier_name: Option<String>,
+        #[serde(default)]
+        modifier_colors: Option<Vec<CompiledColor>>,
         /// Structured `TreatAsDigimon` SynthIdentity payload for a mass aura
         /// ("all of your [Marcus Damon]s are also treated as a 12000 DP
         /// Digimon" — BT25-104). No `skip_serializing_if`: the embedded pack
@@ -1881,6 +1897,8 @@ pub enum CompiledStep {
     },
     MayAddTopSecurityToHand {
         of: CompiledPlayerRef,
+        #[serde(default)]
+        cost: bool,
     },
     AddToHandFromReveal {
         of: CompiledPlayerRef,
@@ -2951,6 +2969,8 @@ pub enum CompiledStep {
         source_refs: String,
         #[serde(default)]
         min_count: Option<u8>,
+        #[serde(default)]
+        is_digi_burst: bool,
     },
     /// Trash the `cards` card-list binding from `target`'s digivolution
     /// cards (`select_materials` sibling of `TrashSelectedSources`).
@@ -3203,6 +3223,8 @@ pub enum CompiledStep {
         attacker: CompiledBindingRef,
         targets: CompiledAttackTargetSpec,
         without_suspending: bool,
+        #[serde(default)]
+        can_attack_unsuspended: bool,
         ignore_summoning_sickness: bool,
         optional: bool,
         prompt: Option<String>,
@@ -3213,6 +3235,8 @@ pub enum CompiledStep {
         affects_player: bool,
         targets: CompiledAttackTargetSpec,
         without_suspending: bool,
+        #[serde(default)]
+        can_attack_unsuspended: bool,
         prompt: Option<String>,
         cost_upgrade: Option<CompiledAttackCostUpgrade>,
     },
@@ -3297,6 +3321,8 @@ pub enum CompiledStep {
         single_fire: bool,
         target_color: Option<CompiledColor>,
         suspend_cost: bool,
+        from_level: Option<u8>,
+        to_level: Option<u8>,
     },
     /// G-DSL-EOT-DNA-INLINE — inline DNA digivolve choice at trigger fire.
     ///
@@ -3547,6 +3573,7 @@ pub enum CompiledRevealRemainder {
 pub struct CompiledCanAttack {
     pub targets: CompiledAttackTargetSpec,
     pub without_suspending: bool,
+    pub can_attack_unsuspended: bool,
     pub ignore_summoning_sickness: bool,
 }
 
@@ -3555,6 +3582,7 @@ pub enum CompiledAttackTargetSpec {
     Any,
     Player,
     Digimon,
+    DigimonFewerSources,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -3562,6 +3590,8 @@ pub enum CompiledBindingRef {
     Named(String),
     SelfRef,
     Carrier,
+    /// The defender permanent of the current attack (`AttackTarget::Digimon`).
+    AttackTarget,
     Source,
     EventTarget,
     EventCard,
@@ -3633,6 +3663,15 @@ pub enum CompiledRevealDestination {
 pub enum CompiledRemainderDestination {
     DeckTop,
     DeckBottom,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledTurnPhase {
+    Unsuspend,
+    Draw,
+    Breeding,
+    Main,
+    EndTurn,
 }
 
 #[cfg(test)]

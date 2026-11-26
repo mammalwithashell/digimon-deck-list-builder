@@ -1,0 +1,36 @@
+{
+  "index": 4618,
+  "norm_id": 0.2309,
+  "card_id": "SD02-04",
+  "card_index": 4,
+  "card_name_eng": "Sekkamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "SD02_04",
+  "play_cost": 7,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beastkin",
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [ALYSION] trait, it unsuspends.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

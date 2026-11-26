@@ -1,0 +1,34 @@
+card: BT2-035
+name: GeoGreymon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: [Dinosaur]
+form: Champion
+attribute: Vaccine
+
+effects:
+  - text: "[When Attacking] If you have 3 or more yellow Tamers in play, 1 of your opponent's Digimon gets -2000 DP for the turn."
+    scope: inherited
+    when: when_attacking
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [battle_area]
+          kind: tamer
+          color_is: yellow
+        n: 3
+    summary: "[Inherited][When Attacking] If you have 3 or more yellow Tamers in play, 1 of your opponent's Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: -2000
+          expiry: end_of_turn

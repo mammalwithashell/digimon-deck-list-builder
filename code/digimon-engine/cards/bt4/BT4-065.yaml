@@ -1,0 +1,10 @@
+card: BT4-065
+name: Gotsumon
+kind: digimon
+level: 3
+color: [black]
+cost: 4
+dp: 6000
+form: Rookie
+attribute: Data
+traits: [Rock]

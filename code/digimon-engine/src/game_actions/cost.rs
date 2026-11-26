@@ -533,17 +533,30 @@ impl Game {
         // currently modified (CR 4.3 4-22-2 wording; DCGO BT3_103.cs reads
         // `TopCard.CardColors`, which folds color-change effects), not the
         // printed top card. Scan finding F04 class.
-        let top_colors = self
+        let base_perm = self
             .player(target.player)
             .battle_area
-            .get(target.index as usize)?
-            .colors_for_rules(&self.card_data, &self.modifiers, target);
+            .get(target.index as usize)?;
+        let top_colors = base_perm.colors_for_rules(&self.card_data, &self.modifiers, target);
+        let base_level = base_perm.level_for_rules(&self.card_data, &self.modifiers, target);
+        let to_card_level = self
+            .card_data_for_handle(cost_target.card)
+            .and_then(|d| d.level);
         use super::digivolve::{DigivolveReducerChoice, DigivolveReducerState};
         let mut remaining: Vec<_> = self
             .player_digivolve_cost_reducers
             .iter()
             .enumerate()
-            .filter(|(_, reducer)| !as_tamer && reducer.qualifies(acting_player, target, &top_colors))
+            .filter(|(_, reducer)| {
+                !as_tamer
+                    && reducer.qualifies(
+                        acting_player,
+                        target,
+                        &top_colors,
+                        base_level,
+                        to_card_level,
+                    )
+            })
             .map(|(index, reducer)| DigivolveReducerChoice::Player {
                 index,
                 reducer: reducer.clone(),

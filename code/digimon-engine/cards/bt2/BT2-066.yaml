@@ -1,0 +1,37 @@
+card: BT2-066
+name: Machinedramon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Virus
+traits: [Machine]
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[On Play] ＜De-Digivolve 2＞ 2 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.)"
+    when: on_play
+    summary: "[On Play] <De-Digivolve 2> 2 of your opponent's Digimon"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          clamp_to_available: true
+          filter: { kind: digimon }
+          bind_as: dd_targets
+          prompt: "Choose 2 of your opponent's Digimon to <De-Digivolve 2>"
+      - per_selected:
+          selection: dd_targets
+          bind_as: dd_target
+          body:
+            - de_digivolve:
+                target: dd_target
+                amount: 2
+                stop_at_level: 3

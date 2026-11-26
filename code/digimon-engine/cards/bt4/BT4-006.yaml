@@ -1,0 +1,24 @@
+card: BT4-006
+name: Xiaomon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+form: In-Training
+traits: [Lesser]
+
+effects:
+  - text: "[Your Turn] While you have 10 or more cards in your trash, this Digimon gains ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+            n: 10
+    target: {}
+    grant_keyword: { keyword: Retaliation }
+    summary: "[Inherited][Your Turn] While you have 10 or more cards in your trash, this Digimon gains <Retaliation>"

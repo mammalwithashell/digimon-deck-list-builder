@@ -1,0 +1,18 @@
+card: BT3-003
+name: Upamon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+form: In-Training
+traits: [Amphibian]
+
+effects:
+  - text: "[When Attacking] [Once Per Turn] If you have 3 or fewer security cards, ＜Draw 1＞ (Draw 1 card from your deck.)"
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { security_count_lte: 3 }
+    summary: "[Inherited][When Attacking][Once Per Turn] If you have 3 or fewer security cards, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,31 @@
+card: BT1-093
+name: Great Tornado
+kind: option
+color: [red]
+cost: 3
+
+effects:
+  - text: "[Main] 1 of your Digimon gets +2000 DP and ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)"
+    when: main_from_hand
+    summary: "[Main] 1 of your Digimon gets +2000 DP and <Security A. +1> for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +2000 DP and <Security A. +1> for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 2000
+          expiry: end_of_turn
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_turn
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

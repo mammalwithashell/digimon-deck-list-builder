@@ -1,0 +1,54 @@
+card: BT2-097
+name: Lightning Paw
+kind: option
+color: [yellow]
+cost: 3
+
+effects:
+  - text: "[Main] 3 of your opponent's level 3 Digimon get -4000 DP for the turn."
+    when: main
+    summary: "[Main] 3 of your opponent's level 3 Digimon get -4000 DP for the turn"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 3
+          optional_zero: false
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          bind_as: targets
+          prompt: "Choose 3 of your opponent's level 3 Digimon to get -4000 DP for the turn"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - add_dp_modifier:
+                target: target
+                value: -4000
+                expiry: end_of_turn
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 3
+          optional_zero: false
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          bind_as: targets
+          prompt: "Choose 3 of your opponent's level 3 Digimon to get -4000 DP for the turn"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - add_dp_modifier:
+                target: target
+                value: -4000
+                expiry: end_of_turn

@@ -1,0 +1,29 @@
+card: BT4-058
+name: Orochimon
+kind: digimon
+level: 5
+color: [green]
+cost: 8
+dp: 8000
+form: Ultimate
+attribute: Virus
+traits: [Dark Dragon]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 3
+
+effects:
+  - text: "[When Digivolving] 1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) for the turn."
+    when: when_digivolving
+    summary: "[When Digivolving] 1 of your Digimon gains <Piercing> for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain <Piercing> for the turn"
+      - grant_keyword:
+          target: target
+          keyword: Piercing
+          expiry: end_of_turn

@@ -1750,6 +1750,7 @@ impl Walk for digimon_dsl::clause::AuraBody {
             modifier,
             modifier_value,
             modifier_name,
+            modifier_colors,
             synth_identity,
             while_condition,
             applies_to_opponent_security_dp,
@@ -1780,6 +1781,7 @@ impl Walk for digimon_dsl::clause::AuraBody {
             "UNCLASSIFIED_STRING",
         );
         modifier_name.walk(c, &format!("{}.modifier_name", path), "UNCLASSIFIED_STRING");
+        modifier_colors.walk(c, &format!("{}.modifier_colors", path), "UNCLASSIFIED_STRING");
         synth_identity.walk(
             c,
             &format!("{}.synth_identity", path),
@@ -3233,6 +3235,12 @@ impl Walk for digimon_dsl::compiled::CompiledEventCause {
                 "ENUM_SCALAR",
                 serde_json::json!("Rule"),
             ),
+            digimon_dsl::compiled::CompiledEventCause::DigiBurst => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledEventCause",
+                "ENUM_SCALAR",
+                serde_json::json!("DigiBurst"),
+            ),
         }
     }
 }
@@ -3835,6 +3843,7 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 modifier,
                 modifier_value,
                 modifier_name,
+                modifier_colors,
                 synth_identity,
                 while_condition,
                 applies_to_opponent_security_dp,
@@ -3915,6 +3924,11 @@ impl Walk for digimon_dsl::compiled::CompiledDeclarativeClause {
                 modifier_name.walk(
                     c,
                     &format!("{}.modifier_name", &format!("{}@Aura", path)),
+                    "UNCLASSIFIED_STRING",
+                );
+                modifier_colors.walk(
+                    c,
+                    &format!("{}.modifier_colors", &format!("{}@Aura", path)),
                     "UNCLASSIFIED_STRING",
                 );
                 synth_identity.walk(
@@ -5478,12 +5492,18 @@ impl Walk for digimon_dsl::compiled::CompiledCanAttack {
         let digimon_dsl::compiled::CompiledCanAttack {
             targets,
             without_suspending,
+            can_attack_unsuspended,
             ignore_summoning_sickness,
         } = self;
         targets.walk(c, &format!("{}.targets", path), "UNCLASSIFIED_STRING");
         without_suspending.walk(
             c,
             &format!("{}.without_suspending", path),
+            "UNCLASSIFIED_STRING",
+        );
+        can_attack_unsuspended.walk(
+            c,
+            &format!("{}.can_attack_unsuspended", path),
             "UNCLASSIFIED_STRING",
         );
         ignore_summoning_sickness.walk(
@@ -5520,6 +5540,12 @@ impl Walk for digimon_dsl::compiled::CompiledAttackTargetSpec {
                 "ENUM_SCALAR",
                 serde_json::json!("Digimon"),
             ),
+            digimon_dsl::compiled::CompiledAttackTargetSpec::DigimonFewerSources => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledAttackTargetSpec",
+                "ENUM_SCALAR",
+                serde_json::json!("DigimonFewerSources"),
+            ),
         }
     }
 }
@@ -5552,6 +5578,12 @@ impl Walk for digimon_dsl::compiled::CompiledBindingRef {
                 "digimon_dsl::compiled::CompiledBindingRef",
                 "ENUM_SCALAR",
                 serde_json::json!("Carrier"),
+            ),
+            digimon_dsl::compiled::CompiledBindingRef::AttackTarget => c.node(
+                path,
+                "digimon_dsl::compiled::CompiledBindingRef",
+                "ENUM_SCALAR",
+                serde_json::json!("AttackTarget"),
             ),
             digimon_dsl::compiled::CompiledBindingRef::Source => c.node(
                 path,
@@ -5875,5 +5907,30 @@ impl Walk for digimon_dsl::compiled::CompiledDnaMaterialResultScope {
         match self {
             digimon_dsl::compiled::CompiledDnaMaterialResultScope::OwnHand => c.node(path, "digimon_dsl::compiled::CompiledDnaMaterialResultScope", "ENUM_SCALAR", serde_json::json!("OwnHand")),
         }
+    }
+}
+
+impl Walk for digimon_dsl::predicate::TurnPhaseSpec {
+    fn walk(&self, c: &mut Collector, path: &str, _role: &str) {
+        let variant = match self {
+            Self::Unsuspend => "Unsuspend",
+            Self::Draw => "Draw",
+            Self::Breeding => "Breeding",
+            Self::Main => "Main",
+            Self::EndTurn => "EndTurn",
+        };
+        c.node(path, "digimon_dsl::predicate::TurnPhaseSpec", "VARIANT", serde_json::json!(variant));
+    }
+}
+impl Walk for digimon_dsl::compiled::CompiledTurnPhase {
+    fn walk(&self, c: &mut Collector, path: &str, _role: &str) {
+        let variant = match self {
+            Self::Unsuspend => "Unsuspend",
+            Self::Draw => "Draw",
+            Self::Breeding => "Breeding",
+            Self::Main => "Main",
+            Self::EndTurn => "EndTurn",
+        };
+        c.node(path, "digimon_dsl::compiled::CompiledTurnPhase", "VARIANT", serde_json::json!(variant));
     }
 }

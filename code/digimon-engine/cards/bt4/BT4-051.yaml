@@ -1,0 +1,30 @@
+card: BT4-051
+name: DoKunemon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Virus
+traits: [Larva]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with ＜Digi-Burst＞ among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+    when: on_play
+    summary: "[On Play] Reveal top 3; add 1 Digimon card with <Digi-Burst> to hand; place rest at deck bottom"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - optional: false
+              filter: { kind: digimon, printed_keyword: DigiBurst }
+              to: hand
+              max: 1
+              prompt: "Add 1 Digimon card with <Digi-Burst> to your hand"
+          remainder: bottom

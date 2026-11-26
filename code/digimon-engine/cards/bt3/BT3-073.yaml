@@ -1,0 +1,51 @@
+card: BT3-073
+name: CresGarurumon
+kind: digimon
+level: 6
+color: [black]
+cost: 11
+dp: 11000
+form: Mega
+attribute: Data
+traits: [Beast Knight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+effects:
+  - text: "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - text: "[When Digivolving] Reveal 1 card from the top of your deck for each Digimon your opponent has in play. You may play 1 black or red Digimon card with a level of 5 or less among them without paying its memory cost. Place the remaining cards on the bottom of your deck in any order."
+    when: when_digivolving
+    summary: "[When Digivolving] Reveal 1 top deck card per opponent Digimon; may play 1 black/red Lv.5 or lower Digimon free; rest to deck bottom"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: opp_digimon
+          body:
+            - reveal_top_deck: { of: you, count: 1 }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - color_is: black
+                  - color_is: red
+          prompt: "You may play 1 black or red level 5 or lower Digimon card without paying its memory cost"
+      - play_from_revealed_free: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }

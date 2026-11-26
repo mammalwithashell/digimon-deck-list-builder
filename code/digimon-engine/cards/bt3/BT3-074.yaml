@@ -1,0 +1,25 @@
+card: BT3-074
+name: MetalEtemon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 10000
+form: Mega
+attribute: Virus
+traits: [Cyborg]
+
+effects:
+  - text: "[Your Turn] This Digimon can't be blocked by your opponent's Digimon."
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    modifier: CannotBeBlocked
+    summary: "[Your Turn] This Digimon can't be blocked by opponent's Digimon"
+
+  - text: "[Opponent's Turn] This Digimon gets +2000 DP."
+    kind: aura
+    active_when: { opponents_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Opponent's Turn] This Digimon gets +2000 DP"

@@ -1,0 +1,92 @@
+card: ST25-05
+name: Rubeusdramon
+kind: dual
+level: 6
+color: [red]
+dp: 12000
+traits: [Dragon Warrior, ALYSION]
+form: Mega
+attribute: Vaccine
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [red]
+    traits: [Dragon Warrior, ALYSION]
+    effect_text: "＜Progress＞ ＜Piercing＞ [When Digivolving] Delete up to 7000 DP total worth of your opponent's Digimon. For every 8000 DP this Digimon has, add 4000 to this DP deletion effect's maximum. [Your Turn] For every 8000 DP this Digimon has, it gains ＜Security A. +1＞."
+  option:
+    use_cost: 5
+    colors: [red]
+    effect_text: "[Main] 1 of your [ALYSION] trait Digimon gets +10000 DP for the turn. Then, delete 1 of your opponent's Digimon with as much DP as 1 of your Digimon or less. ＜Arts Digivolve＞"
+    keywords: [ArtsDigivolve]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, level_eq: 5, in_text_contains: Gemmon }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    text: "＜Progress＞"
+    keyword: Progress
+
+  - kind: grant_keyword
+    text: "＜Piercing＞"
+    keyword: Piercing
+
+  - when: when_digivolving
+    text: "[When Digivolving] Delete up to 7000 DP total worth of your opponent's Digimon. For every 8000 DP this Digimon has, add 4000 to this DP deletion effect's maximum."
+    summary: "[When Digivolving] Delete up to 7000 + 4000*(DP/8000) DP total worth of opposing Digimon"
+    process:
+      - select_opponent_dp_budget:
+          dp_budget:
+            subtract:
+              - 7000
+              - multiply:
+                  - floor_div:
+                      - { source_dp: {} }
+                      - 8000
+                  - -4000
+          min_picks: 1
+          filter: { kind: digimon }
+          bind_as: targets
+          prompt: "Delete up to your DP budget worth of your opponent's Digimon"
+          then:
+            - delete_bound_permanents: { binding: targets }
+
+  - kind: aura
+    text: "[Your Turn] For every 8000 DP this Digimon has, it gains ＜Security A. +1＞."
+    target: {}
+    active_when: { your_turn: true }
+    security_attack:
+      floor_div:
+        - subtract:
+            - { source_dp: {} }
+            - -8000
+        - 8000
+    summary: "[Your Turn] For every 8000 DP this Digimon has, it gains <Security A. +1>"
+
+  - when: main_from_hand
+    text: "[Main] 1 of your [ALYSION] trait Digimon gets +10000 DP for the turn. Then, delete 1 of your opponent's Digimon with as much DP as 1 of your Digimon or less."
+    summary: "[Main] 1 of your [ALYSION] Digimon gets +10000 DP for the turn, then delete 1 opposing Digimon with DP <= 1 of your Digimon's DP"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: boosted
+          filter: { kind: digimon, trait_has: ALYSION }
+          prompt: "1 of your [ALYSION] trait Digimon gets +10000 DP for the turn"
+      - add_dp_modifier: { target: boosted, value: 10000, expiry: end_of_turn }
+      - select_own_permanent:
+          optional: false
+          bind_as: comparison
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon as the DP limit"
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon, dp_lte: { formula: { binding_dp: comparison } } }
+          prompt: "Delete 1 of your opponent's Digimon with as much DP as your chosen Digimon or less"
+      - delete_permanent: { target: victim }

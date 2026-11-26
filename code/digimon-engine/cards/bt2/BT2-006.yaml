@@ -1,0 +1,25 @@
+card: BT2-006
+name: Tsumemon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+form: In-Training
+traits: [Unidentified]
+
+effects:
+  - text: "[Your Turn] While you have another Digimon with the same name as this Digimon, this Digimon gets +2000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            other: true
+            name_matches_source: true
+    target: { is_source_permanent: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] While you have another Digimon with the same name as this Digimon, this Digimon gets +2000 DP"

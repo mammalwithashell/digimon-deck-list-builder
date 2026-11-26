@@ -1,0 +1,24 @@
+card: BT1-012
+name: Biyomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Bird]
+form: Rookie
+attribute: Vaccine
+
+effects:
+  # Official errata / JP text: DP boost lasts for the turn (end_of_turn).
+  - text: "[Your Turn] When this Digimon is blocked, it gets +2000 DP."
+    scope: inherited
+    when: on_block
+    active_when: { your_turn: true }
+    condition: { event_permanent_is_source: true }
+    summary: "[Inherited][Your Turn] When this Digimon is blocked, it gets +2000 DP for the turn"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 2000
+          expiry: end_of_turn

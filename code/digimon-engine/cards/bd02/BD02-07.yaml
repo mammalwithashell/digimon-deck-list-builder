@@ -1,0 +1,39 @@
+card: BD02-07
+name: Yukinamon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 11000
+traits: [Ice-Snow, ALYSION]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+
+effects:
+  - when: when_digivolving
+    text: "[When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Afterwards, until the end of your opponent's turn, this Digimon gains ＜Blocker＞."
+    summary: "[When Digivolving] Trash the bottom 3 sources of 1 opposing Digimon; then this Digimon gains <Blocker> until the end of opponent's turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 3 }
+      - grant_keyword:
+          target: source
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+
+  - kind: aura
+    text: "[All Turns] Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles."
+    target: {}
+    active_when: { all_turns: true }
+    modifier: BattleCompareDigivolutionCards
+    modifier_value: 1
+    summary: "[All Turns] Other than against Security Digimon, compare digivolution card count instead of DP in this Digimon's battles"

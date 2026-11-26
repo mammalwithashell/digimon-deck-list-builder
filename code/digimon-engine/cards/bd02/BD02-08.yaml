@@ -1,0 +1,39 @@
+card: BD02-08
+name: Valner Dragnogh
+kind: tamer
+color: [blue]
+cost: 3
+traits: [ALYSION]
+
+effects:
+  - when: start_of_your_main_phase
+    text: "[Start of Your Main Phase] If you have a blue Digimon with the [ALYSION] trait, gain 1 memory."
+    condition:
+      any_permanent: { of: you, zone: [battle_area], kind: digimon, color_is: blue, trait_has: ALYSION }
+    summary: "[Start of Your Main Phase] If you have a blue [ALYSION] Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: main_on_field
+    text: "[Main] By suspending this Tamer, 1 of your blue Digimon with the [ALYSION] trait gains ＜Piercing＞ for the turn."
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - can_change_orientation: true
+    summary: "[Main] By suspending this Tamer, 1 of your blue [ALYSION] Digimon gains <Piercing> for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          optional: false
+          bind_as: boosted
+          filter: { kind: digimon, color_is: blue, trait_has: ALYSION }
+          prompt: "1 of your blue [ALYSION] trait Digimon gains <Piercing> for the turn"
+      - grant_keyword:
+          target: boosted
+          keyword: Piercing
+          expiry: end_of_turn
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}

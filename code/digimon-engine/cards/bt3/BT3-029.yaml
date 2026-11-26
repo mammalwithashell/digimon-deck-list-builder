@@ -1,0 +1,24 @@
+card: BT3-029
+name: Goldramon
+kind: digimon
+level: 6
+color: [blue]
+cost: 11
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: ["Holy Dragon", "Four Great Dragons"]
+
+effects:
+  - text: "[Your Turn] [Once Per Turn] When you play another Digimon, unsuspend this Digimon."
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_is_source: false
+    summary: "[Your Turn] [Once Per Turn] When you play another Digimon, unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }

@@ -4495,7 +4495,7 @@ mod owned_boolean_replay_tests {
         r.skip_mulligan();r.game.enter_main_phase();
         let source=r.game.players[0].hand[0].handle();
         if security {
-            crate::dsl_cards::step::run_steps(&[digimon_dsl::compiled::CompiledStep::MayAddTopSecurityToHand {of:digimon_dsl::compiled::CompiledPlayerRef::You}],
+            crate::dsl_cards::step::run_steps(&[digimon_dsl::compiled::CompiledStep::MayAddTopSecurityToHand {of:digimon_dsl::compiled::CompiledPlayerRef::You, cost: false}],
                 &mut EffectContext::new(&mut r.game,source,None,0),&mut crate::dsl_cards::bindings::Bindings::new());
         } else {
             EffectContext::new(&mut r.game,source,None,0).select_union_zone(0,crate::selection::UnionZoneSet::HAND,None,None,"choose a card",true,|_,_,_|true,|_,_,_|{});

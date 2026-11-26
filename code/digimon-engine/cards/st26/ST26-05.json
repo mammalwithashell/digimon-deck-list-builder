@@ -1,0 +1,72 @@
+{
+  "index": 4632,
+  "norm_id": 0.2316,
+  "card_id": "ST26-05",
+  "card_index": 5,
+  "card_name_eng": "Yukinamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST26_05",
+  "play_cost": 5,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 4,
+  "rarity": 3,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Ice-Snow",
+    "ALYSION"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Iceclad＞ ＜Piercing＞ ＜Blocker＞ [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] trait Digimon may attack without suspending. [When Attacking] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "",
+  "dual": {
+    "digimon": {
+      "level": 6,
+      "dp": 12000,
+      "colors": [
+        "Blue"
+      ],
+      "traits": [
+        "Ice-Snow",
+        "ALYSION"
+      ],
+      "evo_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "effect_text": "＜Iceclad＞ ＜Piercing＞ ＜Blocker＞ [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] trait Digimon may attack without suspending. [When Attacking] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck.",
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    },
+    "option": {
+      "use_cost": 5,
+      "colors": [
+        "Blue"
+      ],
+      "effect_text": "[Main] Trash all cards from under 1 of your opponent's Digimon or Tamers. Then, 2 of their Digimon or Tamers can't suspend until their turn ends.",
+      "security_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    }
+  }
+}

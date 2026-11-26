@@ -1,0 +1,19 @@
+card: BT3-066
+name: Clockmon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+form: Champion
+attribute: Data
+traits: [Machine]
+
+effects:
+  - text: "[Opponent's Turn] This Digimon gets +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when: { opponents_turn: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][Opponent's Turn] This Digimon gets +1000 DP"

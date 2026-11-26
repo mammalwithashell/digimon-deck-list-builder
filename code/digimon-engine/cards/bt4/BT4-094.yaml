@@ -1,0 +1,37 @@
+card: BT4-094
+name: Tai Kamiya
+kind: tamer
+color: [yellow]
+cost: 3
+
+effects:
+  - text: "[Your Turn] While you have 3 or fewer security cards, all of your Digimon get +1000 DP."
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - security_count_lte: 3
+    target: { of: you, zone: [battle_area], kind: digimon }
+    dp_modifier: 1000
+    summary: "[Your Turn] While you have 3 or fewer security cards, all of your Digimon get +1000 DP"
+
+  - text: "[Your Turn] When an opponent's Digimon is deleted by dropping to 0 DP, you may suspend this Tamer to gain 1 memory."
+    when: on_any_deletion
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_cause: rule
+    summary: "[Your Turn] When an opponent's Digimon is deleted by dropping to 0 DP, you may suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

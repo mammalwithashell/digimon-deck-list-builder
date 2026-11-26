@@ -1,0 +1,25 @@
+card: BT3-072
+name: BryweLudramon
+kind: digimon
+level: 6
+color: [black]
+cost: 10
+dp: 12000
+form: Mega
+attribute: Data
+traits: [Armor, Legend-Arms]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "[Inherited] <Blocker>"

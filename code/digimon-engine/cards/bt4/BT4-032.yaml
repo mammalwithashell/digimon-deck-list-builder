@@ -1,0 +1,45 @@
+card: BT4-032
+name: MachGaogamon
+kind: digimon
+level: 5
+color: [blue]
+cost: 8
+dp: 7000
+form: Ultimate
+attribute: Data
+traits: [Cyborg]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - text: "[Main] ＜Digi-Burst 2＞ (You may trash 2 of this Digimon's digivolution cards to activate the effect below.) ・Return 1 of your opponent's level 4 or lower Digimon to its owner's hand."
+    when: main_on_field
+    summary: "[Main] <Digi-Burst 2> Return 1 of your opponent's level 4 or lower Digimon to its owner's hand"
+    process:
+      - digi_burst:
+          count: 2
+          bind_as: burst_source
+          prompt: "Choose 2 digivolution cards under this Digimon to trash for <Digi-Burst 2>"
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter: { kind: digimon, level_lte: 4 }
+                prompt: "Return 1 of your opponent's level 4 or lower Digimon to its owner's hand"
+            - return_to_hand: { target: target }
+
+  - text: "[Your Turn] While you have a Tamer in play, this Digimon gets +2000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] While you have a Tamer in play, this Digimon gets +2000 DP"

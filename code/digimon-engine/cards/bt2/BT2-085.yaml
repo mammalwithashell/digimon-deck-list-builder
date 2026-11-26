@@ -1,0 +1,23 @@
+card: BT2-085
+name: Joe Kido
+kind: tamer
+color: [blue]
+cost: 3
+
+effects:
+  - text: "[Your Turn] When one of your opponent's digivolution cards is trashed, you may suspend this Tamer to gain 1 memory."
+    when: on_digivolution_card_trashed
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if: { event_target_owner: opponent }
+    summary: "[Your Turn] When one of your opponent's digivolution cards is trashed, you may suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

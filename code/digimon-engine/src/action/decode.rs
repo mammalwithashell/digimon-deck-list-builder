@@ -386,9 +386,6 @@ impl Game {
         }
         // §11-2-7-1: a suspended Digimon, or one this attacker may attack
         // unsuspended.
-        target.is_suspended
-            || self
-                .modifiers
-                .has(attacker, ModifierType::CanAttackUnsuspended)
+        target.is_suspended || self.can_attack_unsuspended_target(attacker, defender)
     }
 }

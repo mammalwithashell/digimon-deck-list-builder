@@ -485,6 +485,8 @@ fn ex6_072_dna_reducer_payment_is_optional_visible_and_clone_safe() {
             true,
             Some(CardColor::Red),
             true,
+            None,
+            None,
         );
         use_option(&mut r);
         complete(&mut r, field, 1);

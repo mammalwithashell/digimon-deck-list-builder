@@ -1,0 +1,26 @@
+card: BT1-004
+name: Wanyamon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - text: "[Your Turn] While your opponent has 2 or more Digimon with no digivolution cards in play, this Digimon gets +2000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_gte:
+            filter:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              materials_count_lte: 0
+            n: 2
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] While opponent has 2+ Digimon with no digivolution cards, this Digimon gets +2000 DP"

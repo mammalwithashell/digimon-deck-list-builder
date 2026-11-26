@@ -1,0 +1,44 @@
+card: BT2-039
+name: Magnadramon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 11
+dp: 10000
+traits: [Holy Dragon, Four Great Dragons]
+form: Mega
+attribute: Vaccine
+
+effects:
+  - text: "[On Play] If you have 3 or fewer security cards, ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)"
+    when: on_play
+    condition:
+      count_lte:
+        filter: { of: you, zone: [security] }
+        n: 3
+    summary: "[On Play] If you have 3 or fewer security cards, <Recovery +2 (Deck)>"
+    process:
+      - recover: { of: you, count: 2 }
+
+  - text: "[When Attacking] You may play 1 yellow level 3 Digimon card from your hand without paying its memory cost."
+    when: when_attacking
+    optional: true
+    summary: "[When Attacking] You may play 1 yellow level 3 Digimon card from your hand without paying its memory cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - color_is: yellow
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 yellow level 3 Digimon card from your hand without paying its memory cost"
+      - if:
+          condition: { binding_present: play_pick }
+          then:
+            - play_from_hand_free:
+                of: you
+                hand_index: play_pick

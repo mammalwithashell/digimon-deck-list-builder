@@ -1,0 +1,32 @@
+card: BT3-071
+name: MetalMamemon
+kind: digimon
+level: 5
+color: [black]
+cost: 8
+dp: 7000
+form: Ultimate
+attribute: Data
+traits: [Cyborg]
+
+effects:
+  - text: "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - text: "[When Digivolving] Return 1 level 7 Digimon card with [Virus] in its attribute from your trash to your hand."
+    when: when_digivolving
+    summary: "[When Digivolving] Return 1 Lv.7 [Virus] Digimon from trash to hand"
+    process:
+      - select_trash:
+          optional: false
+          of: you
+          bind_as: recovered
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 7
+              - attribute_is: Virus
+          prompt: "Return 1 level 7 Digimon card with the [Virus] attribute from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }

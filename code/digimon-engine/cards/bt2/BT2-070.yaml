@@ -1,0 +1,17 @@
+card: BT2-070
+name: Tapirmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Vaccine
+traits: [Holy Beast]
+
+effects:
+  - text: "[On Deletion] ＜Draw 1＞ (Draw 1 card from your deck.)"
+    when: on_deletion
+    summary: "[On Deletion] <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

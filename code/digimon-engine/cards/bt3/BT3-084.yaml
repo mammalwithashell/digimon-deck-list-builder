@@ -1,0 +1,29 @@
+card: BT3-084
+name: Raremon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 4000
+form: Champion
+attribute: Virus
+traits: [Undead]
+
+effects:
+  - text: "[On Play] Reveal the top 3 cards of your deck. Add 1 Option card among them to your hand. Trash the remaining cards."
+    when: on_play
+    summary: "[On Play] Reveal top 3; add 1 Option card to hand; trash remaining cards"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter: { kind: option }
+          prompt: "Add 1 Option card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }

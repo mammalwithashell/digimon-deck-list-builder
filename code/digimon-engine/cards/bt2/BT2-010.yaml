@@ -1,0 +1,18 @@
+card: BT2-010
+name: Biyomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+form: Rookie
+attribute: Vaccine
+traits: [Bird]
+
+effects:
+  - text: "[On Deletion] If it's your turn, gain 1 memory."
+    when: on_deletion
+    condition: { your_turn: true }
+    summary: "[On Deletion] If it's your turn, gain 1 memory"
+    process:
+      - gain_memory: 1

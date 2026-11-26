@@ -1,0 +1,52 @@
+card: BT4-113
+name: AncientGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 13000
+traits: [Ancient Dragon, Ten Warriors]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+
+effects:
+  - text: "[Your Turn] For each Digimon card in this Digimon's digivolution cards with [Greymon] in its name (other than [DoruGreymon], [BurningGreymon] or [DexDoruGreymon]) or [Hybrid] trait, this Digimon gains ＜Security A. +1＞."
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    security_attack:
+      source_stack_count:
+        target: source
+        filter:
+          all_of:
+            - kind: digimon
+            - any_of:
+                - name_contains: "Greymon"
+                - trait_has: "Hybrid"
+    summary: "[Your Turn] Gains <Security A. +1> for each [Greymon]-named or [Hybrid]-trait Digimon card in this Digimon's digivolution cards"
+
+  - text: "[On Deletion] You may play 1 red level 4 or below Digimon card with the [Hybrid] trait from your hand without paying its cost."
+    when: on_deletion
+    summary: "[On Deletion] You may play 1 red Lv.4 or lower [Hybrid]-trait Digimon card from your hand without paying its cost"
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: hybrid_card
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: red
+              - level_lte: 4
+              - trait_has: "Hybrid"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 red level 4 or lower [Hybrid] Digimon card from your hand without paying its cost"
+      - if:
+          condition: { binding_present: hybrid_card }
+          then:
+            - play_from_hand_free: { of: you, hand_index: hybrid_card }

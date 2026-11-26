@@ -1,0 +1,16 @@
+card: BT2-007
+name: Pagumon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+form: In-Training
+traits: [Lesser]
+
+effects:
+  - text: "[When Attacking] Trash the top card of your deck."
+    scope: inherited
+    when: when_attacking
+    summary: "[Inherited][When Attacking] Trash the top card of your deck"
+    process:
+      - trash_from_top: { of: you, count: 1 }

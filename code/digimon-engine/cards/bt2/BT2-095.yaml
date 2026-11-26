@@ -1,0 +1,27 @@
+card: BT2-095
+name: River of Power
+kind: option
+color: [blue]
+cost: 3
+
+effects:
+  - text: "[Main] Return up to 3 of your opponent's level 3 Digimon to their hand."
+    when: main
+    summary: "[Main] Return up to 3 of your opponent's level 3 Digimon to their hand"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 3
+          optional_zero: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          bind_as: targets
+          prompt: "Choose up to 3 of your opponent's level 3 Digimon to return to their hand"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - return_to_hand: { target: target }

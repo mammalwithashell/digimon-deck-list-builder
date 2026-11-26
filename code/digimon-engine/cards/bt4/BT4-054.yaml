@@ -1,0 +1,35 @@
+card: BT4-054
+name: Sunflowmon
+kind: digimon
+level: 4
+color: [green]
+cost: 5
+dp: 5000
+form: Champion
+attribute: Data
+traits: [Vegetation]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 2
+
+effects:
+  - text: "[Main] ＜Digi-Burst 2＞ (You may trash 2 of this Digimon's digivolution cards to activate the effect below.) ・1 of your opponent's suspended Digimon doesn't unsuspend during your opponent's next unsuspend phase."
+    when: main_on_field
+    summary: "[Main] <Digi-Burst 2> 1 of your opponent's suspended Digimon doesn't unsuspend during your opponent's next unsuspend phase"
+    process:
+      - digi_burst:
+          count: 2
+          bind_as: burst_source
+          prompt: "Choose 2 digivolution cards under this Digimon to trash for <Digi-Burst 2>"
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter: { kind: digimon, is_suspended: true }
+                prompt: "Choose 1 of your opponent's suspended Digimon that won't unsuspend during their next unsuspend phase"
+            - add_modifier:
+                target: target
+                modifier: CannotUnsuspendInUnsuspendPhase
+                value: 1
+                expiry: end_of_opponents_next_turn

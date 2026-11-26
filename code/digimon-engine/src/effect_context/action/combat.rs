@@ -205,9 +205,26 @@ impl<'a> EffectContext<'a> {
 
         if matches!(
             targets,
-            AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
+            AttackTargetRestriction::Any
+                | AttackTargetRestriction::DigimonOnly
+                | AttackTargetRestriction::DigimonFewerSources
         ) {
+            let attacker_sources = self
+                .game
+                .players
+                .get(attacker.player as usize)
+                .and_then(|p| p.battle_area.get(attacker.index as usize))
+                .map(|p| p.card_sources.len())
+                .unwrap_or(0);
             for index in 0..self.game.player(opponent).battle_area.len() {
+                if targets == AttackTargetRestriction::DigimonFewerSources
+                    && self.game.player(opponent).battle_area[index]
+                        .card_sources
+                        .len()
+                        >= attacker_sources
+                {
+                    continue;
+                }
                 let target = AttackTarget::Digimon(PermanentHandle {
                     player: opponent,
                     index: index as u8,
@@ -430,17 +447,38 @@ impl<'a> EffectContext<'a> {
         cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
         ignore_summoning_sickness: bool,
     ) -> Result<(), AttackError> {
-        let valid_action_ids = if ignore_summoning_sickness {
-            effect_attack_target_action_ids_with_options(
-                self.game,
-                attacker,
-                targets,
-                without_suspending,
-                true,
-            )
-        } else {
-            effect_attack_target_action_ids(self.game, attacker, targets, without_suspending)
-        };
+        self.may_attack_now_with_all_options(
+            attacker,
+            targets,
+            without_suspending,
+            false,
+            optional,
+            prompt,
+            cost_upgrade,
+            ignore_summoning_sickness,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn may_attack_now_with_all_options(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        can_attack_unsuspended: bool,
+        optional: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+        ignore_summoning_sickness: bool,
+    ) -> Result<(), AttackError> {
+        let valid_action_ids = effect_attack_target_action_ids_with_all_options(
+            self.game,
+            attacker,
+            targets,
+            without_suspending,
+            can_attack_unsuspended,
+            ignore_summoning_sickness,
+        );
         if valid_action_ids.is_empty() {
             return Ok(());
         }
@@ -549,6 +587,28 @@ impl<'a> EffectContext<'a> {
         prompt: &str,
         cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
     ) -> Result<(), AttackError> {
+        self.force_attack_with_scope_and_unsuspended(
+            attacker,
+            affects_player,
+            targets,
+            without_suspending,
+            false,
+            prompt,
+            cost_upgrade,
+        )
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn force_attack_with_scope_and_unsuspended(
+        &mut self,
+        attacker: PermanentHandle,
+        affects_player: bool,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        can_attack_unsuspended: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    ) -> Result<(), AttackError> {
         // A Digimon-directed forced attack affects its selected attacker (EX3-024;
         // general_rule.pdf 15-15-5-1). Selection can still include immune
         // Digimon, but they do not perform this effect's attack. Check the
@@ -559,13 +619,15 @@ impl<'a> EffectContext<'a> {
         }
         let previous_override = self.override_selecting_player;
         self.override_selecting_player = Some(attacker.player);
-        let result = self.may_attack_now_optional_with_upgrade(
+        let result = self.may_attack_now_with_all_options(
             attacker,
             targets,
             without_suspending,
+            can_attack_unsuspended,
             false,
             prompt,
             cost_upgrade,
+            false,
         );
         self.override_selecting_player = previous_override;
         result

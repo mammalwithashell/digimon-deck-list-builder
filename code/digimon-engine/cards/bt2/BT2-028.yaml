@@ -1,0 +1,38 @@
+card: BT2-028
+name: AeroVeedramon
+kind: digimon
+level: 5
+color: [blue]
+cost: 8
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Holy Dragon]
+
+effects:
+  - text: "[When Digivolving] If you have a blue Tamer in play, unsuspend 1 of your blue Digimon."
+    when: when_digivolving
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        color_is: blue
+    summary: "[When Digivolving] If you have a blue Tamer, unsuspend 1 of your blue Digimon"
+    process:
+      - select_own_permanent:
+          optional: false
+          filter: { kind: digimon, color_is: blue }
+          bind_as: target_mon
+          prompt: "Choose 1 of your blue Digimon to unsuspend"
+      - unsuspend: { target: target_mon }
+
+  - text: "[Your Turn] When this Digimon becomes unsuspended during your Main Phase, it gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)"
+    scope: inherited
+    when: on_unsuspend
+    active_when: { your_turn: true }
+    trigger_if: { event_permanent_is_source: true }
+    condition: { in_phase: main }
+    summary: "[Your Turn] When unsuspended during Main Phase, gains <Jamming> for the turn"
+    process:
+      - grant_keyword: { target: source, keyword: Jamming, expiry: end_of_turn }

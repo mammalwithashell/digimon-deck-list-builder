@@ -8,3 +8,7 @@ mod bt4_111;
 mod bt4_010;
 mod bt4_014;
 mod bt4_018;
+mod bt4_batch1;
+mod bt4_batch2;
+mod bt4_batch3;
+mod bt4_batch4;

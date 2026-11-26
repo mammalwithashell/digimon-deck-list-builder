@@ -1,0 +1,46 @@
+card: BT2-108
+name: Night Raid
+kind: option
+color: [purple]
+cost: 2
+
+effects:
+  - text: "[Main] Play 1 purple level 3 Digimon card from your trash without paying its memory cost. Any [On Play] effects on the Digimon played with this effect don't activate."
+    when: main
+    summary: "[Main] Play 1 purple Lv.3 Digimon from your trash free; suppress its [On Play] effects"
+    process:
+      - select_trash:
+          of: you
+          optional: false
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - level_eq: 3
+              - can_play_from_effect_without_cost: true
+          prompt: "Choose 1 purple level 3 Digimon card from your trash to play without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: pick
+          suppress_on_play: true
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_trash:
+          of: you
+          optional: false
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - level_eq: 3
+              - can_play_from_effect_without_cost: true
+          prompt: "Choose 1 purple level 3 Digimon card from your trash to play without paying its memory cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: pick
+          suppress_on_play: true

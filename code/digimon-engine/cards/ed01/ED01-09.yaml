@@ -1,0 +1,67 @@
+card: ED01-09
+name: "Bond of Rubies"
+kind: option
+color: [red]
+cost: 3
+traits: [ALYSION]
+
+effects:
+  - when: main_from_hand
+    text: "[Main] You may play 1 red [Gemmon] or [Kanata Hondo] from your hand without paying the cost. Then, place this card in the battle area."
+    summary: "[Main] You may play 1 red [Gemmon] or [Kanata Hondo] from your hand without paying the cost, then place this card in the battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: played
+          optional: true
+          filter:
+            all_of:
+              - color_is: red
+              - any_of:
+                  - name_is: Gemmon
+                  - name_is: "Kanata Hondo"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 red [Gemmon] or [Kanata Hondo] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: played }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_ally_attack
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [red]
+        - event_target_trait_has: ALYSION
+    text: "[Your Turn] When one of your red [ALYSION] trait Digimon attacks, ＜Delay＞. ・That Digimon gains ＜Security A. +1＞ and +3000 DP for the turn."
+    summary: "[Your Turn] When your red [ALYSION] Digimon attacks, <Delay>: that Digimon gains <Security A. +1> and +3000 DP for the turn"
+    process:
+      - add_modifier:
+          target: event_target
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: event_target
+          value: 3000
+          expiry: end_of_turn
+
+  - when: on_security
+    text: "[Security] Activate this card's [Main] effects."
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_hand:
+          of: you
+          bind_as: sec_played
+          optional: true
+          filter:
+            all_of:
+              - color_is: red
+              - any_of:
+                  - name_is: Gemmon
+                  - name_is: "Kanata Hondo"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 red [Gemmon] or [Kanata Hondo] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: sec_played }
+      - place_self_as_delay_option: {}

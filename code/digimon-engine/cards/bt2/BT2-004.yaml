@@ -1,0 +1,18 @@
+card: BT2-004
+name: Argomon
+kind: digi_egg
+level: 2
+color: [green]
+form: In-Training
+traits: [Mutant]
+
+effects:
+  - text: "[Your Turn] When this Digimon becomes unsuspended during your unsuspend phase, gain 1 memory."
+    scope: inherited
+    when: on_unsuspend
+    active_when: { your_turn: true }
+    trigger_if: { event_permanent_is_source: true }
+    condition: { in_phase: unsuspend }
+    summary: "[Your Turn] When unsuspended during unsuspend phase, gain 1 memory"
+    process:
+      - gain_memory: 1

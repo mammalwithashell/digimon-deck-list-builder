@@ -1,0 +1,32 @@
+card: BT1-041
+name: Zudomon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 6000
+form: Ultimate
+attribute: Vaccine
+traits: [Sea Beast]
+
+effects:
+  - text: "[On Play] ＜Draw 2＞ (Draw 2 cards from your deck.)"
+    when: on_play
+    summary: "[On Play] <Draw 2>"
+    process:
+      - draw: { of: you, count: 2 }
+
+  - text: "[When Attacking] If your opponent has a Digimon with no digivolution cards in play, gain 1 memory."
+    scope: inherited
+    when: when_attacking
+    condition:
+      count_gte:
+        filter:
+          of: opponent
+          zone: [battle_area]
+          kind: digimon
+          stack_size_lte: 1
+        n: 1
+    summary: "[When Attacking] If your opponent has a Digimon with no digivolution cards in play, gain 1 memory"
+    process:
+      - gain_memory: 1

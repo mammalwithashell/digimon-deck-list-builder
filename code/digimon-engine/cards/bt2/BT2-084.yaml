@@ -1,0 +1,31 @@
+card: BT2-084
+name: Sora Takenouchi
+kind: tamer
+color: [red]
+cost: 3
+
+effects:
+  - text: "[Your Turn] When one of your red Digimon attacks a player, you may suspend this Tamer to give that Digimon +2000 DP for the turn."
+    when: on_ally_attack
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [red]
+        - event_target_is_player: true
+    summary: "[Your Turn] When one of your red Digimon attacks a player, you may suspend this Tamer to give that Digimon +2000 DP for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - add_dp_modifier:
+          target: event_target
+          value: 2000
+          expiry: end_of_turn
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

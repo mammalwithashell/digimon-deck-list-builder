@@ -1,0 +1,17 @@
+card: BT1-029
+name: Gabumon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Reptile]
+form: Rookie
+attribute: Data
+
+effects:
+  - text: "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.)."
+    when: on_play
+    summary: "[On Play] Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

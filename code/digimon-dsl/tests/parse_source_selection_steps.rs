@@ -108,6 +108,7 @@ effects:
                     CompiledStep::TrashSelectedSourcesAsCost {
                         source_refs: "burst_sources".to_string(),
                         min_count: None,
+                        is_digi_burst: true,
                     },
                     CompiledStep::GainMemory(2),
                 ]

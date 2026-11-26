@@ -1,0 +1,10 @@
+card: BT4-050
+name: Liollmon
+kind: digimon
+level: 3
+color: [green]
+cost: 2
+dp: 5000
+form: Rookie
+attribute: Vaccine
+traits: [Holy Beast]

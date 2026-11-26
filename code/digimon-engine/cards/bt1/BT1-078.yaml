@@ -1,0 +1,35 @@
+card: BT1-078
+name: Jagamon
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Vegetation]
+
+effects:
+  - text: "[When Attacking] Reveal the top 3 cards of your deck. You can digivolve this card into 1 level 6 green Digimon card among them without paying its memory cost. Place the remaining cards at the bottom of your deck in any order."
+    when: when_attacking
+    summary: "[When Attacking] Reveal top 3; you may digivolve this Digimon into 1 level 6 green Digimon among them for free; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: evo_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 6
+              - color_is: green
+          prompt: "You may digivolve this Digimon into 1 level 6 green Digimon card among the revealed cards without paying its memory cost"
+      - if:
+          condition: { binding_present: evo_card }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: evo_card
+                cost: free
+      - place_remainder_on_deck: { of: you, position: bottom }

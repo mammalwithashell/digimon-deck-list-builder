@@ -1,0 +1,22 @@
+card: BT2-072
+name: Vilemon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 6000
+form: Champion
+attribute: Virus
+traits: [Evil]
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[When Attacking] Lose 2 memory."
+    when: when_attacking
+    summary: "[When Attacking] Lose 2 memory"
+    process:
+      - lose_memory: 2

@@ -1,0 +1,18 @@
+card: BT1-109
+name: Smashed Potatoes
+kind: option
+color: [green]
+cost: 0
+
+effects:
+  - text: "[Main] For the turn, the next time you would digivolve one of your green Digimon from level 5 to level 6, decrease the digivolution cost by 4."
+    when: main
+    summary: "[Main] Next green Lv.5->Lv.6 digivolution this turn costs 4 less"
+    process:
+      - arm_digivolve_cost_reducer:
+          amount: 4
+          single_fire: true
+          target_color: green
+          from_level: 5
+          to_level: 6
+          suspend_cost: false

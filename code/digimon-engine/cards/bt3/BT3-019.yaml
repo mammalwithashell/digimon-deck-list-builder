@@ -1,0 +1,48 @@
+card: BT3-019
+name: RagnaLoardmon
+kind: digimon
+level: 7
+color: [red]
+cost: 14
+dp: 14000
+form: Mega
+attribute: Virus
+traits: [Unique, Legend-Arms]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 3
+
+effects:
+  - text: "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - text: "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - text: "[When Digivolving] You may place 1 [Durandamon] or [BryweLudramon] from your hand on top of this card's digivolution cards to gain 3 memory."
+    when: when_digivolving
+    summary: "[When Digivolving] You may place 1 [Durandamon] or [BryweLudramon] from hand on top of this card's digivolution cards to gain 3 memory"
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: placed
+          filter:
+            any_of:
+              - name_is: Durandamon
+              - name_is: BryweLudramon
+          prompt: "You may place 1 [Durandamon] or [BryweLudramon] from your hand on top of this card's digivolution cards"
+      - if:
+          condition: { binding_present: placed }
+          then:
+            - place_as_top_source:
+                source: placed
+                target: source
+            - gain_memory: 3

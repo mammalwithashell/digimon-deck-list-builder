@@ -1,0 +1,17 @@
+card: SD01-01
+name: Tokomon
+kind: digi_egg
+level: 2
+color: [red]
+cost: 0
+traits: [Lesser, ALYSION]
+form: In-Training
+
+effects:
+  - scope: inherited
+    text: "[Your Turn] This Digimon with the [ALYSION] trait gets +1000 DP."
+    kind: aura
+    target: {}
+    active_when: { your_turn: true, trait_has: ALYSION }
+    dp_modifier: 1000
+    summary: "Inherited [Your Turn] This Digimon with the [ALYSION] trait gets +1000 DP"

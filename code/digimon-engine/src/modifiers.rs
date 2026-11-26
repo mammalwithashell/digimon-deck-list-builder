@@ -711,6 +711,10 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
                 ModifierPayload::Name { .. }
             )
             | (
+                ModifierType::CanOnlyDigivolveIntoNameContaining,
+                ModifierPayload::Name { .. }
+            )
+            | (
                 ModifierType::SourceNameAliases,
                 ModifierPayload::SourceNameAliases { .. }
             )

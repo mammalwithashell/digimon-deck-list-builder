@@ -1,0 +1,33 @@
+card: BT4-073
+name: BanchoGolemon
+kind: digimon
+level: 6
+color: [black]
+cost: 11
+dp: 11000
+traits: [Mineral, Boss]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[Opponent's Turn] While your opponent has 3 or more Digimon in play, this Digimon gets +3000 DP."
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - count_gte:
+            filter: { of: opponent, zone: [battle_area], kind: digimon }
+            n: 3
+    target: {}
+    dp_modifier: 3000
+    summary: "[Opponent's Turn] While your opponent has 3 or more Digimon in play, this Digimon gets +3000 DP"

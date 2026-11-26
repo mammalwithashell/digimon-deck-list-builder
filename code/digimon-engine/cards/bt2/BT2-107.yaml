@@ -1,0 +1,26 @@
+card: BT2-107
+name: Darkness Claw
+kind: option
+color: [purple]
+cost: 1
+
+effects:
+  - text: "[Main] 1 of your Digimon gets +3000 DP for the turn."
+    when: main
+    summary: "[Main] 1 of your Digimon gets +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to get +3000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: 3000
+          expiry: end_of_turn
+
+  - text: "[Security] Gain 2 memory."
+    when: on_security
+    summary: "[Security] Gain 2 memory"
+    process:
+      - gain_memory: 2

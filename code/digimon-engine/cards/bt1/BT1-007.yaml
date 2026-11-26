@@ -1,0 +1,16 @@
+card: BT1-007
+name: Tanemon
+kind: digi_egg
+level: 2
+color: [green]
+form: In-Training
+traits: [Bulb]
+
+effects:
+  - text: "[When Attacking] If you've digivolved this turn, this Digimon gets +1000 DP for the turn."
+    scope: inherited
+    when: when_attacking
+    condition: { digivolved_this_turn: you }
+    summary: "[When Attacking] If you've digivolved this turn, +1000 DP for the turn"
+    process:
+      - add_dp_modifier: { target: source, value: 1000, expiry: end_of_turn }

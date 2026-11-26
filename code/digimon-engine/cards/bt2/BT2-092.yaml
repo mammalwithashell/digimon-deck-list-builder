@@ -1,0 +1,28 @@
+card: BT2-092
+name: Radiation Blade
+kind: option
+color: [red]
+cost: 3
+
+effects:
+  - text: "[Main] Up to 2 of your Digimon gain ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)"
+    when: main
+    summary: "[Main] Up to 2 of your Digimon gain <Security A. +1> for the turn"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max: 2
+          optional_zero: true
+          filter: { kind: digimon }
+          bind_as: targets
+          prompt: "Choose up to 2 of your Digimon to gain <Security A. +1> for the turn"
+      - per_selected:
+          selection: targets
+          bind_as: target
+          body:
+            - grant_keyword:
+                target: target
+                keyword: SecurityAttackPlus
+                value: 1
+                expiry: end_of_turn

@@ -236,9 +236,6 @@ pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]
                 // target after the declaration (§16-23-1 / §16-23-2), as a
                 // [When Attacking] trigger in the attack's pool
                 // (`Game::raid_switch_options`).
-                let can_attack_unsuspended = game
-                    .modifiers
-                    .has(handle, ModifierType::CanAttackUnsuspended);
                 let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
 
                 for j in 0..max_opp {
@@ -260,11 +257,7 @@ pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]
                         continue;
                     }
                     let action_bit = encode_attack(i as u16, j as u16) as usize;
-                    if target.is_suspended {
-                        mask[action_bit] = 1.0;
-                        continue;
-                    }
-                    if can_attack_unsuspended {
+                    if target.is_suspended || game.can_attack_unsuspended_target(handle, t_handle) {
                         mask[action_bit] = 1.0;
                     }
                 }
@@ -581,10 +574,6 @@ pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]
                     mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
                 }
 
-                let can_attack_unsuspended = game
-                    .modifiers
-                    .has(handle, ModifierType::CanAttackUnsuspended);
-
                 for j in 0..max_opp {
                     let t_handle = PermanentHandle {
                         player: opp_id,
@@ -606,8 +595,8 @@ pub fn build_action_mask_into(game: &Game, player_id: PlayerId, mask: &mut [f32]
                     // Either grant (checked above) attacks only a legal
                     // target: suspended, or one this attacker may attack
                     // unsuspended (§11-2-7-1).
-                    let target_legal =
-                        game.player(opp_id).battle_area[j].is_suspended || can_attack_unsuspended;
+                    let target_legal = game.player(opp_id).battle_area[j].is_suspended
+                        || game.can_attack_unsuspended_target(handle, t_handle);
                     if !target_legal {
                         continue;
                     }
@@ -1000,6 +989,24 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     without_suspending: bool,
     ignore_summoning_sickness: bool,
 ) -> Vec<u16> {
+    effect_attack_target_action_ids_with_all_options(
+        game,
+        attacker,
+        restriction,
+        without_suspending,
+        false,
+        ignore_summoning_sickness,
+    )
+}
+
+pub(crate) fn effect_attack_target_action_ids_with_all_options(
+    game: &Game,
+    attacker: PermanentHandle,
+    restriction: AttackTargetRestriction,
+    without_suspending: bool,
+    can_attack_unsuspended: bool,
+    ignore_summoning_sickness: bool,
+) -> Vec<u16> {
     // CR 11-2-4 / BT18-088 Q3046: activation can occur during an attack,
     // but a new declaration cannot, including in EndOfAttackDrain.
     if game.pending_attack.is_some() {
@@ -1012,7 +1019,7 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
         without_suspending,
         ignore_summoning_sickness,
         false,
-        false,
+        can_attack_unsuspended,
     )
 }
 
@@ -1076,12 +1083,16 @@ fn attack_declaration_action_ids(
 
     if matches!(
         restriction,
-        AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
+        AttackTargetRestriction::Any
+            | AttackTargetRestriction::DigimonOnly
+            | AttackTargetRestriction::DigimonFewerSources
     ) {
-        let can_attack_unsuspended = unsuspended_targets
-            || game
-                .modifiers
-                .has(attacker, ModifierType::CanAttackUnsuspended);
+        let attacker_sources = game
+            .players
+            .get(attacker.player as usize)
+            .and_then(|p| p.battle_area.get(attacker.index as usize))
+            .map(|p| p.card_sources.len())
+            .unwrap_or(0);
         let max_opp = game.player(opponent).battle_area.len().min(FIELD_SLOTS);
 
         for j in 0..max_opp {
@@ -1091,6 +1102,11 @@ fn attack_declaration_action_ids(
             };
             let target = &game.player(opponent).battle_area[j];
             if !game.permanent_is_digimon_for_rules(target_handle) {
+                continue;
+            }
+            if restriction == AttackTargetRestriction::DigimonFewerSources
+                && target.card_sources.len() >= attacker_sources
+            {
                 continue;
             }
             // Track C / D consult site (2026-05-08):
@@ -1103,7 +1119,9 @@ fn attack_declaration_action_ids(
             // §11-2-7-1: a suspended Digimon, or any Digimon under a
             // CAN_ATTACK_UNSUSPENDED grant. <Raid> switches after the
             // declaration (§16-23-1), so it adds no declaration target.
-            let legal = target.is_suspended || can_attack_unsuspended;
+            let legal = target.is_suspended
+                || unsuspended_targets
+                || game.can_attack_unsuspended_target(attacker, target_handle);
             if legal {
                 action_ids.push(encode_attack(attacker_index, j as u16));
             }

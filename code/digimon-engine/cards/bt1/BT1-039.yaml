@@ -1,0 +1,45 @@
+card: BT1-039
+name: Cerberusmon
+kind: digimon
+level: 5
+color: [blue]
+cost: 6
+dp: 6000
+form: Ultimate
+attribute: Vaccine
+traits: [Dark Animal]
+
+effects:
+  - text: "[When Attacking] [Twice Per Turn] You may trash 3 cards in your hand to unsuspend this Digimon."
+    when: when_attacking
+    max_per_turn: 2
+    optional: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 3
+    summary: "[When Attacking][Twice Per Turn] You may trash 3 cards in your hand to unsuspend this Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 of 3 cards from your hand to unsuspend this Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          of: you
+          bind_as: trash_b
+          optional: false
+          filter: {}
+          prompt: "Trash 2 of 3 cards from your hand to unsuspend this Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }
+      - select_hand:
+          of: you
+          bind_as: trash_c
+          optional: false
+          filter: {}
+          prompt: "Trash 3 of 3 cards from your hand to unsuspend this Digimon"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_c }
+      - unsuspend: { target: source }

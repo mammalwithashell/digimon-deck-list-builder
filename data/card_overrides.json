@@ -20977,5 +20977,329 @@
         "memory_cost": 5
       }
     ]
+  },
+  "_note_alysion_2026_11_26": "ST-25, ST-26, SD01, SD02, BD01, BD02, ED01 [ALYSION]-trait cards (42 cards total: 30 physical TCG cards reconciled against world.digimoncard.com official Bandai DB + 12 digital-only Digimon Alysion cards verified off card face images).",
+  "BD01-01": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] Raise the limit of the DP deletion effect for this Digimon with the [ALYSION] trait by +1000."
+  },
+  "BD01-02": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] Add 1000 to this [ALYSION] trait Digimon's DP deletion effect's maximum."
+  },
+  "BD01-03": {
+    "inherited_effect_description_eng": ""
+  },
+  "BD01-05": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your opponent's Digimon are deleted, this Digimon gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)"
+  },
+  "BD01-06": {
+    "play_cost": 12,
+    "dp": 11000,
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.) [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 4000 DP or less.",
+    "inherited_effect_description_eng": ""
+  },
+  "BD01-10": {
+    "card_kind": 1,
+    "dp": null,
+    "level": null,
+    "evo_costs": [],
+    "attribute_eng": [],
+    "form_eng": [],
+    "effect_description_eng": "[Start of Your Main Phase] If you have a red Digimon with the [ALYSION] trait, gain 1 memory. [Your Turn] All of your red Digimon with the [ALYSION] trait get +1000 DP.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost."
+  },
+  "BD02-01": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When effects trash your opponent's Digimon's digivolution cards, if this Digimon has the [ALYSION] trait, ＜Draw 1＞ (Draw 1 card from your deck.)"
+  },
+  "BD02-02": {
+    "effect_description_eng": "[On Play] Reveal the top 5 cards of your deck. Add 1 blue [ALYSION] trait card among them to the hand. Return the rest to the bottom of the deck.",
+    "inherited_effect_description_eng": ""
+  },
+  "BD02-03": {
+    "effect_description_eng": ""
+  },
+  "BD02-04": {
+    "effect_description_eng": ""
+  },
+  "BD02-07": {
+    "play_cost": 12,
+    "dp": 11000,
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "effect_description_eng": "[When Digivolving] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Afterwards, until the end of your opponent's turn, this Digimon gains ＜Blocker＞. (This Digimon can block in the blocker timing.) [All Turns] Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.",
+    "inherited_effect_description_eng": ""
+  },
+  "BD02-08": {
+    "effect_description_eng": "[Start of Your Main Phase] If you have a blue Digimon with the [ALYSION] trait, gain 1 memory. [Main] By suspending this Tamer, 1 of your blue Digimon with the [ALYSION] trait gains ＜Piercing＞ for the turn. (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost."
+  },
+  "ED01-01": {
+    "effect_description_eng": "[When Digivolving] ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.) [When Attacking] Delete up to 6000 DP total worth of your opponent's Digimon. [Your Turn] While you have [Kanata Hondo], this Digimon gains ＜Piercing＞ and can also attack your opponent's unsuspended Digimon. (When this Digimon deletes your opponent's Digimon in battle while attacking, it checks security before the attack ends.)"
+  },
+  "ED01-02": {
+    "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.) [When Digivolving] Trash all digivolution cards of 1 of your opponent's Digimon. Then, 1 of their Digimon can't attack until their turn ends. [All Turns] [Once Per Turn] When any of your opponent's Digimon with as many digivolution cards as this Digimon or fewer are deleted, if you have [Valner Dragnogh], trash their top security card."
+  },
+  "ED01-09": {
+    "effect_description_eng": "[Main] You may play 1 red [Gemmon] or [Kanata Hondo] from your hand without paying the cost. Then, place this card in the battle area. [Your Turn] When one of your red [ALYSION] trait Digimon attacks, ＜Delay＞. (By trashing this card after the placing turn, activate the effect.) ・That Digimon gains ＜Security A. +1＞ and +3000 DP for the turn. (This Digimon checks 1 additional security card.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effects."
+  },
+  "ED01-10": {
+    "effect_description_eng": "[Main] You may play 1 blue [Renamon] or [Valner Dragnogh] from your hand without paying the cost. Then, place this card in the battle area. [End of Your Turn] ＜Delay＞ (By trashing this card after the placing turn, activate the effect.) ・Choose 1 of your blue [ALYSION] trait Digimon and it attacks 1 of your opponent's Digimon with fewer digivolution cards than it. It can also attack your opponent's unsuspended Digimon with this effect.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effects."
+  },
+  "SD01-01": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[Your Turn] This Digimon with the [ALYSION] trait gets +1000 DP."
+  },
+  "SD01-02": {
+    "effect_description_eng": "[On Play] Reveal the top 5 cards of your deck. Add 1 red [ALYSION] trait card among them to the hand. Return the rest to the bottom of the deck."
+  },
+  "SD01-04": {
+    "inherited_effect_description_eng": "[Your Turn] This Digimon with the [ALYSION] trait gains ＜Security A. +1＞. (This Digimon checks 1 additional security card.)"
+  },
+  "SD01-05": {
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.) [When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less.",
+    "inherited_effect_description_eng": ""
+  },
+  "SD01-06": {
+    "card_kind": 1,
+    "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [Your Turn] Add 2000 to your [ALYSION] trait Digimon's DP deletion effects' maximums.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost."
+  },
+  "SD01-07": {
+    "card_name_eng": "Crimson Impale",
+    "card_kind": 2,
+    "effect_description_eng": "[Main] 1 of your Digimon with the [ALYSION] trait can also attack your opponent's unsuspended Digimon for the turn.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Add this card to the hand."
+  },
+  "SD02-01": {
+    "effect_description_eng": "",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [ALYSION] trait, trash the bottom digivolution card of 1 of your opponent's Digimon."
+  },
+  "SD02-04": {
+    "effect_description_eng": "[When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [ALYSION] trait, it unsuspends."
+  },
+  "SD02-05": {
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "effect_description_eng": "[Your Turn] This Digimon can also attack your opponent's unsuspended Digimon with fewer digivolution cards than this Digimon. [All Turns] Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.",
+    "inherited_effect_description_eng": ""
+  },
+  "SD02-06": {
+    "card_kind": 1,
+    "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [Main] If you have a Digimon with the [ALYSION] trait, by suspending this Tamer, trash the bottom 2 digivolution cards of 1 of your opponent's Digimon.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost."
+  },
+  "SD02-07": {
+    "card_kind": 2,
+    "effect_description_eng": "[Main] Return 1 of your opponent's level 4 or lower Digimon to the hand.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Activate this card's [Main] effect."
+  },
+  "ST25-02": {
+    "xros_req": "[Digivolve] Lv.2 w/[Gemmon] in text: Cost 0"
+  },
+  "ST25-03": {
+    "xros_req": "[Digivolve] Lv.3 w/[Gemmon] in text: Cost 2",
+    "inherited_effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may change the attack target to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+  },
+  "ST25-04": {
+    "xros_req": "[Digivolve] Lv.4 w/[Gemmon] in text: Cost 3",
+    "effect_description_eng": "＜Engage＞ [On Play] [When Digivolving] 1 of your Digimon gets +3000 DP for the turn. Then, if that Digimon has 12000 DP or more, it also gains ＜Security A. +1＞. (This Digimon checks 1 additional security card.)",
+    "inherited_effect_description_eng": "[Your Turn] This Digimon with [Gemmon] in its text gains ＜Engage＞. (At the end of your turn, this Digimon may attack.)"
+  },
+  "ST25-05": {
+    "card_kind": 4,
+    "play_cost": 5,
+    "dp": 12000,
+    "level": 6,
+    "evo_costs": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "xros_req": "[Digivolve] Lv.5 w/[Gemmon] in text: Cost 3",
+    "effect_description_eng": "＜Progress＞ ＜Piercing＞ [When Digivolving] Delete up to 7000 DP total worth of your opponent's Digimon. For every 8000 DP this Digimon has, add 4000 to this DP deletion effect's maximum. [Your Turn] For every 8000 DP this Digimon has, it gains ＜Security A. +1＞. (This Digimon checks 1 additional security card.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Dragon Warrior",
+      "ALYSION"
+    ],
+    "dual": {
+      "digimon": {
+        "level": 6,
+        "dp": 12000,
+        "colors": [
+          "Red"
+        ],
+        "traits": [
+          "Dragon Warrior",
+          "ALYSION"
+        ],
+        "evo_costs": [
+          {
+            "card_color": 0,
+            "level": 5,
+            "memory_cost": 3
+          }
+        ],
+        "effect_text": "＜Progress＞ ＜Piercing＞ [When Digivolving] Delete up to 7000 DP total worth of your opponent's Digimon. For every 8000 DP this Digimon has, add 4000 to this DP deletion effect's maximum. [Your Turn] For every 8000 DP this Digimon has, it gains ＜Security A. +1＞. (This Digimon checks 1 additional security card.)",
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      },
+      "option": {
+        "use_cost": 5,
+        "colors": [
+          "Red"
+        ],
+        "effect_text": "[Main] 1 of your [ALYSION] trait Digimon gets +10000 DP for the turn. Then, delete 1 of your opponent's Digimon with as much DP as 1 of your Digimon or less.",
+        "security_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      }
+    }
+  },
+  "ST25-06": {
+    "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [Your Turn] When your Digimon are played or digivolve, if any of them have the [ALYSION] trait, by suspending this Tamer, for the turn, 1 of your Digimon isn't affected by your opponent's Option effects and gets +3000 DP.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost."
+  },
+  "ST26-01": {
+    "inherited_effect_description_eng": "[Your Turn] While your opponent has no Digimon with digivolution cards, this [Ice-Snow] trait Digimon can't be deleted in battle."
+  },
+  "ST26-02": {
+    "play_cost": 3,
+    "dp": 1000,
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ],
+    "effect_description_eng": "[When Moving] [On Play] Trash the bottom digivolution card of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, ＜Draw 1＞. (Draw 1 card from your deck.) (Rule) Trait: Has [Ice-Snow] Type.",
+    "inherited_effect_description_eng": "[When Attacking] If this Digimon has the [Ice-Snow] trait, you may change the attack target to 1 of your opponent's unsuspended Digimon with the fewest digivolution cards."
+  },
+  "ST26-03": {
+    "play_cost": 4,
+    "dp": 5000,
+    "type_eng": [
+      "Mysterious Beast",
+      "ALYSION",
+      "Ice-Snow"
+    ],
+    "effect_description_eng": "[On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Valner Dragnogh] from your hand without paying the cost. (Rule) Trait: Has [Ice-Snow] Type.",
+    "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory."
+  },
+  "ST26-04": {
+    "play_cost": 7,
+    "dp": 7000,
+    "type_eng": [
+      "Beastkin",
+      "ALYSION",
+      "Ice-Snow"
+    ],
+    "effect_description_eng": "＜Iceclad＞ (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.) [On Play] [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, 1 of their Digimon or Tamers can't suspend until their turn ends. (Rule) Trait: Has [Ice-Snow] Type.",
+    "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. If this effect didn't trash, this [Ice-Snow] trait Digimon may unsuspend."
+  },
+  "ST26-05": {
+    "card_kind": 4,
+    "play_cost": 5,
+    "dp": 12000,
+    "level": 6,
+    "evo_costs": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "effect_description_eng": "＜Iceclad＞ ＜Piercing＞ ＜Blocker＞ [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] trait Digimon may attack without suspending. [When Attacking] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck.",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "",
+    "type_eng": [
+      "Ice-Snow",
+      "ALYSION"
+    ],
+    "dual": {
+      "digimon": {
+        "level": 6,
+        "dp": 12000,
+        "colors": [
+          "Blue"
+        ],
+        "traits": [
+          "Ice-Snow",
+          "ALYSION"
+        ],
+        "evo_costs": [
+          {
+            "card_color": 1,
+            "level": 5,
+            "memory_cost": 3
+          }
+        ],
+        "effect_text": "＜Iceclad＞ ＜Piercing＞ ＜Blocker＞ [When Digivolving] Trash any 3 digivolution cards from your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, 1 of your [Ice-Snow] trait Digimon may attack without suspending. [When Attacking] You may return 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck.",
+        "inherited_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      },
+      "option": {
+        "use_cost": 5,
+        "colors": [
+          "Blue"
+        ],
+        "effect_text": "[Main] Trash all cards from under 1 of your opponent's Digimon or Tamers. Then, 2 of their Digimon or Tamers can't suspend until their turn ends.",
+        "security_text": "",
+        "keywords": [
+          "ArtsDigivolve"
+        ]
+      }
+    }
+  },
+  "ST26-06": {
+    "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [All Turns] When your Digimon are played or digivolve, if any of them have the [Ice-Snow] trait, by suspending this Tamer, trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. After, if your opponent has no Digimon with digivolution cards, ＜Draw 1＞. (Draw 1 card from your deck.)",
+    "inherited_effect_description_eng": "",
+    "security_effect_description_eng": "[Security] Play this card without paying the cost."
   }
 }

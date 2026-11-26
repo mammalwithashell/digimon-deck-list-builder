@@ -1,0 +1,10 @@
+card: BT3-044
+name: Aruraumon
+kind: digimon
+level: 3
+color: [green]
+cost: 2
+dp: 5000
+form: Rookie
+attribute: Data
+traits: [Vegetation]

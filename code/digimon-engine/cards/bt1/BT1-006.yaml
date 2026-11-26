@@ -1,0 +1,17 @@
+card: BT1-006
+name: Cupimon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Mini Angel]
+form: In-Training
+
+effects:
+  - text: "[When Attacking] If you have 5 or more security cards, ＜Draw 1＞ (Draw 1 card from your deck.)."
+    scope: inherited
+    when: when_attacking
+    condition: { security_count_gte: 5 }
+    summary: "[Inherited][When Attacking] If you have 5+ security cards, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

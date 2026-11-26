@@ -1,0 +1,23 @@
+card: BT3-035
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 3000
+form: Champion
+attribute: Vaccine
+traits: ["Holy Beast"]
+
+effects:
+  - text: "[When Attacking] 1 of your opponent's Digimon gets -1000 DP for the turn."
+    scope: inherited
+    when: when_attacking
+    summary: "[When Attacking] 1 of your opponent's Digimon gets -1000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -1000 DP for the turn"
+      - add_dp_modifier: { target: target, value: -1000, expiry: end_of_turn }

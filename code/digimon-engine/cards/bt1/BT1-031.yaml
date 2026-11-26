@@ -1,0 +1,15 @@
+card: BT1-031
+name: Monmon
+kind: digimon
+level: 3
+color: [blue]
+cost: 4
+dp: 1000
+traits: [Beast]
+form: Rookie
+attribute: Virus
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker

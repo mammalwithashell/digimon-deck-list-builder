@@ -1,0 +1,34 @@
+card: BT2-112
+name: BlackWarGreymon
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 12000
+form: Mega
+attribute: Virus
+traits: [Dragonkin]
+
+effects:
+  - text: "When you would play this card from your hand, if your opponent has a Digimon with 10000 DP or more in play, reduce the memory cost by 6."
+    kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_gte: 10000
+    amount: 6
+    summary: "Play cost -6 if opponent has a 10000+ DP Digimon"
+
+  - text: "[When Attacking] When you attack your opponent's Digimon with the highest DP, unsuspend this Digimon."
+    when: when_attacking
+    condition:
+      attack_target_matches:
+        kind: digimon
+        dp_eq: { aggregate: { selector: highest_dp, scope: opponent } }
+    summary: "[When Attacking] When attacking opponent's highest-DP Digimon, unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }

@@ -64,6 +64,8 @@ impl Game {
         if let Some(count) = self.digimon_attacks_this_turn.get_mut(tp as usize) {
             *count = 0;
         }
+        self.digivolutions_this_turn = [0, 0];
+        self.digisorption_opponent_used_cards.clear();
 
         // StartOfYourTurn fires BEFORE Unsuspend — matches Python's OnStartTurn.
         // Scripts that care about turn beginning (e.g. "at the start of your turn,

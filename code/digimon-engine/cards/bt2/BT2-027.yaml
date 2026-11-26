@@ -1,0 +1,10 @@
+card: BT2-027
+name: Zudomon
+kind: digimon
+level: 5
+color: [blue]
+cost: 6
+dp: 9000
+form: Ultimate
+attribute: Vaccine
+traits: [Sea Beast]

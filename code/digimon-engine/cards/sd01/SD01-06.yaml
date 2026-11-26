@@ -1,0 +1,31 @@
+card: SD01-06
+name: Kanata Hondo
+kind: tamer
+color: [red]
+cost: 4
+traits: [ALYSION]
+
+effects:
+  - when: start_of_your_turn
+    text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - kind: aura
+    text: "[Your Turn] Add 2000 to your [ALYSION] trait Digimon's DP deletion effects' maximums."
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: ALYSION
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 2000
+    summary: "[Your Turn] Add 2000 to your [ALYSION] trait Digimon's DP deletion effects' maximums"
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}

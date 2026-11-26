@@ -1,0 +1,21 @@
+card: BT1-040
+name: WereGarurumon
+kind: digimon
+level: 5
+color: [blue]
+cost: 6
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Beastkin]
+
+effects:
+  - text: "[When Attacking] Gain 3 memory. At end of turn, lose 3 memory."
+    when: when_attacking
+    summary: "[When Attacking] Gain 3 memory. At end of turn, lose 3 memory"
+    process:
+      - gain_memory: 3
+      - schedule_delayed:
+          when: end_of_your_turn
+          body:
+            - lose_memory: 3

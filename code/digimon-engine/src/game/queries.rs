@@ -612,6 +612,70 @@ impl Game {
         ) && self.has_security_attack_change(attacker)
     }
 
+    /// True if `attacker` may declare an attack against an unsuspended `target`
+    /// Digimon via either an unconditional `CanAttackUnsuspended` modifier or
+    /// `CanAttackUnsuspendedWithFewerSources` when `target` has strictly fewer
+    /// digivolution cards than `attacker`.
+    pub fn can_attack_unsuspended_target(
+        &self,
+        attacker: crate::permanent::PermanentHandle,
+        target: crate::permanent::PermanentHandle,
+    ) -> bool {
+        if self.modifiers.has(attacker, ModifierType::CanAttackUnsuspended) {
+            return true;
+        }
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CanAttackUnsuspendedWithFewerSources)
+        {
+            let a_sources = self
+                .players
+                .get(attacker.player as usize)
+                .and_then(|p| p.battle_area.get(attacker.index as usize))
+                .map(|p| p.card_sources.len())
+                .unwrap_or(0);
+            let t_sources = self
+                .players
+                .get(target.player as usize)
+                .and_then(|p| p.battle_area.get(target.index as usize))
+                .map(|p| p.card_sources.len())
+                .unwrap_or(0);
+            return t_sources < a_sources;
+        }
+        false
+    }
+
+    /// Returns the enclosing standard turn phase (`Unsuspend`, `Draw`,
+    /// `Breeding`, `Main`, `EndTurn`), unwrapping interrupt/selection/combat
+    /// sub-phases when a triggered effect evaluates during a selection or attack.
+    pub fn effective_turn_phase(&self) -> crate::enums::GamePhase {
+        use crate::enums::GamePhase;
+        let is_turn_phase = |p: GamePhase| {
+            matches!(
+                p,
+                GamePhase::Unsuspend
+                    | GamePhase::Draw
+                    | GamePhase::Breeding
+                    | GamePhase::Main
+                    | GamePhase::EndTurn
+            )
+        };
+        if is_turn_phase(self.current_phase) {
+            return self.current_phase;
+        }
+        if let Some(sel) = &self.pending_selection {
+            if is_turn_phase(sel.previous_phase) {
+                return sel.previous_phase;
+            }
+        }
+        if let Some(atk) = &self.pending_attack {
+            if is_turn_phase(atk.return_phase) {
+                return atk.return_phase;
+            }
+        }
+        self.current_phase
+    }
+
     /// Sum of static `dp_modifier` values from a single source's effects
     /// that pass the inherited/top filter and their condition (if any).
     /// Returns a signed raw DP delta. Tensor writes this divided by DP_NORM.

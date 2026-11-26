@@ -1,0 +1,40 @@
+card: BT3-030
+name: Leopardmon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Data
+traits: ["Holy Warrior", "Royal Knight"]
+
+effects:
+  - text: "[When Digivolving] You may play 1 level 4 or lower digivolution card of 1 of your Digimon cards as another Digimon without paying its memory cost."
+    when: when_digivolving
+    summary: "[When Digivolving] You may play 1 level 4 or lower digivolution card of 1 of your Digimon without paying its memory cost"
+    process:
+      - select_own_sources:
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - host_kind_is: digimon
+              - can_play_from_effect_without_cost: true
+          min: 0
+          max: 1
+          bind_as: played_source
+          prompt: "You may play 1 level 4 or lower digivolution card of 1 of your Digimon without paying its memory cost"
+          then:
+            - play_selected_sources_free: { source_refs: played_source }
+
+  - text: "[Your Turn] All of your level 4 or lower Digimon gain ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)."
+    kind: aura
+    active_when: { your_turn: true }
+    target_player: you
+    target:
+      all_of:
+        - kind: digimon
+        - level_lte: 4
+    grant_keyword: { keyword: Jamming }
+    summary: "[Your Turn] All of your level 4 or lower Digimon gain <Jamming>"

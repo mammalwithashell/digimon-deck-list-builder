@@ -1,0 +1,43 @@
+card: BT4-071
+name: Tankdramon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Machine, D-Brigade]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects:
+  - text: "[Your Turn] When one of your other Digimon with the [D-Brigade] trait is deleted, reveal the top 2 cards of your deck. You may play 1 [Commandramon] among them without paying its memory cost. Place the remaining cards at the bottom of your deck in any order."
+    when: on_any_deletion
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: "D-Brigade"
+        - event_permanent_is_source: false
+    summary: "[Your Turn] When one of your other [D-Brigade] Digimon is deleted, reveal top 2; you may play 1 [Commandramon] free; bottom the rest in any order"
+    process:
+      - reveal_top_deck: { of: you, count: 2, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - can_play_from_effect_without_cost: true
+                  - kind: digimon
+                  - name_is: "Commandramon"
+          prompt: "You may play 1 [Commandramon] without paying its memory cost"
+      - play_from_revealed_free: { of: you, card: pick }
+      - place_remainder_on_deck: { of: you, position: bottom }

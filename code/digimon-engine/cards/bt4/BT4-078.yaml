@@ -1,0 +1,32 @@
+card: BT4-078
+name: Soundbirdmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Avian]
+form: Rookie
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  - text: "[When Attacking] You may trash 1 Option card in your hand to gain 1 memory."
+    when: when_attacking
+    summary: "[When Attacking] You may trash 1 Option card in your hand to gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          optional: true
+          bind_as: discarded
+          filter: { kind: option }
+          prompt: "You may trash 1 Option card in your hand to gain 1 memory"
+      - if:
+          condition: { binding_present: discarded }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discarded }
+            - gain_memory: 1

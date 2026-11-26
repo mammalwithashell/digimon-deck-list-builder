@@ -1,0 +1,30 @@
+card: BT2-089
+name: Tai Kamiya
+kind: tamer
+color: [black]
+cost: 4
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[Opponent's Turn] All of your black Digimon get +1000 DP."
+    kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      color_is: black
+    dp_modifier: 1000
+    summary: "[Opponent's Turn] All of your black Digimon get +1000 DP"
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

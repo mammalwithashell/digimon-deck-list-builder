@@ -610,6 +610,11 @@ pub struct AuraBody {
     /// by scalar/flag modifiers.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier_name: Option<String>,
+    /// Optional color list payload for `modifier: AddColor` / `ChangeColor`
+    /// auras (e.g. BT3-014 Silphymon "is also treated as yellow", BT3-040
+    /// Shakkoumon "is also treated as blue").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modifier_colors: Option<Vec<crate::spec::ColorSpec>>,
     /// Structured `synth_identity` payload for a `modifier: TreatAsDigimon`
     /// aura — "all of your [Marcus Damon]s are also treated as a 12000 DP
     /// Digimon" (BT25-104). Lowers to `ModifierPayload::SynthIdentity` on each

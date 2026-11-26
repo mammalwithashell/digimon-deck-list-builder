@@ -1,0 +1,41 @@
+card: ST26-06
+name: Valner Dragnogh
+kind: tamer
+color: [blue]
+cost: 4
+traits: [ALYSION]
+
+effects:
+  - when: start_of_your_turn
+    text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - when: [on_ally_played, on_digivolve]
+    text: "[All Turns] When your Digimon are played or digivolve, if any of them have the [Ice-Snow] trait, by suspending this Tamer, trash the bottom 2 digivolution cards of 1 of your opponent's Digimon. After, if your opponent has no Digimon with digivolution cards, ＜Draw 1＞."
+    optional: true
+    outer_prompt: true
+    trigger_if: { event_target_owner: you, event_target_kind: digimon, event_target_trait_has: Ice-Snow }
+    condition: { source_is_unsuspended: true }
+    summary: "[All Turns] When your [Ice-Snow] Digimon is played or digivolves, suspend this Tamer to trash the bottom 2 sources of 1 opposing Digimon; after, if none have sources, Draw 1"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 2 }
+      - if:
+          condition:
+            not:
+              any_permanent: { of: opponent, zone: [battle_area], kind: digimon, materials_count_gte: 1 }
+          then:
+            - draw: { of: you, count: 1 }
+
+  - when: on_security
+    text: "[Security] Play this card without paying the cost."
+    process:
+      - play_from_security: {}

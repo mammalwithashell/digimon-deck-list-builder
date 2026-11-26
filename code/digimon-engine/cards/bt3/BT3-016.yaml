@@ -1,0 +1,22 @@
+card: BT3-016
+name: Durandamon
+kind: digimon
+level: 6
+color: [red]
+cost: 10
+dp: 12000
+form: Mega
+attribute: Vaccine
+traits: [Holy Sword, Legend-Arms]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)."
+    scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "[Inherited] <Piercing>"

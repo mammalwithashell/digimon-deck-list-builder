@@ -1,0 +1,10 @@
+card: BT4-056
+name: SkullScorpiomon
+kind: digimon
+level: 5
+color: [green]
+cost: 5
+dp: 6000
+form: Ultimate
+attribute: Data
+traits: [Insectoid]

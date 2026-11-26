@@ -1,0 +1,9 @@
+card: BT3-060
+name: Psychemon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 5000
+attribute: Data
+traits: [Reptile]

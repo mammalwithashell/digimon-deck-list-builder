@@ -1,0 +1,23 @@
+card: BT3-012
+name: Aquilamon
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 5000
+form: Champion
+attribute: Free
+traits: [Giant Bird]
+
+effects:
+  - text: "[When Attacking] Delete 1 of your opponent's Digimon with 2000 DP or less."
+    scope: inherited
+    when: when_attacking
+    summary: "[Inherited][When Attacking] Delete 1 opponent Digimon with 2000 DP or less"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon, dp_lte: 2000 }
+          prompt: "Delete 1 of your opponent's Digimon with 2000 DP or less"
+      - delete_permanent: { target: target }

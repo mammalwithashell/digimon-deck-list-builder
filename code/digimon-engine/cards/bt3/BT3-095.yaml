@@ -1,0 +1,24 @@
+card: BT3-095
+name: Joe Kido
+kind: tamer
+color: [black]
+cost: 2
+
+effects:
+  - text: "[Start of Your Turn] If you have a Digimon with ＜Blocker＞ in play, gain 1 memory."
+    when: start_of_your_turn
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        has_keyword: Blocker
+    summary: "[Start of Your Turn] If you have a Digimon with <Blocker> in play, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

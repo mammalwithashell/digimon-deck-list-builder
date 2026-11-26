@@ -1,0 +1,41 @@
+card: BT4-093
+name: "Thomas H. Norstein"
+kind: tamer
+color: [blue]
+cost: 3
+
+effects:
+  - text: "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.)"
+    when: on_play
+    summary: "[On Play] <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  - text: "[Main] If your opponent has 8 or more cards in their hand, you may suspend this Tamer to unsuspend 1 of your Digimon with [Gao] in its name."
+    when: main_on_field
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - count_gte:
+            filter:
+              of: opponent
+              zone: [hand]
+            n: 8
+    summary: "[Main] If opponent has 8+ cards in hand, suspend this Tamer to unsuspend 1 of your [Gao]-named Digimon"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          optional: false
+          bind_as: gao_target
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Gao"
+          prompt: "Choose 1 of your Digimon with [Gao] in its name to unsuspend"
+      - unsuspend: { target: gao_target }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

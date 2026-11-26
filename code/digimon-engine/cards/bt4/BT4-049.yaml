@@ -1,0 +1,31 @@
+card: BT4-049
+name: Varodurumon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 13
+dp: 11000
+form: Mega
+attribute: Vaccine
+traits: [Holy Bird]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+effects:
+  - text: "[Main] ＜Digi-Burst 3＞ (You may trash 3 of this Digimon's digivolution cards to activate the effect below.) ・All of your opponent's Digimon get -4000 DP for the turn."
+    when: main_on_field
+    summary: "[Main] <Digi-Burst 3> All of your opponent's Digimon get -4000 DP for the turn"
+    process:
+      - digi_burst:
+          count: 3
+          bind_as: burst_source
+          prompt: "Choose 3 digivolution cards under this Digimon to trash for <Digi-Burst 3>"
+          then:
+            - add_modifier:
+                continuous: true
+                target: { of: opponent, kind: digimon }
+                modifier: ChangeDp
+                value: -4000
+                expiry: end_of_turn

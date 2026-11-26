@@ -1,0 +1,21 @@
+card: BT4-002
+name: Bukamon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+form: In-Training
+traits: [Lesser]
+
+effects:
+  - text: "[When Attacking] Trash the bottom digivolution card of 1 of your opponent's level 4 or lower Digimon."
+    scope: inherited
+    when: when_attacking
+    summary: "[Inherited][When Attacking] Trash the bottom digivolution card of 1 of your opponent's level 4 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon, level_lte: 4 }
+          prompt: "Choose 1 of your opponent's level 4 or lower Digimon to trash its bottom digivolution card"
+      - trash_bottom_sources: { target: victim, count: 1 }

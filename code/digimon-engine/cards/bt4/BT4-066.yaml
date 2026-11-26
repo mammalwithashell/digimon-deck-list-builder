@@ -1,0 +1,27 @@
+card: BT4-066
+name: Golemon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 3000
+traits: [Mineral]
+form: Champion
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - text: "[All Turns] All of your black Digimon get +1000 DP."
+    kind: aura
+    active_when: { all_turns: true }
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+      color_is: black
+    dp_modifier: 1000
+    summary: "[All Turns] All of your black Digimon get +1000 DP"

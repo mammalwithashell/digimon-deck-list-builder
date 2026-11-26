@@ -1,0 +1,18 @@
+card: BT1-030
+name: Gomamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 3000
+traits: [Sea Beast]
+form: Rookie
+attribute: Vaccine
+
+effects:
+  - text: "[On Deletion] Gain 1 memory."
+    scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Gain 1 memory"
+    process:
+      - gain_memory: 1

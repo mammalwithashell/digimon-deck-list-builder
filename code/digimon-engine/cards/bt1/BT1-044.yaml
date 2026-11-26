@@ -1,0 +1,29 @@
+card: BT1-044
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 11000
+form: Mega
+attribute: Data
+traits: [Cyborg]
+
+effects:
+  - text: "[When Attacking] Play 1 level 4 or lower digivolution card under this card as another Digimon without paying its memory cost."
+    when: when_attacking
+    summary: "[When Attacking] Play 1 level 4 or lower digivolution card under this Digimon without paying its memory cost"
+    process:
+      - select_material:
+          optional: false
+          of_permanent: source
+          bind_as: played_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Choose 1 level 4 or lower digivolution card under this Digimon to play without paying its memory cost"
+      - play_from_materials:
+          target: source
+          source_index: played_source
+          cost_delta: free

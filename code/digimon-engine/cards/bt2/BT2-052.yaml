@@ -1,0 +1,10 @@
+card: BT2-052
+name: Hagurumon
+kind: digimon
+level: 3
+color: [black]
+cost: 2
+dp: 3000
+form: Rookie
+attribute: Virus
+traits: [Machine]

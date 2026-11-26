@@ -1,0 +1,36 @@
+card: SD02-04
+name: Sekkamon
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 6000
+traits: [Beastkin, ALYSION]
+form: Ultimate
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    text: "[When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon."
+    summary: "[When Digivolving] Trash the bottom 2 digivolution cards of 1 opposing Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon"
+      - trash_bottom_sources: { target: victim, count: 2 }
+
+  - scope: inherited
+    text: "[When Attacking] [Once Per Turn] If this Digimon has the [ALYSION] trait, it unsuspends."
+    when: when_attacking
+    once_per_turn: true
+    condition: { trait_has: ALYSION }
+    summary: "Inherited [When Attacking][OPT] If this Digimon has [ALYSION] trait, it unsuspends"
+    process:
+      - unsuspend: { target: source }

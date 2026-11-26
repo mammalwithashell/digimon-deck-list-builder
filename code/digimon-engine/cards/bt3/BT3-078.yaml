@@ -1,0 +1,10 @@
+card: BT3-078
+name: Shamanmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 4000
+form: Rookie
+attribute: Virus
+traits: [Demon]

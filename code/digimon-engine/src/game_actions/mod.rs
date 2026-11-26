@@ -1003,6 +1003,8 @@ impl Game {
                 }
                 let previous_controller = self.effect_source_player;
                 self.effect_source_player = Some(resume.play_controller);
+                let prev_from_trash = self.pending_play_from_trash;
+                self.pending_play_from_trash = matches!(resume.origin, PendingWouldPlayOrigin::Trash { .. });
                 let played = self.commit_play_from_hand_card_no_replace(
                     resume.player,
                     resume.card,
@@ -1013,6 +1015,7 @@ impl Game {
                     resume.origin.source_play_receipt(),
                     matches!(resume.origin, PendingWouldPlayOrigin::SecurityTop { .. } | PendingWouldPlayOrigin::SecurityRecorded { .. } | PendingWouldPlayOrigin::SecurityAt { .. }),
                 );
+                self.pending_play_from_trash = prev_from_trash;
                 self.effect_source_player = previous_controller;
                 if played.is_none() {
                     self.restore_pending_would_play_origin(resume);

@@ -1,0 +1,24 @@
+card: BT3-056
+name: Ceresmon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+form: Mega
+attribute: Data
+traits: [Shaman, Olympos XII]
+
+effects:
+  - text: "＜Digisorption -3＞ (When one of your Digimon would digivolve into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 3.)"
+    kind: grant_keyword
+    keyword: Digisorption
+    value: 3
+    summary: "<Digisorption -3>"
+
+  - text: "[Your Turn] [Once Per Turn] When your ＜Digisorption＞ effect would suspend one of your Digimon, you may suspend your opponent's Digimon with that effect instead."
+    kind: aura
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    modifier: DigisorptionMaySuspendOpponent
+    summary: "[Your Turn][OPT] <Digisorption> may suspend an opponent's Digimon instead"

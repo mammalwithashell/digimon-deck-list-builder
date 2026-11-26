@@ -1,0 +1,38 @@
+card: BT2-083
+name: Millenniummon
+kind: digimon
+level: 7
+color: [white]
+cost: 15
+dp: 13000
+attribute: Virus
+traits: [Composite]
+
+effects:
+  - text: "[When Digivolving] Return 1 of your opponent's Digimon to the bottom of their deck."
+    when: when_digivolving
+    summary: "[When Digivolving] Return 1 of your opponent's Digimon to the bottom of their deck"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Return 1 of your opponent's Digimon to the bottom of their deck"
+      - return_to_deck: { target: victim, position: bottom }
+
+  - text: "[On Deletion] If this card had digivolution cards, you may play this card from your trash without paying its memory cost."
+    when: on_deletion
+    optional: true
+    condition: { event_target_has_digivolution_cards: true }
+    summary: "[On Deletion] If this card had digivolution cards, you may play this card from your trash without paying its memory cost"
+    process:
+      - select_trash:
+          of: you
+          optional: false
+          bind_as: self_card
+          filter:
+            all_of:
+              - is_source_card: true
+              - can_play_from_effect_without_cost: true
+          prompt: "Play this card from your trash without paying its memory cost"
+      - play_from_trash_free: { of: you, hand_index: self_card }

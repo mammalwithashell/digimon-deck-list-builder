@@ -1,0 +1,38 @@
+card: BT2-109
+name: Heat Viper
+kind: option
+color: [purple]
+cost: 5
+
+effects:
+  - text: "[Main] You may delete 1 of your Digimon to delete up to 2 of your opponent's level 4 or lower Digimon."
+    when: main
+    summary: "[Main] You may delete 1 of your Digimon to delete up to 2 of your opponent's Lv.4 or lower Digimon"
+    process:
+      - select_own_permanent:
+          optional: true
+          bind_as: sacrifice
+          filter: { kind: digimon }
+          prompt: "You may delete 1 of your Digimon"
+      - delete_permanent: { target: sacrifice }
+      - if:
+          condition: { effect_deleted_any_own_digimon: true }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: battle_area
+                max: 2
+                optional_zero: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                bind_as: targets
+                prompt: "Choose up to 2 of your opponent's level 4 or lower Digimon to delete"
+            - delete_bound_permanents: { binding: targets }
+
+  - text: "[Security] Add this card to the hand."
+    when: on_security
+    summary: "[Security] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

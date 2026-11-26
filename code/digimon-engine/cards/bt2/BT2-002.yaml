@@ -1,0 +1,19 @@
+card: BT2-002
+name: DemiVeemon
+kind: digi_egg
+level: 2
+color: [blue]
+form: In-Training
+traits: [Baby Dragon]
+
+effects:
+  - text: "[Your Turn] [Once Per Turn] When this Digimon becomes unsuspended during your main phase, it gets +1000 DP for the turn."
+    scope: inherited
+    when: on_unsuspend
+    active_when: { your_turn: true }
+    once_per_turn: true
+    trigger_if: { event_permanent_is_source: true }
+    condition: { in_phase: main }
+    summary: "[Your Turn][OPT] When unsuspended during main phase, +1000 DP for the turn"
+    process:
+      - add_dp_modifier: { target: source, value: 1000, expiry: end_of_turn }

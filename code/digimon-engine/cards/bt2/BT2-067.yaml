@@ -1,0 +1,10 @@
+card: BT2-067
+name: DemiDevimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 2
+dp: 3000
+form: Rookie
+attribute: Virus
+traits: [Evil]

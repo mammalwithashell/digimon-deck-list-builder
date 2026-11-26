@@ -1,0 +1,28 @@
+card: BT2-106
+name: Infinity Cannon
+kind: option
+color: [black]
+cost: 6
+
+effects:
+  - text: "[Main] ＜De-Digivolve 4＞ 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)"
+    when: main
+    summary: "[Main] <De-Digivolve 4> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 4>"
+      - de_digivolve: { target: target, amount: 4 }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 4>"
+      - de_digivolve: { target: target, amount: 4 }

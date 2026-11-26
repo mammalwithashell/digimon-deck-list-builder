@@ -1,0 +1,20 @@
+card: BT4-005
+name: Missimon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+form: In-Training
+traits: [Machine]
+
+effects:
+  - text: "[Your Turn] While this Digimon has the [D-Brigade] trait, it gets +1000 DP."
+    scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - trait_has: D-Brigade
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][Your Turn] While this Digimon has the [D-Brigade] trait, it gets +1000 DP"

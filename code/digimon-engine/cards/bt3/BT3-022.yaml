@@ -1,0 +1,10 @@
+card: BT3-022
+name: Penguinmon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 5000
+form: Rookie
+attribute: Vaccine
+traits: [Avian]

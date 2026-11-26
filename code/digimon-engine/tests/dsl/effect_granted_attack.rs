@@ -39,6 +39,7 @@ effects:
         attacker,
         targets,
         without_suspending,
+        can_attack_unsuspended,
         ignore_summoning_sickness,
         optional,
         prompt,
@@ -50,6 +51,7 @@ effects:
     assert_eq!(*attacker, CompiledBindingRef::Source);
     assert_eq!(*targets, CompiledAttackTargetSpec::Player);
     assert!(*without_suspending);
+    assert!(!*can_attack_unsuspended);
     assert!(!*ignore_summoning_sickness);
     assert!(*optional);
     assert_eq!(prompt, &None);
@@ -121,6 +123,7 @@ effects:
         affects_player,
         targets,
         without_suspending,
+        can_attack_unsuspended,
         prompt,
         cost_upgrade,
     } = &clause.process[0]
@@ -131,6 +134,7 @@ effects:
     assert!(!*affects_player);
     assert_eq!(*targets, CompiledAttackTargetSpec::Player);
     assert!(*without_suspending);
+    assert!(!*can_attack_unsuspended);
     assert_eq!(prompt, &None);
     assert_eq!(cost_upgrade, &None);
 }

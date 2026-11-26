@@ -1,0 +1,34 @@
+card: BT2-110
+name: Trump Sword
+kind: option
+color: [purple]
+cost: 7
+
+effects:
+  - text: "[Main] Delete 1 of your opponent's unsuspended Digimon."
+    when: main
+    summary: "[Main] Delete 1 of your opponent's unsuspended Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Choose 1 of your opponent's unsuspended Digimon to delete"
+      - delete_permanent: { target: target }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Choose 1 of your opponent's unsuspended Digimon to delete"
+      - delete_permanent: { target: target }

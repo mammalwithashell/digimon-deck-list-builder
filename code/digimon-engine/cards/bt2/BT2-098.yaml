@@ -1,0 +1,44 @@
+card: BT2-098
+name: "Eden's Javelin"
+kind: option
+color: [yellow]
+cost: 6
+
+effects:
+  - text: "[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, 1 of your opponent's Digimon gets -1000 DP for each card in your hand for the turn."
+    when: main
+    summary: "[Main] Draw 1, then 1 opponent Digimon gets -1000 DP per card in your hand for the turn"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -1000 DP for each card in your hand"
+      - add_dp_modifier:
+          target: target
+          value:
+            formula:
+              base: 0
+              per: { card_count_in_zone: { of: you, zone: hand } }
+              delta: -1000
+          expiry: end_of_turn
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -1000 DP for each card in your hand"
+      - add_dp_modifier:
+          target: target
+          value:
+            formula:
+              base: 0
+              per: { card_count_in_zone: { of: you, zone: hand } }
+              delta: -1000
+          expiry: end_of_turn

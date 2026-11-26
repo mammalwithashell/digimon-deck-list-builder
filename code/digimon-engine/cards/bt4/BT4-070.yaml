@@ -1,0 +1,21 @@
+card: BT4-070
+name: Meteormon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 8000
+traits: [Rock]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+effects:
+  - text: "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"

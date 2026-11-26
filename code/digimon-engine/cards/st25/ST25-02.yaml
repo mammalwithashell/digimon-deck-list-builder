@@ -1,0 +1,41 @@
+card: ST25-02
+name: Gemmon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Mythical Beast, ALYSION]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { any_color: true, level_eq: 2, in_text_contains: Gemmon }
+    cost: 0
+
+effects:
+  - when: [on_move, on_play]
+    text: "[When Moving] [On Play] 1 of your Digimon gets +3000 DP for the turn."
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
+    summary: "[When Moving][On Play] 1 of your Digimon gets +3000 DP for the turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gets +3000 DP for the turn"
+      - add_dp_modifier: { target: boosted, value: 3000, expiry: end_of_turn }
+
+  - scope: inherited
+    text: "[Your Turn] This Digimon gets +2000 DP."
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "Inherited [Your Turn] This Digimon gets +2000 DP"

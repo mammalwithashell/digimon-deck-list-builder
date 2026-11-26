@@ -1,0 +1,23 @@
+card: BT4-015
+name: Volcdramon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Data
+traits: [Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  - text: "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+    scope: inherited
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "[Inherited] <Security A. +1>"

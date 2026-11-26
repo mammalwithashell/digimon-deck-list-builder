@@ -1,0 +1,90 @@
+card: BT1-111
+name: Giga Blaster
+kind: option
+color: [green]
+cost: 3
+
+effects:
+  - text: "[Main] Suspend 1 of your opponent's Digimon, or 2 of your opponent's Digimon with 5000 DP or less."
+    when: main_from_hand
+    summary: "[Main] Suspend 1 of your opponent's Digimon, or 2 of your opponent's Digimon with 5000 DP or less"
+    process:
+      - select_effect_choice:
+          bind_as: mode
+          labels:
+            - "Suspend 1 of your opponent's Digimon"
+            - "Suspend 2 of your opponent's Digimon with 5000 DP or less"
+          legal_when:
+            - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+            - any_permanent: { of: opponent, zone: [battle_area], kind: digimon, dp_lte: 5000 }
+          prompt: "Suspend 1 of your opponent's Digimon, or 2 of your opponent's Digimon with 5000 DP or less?"
+      - if:
+          condition: { equals: [mode, 0] }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to suspend"
+            - suspend: { target: target }
+      - if:
+          condition: { equals: [mode, 1] }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: battle_area
+                max: 2
+                optional_zero: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 5000
+                bind_as: targets
+                prompt: "Choose 2 of your opponent's Digimon with 5000 DP or less to suspend"
+            - per_selected:
+                selection: targets
+                bind_as: target
+                body:
+                  - suspend: { target: target }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_effect_choice:
+          bind_as: mode
+          labels:
+            - "Suspend 1 of your opponent's Digimon"
+            - "Suspend 2 of your opponent's Digimon with 5000 DP or less"
+          legal_when:
+            - any_permanent: { of: opponent, zone: [battle_area], kind: digimon }
+            - any_permanent: { of: opponent, zone: [battle_area], kind: digimon, dp_lte: 5000 }
+          prompt: "Suspend 1 of your opponent's Digimon, or 2 of your opponent's Digimon with 5000 DP or less?"
+      - if:
+          condition: { equals: [mode, 0] }
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to suspend"
+            - suspend: { target: target }
+      - if:
+          condition: { equals: [mode, 1] }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: battle_area
+                max: 2
+                optional_zero: false
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 5000
+                bind_as: targets
+                prompt: "Choose 2 of your opponent's Digimon with 5000 DP or less to suspend"
+            - per_selected:
+                selection: targets
+                bind_as: target
+                body:
+                  - suspend: { target: target }

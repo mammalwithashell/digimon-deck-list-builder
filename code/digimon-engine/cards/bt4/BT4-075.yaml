@@ -1,0 +1,42 @@
+card: BT4-075
+name: Blastmon
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 13000
+traits: [Mineral]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+effects:
+  - text: "＜Security A. +1＞ (This Digimon checks 1 additional security card.)."
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security Attack +1>"
+
+  - text: "[When Attacking] Your opponent may choose 1 of their unsuspended Digimon. If they do, switch the target of attack to that Digimon."
+    when: when_attacking
+    summary: "[When Attacking] Your opponent may choose 1 of their unsuspended Digimon to switch the attack target to"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            - select_opponent_permanent:
+                optional: true
+                bind_as: redirect_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - is_suspended: false
+                prompt: "You may choose 1 of your unsuspended Digimon to switch the attack target to"
+            - if:
+                condition: { binding_present: redirect_target }
+                then:
+                  - redirect_attack_target: { optional: false, new_target: redirect_target }

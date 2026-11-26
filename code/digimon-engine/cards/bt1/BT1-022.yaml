@@ -1,0 +1,24 @@
+card: BT1-022
+name: Garudamon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Birdkin]
+form: Ultimate
+attribute: Vaccine
+
+effects:
+  - text: "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+    kind: grant_keyword
+    keyword: Piercing
+
+  - text: "[Your Turn] When this Digimon is blocked, ＜Draw 1＞ (Draw 1 card from your deck.)"
+    scope: inherited
+    when: on_block
+    active_when: { your_turn: true }
+    condition: { event_permanent_is_source: true }
+    summary: "[Inherited][Your Turn] When this Digimon is blocked, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

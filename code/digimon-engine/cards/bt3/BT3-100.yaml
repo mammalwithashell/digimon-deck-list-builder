@@ -1,0 +1,68 @@
+card: BT3-100
+name: Death Parade Blaster
+kind: option
+color: [blue]
+cost: 3
+
+effects:
+  - text: "[Main] Trash up to 2 digivolution cards from the bottom of all of your opponent's Digimon. Then, if you have a green Digimon in play, suspend 1 of your opponent's Digimon with no digivolution cards."
+    when: main_from_hand
+    summary: "[Main] Trash up to 2 bottom digivolution cards from all opponent's Digimon; if you have a green Digimon, suspend 1 opponent's Digimon with no digivolution cards"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+          bind_as: opp_digi
+          body:
+            - trash_bottom_sources: { target: opp_digi, count: 2 }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              color_is: green
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: no_src_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - stack_size_lte: 1
+                prompt: "Choose 1 of your opponent's Digimon with no digivolution cards to suspend"
+            - suspend: { target: no_src_target }
+
+  - text: "[Security] Activate this card's [Main] effects."
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+          bind_as: opp_digi
+          body:
+            - trash_bottom_sources: { target: opp_digi, count: 2 }
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              color_is: green
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: no_src_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - stack_size_lte: 1
+                prompt: "Choose 1 of your opponent's Digimon with no digivolution cards to suspend"
+            - suspend: { target: no_src_target }

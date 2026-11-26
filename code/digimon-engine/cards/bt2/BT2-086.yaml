@@ -1,0 +1,47 @@
+card: BT2-086
+name: Rina Shinomiya
+kind: tamer
+color: [blue]
+cost: 3
+
+effects:
+  - text: "[Your Turn] When one of your blue Digimon attacks, you may suspend this Tamer to give that Digimon +1000 DP for the turn."
+    when: on_ally_attack
+    optional: true
+    active_when: { your_turn: true }
+    condition: { source_is_unsuspended: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [blue]
+    summary: "[Your Turn] When one of your blue Digimon attacks, you may suspend this Tamer to give that Digimon +1000 DP for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - add_dp_modifier:
+          target: event_target
+          value: 1000
+          expiry: end_of_turn
+
+  - text: "[On Play] Reveal 3 cards from the top of your deck. Add 1 Digimon Card with [Vee] in its name among them to your hand. Place the remaining cards on the bottom of your deck in any order."
+    when: on_play
+    summary: "[On Play] Reveal top 3 cards; add 1 Digimon card with [Vee] in its name to hand; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Vee
+          prompt: "Add 1 Digimon card with [Vee] in its name to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

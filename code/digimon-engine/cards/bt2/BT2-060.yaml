@@ -1,0 +1,10 @@
+card: BT2-060
+name: Megadramon
+kind: digimon
+level: 5
+color: [black]
+cost: 6
+dp: 9000
+form: Ultimate
+attribute: Virus
+traits: [Cyborg]

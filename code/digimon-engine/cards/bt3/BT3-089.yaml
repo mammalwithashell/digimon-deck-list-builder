@@ -1,0 +1,10 @@
+card: BT3-089
+name: Boltmon
+kind: digimon
+level: 6
+color: [purple]
+cost: 10
+dp: 12000
+form: Mega
+attribute: Data
+traits: [Cyborg]

@@ -1,0 +1,10 @@
+card: BT2-037
+name: Angewomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 10000
+form: Ultimate
+attribute: Vaccine
+traits: [Archangel]

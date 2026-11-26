@@ -1,0 +1,22 @@
+card: BT1-043
+name: SaberLeomon
+kind: digimon
+level: 6
+color: [blue]
+cost: 11
+dp: 10000
+form: Mega
+attribute: Data
+traits: [Ancient Animal]
+
+effects:
+  - text: "[When Digivolving] Trash 4 digivolution cards at the bottom of 1 of your opponent's Digimon."
+    when: when_digivolving
+    summary: "[When Digivolving] Trash 4 digivolution cards from the bottom of 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          filter: { kind: digimon }
+          bind_as: victim
+          optional: false
+          prompt: "Choose 1 of your opponent's Digimon to trash 4 digivolution cards from its bottom"
+      - trash_bottom_sources: { target: victim, count: 4 }

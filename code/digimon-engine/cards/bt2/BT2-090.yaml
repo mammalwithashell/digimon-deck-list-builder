@@ -1,0 +1,36 @@
+card: BT2-090
+name: Matt Ishida
+kind: tamer
+color: [purple]
+cost: 4
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[On Play] Return 1 purple Digimon card or Option card from your trash to the hand."
+    when: on_play
+    summary: "[On Play] Return 1 purple Digimon card or purple Option card from your trash to your hand"
+    process:
+      - select_trash:
+          of: you
+          optional: false
+          bind_as: recovered
+          filter:
+            all_of:
+              - color_is: purple
+              - any_of:
+                  - kind: digimon
+                  - kind: option
+          prompt: "Return 1 purple Digimon card or Option card from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }
+
+  - text: "[Security] Play this card without paying the cost."
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -140,7 +140,11 @@ impl Game {
             })
             .map(|entry| entry.value)
             .sum();
-        for perm in &self.player(defender).battle_area {
+        for (perm_idx, perm) in self.player(defender).battle_area.iter().enumerate() {
+            let perm_handle = PermanentHandle {
+                player: defender,
+                index: perm_idx as u8,
+            };
             for source in &perm.card_sources {
                 let card_id = source.card_id(&self.card_data);
                 let Some(effects) = self.effects_for_card(card_id, source.handle()) else {
@@ -157,7 +161,7 @@ impl Game {
                     let rctx = crate::effect_context::EffectReadContext::new(
                         self,
                         source.handle(),
-                        None,
+                        Some(perm_handle),
                         defender,
                     );
                     if let Some(condition) = &effect.condition {

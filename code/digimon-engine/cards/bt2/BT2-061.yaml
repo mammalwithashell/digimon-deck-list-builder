@@ -1,0 +1,16 @@
+card: BT2-061
+name: Andromon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+form: Ultimate
+attribute: Vaccine
+
+effects:
+  - text: "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"

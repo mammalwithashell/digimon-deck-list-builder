@@ -1,0 +1,10 @@
+card: BT3-059
+name: Commandramon
+kind: digimon
+level: 3
+color: [black]
+cost: 2
+dp: 3000
+form: Rookie
+attribute: Virus
+traits: [Cyborg, D-Brigade]

@@ -1,0 +1,25 @@
+card: BT4-045
+name: Maycrackmon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+form: Ultimate
+attribute: Vaccine
+traits: [Beastkin]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - text: "[Opponent's Turn] While you have 3 or fewer security cards, all of your Security Digimon get +4000 DP."
+    kind: aura
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - security_count_lte: 3
+    dp_modifier: 4000
+    applies_to_own_security_dp: true
+    summary: "[Opponent's Turn] While you have 3 or fewer security cards, all of your Security Digimon get +4000 DP"

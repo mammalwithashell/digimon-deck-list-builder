@@ -1,0 +1,29 @@
+card: BT4-079
+name: Labramon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Beast]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  - text: "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card in your hand."
+    when: on_play
+    summary: "[On Play] <Draw 1>, then trash 1 card in your hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          optional: false
+          bind_as: discarded
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discarded }

@@ -1,0 +1,24 @@
+card: BT2-059
+name: Kurisarimon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 4000
+form: Champion
+attribute: Unknown
+traits: [Unidentified]
+
+effects:
+  - text: "[Your Turn] When you play another Digimon with the same name as this Digimon, gain 1 memory."
+    scope: inherited
+    when: on_ally_played
+    active_when: { your_turn: true }
+    trigger_if:
+      event_target_owner: you
+      event_target_kind: digimon
+      event_target_is_source: false
+      event_target_name_matches_source: true
+    summary: "[Your Turn] When you play another Digimon with the same name, gain 1 memory"
+    process:
+      - gain_memory: 1
