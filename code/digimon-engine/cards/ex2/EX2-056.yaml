@@ -1,0 +1,50 @@
+card: EX2-056
+name: "Takato Matsuki"
+kind: tamer
+color: [red]
+cost: 3
+
+effects:
+  - text: "[Your Turn] When an opponent's Digimon is deleted, you may suspend this Tamer to gain 1 memory."
+    when: on_any_deletion
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When an opponent's Digimon is deleted, suspend this Tamer to gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - text: '[Your Turn] When one of your Digimon would digivolve into a Digimon with [Gallantmon] or [Growlmon] in its name, that Digimon gains "[When Digivolving] ＜Blitz＞ (This Digimon can attack when your opponent has 1 or more memory.)" for the turn.'
+    when: before_pay_cost_observe
+    active_when:
+      all_of:
+        - your_turn: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Gallantmon
+                  - name_contains: Growlmon
+    summary: "[Your Turn] When your Digimon would digivolve into [Gallantmon]/[Growlmon], grant it '[When Digivolving] <Blitz>' for the turn"
+    process:
+      - grant_triggered_effect:
+          target: cost_target_permanent
+          timing: when_digivolving
+          expiry: end_of_turn
+          body:
+            - grant_keyword:
+                target: carrier
+                keyword: Blitz
+                expiry: end_of_turn
+
+  - text: "[Security] Play this card without paying its memory cost."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying its memory cost"
+    process:
+      - play_from_security: {}

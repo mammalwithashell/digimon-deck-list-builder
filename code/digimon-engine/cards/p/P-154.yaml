@@ -1,0 +1,42 @@
+card: P-154
+name: Maildramon
+kind: digimon
+level: 4
+form: Armor Form
+attribute: Free
+color: [black]
+cost: 4
+dp: 4000
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - text: "[All Turns] When any of your Digimon with [Knightmon] in their texts would leave the battle area by your opponent's effects, by placing this Digimon as any of those Digimon's bottom digivolution card, they don't leave."
+    kind: replacement
+    timing: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - replacement_cause: opponent_effect
+        - kind: digimon
+        - other: true
+        - any_of:
+            - name_contains: Knightmon
+            - rules_text_contains: Knightmon
+    summary: "[All Turns] When another of your [Knightmon]-text Digimon would leave by opponent's effect, place this Digimon under it to prevent leaving"
+    process:
+      - place_as_bottom_source:
+          source: source
+          target: replacement_subject
+      - cancel_replacement: {}
+
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    scope: inherited
+    keyword: Blocker
+    summary: "[Inherited] <Blocker>"

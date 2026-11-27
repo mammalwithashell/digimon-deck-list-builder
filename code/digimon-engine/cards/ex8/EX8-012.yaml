@@ -1,0 +1,72 @@
+card: EX8-012
+name: "Growlmon (X Antibody)"
+kind: digimon
+level: 4
+form: Champion
+attribute: Virus
+color: [red, purple]
+cost: 6
+dp: 6000
+traits: [Dark Dragon, X Antibody]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, name_is: Growlmon }
+    cost: 0
+
+effects:
+  - text: '[When Digivolving] ＜Draw 1＞ and trash 1 card in your hand. Then, if [Growlmon] or [X Antibody] is in this Digimon''s digivolution cards, until the end of your opponent''s turn, this Digimon gains "[On Deletion] You may play 1 card with [Guilmon] in its name from your trash without paying the cost."'
+    when: when_digivolving
+    summary: "[WD] <Draw 1> and trash 1; if [Growlmon]/[X Antibody] in sources, grant '[On Deletion] may play 1 [Guilmon]-named card from trash free' until end of opp turn"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: false
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - if:
+          condition:
+            any_of:
+              - self_digivolution_sources_contain_name: Growlmon
+              - self_digivolution_sources_contain_name: "X Antibody"
+          then:
+            - grant_triggered_effect:
+                target: source
+                timing: on_deletion
+                expiry: end_of_opponents_turn
+                body:
+                  - select_trash:
+                      of: you
+                      bind_as: guilmon
+                      optional: true
+                      filter:
+                        all_of:
+                          - name_contains: Guilmon
+                          - can_play_from_effect_without_cost: true
+                      prompt: "You may play 1 card with [Guilmon] in its name from your trash without paying the cost"
+                  - if:
+                      condition: { binding_present: guilmon }
+                      then:
+                        - play_from_trash_free: { of: you, hand_index: guilmon }
+
+  - text: "[Your Turn] [Once Per Turn] When any of your opponent's Digimon are deleted, gain 1 memory."
+    scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[Inherited][Your Turn][OPT] When an opponent's Digimon is deleted, gain 1 memory"
+    process:
+      - gain_memory: 1

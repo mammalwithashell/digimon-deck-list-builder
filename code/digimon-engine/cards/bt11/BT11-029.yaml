@@ -1,0 +1,56 @@
+card: BT11-029
+name: AeroVeedramon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Vaccine
+color: [blue]
+cost: 8
+dp: 8000
+traits: [Holy Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - text: "[Main][Once Per Turn] By suspending this Digimon, reveal the top 3 cards of your deck. Add all blue Tamer cards among them to your hand. Place the rest at the bottom of your deck in any order."
+    when: main_on_field
+    once_per_turn: true
+    optional: true
+    condition: { source_is_unsuspended: true }
+    summary: "[Main][OPT] Suspend this Digimon to reveal top 3, add all blue Tamers to hand, rest to bottom"
+    process:
+      - activation_cost: { suspend_self: true }
+      - reveal_top_deck: { of: you, count: 3 }
+      - for_each:
+          over:
+            zone: [reveal]
+            kind: tamer
+            color_is: blue
+          bind_as: bt
+          body:
+            - add_to_hand_from_reveal: { of: you, card: bt }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - text: "[When Attacking][Once Per Turn] Activate 1 of your [Rina Shinomiya]'s [On Play] effects."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        name_is: "Rina Shinomiya"
+    summary: "[Inherited][When Attacking][OPT] Activate 1 of your [Rina Shinomiya]'s [On Play] effects"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: rina
+          filter: { name_is: "Rina Shinomiya" }
+          prompt: "Choose 1 of your [Rina Shinomiya] to activate its [On Play] effect"
+      - refire_effect:
+          source: rina
+          timing: on_play
+          optional: false

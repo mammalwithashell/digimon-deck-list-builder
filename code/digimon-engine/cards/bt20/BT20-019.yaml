@@ -1,0 +1,87 @@
+card: BT20-019
+name: "Jesmon (X Antibody)"
+kind: digimon
+level: 6
+form: Mega
+attribute: Data
+color: [red]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, X Antibody, Royal Knight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, name_is: Jesmon }
+    cost: 1
+
+effects:
+  - text: "＜Alliance＞"
+    kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+
+  - text: "[When Digivolving] If [Jesmon] or [X Antibody] is in this Digimon's digivolution cards, for the turn, 1 of your Digimon isn't affected by your opponent's effects. Then, 1 of your Digimon may attack."
+    when: when_digivolving
+    summary: "[WD] If [Jesmon]/[X Antibody] in sources, 1 Digimon is immune to opp effects for turn; then 1 Digimon may attack"
+    process:
+      - if:
+          condition:
+            any_of:
+              - self_digivolution_sources_contain_name: Jesmon
+              - self_digivolution_sources_contain_name: "X Antibody"
+          then:
+            - select_own_permanent:
+                optional: false
+                bind_as: immune_mon
+                filter: { kind: digimon }
+                prompt: "For the turn, 1 of your Digimon isn't affected by your opponent's effects"
+            - add_modifier:
+                target: immune_mon
+                modifier: CannotBeAffected
+                value: 1
+                expiry: end_of_turn
+      - select_own_permanent:
+          optional: true
+          bind_as: atk_mon
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon may attack"
+      - if:
+          condition: { binding_present: atk_mon }
+          then:
+            - may_attack_now:
+                attacker: atk_mon
+                targets: any
+                optional: true
+
+  - text: "[Your Turn] All of your Digimon with [Sistermon] in their names or the [Royal Knight] trait gain ＜Piercing＞ and can also attack your opponent's unsuspended Digimon."
+    kind: aura
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      all_of:
+        - kind: digimon
+        - any_of:
+            - name_contains: Sistermon
+            - trait_has: "Royal Knight"
+    grant_keyword: { keyword: Piercing }
+    modifier: CanAttackUnsuspended
+    summary: "[Your Turn] Your [Sistermon]/[Royal Knight] Digimon gain <Piercing> and CanAttackUnsuspended"
+
+  - text: "[Your Turn] While this Digimon is [Jesmon GX], all of your Digimon gain ＜Piercing＞ and can also attack your opponent's unsuspended Digimon."
+    kind: aura
+    scope: inherited
+    active_when:
+      all_of:
+        - your_turn: true
+        - name_is: "Jesmon GX"
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+    grant_keyword: { keyword: Piercing }
+    modifier: CanAttackUnsuspended
+    summary: "[Inherited][Your Turn] While this Digimon is [Jesmon GX], all your Digimon gain <Piercing> and CanAttackUnsuspended"

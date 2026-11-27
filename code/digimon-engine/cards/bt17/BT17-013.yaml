@@ -1,0 +1,60 @@
+card: BT17-013
+name: WarGrowlmon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Virus
+color: [red]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  - text: "[When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less. If this effect didn't delete, this Digimon gains ＜Security A. +1＞ for the turn."
+    when: when_digivolving
+    summary: "[WD] Delete 1 opponent Digimon with <=6000 DP; if didn't delete, gain <Security A. +1> for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+          prompt: "Delete 1 of your opponent's Digimon with 6000 DP or less"
+      - if:
+          condition: { binding_present: victim }
+          then:
+            - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - grant_keyword:
+                target: source
+                keyword: SecurityAttackPlus
+                value: 1
+                expiry: end_of_turn
+
+  - text: "[All Turns] [Once Per Turn] When an effect deletes an opponent's Digimon, you may unsuspend this Digimon with [Gallantmon] in its name."
+    scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - any_of:
+            - event_cause: own_effect
+            - event_cause: opponent_effect
+    condition:
+      name_contains: Gallantmon
+    summary: "[Inherited][All Turns][OPT] When an effect deletes an opponent's Digimon, may unsuspend this [Gallantmon]-named Digimon"
+    process:
+      - unsuspend: { target: source }

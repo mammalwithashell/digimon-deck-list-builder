@@ -1,0 +1,52 @@
+card: BT17-010
+name: Growlmon
+kind: digimon
+level: 4
+form: Champion
+attribute: Virus
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dark Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  - text: "[When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, this Digimon gets +3000 DP for the turn."
+    when: when_digivolving
+    summary: "[When Digivolving] Delete 1 opponent Digimon with <=4000 DP; if didn't delete, +3000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 of your opponent's Digimon with 4000 DP or less"
+      - if:
+          condition: { binding_present: victim }
+          then:
+            - delete_permanent: { target: victim }
+      - if:
+          condition: { effect_deleted_any_opponent_digimon: false }
+          then:
+            - add_dp_modifier:
+                target: source
+                value: 3000
+                expiry: end_of_turn
+
+  - text: "[All Turns] While you have 0 or less memory, add 2000 to this Digimon's DP-based deletion effects' maximums."
+    kind: aura
+    scope: inherited
+    active_when:
+      all_of:
+        - all_turns: true
+        - memory_lte: 0
+    target: {}
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 2000
+    summary: "[Inherited][All Turns] While memory <= 0, add 2000 to DP-based deletion effects' maximums"

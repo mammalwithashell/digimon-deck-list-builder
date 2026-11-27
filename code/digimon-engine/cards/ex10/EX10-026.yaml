@@ -1,0 +1,64 @@
+card: EX10-026
+name: SkullKnightmon
+kind: digimon
+level: 4
+form: Champion
+attribute: Virus
+color: [black, purple]
+cost: 4
+dp: 4000
+traits: [Undead, Bagra Army, Twilight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: Knightmon
+            - rules_text_contains: Knightmon
+    cost: 2
+
+effects:
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, delete 1 of your opponent's Digimon with a play cost of 4 or less."
+    when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] By trashing 1 card in hand, delete 1 opponent Digimon with play cost <= 4"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: {}
+          prompt: "By trashing 1 card in your hand, delete 1 of your opponent's Digimon with a play cost of 4 or less"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - play_cost_lte: 4
+                prompt: "Delete 1 of your opponent's Digimon with a play cost of 4 or less"
+            - delete_permanent: { target: victim }
+
+  - text: "＜Save＞"
+    kind: grant_keyword
+    keyword: Save
+    summary: "[On Deletion] <Save>"
+
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    scope: inherited
+    keyword: Blocker
+    summary: "[Inherited] <Blocker>"

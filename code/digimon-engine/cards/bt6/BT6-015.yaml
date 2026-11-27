@@ -1,0 +1,51 @@
+card: BT6-015
+name: SaviorHuckmon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Data
+color: [red]
+cost: 7
+dp: 7000
+traits: [Dragonkin]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  - text: "[When Digivolving] You may play 1 Digimon card with [Sistermon] in its name from your hand without paying its memory cost."
+    when: when_digivolving
+    optional: true
+    summary: "[WD] May play 1 [Sistermon] Digimon from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: sis
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Sistermon
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 Digimon card with [Sistermon] in its name from your hand without paying its memory cost"
+      - if:
+          condition: { binding_present: sis }
+          then:
+            - play_from_hand_free: { of: you, hand_index: sis }
+
+  - text: "[When Attacking][Once Per Turn] If you have a Digimon with [Sistermon] in its name in play, unsuspend this Digimon."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - name_contains: Sistermon
+    summary: "[Inherited][When Attacking][OPT] If you have a [Sistermon] Digimon in play, unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }

@@ -1,0 +1,17 @@
+card: BT12-001
+name: Gigimon
+kind: digi_egg
+level: 2
+form: In-Training
+color: [red]
+traits: [Lesser]
+
+effects:
+  - text: "[Your Turn] Add 1000 to the maximum your DP-based deletion effects can delete."
+    kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target: {}
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 1000
+    summary: "[Inherited][Your Turn] Add 1000 to DP-based deletion effects' maximums"

@@ -1,0 +1,61 @@
+card: BT13-009
+name: Huckmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Data
+color: [red]
+cost: 3
+dp: 2000
+traits: [Mini Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - text: "[Your Turn] When you play a Digimon with [Sistermon] in its name, this Digimon may digivolve into [BaoHuckmon] in the hand without paying the cost."
+    when: on_ally_played
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_name_contains: Sistermon
+    summary: "[Your Turn] When you play a [Sistermon] Digimon, this Digimon may digivolve into [BaoHuckmon] in hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: bao
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: BaoHuckmon
+              - can_digivolve_onto_with_cost:
+                  target: source
+                  cost: free
+          prompt: "This Digimon may digivolve into [BaoHuckmon] in the hand without paying the cost"
+      - if:
+          condition: { binding_present: bao }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: bao
+                cost: free
+
+  - text: "[Your Turn][Once Per Turn] When you play a Digimon with [Sistermon] in its name, gain 1 memory."
+    scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_name_contains: Sistermon
+    summary: "[Inherited][Your Turn][OPT] When you play a [Sistermon] Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1

@@ -1,0 +1,69 @@
+card: EX10-027
+name: DeadlyAxemon
+kind: digimon
+level: 4
+form: Champion
+attribute: Virus
+color: [black, purple]
+cost: 4
+dp: 4000
+traits: [Dark Animal, Bagra Army, Twilight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: Knightmon
+            - rules_text_contains: Knightmon
+    cost: 2
+
+effects:
+  - text: "[On Play] [When Digivolving] By trashing 1 card in your hand, you may return 1 Digimon card with [Knightmon] in its text or the [Bagra Army] or [Twilight] trait from your trash to the hand."
+    when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] By trashing 1 card in hand, may return 1 [Knightmon]-text/[Bagra Army]/[Twilight] Digimon from trash to hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: {}
+          prompt: "By trashing 1 card in your hand, you may return 1 qualifying Digimon card from your trash to the hand"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - select_trash:
+                of: you
+                bind_as: recovered
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: Knightmon
+                        - rules_text_contains: Knightmon
+                        - trait_has: "Bagra Army"
+                        - trait_has: Twilight
+                prompt: "You may return 1 Digimon card with [Knightmon] in its text or the [Bagra Army] or [Twilight] trait from your trash to the hand"
+            - add_to_hand_from_trash: { of: you, card: recovered }
+
+  - text: "＜Save＞"
+    kind: grant_keyword
+    keyword: Save
+    summary: "[On Deletion] <Save>"
+
+  - text: "＜Retaliation＞"
+    kind: grant_keyword
+    scope: inherited
+    keyword: Retaliation
+    summary: "[Inherited] <Retaliation>"

@@ -1,0 +1,25 @@
+card: P-177
+name: Gigimon
+kind: digi_egg
+level: 2
+form: In-Training
+color: [purple]
+traits: [Lesser]
+
+effects:
+  - text: "[On Deletion] You may return 1 card with [Growlmon] or [Gallantmon] in its name from your trash to the hand."
+    scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] You may return 1 [Growlmon]/[Gallantmon]-named card from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter:
+            any_of:
+              - name_contains: Growlmon
+              - name_contains: Gallantmon
+          prompt: "You may return 1 card with [Growlmon] or [Gallantmon] in its name from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }

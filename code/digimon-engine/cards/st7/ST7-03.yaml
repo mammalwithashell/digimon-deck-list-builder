@@ -1,0 +1,47 @@
+card: ST7-03
+name: Guilmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Virus
+color: [red]
+cost: 3
+dp: 2000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    direction: into
+    from:
+      zone: [hand]
+      of: you
+      kind: digimon
+      name_is: Gallantmon
+    cost: 4
+    ignore_requirements: true
+    condition:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+
+effects:
+  - text: "[Your Turn][Once Per Turn] When an opponent's Digimon is deleted, trigger ＜Draw 1＞."
+    scope: inherited
+    when: on_any_deletion
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "[Inherited][Your Turn][OPT] When an opponent's Digimon is deleted, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

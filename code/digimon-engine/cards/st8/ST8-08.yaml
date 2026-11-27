@@ -1,0 +1,34 @@
+card: ST8-08
+name: AeroVeedramon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Vaccine
+color: [blue]
+cost: 7
+dp: 7000
+traits: [Holy Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 3
+
+effects:
+  - text: "＜Jamming＞"
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  - text: "[Your Turn] While you have 8 or more cards in your hand, this Digimon gains ＜Security Attack +1＞."
+    kind: aura
+    scope: inherited
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 8
+    target: {}
+    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+    summary: "[Inherited][Your Turn] While hand >= 8, gain <Security A. +1>"

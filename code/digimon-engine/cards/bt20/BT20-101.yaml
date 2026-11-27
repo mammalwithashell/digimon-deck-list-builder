@@ -1,0 +1,84 @@
+card: BT20-101
+name: Zephagamon
+kind: digimon
+level: 6
+form: Mega
+attribute: Data
+color: [green]
+cost: 8
+dp: 13000
+traits: [Magic Knight, Vortex Warriors, LIBERATOR, Bird Dragon]
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 5
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 6
+        - play_cost_gte: 10
+        - trait_has: "Vortex Warriors"
+    cost: 1
+
+effects:
+  - text: "＜Blast Digivolve＞"
+    kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "[Hand][Counter] <Blast Digivolve>"
+
+  - text: "＜Piercing＞"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "＜Vortex＞"
+    kind: grant_keyword
+    keyword: Vortex
+    summary: "<Vortex>"
+
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend."
+    when: on_suspend
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    trigger_if: { event_target_kind: digimon }
+    summary: "[All Turns][OPT] When any Digimon suspends, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }
+
+  - text: "[On Play] [When Digivolving] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck."
+    when: [on_play, when_digivolving]
+    summary: "[OP][WD] May suspend 1 Digimon; then for every 2 suspended Digimon, may bottom 1 opponent suspended Digimon"
+    process:
+      - select_any_permanent:
+          optional: true
+          bind_as: susp_mon
+          filter: { kind: digimon }
+          prompt: "You may suspend 1 Digimon"
+      - if:
+          condition: { binding_present: susp_mon }
+          then:
+            - suspend: { target: susp_mon }
+      - select_opponent_permanent:
+          optional: true
+          bind_as: bounced1
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "For every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck"
+      - if:
+          condition:
+            all_of:
+              - binding_present: bounced1
+              - count_gte: { filter: { of: any, zone: [battle_area], kind: digimon, is_suspended: true }, n: 2 }
+          then:
+            - return_to_deck: { target: bounced1, position: bottom }

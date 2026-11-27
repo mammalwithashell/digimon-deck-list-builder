@@ -1,0 +1,71 @@
+card: BT10-016
+name: "Jesmon (X Antibody)"
+kind: digimon
+level: 6
+form: Mega
+attribute: Data
+color: [red]
+cost: 12
+dp: 11000
+traits: [Holy Warrior, Royal Knight, X Antibody]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, name_is: Jesmon }
+    cost: 0
+
+effects:
+  - text: "＜Piercing＞"
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - text: "[When Digivolving] You may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its play cost. Then, if [Jesmon] is in this Digimon's digivolution cards or you have a Digimon with [Sistermon] in its name in play, until the end of your opponent's turn, all of your Digimon may also attack unsuspended Digimon and get +2000 DP."
+    when: when_digivolving
+    summary: "[WD] May play 1 [Sistermon] from hand/trash free; if [Jesmon] in sources or [Sistermon] in play, all your Digimon get CanAttackUnsuspended + +2000 DP until end of opp turn"
+    process:
+      - select_zone_cards:
+          zones: [hand, trash]
+          min: 0
+          max: 1
+          bind_as: sis
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: Sistermon
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its play cost"
+      - if:
+          condition: { binding_present: sis }
+          then:
+            - play_cards_free: { cards: sis }
+      - if:
+          condition:
+            any_of:
+              - self_digivolution_sources_contain_name: Jesmon
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  all_of:
+                    - kind: digimon
+                    - name_contains: Sistermon
+          then:
+            - for_each:
+                over:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+                bind_as: ally
+                body:
+                  - add_modifier:
+                      target: ally
+                      modifier: CanAttackUnsuspended
+                      value: 1
+                      expiry: end_of_opponents_turn
+                  - add_dp_modifier:
+                      target: ally
+                      value: 2000
+                      expiry: end_of_opponents_turn

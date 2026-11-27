@@ -1,0 +1,54 @@
+card: BT12-010
+name: Growlmon
+kind: digimon
+level: 4
+form: Champion
+attribute: Virus
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dark Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  - text: "[When Digivolving] If you don't have [Takato Matsuki] in play, you may play 1 [Takato Matsuki] from your hand without paying the cost."
+    when: when_digivolving
+    optional: true
+    condition:
+      not:
+        any_permanent:
+          of: you
+          zone: [battle_area]
+          name_is: "Takato Matsuki"
+    summary: "[When Digivolving] If no [Takato Matsuki] in play, may play 1 [Takato Matsuki] from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: takato
+          optional: true
+          filter:
+            all_of:
+              - name_is: "Takato Matsuki"
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [Takato Matsuki] from your hand without paying the cost"
+      - if:
+          condition: { binding_present: takato }
+          then:
+            - play_from_hand_free: { of: you, hand_index: takato }
+
+  - text: "[Your Turn] While this Digimon has [Growlmon] or [Gallantmon] in its name, it gets +2000 DP."
+    kind: aura
+    scope: inherited
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - name_contains: Growlmon
+            - name_contains: Gallantmon
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] While [Growlmon]/[Gallantmon] in name, +2000 DP"

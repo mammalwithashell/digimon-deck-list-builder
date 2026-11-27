@@ -1,0 +1,49 @@
+card: BT20-008
+name: Huckmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Data
+color: [red]
+cost: 3
+dp: 1000
+traits: [Mini Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - text: "[Start of Your Main Phase] By trashing 1 card with [Huckmon] or [Sistermon] in its name or the [Royal Knight] trait in your hand, ＜Draw 1＞ and gain 1 memory."
+    when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Main] Trash 1 [Huckmon]/[Sistermon]/[Royal Knight] card from hand to <Draw 1> and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter:
+            any_of:
+              - name_contains: Huckmon
+              - name_contains: Sistermon
+              - trait_has: "Royal Knight"
+          prompt: "By trashing 1 card with [Huckmon] or [Sistermon] in its name or the [Royal Knight] trait in your hand, <Draw 1> and gain 1 memory"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - text: "[Your Turn] All of your Digimon get +1000 DP."
+    kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+    dp_modifier: 1000
+    summary: "[Inherited][Your Turn] All of your Digimon get +1000 DP"

@@ -1,0 +1,52 @@
+card: BT6-009
+name: Huckmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Data
+color: [red]
+cost: 3
+dp: 2000
+traits: [Mini Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - text: "[On Play] Reveal the top 5 cards of your deck. Add up to 2 Digimon cards with [Huckmon], [Jesmon], or [Sistermon] in their names among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+    when: on_play
+    summary: "[On Play] Reveal top 5; add up to 2 [Huckmon]/[Jesmon]/[Sistermon] Digimon to hand; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 5 }
+      - select_reveal:
+          of: you
+          bind_as: pick1
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Huckmon
+                  - name_contains: Jesmon
+                  - name_contains: Sistermon
+          prompt: "Add up to 2 Digimon cards with [Huckmon], [Jesmon], or [Sistermon] in their names to your hand (1/2)"
+      - if:
+          condition: { binding_present: pick1 }
+          then:
+            - add_to_hand_from_reveal: { of: you, card: pick1 }
+            - select_reveal:
+                of: you
+                bind_as: pick2
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: Huckmon
+                        - name_contains: Jesmon
+                        - name_contains: Sistermon
+                prompt: "Add up to 2 Digimon cards with [Huckmon], [Jesmon], or [Sistermon] in their names to your hand (2/2)"
+            - add_to_hand_from_reveal: { of: you, card: pick2 }
+      - place_remainder_on_deck: { of: you, position: bottom }

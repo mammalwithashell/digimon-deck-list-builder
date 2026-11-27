@@ -72,3 +72,5 @@ mod p_119;
 mod p_187;
 mod p_247;
 mod p_174;
+mod p_154;
+mod p_190;

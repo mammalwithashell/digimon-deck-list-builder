@@ -1,0 +1,58 @@
+card: BT21-051
+name: Puppetmon
+kind: digimon
+level: 6
+form: Mega
+attribute: Virus
+color: [green, black]
+cost: 7
+dp: 12000
+traits: [Puppet, WG, Vegetation]
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, level_eq: 5, trait_has: WG }
+    cost: 3
+
+effects:
+  - text: "＜Blast Digivolve＞"
+    kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "[Hand][Counter] <Blast Digivolve>"
+
+  - text: "＜Reboot＞"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[On Play] [When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. Then, return 1 of their suspended Digimon to the bottom of the deck."
+    when: [on_play, when_digivolving]
+    summary: "[OP][WD] <De-Digivolve 2> 1 opponent Digimon, then bottom 1 opponent suspended Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 2> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dedigi, amount: 2, stop_at_level: 3 }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: bottom_target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
+      - return_to_deck: { target: bottom_target, position: bottom }

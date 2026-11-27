@@ -1,0 +1,67 @@
+card: BT21-079
+name: Megidramon
+kind: digimon
+level: 6
+form: Mega
+attribute: Virus
+color: [purple, red]
+cost: 13
+dp: 13000
+traits: [Evil Dragon, Four Great Dragons]
+also_treated_as: [ChaosGallantmon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { any_color: true, level_eq: 5, name_contains: Growlmon }
+    cost: 4
+
+effects:
+  - text: "＜Security A. +1＞"
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - text: "[End of Attack] [Once Per Turn] Delete all Digimon."
+    when: end_of_attack
+    once_per_turn: true
+    summary: "[End of Attack][OPT] Delete all Digimon"
+    process:
+      - delete_all_permanents:
+          over:
+            zone: [battle_area]
+            kind: digimon
+
+  - text: "[On Deletion] You may play 1 play cost 3 or lower Digimon card with [Guilmon] or [Growlmon] in its name from your trash without paying the cost. For every 10 total cards in both players' trashes, add 2 to this effect's play cost maximum."
+    when: on_deletion
+    optional: true
+    summary: "[On Deletion] May play 1 [Guilmon]/[Growlmon] from trash with play cost <= 3 + 2*(total_trash/10) free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Guilmon
+                  - name_contains: Growlmon
+              - play_cost_lte:
+                  formula:
+                    base: 3
+                    per: { shared_trash_count: {} }
+                    bucket: 10
+                    delta: 2
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 qualifying Digimon card with [Guilmon] or [Growlmon] in its name from your trash without paying the cost"
+      - if:
+          condition: { binding_present: revived }
+          then:
+            - play_from_trash_free: { of: you, hand_index: revived }

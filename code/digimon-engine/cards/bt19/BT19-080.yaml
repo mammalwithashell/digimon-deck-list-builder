@@ -1,0 +1,44 @@
+card: BT19-080
+name: "Takato Matsuki"
+kind: tamer
+color: [red]
+cost: 4
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If memory <= 2, set to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[Your Turn] When any of your Digimon digivolve into a Digimon with [Growlmon] or [Gallantmon] in its name, by suspending this Tamer, that Digimon gains ＜Raid＞ for the turn. Then, that Digimon attacks a player."
+    when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_name_contains: Growlmon
+            - event_target_name_contains: Gallantmon
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When your Digimon digivolves into [Growlmon]/[Gallantmon], suspend this Tamer to grant <Raid> and force attack a player"
+    process:
+      - activation_cost: { suspend_self: true }
+      - grant_keyword:
+          target: event_target
+          keyword: Raid
+          expiry: end_of_turn
+      - force_attack:
+          attacker: event_target
+          targets: player
+          prompt: "That Digimon attacks a player"
+
+  - text: "[Security] Play this card without paying the cost."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

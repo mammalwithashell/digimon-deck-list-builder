@@ -1,0 +1,97 @@
+card: BT22-067
+name: LordKnightmon
+kind: digimon
+level: 6
+form: Mega
+attribute: Virus
+color: [black, red]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight, CS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, level_eq: 5, trait_has: CS }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, name_is: "Rie Kishibe" }
+    cost: 5
+    condition:
+      count_lte: { filter: { of: you, zone: [security] }, n: 3 }
+
+effects:
+  - text: "＜Raid＞"
+    kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - text: "＜Reboot＞"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - text: "[On Play] [When Digivolving] 1 of your Digimon gets +3000 DP until your opponent's turn ends. Then, 1 of your Digimon may attack a player."
+    when: [on_play, when_digivolving]
+    summary: "[OP][WD] 1 of your Digimon gets +3000 DP until end of opp turn; then 1 of your Digimon may attack a player"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: buffed
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gets +3000 DP until your opponent's turn ends"
+      - add_dp_modifier:
+          target: buffed
+          value: 3000
+          expiry: end_of_opponents_turn
+      - select_own_permanent:
+          optional: true
+          bind_as: atk_mon
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon may attack a player"
+      - if:
+          condition: { binding_present: atk_mon }
+          then:
+            - may_attack_now:
+                attacker: atk_mon
+                targets: player
+                optional: true
+
+  - text: "[All Turns] [Once Per Turn] When Digimon attack players, reveal the top 3 cards of your deck. You may play 1 play cost 4 or lower black or red card among them without paying the cost. Trash the rest."
+    when: on_attack
+    once_per_turn: true
+    active_when: { all_turns: true }
+    trigger_if: { event_target_is_player: true }
+    summary: "[All Turns][OPT] When Digimon attack players, reveal top 3, may play 1 cost <=4 black/red card free, trash rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - select_reveal:
+          of: you
+          bind_as: played_card
+          optional: true
+          filter:
+            all_of:
+              - play_cost_lte: 4
+              - any_of:
+                  - color_is: black
+                  - color_is: red
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 play cost 4 or lower black or red card among them without paying the cost"
+      - if:
+          condition: { binding_present: played_card }
+          then:
+            - play_from_revealed_free: { of: you, card: played_card }
+      - for_each:
+
+          over: { zone: [reveal] }
+
+          bind_as: rest
+
+          body:
+
+            - trash_from_reveal: { of: you, card: rest }

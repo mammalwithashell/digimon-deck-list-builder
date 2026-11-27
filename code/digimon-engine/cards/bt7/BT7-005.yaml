@@ -1,0 +1,21 @@
+card: BT7-005
+name: Dorimon
+kind: digi_egg
+level: 2
+form: In-Training
+color: [black]
+traits: [Lesser, X Antibody]
+
+effects:
+  - text: "[Your Turn][Once Per Turn] When one of your effects places a digivolution card under this Digimon, ＜Draw 1＞."
+    scope: inherited
+    when: on_add_digivolution_cards
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_caused_by_own_effect: true
+    summary: "[Inherited][Your Turn][OPT] When one of your effects places a digivolution card under this Digimon, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

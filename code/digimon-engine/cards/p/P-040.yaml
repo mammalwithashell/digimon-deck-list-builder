@@ -1,0 +1,39 @@
+card: P-040
+name: "Purple Memory Boost!"
+kind: option
+color: [purple]
+cost: 3
+
+effects:
+  - text: "[Main] Reveal the top 4 cards of your deck. Add 1 purple Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area."
+    when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 4; add 1 purple Digimon to hand; place rest at bottom; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 4 }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          prompt: "Add 1 purple Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  - text: "[Main] ＜Delay＞ (Trash this card in your battle area to activate the effect below. You can't activate this effect the turn this card enters play.) ・Gain 2 memory."
+    kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - text: "[Security] Place this card in its owner's battle area."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}
