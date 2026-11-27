@@ -206,6 +206,15 @@ const REVIEWED: &[&str] = &[
     // DNA binding. ex8_060.rs tests that declining keeps the use for a second
     // trigger the same turn.
     "EX8-060#1",
+    // BT21-076#1 [When Attacking][Once Per Turn] "This Digimon may digivolve
+    // into [Megidramon] or [ChaosGallantmon] in the hand...": whole-effect may
+    // with no independent Then tail (Q1818).
+    "BT21-076#1",
+    // BT22-090#1 [End of Your Turn][Once Per Turn] "By deleting 1 of your other
+    // [Knightmon]-text/[CS] Digimon or Tamers, this Tamer may digivolve into
+    // [LordKnightmon] in the hand...": whole-effect optional cost + may with no
+    // independent Then tail (Q1818).
+    "BT22-090#1",
 ];
 
 #[test]
