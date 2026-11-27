@@ -29,3 +29,5 @@ mod ex8_073;
 mod ex8_074;
 mod ex8_002;
 mod ex8_006_nso;
+mod ex8_012;
+mod ex8_015;

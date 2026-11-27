@@ -1,0 +1,26 @@
+card: BT5-071
+name: Guilmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Virus
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  - text: "[On Deletion] If this card was deleted by an effect, gain 1 memory."
+    when: on_deletion
+    trigger_if:
+      any_of:
+        - event_cause: own_effect
+        - event_cause: opponent_effect
+    summary: "[On Deletion] If deleted by an effect, gain 1 memory"
+    process:
+      - gain_memory: 1

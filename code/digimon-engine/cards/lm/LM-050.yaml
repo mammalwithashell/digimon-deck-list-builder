@@ -1,0 +1,49 @@
+card: LM-050
+name: "Magenta Memory Boost!"
+kind: option
+color: [purple]
+cost: 3
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    any_of:
+      - kind: digimon
+      - kind: tamer
+    color_is: red
+
+effects:
+  - text: "Red also meets this card's color requirements. [Main] Reveal the top 3 cards of your deck. Add 1 purple or red Digimon card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area."
+    when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 purple or red Digimon to hand; return rest to bottom; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3 }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - color_is: purple
+                  - color_is: red
+          prompt: "Add 1 purple or red Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  - text: "[Main] ＜Delay＞ ・Gain 2 memory."
+    kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - text: "[Security] Place this card in the battle area."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

@@ -1,0 +1,54 @@
+card: EX9-068
+name: Analogman
+kind: tamer
+color: [black]
+cost: 4
+traits: [DM]
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If memory <= 2, set to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[Your Turn] When any of your play cost 7 or higher [Cyborg], [Machine] or [DM] trait Digimon are played, by suspending this Tamer, ＜Draw 1＞ and gain 1 memory. Then, you may place 1 card from your hand face down as any of those Digimon's bottom digivolution card."
+    when: on_ally_played
+    optional: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - play_cost_gte: 7
+        - any_of:
+            - event_target_trait_has: Cyborg
+            - event_target_trait_has: Machine
+            - event_target_trait_has: DM
+    condition: { source_is_unsuspended: true }
+    summary: "[Your Turn] When your cost 7+ [Cyborg]/[Machine]/[DM] Digimon is played, suspend this Tamer to <Draw 1>, gain 1 memory, and optionally place 1 hand card face down under it"
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+      - select_hand:
+          of: you
+          bind_as: fd_card
+          optional: true
+          filter: {}
+          prompt: "You may place 1 card from your hand face down as that Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: fd_card }
+          then:
+            - place_as_bottom_source:
+                source: fd_card
+                target: event_target
+                face_down: true
+
+  - text: "[Security] Play this card without paying the cost."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

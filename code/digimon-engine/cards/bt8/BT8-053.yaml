@@ -1,0 +1,38 @@
+card: BT8-053
+name: Lighdramon
+kind: digimon
+level: 4
+form: Armor Form
+attribute: Free
+color: [green, blue]
+cost: 5
+dp: 5000
+traits: [Beast]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, name_is: Veemon }
+    cost: 2
+
+effects:
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge>"
+
+  - text: "[When Digivolving] Suspend 1 of your opponent's level 4 or lower Digimon."
+    when: when_digivolving
+    summary: "[WD] Suspend 1 opponent Lv.4 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Suspend 1 of your opponent's level 4 or lower Digimon"
+      - suspend: { target: target }

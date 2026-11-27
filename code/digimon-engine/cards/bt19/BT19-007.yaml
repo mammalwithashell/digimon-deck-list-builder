@@ -1,0 +1,41 @@
+card: BT19-007
+name: Guilmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Virus
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - text: "[Start of Your Main Phase] If you have [Takato Matsuki] or [Calumon], gain 1 memory."
+    when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - name_is: "Takato Matsuki"
+          - name_is: Calumon
+    summary: "[Start of Your Main Phase] If you have [Takato Matsuki] or [Calumon], gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - text: "[All Turns] While you have 0 or less memory, add 2000 to this Digimon's DP deletion effects' maximums."
+    kind: aura
+    scope: inherited
+    active_when:
+      all_of:
+        - all_turns: true
+        - memory_lte: 0
+    target: {}
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 2000
+    summary: "[Inherited][All Turns] While memory <= 0, add 2000 to DP deletion effects' maximums"

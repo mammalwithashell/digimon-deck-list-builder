@@ -1,0 +1,58 @@
+card: EX4-008
+name: BlackGrowlmon
+kind: digimon
+level: 4
+form: Champion
+attribute: Virus
+color: [red, purple]
+cost: 5
+dp: 5000
+traits: [Dark Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, level_eq: 3, name_contains: Guilmon }
+    cost: 2
+
+effects:
+  - text: "[When Digivolving] Trash the top 2 cards of both players' decks. Then, you may return 1 [Guilmon] or 1 card with [Growlmon] or [Gallantmon] in its name from your trash to your hand."
+    when: when_digivolving
+    summary: "[When Digivolving] Both players mill 2; then may return 1 [Guilmon] or [Growlmon]/[Gallantmon]-named card from trash to hand"
+    process:
+      - trash_from_top: { of: you, count: 2 }
+      - trash_from_top: { of: opponent, count: 2 }
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter:
+            any_of:
+              - name_is: Guilmon
+              - name_contains: Growlmon
+              - name_contains: Gallantmon
+          prompt: "You may return 1 [Guilmon] or 1 card with [Growlmon] or [Gallantmon] in its name from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }
+
+  - text: "[On Deletion] You may return 1 [Guilmon] or 1 card with [Growlmon] or [Gallantmon] in its name from your trash to your hand."
+    scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] May return 1 [Guilmon] or [Growlmon]/[Gallantmon]-named card from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter:
+            any_of:
+              - name_is: Guilmon
+              - name_contains: Growlmon
+              - name_contains: Gallantmon
+          prompt: "You may return 1 [Guilmon] or 1 card with [Growlmon] or [Gallantmon] in its name from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }

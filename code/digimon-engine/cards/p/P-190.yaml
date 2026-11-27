@@ -1,0 +1,43 @@
+card: P-190
+name: Tweetmon
+kind: digimon
+level: 3
+attribute: Social
+color: [blue]
+cost: 3
+dp: 1000
+traits: ["Stnd.", Appmon, Social, Tweet]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { any_color: true, level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  - text: "＜Link＞ [Appmon] trait: Cost 1"
+    kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+
+  - text: "DP+2000"
+    kind: aura
+    scope: linked
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] Host gains +2000 DP"
+
+  - text: "[On Play] ＜Draw 1＞"
+    when: on_play
+    summary: "[On Play] <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  - text: "[When Linking] ＜Draw 1＞"
+    scope: linked
+    when: when_linked
+    summary: "[When Linking] <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,63 @@
+card: EX8-015
+name: "WarGrowlmon (X Antibody)"
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Virus
+color: [red, purple]
+cost: 8
+dp: 8000
+traits: [Cyborg, X Antibody]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, name_is: WarGrowlmon }
+    cost: 1
+
+effects:
+  - text: "[When Digivolving] Until the end of your opponent's turn, this Digimon can't be returned to hands or decks and gets +3000 DP. Then, if [WarGrowlmon] or [X Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with 10000 or less DP."
+    when: when_digivolving
+    summary: "[WD] Can't return to hand/deck & +3000 DP until end of opp turn; if [WarGrowlmon]/[X Antibody] in sources, delete opp Digimon <=10000 DP"
+    process:
+      - add_modifier:
+          target: source
+          modifier: CannotReturnToHand
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: source
+          modifier: CannotBeReturnedToDeck
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_opponents_turn
+      - if:
+          condition:
+            any_of:
+              - self_digivolution_sources_contain_name: WarGrowlmon
+              - self_digivolution_sources_contain_name: "X Antibody"
+          then:
+            - select_opponent_permanent:
+                optional: false
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 10000
+                prompt: "Delete 1 of your opponent's Digimon with 10000 DP or less"
+            - delete_permanent: { target: victim }
+
+  - text: "＜Security A. +1＞"
+    kind: grant_keyword
+    scope: inherited
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "[Inherited] <Security A. +1>"

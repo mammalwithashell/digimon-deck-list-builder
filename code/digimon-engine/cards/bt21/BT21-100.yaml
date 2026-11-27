@@ -1,0 +1,81 @@
+card: BT21-100
+name: "The Digimon I Designed"
+kind: option
+color: [purple]
+cost: 2
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    name_is: "Takato Matsuki"
+
+effects:
+  - text: "While you have [Takato Matsuki], you can ignore this card's color requirements. [Main] ＜Draw 1＞ and trash 1 card in your hand. Then, place this card in the battle area."
+    when: main_from_hand
+    summary: "[Main] <Draw 1> and trash 1 card in hand, then place self in battle area"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: false
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - place_self_as_delay_option: {}
+
+  - text: "[Your Turn] When effects delete Digimon, ＜Delay＞. ・1 of your Digimon with [Guilmon] or [Growlmon] in its name may digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost."
+    kind: delay
+    trigger: on_any_deletion
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_kind: digimon
+        - any_of:
+            - event_cause: own_effect
+            - event_cause: opponent_effect
+    summary: "[Your Turn] When effects delete Digimon, <Delay> 1 [Guilmon]/[Growlmon] may digivolve into [Growlmon]/[Gallantmon]/[Megidramon] in trash free"
+    process:
+      - select_own_permanent:
+          optional: true
+          bind_as: host
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Guilmon
+                  - name_contains: Growlmon
+          prompt: "Select 1 of your Digimon with [Guilmon] or [Growlmon] in its name to digivolve from trash"
+      - if:
+          condition: { binding_present: host }
+          then:
+            - select_trash:
+                of: you
+                bind_as: evo_card
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: Growlmon
+                        - name_contains: Gallantmon
+                        - name_contains: Megidramon
+                    - can_digivolve_onto_with_cost:
+                        target: host
+                        cost: free
+                prompt: "Digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost"
+            - if:
+                condition: { binding_present: evo_card }
+                then:
+                  - effect_initiated_digivolve:
+                      target: host
+                      source: evo_card
+                      cost: free
+
+  - text: "[Security] Gain 1 memory. Then, place this card in the battle area."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Gain 1 memory, then place self in battle area"
+    process:
+      - gain_memory: 1
+      - place_self_as_delay_option: {}

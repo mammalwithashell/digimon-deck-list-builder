@@ -1,0 +1,86 @@
+card: BT10-112
+name: "Jesmon GX"
+kind: digimon
+level: 7
+form: Mega
+attribute: Data
+color: [red, black]
+cost: 15
+dp: 15000
+traits: [Holy Warrior, Royal Knight, X Antibody]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { any_color: true, level_eq: 6, trait_has: "Royal Knight" }
+    cost: 5
+
+effects:
+  - text: "[When Digivolving] You may place 1 [Royal Knight] trait card with a play cost of 13 or less from your hand or trash as this Digimon's bottom digivolution card. Activate 1 of that card's [When Digivolving] effects as this Digimon's effect. Then, ＜Blitz＞."
+    when: when_digivolving
+    summary: "[WD] May place 1 cost <=13 [Royal Knight] from hand/trash under self, activate 1 of its [WD] effects, then <Blitz>"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: rk_card
+          optional: true
+          filter:
+            all_of:
+              - trait_has: "Royal Knight"
+              - play_cost_lte: 13
+          prompt: "You may place 1 [Royal Knight] trait card with a play cost of 13 or less from your hand or trash as this Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: rk_card }
+          then:
+            - place_as_bottom_source:
+                source: rk_card
+                target: source
+                bind_placed_as: placed_rk
+            - refire_card_effect:
+                card: placed_rk
+                timing: when_digivolving
+      - grant_keyword:
+          target: source
+          keyword: Blitz
+          expiry: end_of_turn
+
+  - text: "[All Turns] While a [Royal Knight] trait card is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ and ＜Blocker＞, and gains ＜Security A. +1＞ for each such card."
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - self_digivolution_sources_trait_has: "Royal Knight"
+    target: {}
+    grant_keyword: { keyword: Piercing }
+    summary: "[All Turns] While a [Royal Knight] is in sources, gain <Piercing>"
+
+  - text: "[All Turns] While a [Royal Knight] trait card is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ and ＜Blocker＞, and gains ＜Security A. +1＞ for each such card."
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - self_digivolution_sources_trait_has: "Royal Knight"
+    target: {}
+    grant_keyword: { keyword: Blocker }
+    summary: "[All Turns] While a [Royal Knight] is in sources, gain <Blocker>"
+
+  - text: "[All Turns] While a [Royal Knight] trait card is in this Digimon's digivolution cards, this Digimon gains ＜Piercing＞ and ＜Blocker＞, and gains ＜Security A. +1＞ for each such card."
+    kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - self_digivolution_sources_trait_has: "Royal Knight"
+    target: {}
+    security_attack:
+      base: 1
+      per:
+        source_stack_count:
+          filter: { trait_has: "Royal Knight" }
+      delta: 1
+    summary: "[All Turns] Gain <Security A. +1> for each [Royal Knight] in digivolution cards"

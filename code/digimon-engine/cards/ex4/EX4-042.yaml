@@ -1,0 +1,34 @@
+card: EX4-042
+name: DarkMaildramon
+kind: digimon
+level: 4
+form: Champion
+attribute: Virus
+color: [black, blue]
+cost: 4
+dp: 4000
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+
+effects:
+  - text: "[Your Turn] This Digimon and all Digimon with [Knightmon] or [Knightsmon] in their names are unblockable."
+    kind: aura
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      all_of:
+        - kind: digimon
+        - any_of:
+            - is_source_permanent: true
+            - name_contains: Knightmon
+            - name_contains: Knightsmon
+    modifier: CannotBeBlocked
+    summary: "[Your Turn] This Digimon and your [Knightmon]/[Knightsmon]-named Digimon can't be blocked"

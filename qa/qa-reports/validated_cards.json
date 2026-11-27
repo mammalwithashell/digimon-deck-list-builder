@@ -559,7 +559,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Faithful — cost reduction, branch choice, inherited security trash all correct. 11 tests."
+      "notes": "Faithful \u2014 cost reduction, branch choice, inherited security trash all correct. 11 tests."
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
@@ -573,7 +573,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Faithful — all effects correct. 8 tests."
+      "notes": "Faithful \u2014 all effects correct. 8 tests."
     },
     "BT17-025": {
       "card_name": "Cerberusmon: Werewolf Mode",
@@ -587,7 +587,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Faithful — cost reduction, branch choice, inherited unsuspend all correct. 10 tests."
+      "notes": "Faithful \u2014 cost reduction, branch choice, inherited unsuspend all correct. 10 tests."
     },
     "BT17-041": {
       "card_name": "ShineGreymon: Burst Mode",
@@ -953,10 +953,10 @@
     },
     "BT20-013": {
       "card_name": "BaoHuckmon",
-      "status": "QA-FAIL",
+      "status": "PASS",
       "validated_date": "2026-03-15",
       "report": "2026-03-15-jesmon-dark-masters-qa.md",
-      "notes": "[Main] unreachable. Systemic OnDeclaration gap."
+      "notes": "Superseded by Rust DSL implementation (code/digimon-engine/cards/bt20/BT20-013.yaml) with [Main][OPT] and behavioral test."
     },
     "BT20-014": {
       "card_name": "SaviorHuckmon",
@@ -1586,7 +1586,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "FIXED",
-      "notes": "Fixed wrong timing BeforePayCost→WhenWouldDigivolve for digi cost reduction."
+      "notes": "Fixed wrong timing BeforePayCost\u2192WhenWouldDigivolve for digi cost reduction."
     },
     "BT23-006": {
       "card_name": "Huckmon",
@@ -1800,7 +1800,7 @@
       "validated_date": "2026-02-28",
       "report": "2026-02-28-medusa-vs-hudie.md",
       "status": "PASS",
-      "notes": "Free CS play verified. OnTapped trait filter fixed â€” triggers only for Hudie Digimon. Suspends self as cost. Security play verified."
+      "notes": "Free CS play verified. OnTapped trait filter fixed \u00e2\u20ac\u201d triggers only for Hudie Digimon. Suspends self as cost. Security play verified."
     },
     "BT23-084": {
       "verdict": "PASS",
@@ -1906,7 +1906,7 @@
       "validated_date": "2026-04-04",
       "report": "fix-card",
       "status": "PASS",
-      "notes": "Fixed fragile color/trait checks: string-in-string enum comparison → CardColor.Blue enum check + perm.has_trait('TS')"
+      "notes": "Fixed fragile color/trait checks: string-in-string enum comparison \u2192 CardColor.Blue enum check + perm.has_trait('TS')"
     },
     "BT24-003": {
       "card_name": "Tsunomon",
@@ -3674,7 +3674,7 @@
       "validated_date": "2026-04-04",
       "report": "batch-fix-cards",
       "status": "PASS",
-      "notes": "Faithful — all effects correct. DNA immunity, delete highest level, EoA play from evo + security. 17 tests."
+      "notes": "Faithful \u2014 all effects correct. DNA immunity, delete highest level, EoA play from evo + security. 17 tests."
     },
     "EX9-022": {
       "verdict": "PASS",

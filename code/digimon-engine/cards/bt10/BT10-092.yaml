@@ -1,0 +1,52 @@
+card: BT10-092
+name: "Nene Amano"
+kind: tamer
+color: [black]
+cost: 3
+traits: [General, Twilight]
+
+effects:
+  - text: "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Knightmon] or [DeadlyAxemon] in its name or the [Twilight] trait among them to the hand. Return the rest to the bottom of the deck."
+    when: on_play
+    summary: "[On Play] Reveal top 4; add 1 [Knightmon]/[DeadlyAxemon]-named or [Twilight] card to hand; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 4 }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            any_of:
+              - name_contains: Knightmon
+              - name_contains: DeadlyAxemon
+              - trait_has: Twilight
+          prompt: "Add 1 card with [Knightmon] or [DeadlyAxemon] in its name or the [Twilight] trait to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - text: "[Opponent's Turn] All of your Digimon with [DarkKnightmon] in their names or the [Twilight] trait gain ＜Blocker＞."
+    kind: aura
+    active_when: { opponents_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      all_of:
+        - kind: digimon
+        - any_of:
+            - name_contains: DarkKnightmon
+            - trait_has: Twilight
+    grant_keyword: { keyword: Blocker }
+    summary: "[Opponent's Turn] Your [DarkKnightmon]-named or [Twilight] Digimon gain <Blocker>"
+
+  - text: "[On Deletion] Gain 2 memory."
+    when: on_deletion
+    summary: "[On Deletion] Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - text: "[Security] Play this card without paying the cost."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

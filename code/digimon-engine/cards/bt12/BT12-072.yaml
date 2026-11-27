@@ -1,0 +1,63 @@
+card: BT12-072
+name: "Chaosdramon (X Antibody)"
+kind: digimon
+level: 6
+form: Mega
+attribute: Virus
+color: [black, red]
+cost: 13
+dp: 13000
+traits: [Machine, X Antibody]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { any_color: true, name_is: Machinedramon }
+    cost: 2
+  - kind: digivolve
+    from: { any_color: true, name_is: Chaosdramon }
+    cost: 2
+
+effects:
+  - text: "[Start of Your Main Phase] Place 1 Digimon card with the [Cyborg] or [Machine] trait from your trash as this Digimon's bottom digivolution card."
+    when: start_of_your_main_phase
+    summary: "[Start of Main] Place 1 [Cyborg]/[Machine] Digimon from trash as bottom digivolution card"
+    process:
+      - select_trash:
+          of: you
+          bind_as: mat
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Cyborg
+                  - trait_has: Machine
+          prompt: "Place 1 Digimon card with the [Cyborg] or [Machine] trait from your trash as this Digimon's bottom digivolution card"
+      - if:
+          condition: { binding_present: mat }
+          then:
+            - place_as_bottom_source: { source: mat, target: source }
+
+  - text: "[All Turns] This Digimon gains all the effects of [Machinedramon] and [Chaosdramon] in its digivolution cards."
+    kind: succession
+    filter:
+      any_of:
+        - name_is: Machinedramon
+        - name_is: Chaosdramon
+    summary: "[All Turns] Gains all effects of [Machinedramon] and [Chaosdramon] in digivolution cards"
+
+  - text: "[All Turns][Once Per Turn] When this Digimon would be deleted, trash your opponent's top security card."
+    kind: replacement
+    timing: when_would_be_deleted
+    optional: false
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When this Digimon would be deleted, trash opponent's top security card"
+    process:
+      - trash_top_security: { of: opponent, count: 1 }

@@ -1,0 +1,61 @@
+card: EX2-008
+name: Guilmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Virus
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - text: "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Growlmon] or [Gallantmon] in its name and 1 [Takato Matsuki] among them to your hand. Place the remaining cards at the bottom of your deck in any order."
+    when: on_play
+    summary: "[On Play] Reveal top 4; add 1 [Growlmon]/[Gallantmon]-named card and 1 [Takato Matsuki] to hand; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 4 }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: mon_pick
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - name_contains: Growlmon
+                  - name_contains: Gallantmon
+            - bind_as: tamer_pick
+              min: 1
+              max: 1
+              filter:
+                name_is: "Takato Matsuki"
+      - add_to_hand_from_reveal: { of: you, card: mon_pick }
+      - add_to_hand_from_reveal: { of: you, card: tamer_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - text: "[When Attacking][Once Per Turn] If this Digimon has [Growlmon] or [Gallantmon] in its name, delete 1 of your opponent's Digimon with 3000 DP or less."
+    scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_of:
+        - name_contains: Growlmon
+        - name_contains: Gallantmon
+    summary: "[Inherited][When Attacking][OPT] If [Growlmon]/[Gallantmon] in name, delete 1 opponent Digimon with <=3000 DP"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Delete 1 of your opponent's Digimon with 3000 DP or less"
+      - delete_permanent: { target: victim }

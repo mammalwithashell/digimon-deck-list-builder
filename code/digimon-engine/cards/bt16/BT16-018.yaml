@@ -1,0 +1,50 @@
+card: BT16-018
+name: ExVeemon
+kind: digimon
+level: 4
+form: Champion
+attribute: Free
+color: [blue, red]
+cost: 4
+dp: 4000
+traits: [Mythical Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from: { any_color: true, name_is: Veemon }
+    cost: 2
+
+effects:
+  - text: "＜Raid＞"
+    kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - text: "[On Play] [When Digivolving] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn."
+    when: [on_play, when_digivolving]
+    summary: "[OP][WD] 1 of your Digimon can't be deleted in battle until end of opponent's turn"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: shielded
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon can't be deleted in battle until the end of your opponent's turn"
+      - add_modifier:
+          target: shielded
+          modifier: CannotBeDestroyedByBattle
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - text: "[Your Turn] This Digimon gets +2000 DP."
+    kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] +2000 DP"

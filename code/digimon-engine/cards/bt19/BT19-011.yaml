@@ -1,0 +1,56 @@
+card: BT19-011
+name: WarGrowlmon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Virus
+color: [red]
+cost: 5
+dp: 8000
+traits: [Cyborg]
+ace_overflow: -3
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+
+effects:
+  - text: "＜Blast Digivolve＞"
+    kind: grant_keyword
+    keyword: BlastDigivolve
+    summary: "[Hand][Counter] <Blast Digivolve>"
+
+  - text: "[On Play] [When Digivolving] Delete up to 3000 DP total worth of your opponent's Digimon. For each of your opponent's Digimon, add 2000 to this DP deletion effect's maximum. Then, for each Digimon this effect deleted, gain 1 memory."
+    when: [on_play, when_digivolving]
+    summary: "[OP][WD] Delete opponent Digimon up to 3000 + 2000*opp_digimon total DP; gain 1 memory per deleted Digimon"
+    process:
+      - select_opponent_dp_budget:
+          dp_budget:
+            base: 3000
+            per:
+              card_count_in_zone:
+                of: opponent
+                zone: battle_area
+                filter: { kind: digimon }
+            delta: 2000
+          min_picks: 1
+          filter: { kind: digimon }
+          bind_as: targets
+          prompt: "Delete opponent Digimon within the total DP maximum"
+          then:
+            - per_selected:
+                selection: targets
+                bind_as: deleted_mon
+                body:
+                  - gain_memory: 1
+            - delete_bound_permanents: { binding: targets }
+
+  - text: "[All Turns] Add 3000 to this Digimon's DP deletion effects' maximums."
+    kind: aura
+    scope: inherited
+    active_when: { all_turns: true }
+    target: {}
+    modifier: ChangeDPDeleteEffectMaxDP
+    modifier_value: 3000
+    summary: "[Inherited][All Turns] Add 3000 to DP deletion effects' maximums"

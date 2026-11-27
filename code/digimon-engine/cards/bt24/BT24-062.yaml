@@ -2,15 +2,19 @@ card: BT24-062
 name: MasterBlimpmon
 kind: digimon
 level: 5
+form: Ultimate
+attribute: Data
 color: [black, blue]
 cost: 7
 dp: 7000
 traits: [Machine, Iliad, TS]
 
-# Printed:
+# Printed (official Bandai DB bundle + card face):
+#   [Digivolve] Lv.4 w/[Machine]/[Cyborg]/[TS] trait: Cost 3
+#   Assembly -2: [Blimpmon]/Tamer card w/[TS] trait
 #   <Blocker>
 #   <Armor Purge>
-#   [End of Attack][End of Opponent's Turn][Once Per Turn] You may play 1 play
+#   [End of Attack] [End of Opponent's Turn] [Once Per Turn] You may play 1 play
 #     cost 5 or lower card with the [Machine], [Cyborg], or [TS] trait from
 #     this Digimon's digivolution cards without paying the cost.
 # Inherited:
@@ -32,38 +36,59 @@ alt_paths:
   - kind: digivolve
     from: { any_color: true, level_eq: 4, trait_has: TS }
     cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          any_of:
+            - name_is: "Blimpmon"
+            - all_of:
+                - kind: tamer
+                - trait_has: TS
+        zones: [trash]
+        stack_under: true
+    cost: 2
 
 effects:
+  # ─── Printed keywords ────────────────────────────────────────────────────
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "＜Armor Purge＞"
+    kind: grant_keyword
+    keyword: ArmorPurge
+    summary: "<Armor Purge>"
+
+  # ─── [End of Attack][End of Opponent's Turn][OPT] play from sources ──────
+  - text: "[End of Attack] [End of Opponent's Turn] [Once Per Turn] You may play 1 play cost 5 or lower card with the [Machine], [Cyborg] or [TS] trait from this Digimon's digivolution cards without paying the cost."
+    when: [end_of_attack, end_of_opponents_turn]
+    optional: true
+    once_per_turn: true
+    summary: "[End of Attack][End of Opponent's Turn][OPT] Play 1 cost <=5 [Machine]/[Cyborg]/[TS] card from this Digimon's digivolution cards free"
+    process:
+      - select_own_sources:
+          from: source
+          filter:
+            all_of:
+              - play_cost_lte: 5
+              - any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+                  - trait_has: TS
+              - can_play_from_effect_without_cost: true
+          min: 0
+          max: 1
+          bind_as: freed
+          prompt: "You may play 1 play cost 5 or lower card with the [Machine], [Cyborg], or [TS] trait from this Digimon's digivolution cards without paying the cost"
+          then:
+            - play_selected_sources_free: { source_refs: freed }
+
   # ─── Inherited: target lock on the controller's turn ─────────────────────
-  #
-  # "[Your Turn] This Digimon's attack target can't change." Installs
-  # `ModifierType::CannotSwitchAttackTarget` on the carrier each declarative
-  # tick when its controller is the turn player. Track D consult sites read it
-  # in `try_enter_block` (early-return, suppressing the Block window),
-  # `raid_switch_options` (no <Raid> switch), and
-  # `apply_attack_target_substitution` (no-op for replacement / redirect_attack
-  # retargets).
-  #
-  # `target: { is_source_permanent: true }` installs on the carrier itself (no
-  # board scan + aux self-identity predicate). `scope: both` emits the gate from
-  # BOTH the active-top (face_up) and digivolution-source (inherited) positions,
-  # so the carrier resolves to this card's own permanent when it is the top, or
-  # to the host when it is a source — matching the former raw_rust
-  # `bt24_062_attack_target_lock` exactly, without the escape hatch.
-  - kind: flood_gate
-    scope: both
+  - text: "[Your Turn] This Digimon's attack target can't change."
+    kind: flood_gate
+    scope: inherited
     active_when: { your_turn: true }
     target: { is_source_permanent: true }
     modifier: CannotSwitchAttackTarget
-
-  # ─── Omitted clauses ──────────────────────────────────────────────────────
-  #
-  # `<Blocker>` and `<Armor Purge>` parse from printed text via the keyword
-  # parser (see `card_data::parse_printed_keywords`); no DSL clause needed.
-  #
-  # [End of Attack][End of Opponent's Turn][Once Per Turn] play card from
-  # stack — not implemented in this fixture. The behavioral fixture targets
-  # the inherited target-lock clause specifically, since that exercises the
-  # Track C taxonomy + Track D combat consult sites landed on 2026-05-06 /
-  # 2026-05-07. Full implementation requires an additional select-from-
-  # digivolution-stack flow which is orthogonal to the modifier surface.
+    summary: "Inherited: [Your Turn] This Digimon's attack target can't change"

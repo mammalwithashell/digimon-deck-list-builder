@@ -1,0 +1,52 @@
+card: BT20-013
+name: BaoHuckmon
+kind: digimon
+level: 4
+form: Champion
+attribute: Data
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dinosaur]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  - text: "[Main] [Once Per Turn] You may play 1 Digimon card with [Sistermon] or [Gankoomon] in its name from your hand with the play cost reduced by 2."
+    when: main_on_field
+    once_per_turn: true
+    optional: true
+    summary: "[Main][OPT] May play 1 [Sistermon]/[Gankoomon] Digimon from hand with play cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: played_mon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Sistermon
+                  - name_contains: Gankoomon
+          prompt: "You may play 1 Digimon card with [Sistermon] or [Gankoomon] in its name from your hand with the play cost reduced by 2"
+      - if:
+          condition: { binding_present: played_mon }
+          then:
+            - play_from_hand:
+                of: you
+                hand_index: played_mon
+                cost_delta: { reduce: 2 }
+
+  - text: "[Your Turn] All of your Digimon get +1000 DP."
+    kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    target:
+      of: you
+      zone: [battle_area]
+      kind: digimon
+    dp_modifier: 1000
+    summary: "[Inherited][Your Turn] All of your Digimon get +1000 DP"

@@ -1,0 +1,48 @@
+card: EX3-062
+name: WarGrowlmon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Virus
+color: [purple, red]
+cost: 8
+dp: 8000
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, level_eq: 4, name_contains: Growlmon }
+    cost: 3
+
+effects:
+  - text: "[When Digivolving] Trash the top 3 cards of both players' decks. Then, if either player has 5 or more cards in their trash, you may play 1 [Guilmon] or [Takato Matsuki] from your hand or trash without paying the cost."
+    when: when_digivolving
+    summary: "[WD] Both players mill 3; if either trash >= 5, may play 1 [Guilmon]/[Takato Matsuki] from hand or trash free"
+    process:
+      - trash_from_top: { of: you, count: 3 }
+      - trash_from_top: { of: opponent, count: 3 }
+      - if:
+          condition:
+            any_of:
+              - count_gte: { filter: { of: you, zone: [trash] }, n: 5 }
+              - count_gte: { filter: { of: opponent, zone: [trash] }, n: 5 }
+          then:
+            - select_zone_cards:
+                zones: [hand, trash]
+                min: 0
+                max: 1
+                bind_as: played_card
+                filter:
+                  all_of:
+                    - any_of:
+                        - name_is: Guilmon
+                        - name_is: "Takato Matsuki"
+                    - can_play_from_effect_without_cost: true
+                prompt: "You may play 1 [Guilmon] or [Takato Matsuki] from your hand or trash without paying the cost"
+            - if:
+                condition: { binding_present: played_card }
+                then:
+                  - play_cards_free: { cards: played_card }

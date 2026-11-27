@@ -1,0 +1,44 @@
+card: BT18-058
+name: Kotemon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Data
+color: [black]
+cost: 3
+dp: 1000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - text: "[On Play] By trashing 1 card with [Knightmon] in its text in your hand, ＜Draw 2＞."
+    when: on_play
+    optional: true
+    summary: "[On Play] By trashing 1 [Knightmon]-text card in hand, <Draw 2>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter:
+            any_of:
+              - name_contains: Knightmon
+              - rules_text_contains: Knightmon
+          prompt: "By trashing 1 card with [Knightmon] in its text in your hand, <Draw 2>"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  - text: "[All Turns] This Digimon gets +1000 DP."
+    kind: aura
+    scope: inherited
+    active_when: { all_turns: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[Inherited][All Turns] +1000 DP"

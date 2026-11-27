@@ -1,0 +1,23 @@
+card: BT18-009
+name: Shamanmon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Virus
+color: [red]
+cost: 3
+dp: 2000
+traits: [Demon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+effects:
+  - text: "[All Turns] Your opponent can't gain memory other than by Tamer effects."
+    kind: flood_gate
+    active_when: { all_turns: true }
+    target_player: opponent
+    modifier: CannotGainMemoryExceptFromTamers
+    summary: "[All Turns] Opponent can't gain memory except with Tamer effects"

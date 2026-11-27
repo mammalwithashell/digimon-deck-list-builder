@@ -1,0 +1,26 @@
+card: BT17-001
+name: Gigimon
+kind: digi_egg
+level: 2
+form: In-Training
+color: [red]
+traits: [Lesser]
+
+effects:
+  - text: "[When Attacking] By paying 1 cost, delete 1 of your opponent's Digimon with 3000 DP or less."
+    scope: inherited
+    when: when_attacking
+    optional: true
+    outer_prompt: true
+    summary: "[Inherited][When Attacking] By paying 1 cost, delete 1 opponent's Digimon with 3000 DP or less"
+    process:
+      - lose_memory: 1
+      - select_opponent_permanent:
+          optional: false
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Delete 1 of your opponent's Digimon with 3000 DP or less"
+      - delete_permanent: { target: victim }

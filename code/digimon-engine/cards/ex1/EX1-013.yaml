@@ -1,0 +1,27 @@
+card: EX1-013
+name: Veemon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Free
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Mini Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  - text: "[Your Turn][Once Per Turn] When this Digimon becomes unsuspended during your main phase, gain 1 memory."
+    scope: inherited
+    when: on_unsuspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if: { event_permanent_is_source: true }
+    condition: { in_phase: main }
+    summary: "[Inherited][Your Turn][OPT] When this Digimon becomes unsuspended during your main phase, gain 1 memory"
+    process:
+      - gain_memory: 1

@@ -609,10 +609,10 @@ pub const REFUND_AFTER_ACCEPT_REVIEWED: &[ReviewedRefund] = &[
             "candidate (CanUseCondition).",
         ),
         tests: &[
-            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn",
-            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_pick_chosen_spends_the_once_per_turn",
-            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_pass_then_state_change_redeclares_and_spends",
-            "cards_behavioral/ex12/me_machine_puppet.rs::ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait",
+            "cards_behavioral/ex12/ex12_041.rs::ex12_041_main_declared_then_pick_passed_keeps_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_041.rs::ex12_041_main_pick_chosen_spends_the_once_per_turn",
+            "cards_behavioral/ex12/ex12_041.rs::ex12_041_main_pass_then_state_change_redeclares_and_spends",
+            "cards_behavioral/ex12/ex12_041.rs::ex12_041_main_never_offers_a_card_without_the_mutant_or_me_trait",
         ],
     },
     ReviewedRefund {

@@ -1,0 +1,82 @@
+card: BT22-090
+name: "Rie Kishibe"
+kind: tamer
+color: [black]
+cost: 3
+traits: [CS]
+
+effects:
+  - text: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory."
+    when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Start of Your Main Phase] If opponent has a Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - text: "[End of Your Turn] [Once Per Turn] By deleting 1 of your other Digimon or Tamers with [Knightmon] in their texts or the [CS] trait, this Tamer may digivolve into [LordKnightmon] in the hand with the digivolution cost reduced by 3."
+    when: end_of_your_turn
+    once_per_turn: true
+    optional: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        all_of:
+          - other: true
+          - any_of:
+              - kind: digimon
+              - kind: tamer
+          - any_of:
+              - name_contains: Knightmon
+              - rules_text_contains: Knightmon
+              - trait_has: CS
+    summary: "[End of Your Turn][OPT] By deleting 1 other [Knightmon]-text/[CS] Digimon or Tamer, this Tamer may digivolve into [LordKnightmon] in hand for cost -3"
+    process:
+      - select_own_permanent:
+          optional: true
+          bind_as: sac
+          filter:
+            all_of:
+              - other: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - any_of:
+                  - name_contains: Knightmon
+                  - rules_text_contains: Knightmon
+                  - trait_has: CS
+          prompt: "Delete 1 of your other Digimon or Tamers with [Knightmon] in its text or the [CS] trait"
+      - if:
+          condition: { binding_present: sac }
+          then:
+            - delete_permanent: { target: sac }
+            - select_hand:
+                of: you
+                bind_as: lk
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: LordKnightmon
+                    - can_digivolve_onto_with_cost:
+                        target: source
+                        cost: { reduce: 3 }
+                prompt: "This Tamer may digivolve into [LordKnightmon] in the hand with the digivolution cost reduced by 3"
+            - if:
+                condition: { binding_present: lk }
+                then:
+                  - effect_initiated_digivolve:
+                      target: source
+                      from_hand: lk
+                      cost: { reduce: 3 }
+
+  - text: "[Security] Play this card without paying the cost."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

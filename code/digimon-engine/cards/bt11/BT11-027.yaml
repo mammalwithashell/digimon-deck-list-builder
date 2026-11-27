@@ -1,0 +1,43 @@
+card: BT11-027
+name: Veedramon
+kind: digimon
+level: 4
+form: Champion
+attribute: Vaccine
+color: [blue]
+cost: 6
+dp: 6000
+traits: [Mythical Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+
+effects:
+  - text: "[Your Turn][Once Per Turn] When you play a blue Tamer, ＜Draw 1＞."
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [blue]
+    summary: "[Your Turn][OPT] When you play a blue Tamer, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  - text: "[Your Turn][Once Per Turn] When you play a blue Tamer, gain 1 memory."
+    scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [blue]
+    summary: "[Inherited][Your Turn][OPT] When you play a blue Tamer, gain 1 memory"
+    process:
+      - gain_memory: 1

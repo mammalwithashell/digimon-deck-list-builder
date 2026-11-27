@@ -1,0 +1,81 @@
+card: BT16-092
+name: "Invincible Dragon-Insect Fusion"
+kind: option
+color: [blue, green]
+cost: 3
+
+effects:
+  - text: "[Main] You may play 1 [ExVeemon] or [Stingmon] from your hand without paying the cost. Then, 2 of your Digimon may DNA digivolve into a Digimon card in your hand. Until the end of your opponent's turn, the Digimon this effect DNA digivolved can't be deleted in battle and gains ＜Blocker＞."
+    when: main_from_hand
+    summary: "[Main] May play [ExVeemon]/[Stingmon] free; then 2 Digimon may DNA digivolve and gain battle immunity + <Blocker>"
+    process:
+      - select_hand:
+          of: you
+          bind_as: played_mon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: ExVeemon
+                  - name_is: Stingmon
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [ExVeemon] or [Stingmon] from your hand without paying the cost"
+      - if:
+          condition: { binding_present: played_mon }
+          then:
+            - play_from_hand_free: { of: you, hand_index: played_mon }
+      - select_own_permanent:
+          optional: true
+          bind_as: dna_anchor
+          filter: { kind: digimon }
+          prompt: "Select the 1st Digimon to DNA digivolve into a Digimon card in your hand"
+      - if:
+          condition: { binding_present: dna_anchor }
+          then:
+            - may_dna_digivolve_now:
+                anchor: { binding: dna_anchor }
+                partner_filter:
+                  all_of:
+                    - of: you
+                    - kind: digimon
+                target_filter:
+                  all_of:
+                    - of: you
+                    - kind: digimon
+                cost: 0
+                ignore_requirements: false
+                optional: false
+            - add_modifier:
+                target: dna_anchor
+                modifier: CannotBeDestroyedByBattle
+                value: 1
+                expiry: end_of_opponents_turn
+            - grant_keyword:
+                target: dna_anchor
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+
+  - text: "[Security] You may play 1 [Veemon] or [Wormmon] from your hand or trash without paying the cost. Then, add this card to the hand."
+    scope: inherited
+    when: on_security
+    summary: "[Security] May play [Veemon]/[Wormmon] from hand or trash free, then add this card to hand"
+    process:
+      - select_zone_cards:
+          zones: [hand, trash]
+          min: 0
+          max: 1
+          bind_as: sec_mon
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: Veemon
+                  - name_is: Wormmon
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 [Veemon] or [Wormmon] from your hand or trash without paying the cost"
+      - if:
+          condition: { binding_present: sec_mon }
+          then:
+            - play_cards_free: { cards: sec_mon }
+      - add_this_option_to_hand: {}

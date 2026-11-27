@@ -1,0 +1,49 @@
+card: P-012
+name: "Tai Kamiya (V-Tamer)"
+kind: tamer
+color: [blue]
+cost: 2
+
+effects:
+  - text: "[Main] If you have a Digimon with [Veedramon] in its name, you may suspend this Tamer to activate one of the following effects: ・Trigger ＜Draw 1＞. (Draw 1 card from your deck.) ・1 of your Digimon gets +1000 DP for the turn."
+    when: main_on_field
+    optional: true
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            all_of:
+              - kind: digimon
+              - name_contains: Veedramon
+    summary: "[Main] If you have a [Veedramon]-named Digimon, suspend this Tamer to <Draw 1> or give 1 Digimon +1000 DP for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_effect_choice:
+          bind_as: mode
+          labels:
+            - "<Draw 1>"
+            - "1 of your Digimon gets +1000 DP for the turn"
+          prompt: "Activate 1 of the effects"
+      - if:
+          condition: { equals: [mode, 0] }
+          then:
+            - draw: { of: you, count: 1 }
+          else:
+            - select_own_permanent:
+                optional: false
+                bind_as: buffed
+                filter: { kind: digimon }
+                prompt: "1 of your Digimon gets +1000 DP for the turn"
+            - add_dp_modifier:
+                target: buffed
+                value: 1000
+                expiry: end_of_turn
+
+  - text: "[Security] Play this card without paying its memory cost."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying its memory cost"
+    process:
+      - play_from_security: {}

@@ -607,7 +607,6 @@ BT24-051 missing_text 3
 BT24-051 missing_text 4
 BT24-059 missing_text 0
 BT24-061 missing_text 1
-BT24-062 missing_text 0
 BT24-065 missing_text 0
 BT24-065 missing_text 1
 BT24-065 missing_text 2

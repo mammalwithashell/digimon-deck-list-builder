@@ -1,0 +1,45 @@
+card: ST8-04
+name: Veemon
+kind: digimon
+level: 3
+form: Rookie
+attribute: Free
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Mini Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    direction: into
+    from:
+      zone: [hand]
+      of: you
+      kind: digimon
+      name_is: UlforceVeedramon
+    cost: 4
+    ignore_requirements: true
+    condition:
+      all_of:
+        - your_turn: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+
+effects:
+  - text: "[When Attacking] If you have 7 or fewer cards in your hand, trigger ＜Draw 1＞."
+    scope: inherited
+    when: when_attacking
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 7
+    summary: "[Inherited][When Attacking] If hand <= 7, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

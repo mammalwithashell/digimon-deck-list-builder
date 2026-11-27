@@ -1,0 +1,89 @@
+card: EX11-041
+name: Oblivimon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Virus
+color: [black, blue]
+cost: 7
+dp: 7000
+traits: [Cyborg, LIBERATOR]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from:
+      any_color: true
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: Cyborg
+            - trait_has: Machine
+    cost: 3
+
+effects:
+  - text: "{Security} [End of Opponent’s Turn] Play this card without paying the cost."
+    scope: security
+    when: end_of_opponents_turn
+    summary: "[Security][End of Opponent's Turn] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  - text: "[On Play] [When Digivolving] Flip your opponent's top face-down security card face up and ＜De-Digivolve 1＞ 1 of their Digimon. Then, if it's their turn, this Digimon may digivolve into [Invisimon] in the hand without paying the cost."
+    when: [on_play, when_digivolving]
+    summary: "[OP][WD] Flip opponent's top face-down security face up and <De-Digivolve 1> 1 opp Digimon; if opp turn, may digivolve into [Invisimon] in hand free"
+    process:
+      - flip_security_face_up: { of: opponent }
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dedigi, amount: 1, stop_at_level: 3 }
+      - if:
+          condition: { opponents_turn: true }
+          then:
+            - select_hand:
+                of: you
+                bind_as: invisi
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: Invisimon
+                    - can_digivolve_onto_with_cost:
+                        target: source
+                        cost: free
+                prompt: "This Digimon may digivolve into [Invisimon] in the hand without paying the cost"
+            - if:
+                condition: { binding_present: invisi }
+                then:
+                  - effect_initiated_digivolve:
+                      target: source
+                      from_hand: invisi
+                      cost: free
+
+  - text: "[Your Turn] When any of your Digimon check face-up security cards, you may place this Digimon's top stacked card face up as the bottom security card."
+    when: on_check_face_up_security
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your Digimon checks face-up security, may place this Digimon's top card face up as bottom security"
+    process:
+      - security_place_top_stacked_card:
+          carrier: source
+          of: you
+          position: bottom
+          face: up
+
+  - text: "[Your Turn] This Digimon's attack target can't change."
+    kind: flood_gate
+    scope: inherited
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    modifier: CannotSwitchAttackTarget
+    summary: "[Inherited][Your Turn] This Digimon's attack target can't change"

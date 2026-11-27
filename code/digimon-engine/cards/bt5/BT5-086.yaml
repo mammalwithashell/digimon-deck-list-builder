@@ -1,0 +1,58 @@
+card: BT5-086
+name: Omnimon
+kind: digimon
+level: 7
+form: Mega
+attribute: Vaccine
+color: [white]
+cost: 15
+dp: 14000
+traits: [Holy Warrior, Royal Knight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 4
+
+effects:
+  - text: "[When Digivolving] ＜Blitz＞"
+    when: when_digivolving
+    summary: "[When Digivolving] <Blitz>"
+    process:
+      - grant_keyword:
+          target: source
+          keyword: Blitz
+          expiry: end_of_turn
+
+  - text: "[When Digivolving] This Digimon unsuspends."
+    when: when_digivolving
+    summary: "[When Digivolving] Unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }
+
+  - text: "[All Turns] When your opponent's effects would delete this Digimon or return it to the hand or deck, by trashing 1 level 6 Digimon card from its digivolution cards, it isn't deleted or returned to the hand or deck."
+    kind: replacement
+    timing: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - replacement_cause: opponent_effect
+    summary: "[All Turns] When opponent's effect would delete or bounce this Digimon, trash 1 Lv.6 Digimon source to prevent"
+    process:
+      - select_own_sources:
+          from: source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 6
+          min: 1
+          max: 1
+          bind_as: lv6_src
+          prompt: "Trash 1 level 6 Digimon card from this Digimon's digivolution cards to prevent it from leaving"
+          then:
+            - trash_selected_sources_as_cost: { source_refs: lv6_src }
+            - cancel_replacement: {}

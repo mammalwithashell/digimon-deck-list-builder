@@ -1,0 +1,82 @@
+card: BT20-057
+name: Gankoomon
+kind: digimon
+level: 6
+form: Mega
+attribute: Data
+color: [black]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+effects:
+  - text: "When this card would be played, if you have a Digimon with [Huckmon], [Jesmon] or [Sistermon] in its name, reduce the play cost by 4."
+    kind: cost_reduction
+    when_playing_this: true
+    amount: 4
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - any_of:
+              - name_contains: Huckmon
+              - name_contains: Jesmon
+              - name_contains: Sistermon
+    summary: "Play cost -4 if you have a [Huckmon]/[Jesmon]/[Sistermon] Digimon"
+
+  - text: "＜Reboot＞"
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - text: "＜Blocker＞"
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - text: "[On Play] [When Digivolving] 1 of your Digimon may digivolve into a level 6 or lower Digimon card with [Huckmon] in its name or the [Royal Knight] trait in the hand or trash without paying the cost."
+    when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OP][WD] 1 of your Digimon may digivolve into a Lv.6 or lower [Huckmon]/[Royal Knight] Digimon in hand or trash free"
+    process:
+      - select_own_permanent:
+          optional: true
+          bind_as: host
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to digivolve into a level 6 or lower [Huckmon]/[Royal Knight] Digimon from hand or trash"
+      - if:
+          condition: { binding_present: host }
+          then:
+            - select_zone_cards:
+                zones: [hand, trash]
+                min: 0
+                max: 1
+                bind_as: evo_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 6
+                    - any_of:
+                        - name_contains: Huckmon
+                        - trait_has: "Royal Knight"
+                    - can_digivolve_onto_with_cost:
+                        target: host
+                        cost: free
+                prompt: "Digivolve into a level 6 or lower Digimon card with [Huckmon] in its name or the [Royal Knight] trait from your hand or trash without paying the cost"
+            - if:
+                condition: { binding_present: evo_card }
+                then:
+                  - effect_initiated_digivolve:
+                      target: host
+                      source: evo_card
+                      cost: free

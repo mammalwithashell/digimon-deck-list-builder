@@ -1,0 +1,91 @@
+card: BT12-089
+name: "Takato Matsuki"
+kind: tamer
+color: [red]
+cost: 4
+
+effects:
+  - text: "[Start of Your Turn] If you have 2 memory or less, set your memory to 3."
+    when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If memory <= 2, set to 3"
+    process:
+      - set_memory: 3
+
+  - text: "[Main] [Once Per Turn] By placing this Tamer and 1 each of [Growlmon] and [WarGrowlmon] in your trash as 1 of your [Guilmon]'s bottom digivolution cards, that Digimon may digivolve into [Gallantmon] in the hand, ignoring its level. The Digimon this effect digivolved gets +2000 DP for the turn."
+    when: main_on_field
+    once_per_turn: true
+    optional: true
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            all_of:
+              - kind: digimon
+              - name_is: Guilmon
+        - count_gte:
+            filter: { of: you, zone: [trash], name_is: Growlmon }
+            n: 1
+        - count_gte:
+            filter: { of: you, zone: [trash], name_is: WarGrowlmon }
+            n: 1
+    summary: "[Main][OPT] Place this Tamer, [Growlmon], and [WarGrowlmon] from trash under [Guilmon] to digivolve into [Gallantmon] ignoring level and +2000 DP"
+    process:
+      - select_own_permanent:
+          optional: false
+          bind_as: guilmon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Guilmon
+          prompt: "Select 1 of your [Guilmon] to place this Tamer, a [Growlmon] and a [WarGrowlmon] under"
+      - select_zone_cards:
+          zones: [battle_area, trash]
+          filter:
+            any_of:
+              - { is_source_card: true, card_in_zone: [battle_area] }
+              - { name_is: Growlmon, card_in_zone: [trash] }
+              - { name_is: WarGrowlmon, card_in_zone: [trash] }
+          min: 3
+          max: 3
+          distinct_by: name
+          exclude: guilmon
+          bind_as: materials
+          prompt: "Place this Tamer, 1 [Growlmon] and 1 [WarGrowlmon] from your trash as bottom digivolution cards"
+      - if:
+          condition: { binding_present: materials }
+          then:
+            - place_cards_as_bottom_sources: { cards: materials, target: guilmon }
+            - select_hand:
+                of: you
+                bind_as: gallantmon
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: Gallantmon
+                    - can_digivolve_onto_with_cost:
+                        target: guilmon
+                        cost: printed
+                        ignore_level: true
+                prompt: "That [Guilmon] may digivolve into [Gallantmon] in your hand, ignoring its level"
+            - if:
+                condition: { binding_present: gallantmon }
+                then:
+                  - effect_initiated_digivolve:
+                      target: guilmon
+                      from_hand: gallantmon
+                      cost: printed
+                      ignore_level: true
+                  - add_dp_modifier:
+                      target: guilmon
+                      value: 2000
+                      expiry: end_of_turn
+
+  - text: "[Security] Play this card without paying the cost."
+    scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

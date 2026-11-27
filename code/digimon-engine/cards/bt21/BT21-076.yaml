@@ -1,0 +1,75 @@
+card: BT21-076
+name: WarGrowlmon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Virus
+color: [purple, red]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { any_color: true, level_eq: 4, name_contains: Growlmon }
+    cost: 3
+
+effects:
+  - text: "[On Play] [When Digivolving] Trash the top 2 cards of your deck. Then, this Digimon gains ＜Raid＞ and ＜Retaliation＞ until your opponent's turn ends."
+    when: [on_play, when_digivolving]
+    summary: "[OP][WD] Mill 2, then gain <Raid> and <Retaliation> until end of opponent's turn"
+    process:
+      - trash_from_top: { of: you, count: 2 }
+      - grant_keyword: { target: source, keyword: Raid, expiry: end_of_opponents_turn }
+      - grant_keyword: { target: source, keyword: Retaliation, expiry: end_of_opponents_turn }
+
+  - text: "[When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with [Megidramon] or [ChaosGallantmon] in its name in the hand. For every 10 total cards in both players' trashes, reduce this effect's digivolution cost by 1."
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[When Attacking][OPT] May digivolve into [Megidramon]/[ChaosGallantmon] in hand with cost reduced by 1 per 10 total trash"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Megidramon
+                  - name_contains: ChaosGallantmon
+              - can_digivolve_onto_with_cost:
+                  target: source
+                  cost:
+                    reduce:
+                      base: 0
+                      per: { shared_trash_count: {} }
+                      bucket: 10
+                      delta: 1
+          prompt: "This Digimon may digivolve into a Digimon card with [Megidramon] or [ChaosGallantmon] in its name in the hand"
+      - if:
+          condition: { binding_present: evo_card }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: evo_card
+                cost:
+                  reduce:
+                    base: 0
+                    per: { shared_trash_count: {} }
+                    bucket: 10
+                    delta: 1
+
+  - text: "[On Deletion] Trash your opponent's top security card."
+    scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Trash opponent's top security card"
+    process:
+      - trash_top_security: { of: opponent, count: 1 }

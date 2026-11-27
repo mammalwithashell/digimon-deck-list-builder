@@ -1,0 +1,22 @@
+card: P-157
+name: Monimon
+kind: digi_egg
+level: 2
+form: In-Training
+color: [black]
+traits: [CRT, Twilight, Xros Heart]
+
+effects:
+  - text: "[On Deletion] If you have a black Tamer, ＜Draw 1＞."
+    scope: inherited
+    when: on_deletion
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        all_of:
+          - kind: tamer
+          - color_is: black
+    summary: "[Inherited][On Deletion] If you have a black Tamer, <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }

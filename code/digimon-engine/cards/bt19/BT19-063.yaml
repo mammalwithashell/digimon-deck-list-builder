@@ -1,0 +1,130 @@
+card: BT19-063
+name: DarkKnightmon
+kind: digimon
+level: 5
+form: Ultimate
+attribute: Virus
+color: [black, purple]
+cost: 8
+dp: 8000
+traits: [Dark Knight, Twilight]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digixros
+    materials:
+      - filter: { name_is: SkullKnightmon }
+        zones: [hand, battle_area]
+        cost_delta: -2
+      - filter: { name_is: DeadlyAxemon }
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 8
+
+effects:
+  - text: "＜Material Save 1＞"
+    kind: grant_keyword
+    keyword: MaterialSave
+    value: 1
+    summary: "<Material Save 1>"
+
+  - text: "[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. Then, if DigiXrosing with 2 cards, you may delete 1 play cost 3 or lower Digimon or Tamer."
+    when: on_play
+    summary: "[OP] <De-Digivolve 1> 1 opponent Digimon; if DigiXros with 2, may delete 1 cost <=3 Digimon or Tamer"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dedigi, amount: 1, stop_at_level: 3 }
+      - if:
+          condition: { self_source_count: { op: gte, value: 2 } }
+          then:
+            - select_any_permanent:
+                optional: true
+                bind_as: victim
+                filter:
+                  all_of:
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                    - play_cost_lte: 3
+                prompt: "You may delete 1 play cost 3 or lower Digimon or Tamer"
+            - if:
+                condition: { binding_present: victim }
+                then:
+                  - delete_permanent: { target: victim }
+
+  - text: "[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+    when: when_digivolving
+    summary: "[WD] <De-Digivolve 1> 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          optional: false
+          bind_as: dedigi
+          filter: { kind: digimon }
+          prompt: "<De-Digivolve 1> 1 of your opponent's Digimon"
+      - de_digivolve: { target: dedigi, amount: 1, stop_at_level: 3 }
+
+  - text: "[On Deletion] You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from under your Tamers without paying the cost."
+    when: on_deletion
+    optional: true
+    summary: "[On Deletion] May play 1 Lv.4 or lower [Knightmon]-text Digimon from under your Tamers free"
+    process:
+      - select_own_permanent:
+          optional: true
+          bind_as: tamer_host
+          filter:
+            all_of:
+              - kind: tamer
+              - materials_count_gte: 1
+          prompt: "Choose 1 of your Tamers to play a level 4 or lower [Knightmon]-text Digimon from under"
+      - if:
+          condition: { binding_present: tamer_host }
+          then:
+            - select_own_sources:
+                from: tamer_host
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                    - any_of:
+                        - name_contains: Knightmon
+                        - rules_text_contains: Knightmon
+                    - can_play_from_effect_without_cost: true
+                min: 0
+                max: 1
+                bind_as: freed
+                prompt: "You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from under your Tamer without paying the cost"
+                then:
+                  - play_under_tamer_source: { source_refs: freed }
+
+  - text: "[On Deletion] You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from your trash without paying the cost."
+    scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] May play 1 Lv.4 or lower [Knightmon]-text Digimon from trash free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - name_contains: Knightmon
+                  - rules_text_contains: Knightmon
+              - can_play_from_effect_without_cost: true
+          prompt: "You may play 1 level 4 or lower Digimon card with [Knightmon] in its text from your trash without paying the cost"
+      - if:
+          condition: { binding_present: revived }
+          then:
+            - play_from_trash_free: { of: you, hand_index: revived }

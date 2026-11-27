@@ -10,3 +10,6 @@ mod ex4_061;
 mod ex4_065;
 mod ex4_073;
 mod ex4_074;
+mod ex4_008;
+mod ex4_011;
+mod ex4_042;
