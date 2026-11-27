@@ -14225,14 +14225,26 @@
     "BT24-062": {
       "path": "bt24/BT24-062.yaml",
       "predicates": [
+        "all_of",
+        "any_of",
+        "can_play_from_effect_without_cost",
         "color_is",
         "is_source_permanent",
+        "kind",
         "level_eq",
+        "name_is",
+        "play_cost_lte",
         "trait_has",
         "your_turn"
       ],
-      "timings": [],
-      "verbs": []
+      "timings": [
+        "end_of_attack",
+        "end_of_opponents_turn"
+      ],
+      "verbs": [
+        "play_selected_sources_free",
+        "select_own_sources"
+      ]
     },
     "BT24-063": {
       "path": "bt24/BT24-063.yaml",
@@ -27816,12 +27828,15 @@
       "path": "ex10/EX10-031.yaml",
       "predicates": [
         "all_of",
+        "all_turns",
+        "can_play_from_effect_without_cost",
         "color_is",
         "effect_text_contains",
         "kind",
         "level_eq",
         "name_is",
-        "opponents_turn"
+        "opponents_turn",
+        "play_cost_lte"
       ],
       "timings": [
         "on_opponent_attack",
@@ -27831,8 +27846,10 @@
       "verbs": [
         "add_dp_modifier",
         "add_modifier",
+        "play_selected_sources_free",
         "redirect_attack_target",
-        "select_own_permanent"
+        "select_own_permanent",
+        "select_own_sources"
       ]
     },
     "EX10-032": {
@@ -42926,7 +42943,7 @@
       ]
     }
   },
-  "cards_root": "code/digimon-engine/cards",
+  "cards_root": "/home/antigravity/mammalwithashell/digimon-deck-list-builder/code/digimon-engine/cards",
   "predicates": {
     "affordable_with_cost": [
       "AD1-019",
@@ -43406,6 +43423,7 @@
       "BT24-058",
       "BT24-059",
       "BT24-061",
+      "BT24-062",
       "BT24-063",
       "BT24-065",
       "BT24-067",
@@ -44377,6 +44395,7 @@
       "EX1-066",
       "EX10-002",
       "EX10-010",
+      "EX10-031",
       "EX10-034",
       "EX10-056",
       "EX10-070",
@@ -44791,6 +44810,7 @@
       "BT24-058",
       "BT24-059",
       "BT24-061",
+      "BT24-062",
       "BT24-063",
       "BT24-065",
       "BT24-068",
@@ -46361,6 +46381,7 @@
       "BT24-037",
       "BT24-041",
       "BT24-059",
+      "BT24-062",
       "BT24-063",
       "BT24-065",
       "BT24-067",
@@ -46444,6 +46465,7 @@
       "BT9-041",
       "ED01-09",
       "ED01-10",
+      "EX10-031",
       "EX10-063",
       "EX10-068",
       "EX10-069",
@@ -50588,6 +50610,7 @@
       "BT24-058",
       "BT24-059",
       "BT24-061",
+      "BT24-062",
       "BT24-063",
       "BT24-065",
       "BT24-067",
@@ -53414,6 +53437,7 @@
       "BT24-035",
       "BT24-042",
       "BT24-045",
+      "BT24-062",
       "BT24-065",
       "BT24-067",
       "BT24-081",
@@ -54957,6 +54981,7 @@
       "BT24-041",
       "BT24-059",
       "BT24-061",
+      "BT24-062",
       "BT24-063",
       "BT25-044",
       "BT25-070",
@@ -54999,6 +55024,7 @@
       "EX10-010",
       "EX10-025",
       "EX10-028",
+      "EX10-031",
       "EX10-044",
       "EX10-068",
       "EX12-055",
@@ -57938,6 +57964,7 @@
       "BT19-024",
       "BT21-021",
       "BT21-029",
+      "BT24-062",
       "BT25-041",
       "BT26-082",
       "BT27-027",
@@ -57972,6 +57999,7 @@
       "BT18-042",
       "BT20-055",
       "BT20-084",
+      "BT24-062",
       "BT26-082",
       "BT4-047",
       "BT9-112",
@@ -65987,8 +66015,10 @@
     ],
     "play_selected_sources_free": [
       "BT13-096",
+      "BT24-062",
       "BT27-031",
       "BT3-030",
+      "EX10-031",
       "ST9-06"
     ],
     "play_to_breeding_from_hand": [
@@ -68639,6 +68669,7 @@
       "BT18-102",
       "BT21-027",
       "BT21-060",
+      "BT24-062",
       "BT27-031",
       "BT27-034",
       "BT27-070",
@@ -68648,6 +68679,7 @@
       "BT3-112",
       "EX10-003",
       "EX10-028",
+      "EX10-031",
       "EX10-032",
       "EX10-033",
       "EX10-034",

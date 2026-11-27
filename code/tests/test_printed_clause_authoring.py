@@ -78,6 +78,12 @@ REVIEWED_AUTHORED: dict[str, tuple[str, str, str]] = {
         "Card face prints the clause only in the inherited box; the bundle "
         "repeats it as Effect; authored `scope: inherited`.",
     ),
+    "EX12-059": (
+        "inherited",
+        "Ace Overflow",
+        "ACE Overflow <-4> is authored via card-level `ace_overflow: -4` metadata "
+        "in EX12-059.yaml and verified in ex12_059.rs.",
+    ),
 }
 
 
