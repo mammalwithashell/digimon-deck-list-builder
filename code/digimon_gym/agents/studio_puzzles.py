@@ -246,12 +246,15 @@ def select_refutation_action(
     if not isinstance(pending, dict):
         pending = None
 
+    ui_doc: Optional[dict[str, Any]] = None
     ui_pending: Optional[dict[str, Any]] = None
     if hasattr(runner, "to_ui_json") and callable(runner.to_ui_json):
         try:
             ui = runner.to_ui_json()
-            if isinstance(ui, dict) and isinstance(ui.get("pendingSelection"), dict):
-                ui_pending = ui["pendingSelection"]
+            if isinstance(ui, dict):
+                ui_doc = ui
+                if isinstance(ui.get("pendingSelection"), dict):
+                    ui_pending = ui["pendingSelection"]
         except Exception:
             ui_pending = None
 
@@ -269,6 +272,44 @@ def select_refutation_action(
                 choice_card_by_action[aid] = str(cid)
             if ch.get("label"):
                 choice_label_by_action[aid] = str(ch["label"])
+
+    if ui_doc is not None and legal_ids:
+        sel_pid = int(
+            (pending or {}).get("selectingPlayer")
+            or (ui_pending or {}).get("selectingPlayer")
+            or getattr(runner, "current_player_id", 0)
+            or 0
+        )
+        p_ui = ui_doc.get(f"player{sel_pid}") if sel_pid in (1, 2) else None
+        if isinstance(p_ui, dict):
+            hand_ids = list(p_ui.get("handIds") or [])
+            ba = list(p_ui.get("battleArea") or [])
+            cur_phase_hint = ""
+            if hasattr(runner, "get_rl_state") and callable(runner.get_rl_state):
+                try:
+                    cur_phase_hint = str((runner.get_rl_state() or {}).get("phase") or "").lower()
+                except Exception:
+                    cur_phase_hint = ""
+            pend_kind = str((pending or {}).get("kind") or "").lower()
+            for aid in legal_ids:
+                if aid in choice_card_by_action or aid == ACTION_PASS:
+                    continue
+                if 400 <= aid < 1000:
+                    h_idx = (aid - 400) // 15
+                    if 0 <= h_idx < len(hand_ids) and hand_ids[h_idx]:
+                        choice_card_by_action[aid] = str(hand_ids[h_idx])
+                elif 0 <= aid < 60 and (cur_phase_hint in ("countertiming", "selecthand", "main") or pend_kind == "hand"):
+                    h_idx = aid if aid < 30 else aid - 30
+                    if 0 <= h_idx < len(hand_ids) and hand_ids[h_idx]:
+                        choice_card_by_action[aid] = str(hand_ids[h_idx])
+                elif 1000 <= aid < 1150:
+                    s_idx = (aid - 1000) // 10
+                    if 0 <= s_idx < len(ba) and isinstance(ba[s_idx], dict) and ba[s_idx].get("topCardId"):
+                        choice_card_by_action[aid] = str(ba[s_idx]["topCardId"])
+                elif 100 <= aid < 114 and cur_phase_hint == "blocktiming":
+                    s_idx = aid - 100
+                    if 0 <= s_idx < len(ba) and isinstance(ba[s_idx], dict) and ba[s_idx].get("topCardId"):
+                        choice_card_by_action[aid] = str(ba[s_idx]["topCardId"])
 
     decoded: list[dict[str, Any]] = []
     for d in raw_decoded:

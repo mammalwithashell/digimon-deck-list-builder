@@ -47,16 +47,13 @@ Future work when opting into desktop distribution:
 
 ---
 
-## 5. Direct Export to DCGO Oracle YAML Exams (`qa/dcgo-exams/`)
+## 5. Direct Export to DCGO Oracle YAML Exams (`qa/dcgo-exams/`) — **Shipped**
 
-The MVP exports to `qa/puzzles/` (canonical), `qa/scenarios/` (Rust/Playwright fixtures), and `qa/search-exams/` (MCTS/policy grading). DCGO oracle exams (`qa/dcgo-exams/<SET>/<CARD-ID>.yaml`) cannot use arbitrary mid-game board injection because DCGO only supports turn-1 stacked decks (`decks.p0.stack`, `decks.p1.stack`) plus symbolic action steps.
-
-Future idea:
-- **Turn-1 symbolic recorder / DCGO exam exporter**: When a Studio session begins from a turn-1 stacked deck (or from a loaded DCGO recording), offer an export mode that emits symbolic `qa/dcgo-exams/` YAML with `steps[].do`, `expect.prompt`, and `clause:` binding.
+Implemented via `digimon_engine::playin::dcgo_yaml` (`compile_play_in` in `digimon-engine-mcp` and `puzzle-lab compile-play-in --out-dcgo-yaml`), emitting symbolic `dcgo-harness` ordinary mapping-form YAML (`decks: { p0: { stack, rest }, p1: { stack, rest } }` + `steps[].do`). See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
 
 ---
 
-## 6. Supervised Imitation Training & Curriculum Scheduling Pipelines
+## 6. Supervised Imitation Training & Curriculum Scheduling Pipelines — **Shipped**
 
 `studio-puzzle-v1` files store recorded `target` / `avoid` lines, optional `refutation_triggers`, and wire up `PuzzleResetWrapper` (with `permute_staged_puzzle` slot/hand shuffling and `AdaptivePuzzleScheduler` EMA solve-rate weighting in `code/digimon_gym/agents/studio_puzzles.py`) plus `code/tools/emit_puzzle_shards.py` (emitting `selfplay-shards-v1` + contrastive `avoid` hinge edges for `azero_trainer.py` and `azero_lstm_distill.py`). See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
 
@@ -65,52 +62,45 @@ Remaining UI/ops idea:
 
 ---
 
-## 7. Closed-Loop "Matchup Blind-Spot -> Puzzle -> Warm-Start" Daemon
+## 7. Closed-Loop "Matchup Blind-Spot -> Puzzle -> Warm-Start" Daemon — **Shipped**
 
-Connect anchored/league evaluation, replay mining, white-box gating, and shard warm-starting into an automated between-generation daemon:
-- After an `anchored_eval` or Specialist League generation finishes, automatically select the **bottom-K worst-performing matchups** and run `puzzle_lab mine-replays` on their highest non-RNG value drops and policy-vs-MCTS disagreements.
-- Synthesize 10–20 engine-verified `studio-puzzle-v1` drills targeting those exact matchup blind spots.
-- Gate every candidate drill with `digimon-training-mcp`'s `plasticity_probe`:
-  - **Learnable drills** (`learnable: true`) automatically emit permuted shards mixed at `5–10%` share into the next generation's replay buffer.
-  - **Unlearnable drills** (`observation_blindness`) quarantine automatically into a tensor/engine gap report rather than wasting RL timesteps.
+Implemented as the air-gapped sidecar `puzzle-lab auto-curriculum` (`code/tools/puzzle_lab/auto_curriculum.py`) paired with `--extra-shards` + `--max-extra-shard-share 0.10` across `azero_trainer.py`, `azero_lstm_distill.py`, `run_selfplay_generation.py`, and `specialist_league.py`:
+- Ingests `anchored_eval` or `specialist-gate-v1` evaluations, selects bottom-$K$ matchups (`win_rate < 0.45`), harvests drills, and enforces the Mandatory Dual Gate (`verify_puzzle` + `plasticity_probe`).
+- Learnable drills emit SHA256-stamped `selfplay-shards-v1` bundles (`curriculum_manifest.json`); unlearnable drills quarantine to `tensor_blindness_quarantine.json`. See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
 
 ---
 
-## 8. Guided "Play-In Compiler" (Staged Puzzles -> `closed-list` Beliefs, Warm LSTMs & DCGO Exams)
+## 8. Guided "Play-In Compiler" (Staged Puzzles -> `closed-list` Beliefs, Warm LSTMs & DCGO Exams) — **Shipped**
 
-Mid-game staged boards (`setup.staged`) are fast to compose, but start with zeroed LSTM `(h, c)` state, cannot reconstruct Turn-1 `KnowledgeLedger` history for `closed-list` determinized search (`docs/FAIR_BELIEF_TRAINING.md`), and cannot export directly to Turn-1 DCGO YAML exams (§5 above):
-- Build a **Guided Play-In Compiler** (`compile_staged_to_replay`) that takes a composed `studio-puzzle-v1` board, stacks legal opening hands + `deck_top` orders for both seats so required pieces draw naturally over Turns 1–3, and runs a lightweight Rust beam search (or fast LLM driver) playing **100% legal Turn-1 actions** that arrive at the target staged board.
-- **Triple payoff**: realistic pre-warmed LSTM hidden states, full `closed-list` `KnowledgeLedger` compatibility, and symbolic export to `qa/dcgo-exams/` YAML.
-
----
-
-## 9. Imperfect-Information & "Hand-Trap Discipline" Belief Puzzles
-
-Extend `studio-puzzle-v1` and `search_exam` beyond deterministic or fixed-hand interrupts to test **probabilistic opponent-hand reading** (`<Blast Digivolve>` Aces, security traps, unseen `[All Turns]` hand options):
-- Define **Belief Puzzles** where Seat 2's public trash, breeding, and battle area telegraph a specific archetype while Seat 2's hand remains unpinned (`closed-list` regime conditioned on `WeightedDeckPrior`).
-- Grade `closed-list` PIMC / IS-MCTS across $W$ sampled worlds (`e.g., W = 32`) to measure whether the model down-weights reckless swings into high-probability Ace windows or baits `[Once Per Turn]` / `<Counter>` timing appropriately compared to an omniscient `open-list` baseline.
+Implemented in `code/digimon-engine/src/playin/` (`compile_play_in` MCP tool) and `code/tools/puzzle_lab/play_in.py` (`puzzle-lab compile-play-in`):
+- Runs goal-directed Rust beam search (with optional `Role.AUTHOR` LLM macro-plan fallback) from Turn-1 Mulligan keeps over inverted-shuffle stacked decks to reach functional equivalence (or `--strict-zones`), remapping solver lines and upgrading puzzles to `setup.kind = "replay_prefix"` for full `closed-list` `KnowledgeLedger` compatibility, pre-warmed LSTM `(h, c)` state, and symbolic DCGO YAML export. See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
 
 ---
 
-## 10. "Continuation-Consistent" Critic Loss (Global Fix for Mid-Prompt Value Cliffs)
+## 9. Imperfect-Information & "Hand-Trap Discipline" Belief Puzzles — **Shipped**
 
-Multi-step single-card effects (`<Training>`, `<Delay>`, DNA material selection, multi-target prompts) often suffer intermediate value-head cliffs (e.g., `-0.76` mid-Training in `ex13-examon-training-before-wingdramon.json`) before the effect finishes resolving, starving MCTS visits before search reaches the post-resolution payoff:
-- Use `score_line` traces across `qa/puzzles/` and self-play trajectories to identify single-mover committed resolution chains (`PendingSelection` sub-steps belonging to one initiated effect).
-- Add an auxiliary **temporal-consistency critic loss** in `azero_trainer.py` / `azero_lstm_distill.py` penalizing $|V(s_{\text{pre-commit}}) - V(s_{\text{mid-selection}})|$ along committed resolution chains (alongside MCTS `macro_substeps` refinements), teaching the value head globally not to panic mid-prompt.
-
----
-
-## 11. GRPO / LoRA Distillation into a Local 8B "Digimon Tactician" (RTX 4070)
-
-Because `verify_puzzle` and `digimon-engine` provide an **exact, non-gameable ground-truth reward** (board legality, `target` win/goal satisfaction against adversary `[All Turns]` interrupts, and `avoid` refutation), Digimon puzzle authoring and tactical play are ideal for **Reinforcement Learning with Verifiable Rewards (GRPO)**:
-- Distill engine-verified reasoning traces + `compose-boss-matrix` solves into an Apache-2.0 open-weight 8B/14B model (`Qwen3-8B` / `Qwen3-14B`) via QLoRA + GRPO on RunPod.
-- Export quantized `Q4_K_M` weights to run locally via `Ollama` / `llama.cpp` on a single 12 GB RTX 4070—providing fast, zero-API-cost local Digimon card-interaction reasoning and puzzle synthesis.
+Implemented via `verify_belief_puzzle` (`digimon-engine-mcp`), `search_exam --belief-gap`, `emit_puzzle_shards.py --belief-worlds W`, and reference fixtures `qa/puzzles/ex13-belief-hand-trap-discipline.json` + `qa/search-exams/ex13-belief-hand-trap-discipline.json`:
+- Grades `closed-list` PIMC conditioned on `KnowledgeLedger` + `WeightedDeckPrior` against an omniscient `open-list` baseline (`information_gap`) and emits multi-world Bayes-averaged `policy_visits.npy` and continuous expected outcome `z.npy` (`z_bar in [-1, +1]`). See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
 
 ---
 
-## 12. Automated Observation-Tensor Completeness & Card-Fidelity Fuzzing
+## 10. "Continuation-Consistent" Critic Loss (Global Fix for Mid-Prompt Value Cliffs) — **Shipped**
 
-Combine `digimon-engine-mcp` (`inspect_stack`, `events`) and `digimon-training-mcp` (`plasticity_probe`) to audit newly admitted card sets automatically before launching large training runs:
-- **Card-Fidelity Audit**: Prompt an LLM with printed `effect_text` / `inherited_text` from `data/cards.json` to stage minimal boundary cases and compare emitted `GameEvent`s against Comprehensive Rules, routing discrepancies to `qa/archetype-qa/engine-gaps.md`.
-- **Observation-Tensor Completeness Fuzzing**: Construct pairs of legally distinct game states (e.g., `[Once Per Turn]` spent vs. unspent, active vs. expired `CannotUnsuspend`, face-down vs. face-up digivolution sources) where optimal actions differ, and assert `obs_a != obs_b` + `plasticity_probe.learnable == True`—automatically catching unencoded state features for future observation-profile revisions.
+Implemented across `code/digimon-engine/src/selfplay/driver.rs` (`--include-forced-selection-value`), `code/tools/emit_puzzle_shards.py`, `azero_trainer.py`, and `azero_lstm_distill.py`:
+- Emits value-only rows (`policy_weight = 0.0`, `forced_selection.npy`) on choiceless `PendingSelection` steps (filtered out by default in `azero_lstm_distill.py` unless `--include-forced-selection` is set so LSTM recurrent step clocks stay aligned) plus `chain_anchor_idx.npy` across non-RNG single-mover chains trained with `--consistency-coef 0.25` MSE $(V(s_{\text{mid}}) - \operatorname{sg}(V(s_{\text{post}})))^2$. See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
+
+---
+
+## 11. GRPO / LoRA Distillation into a Local 8B "Digimon Tactician" (RTX 4070) — **Shipped**
+
+Implemented in `code/tools/tactician_grpo/` (`dataset_exporter.py`, 5-stage dense `verifiable_reward.py`, lazy `TRL` `SFTTrainer` + `GRPOTrainer` QLoRA `train_grpo.py`, and `export_ollama.py`):
+- Defaults to Apache-2.0 `Qwen/Qwen3-8B` (`~5.2 GB` `Q4_K_M` GGUF co-resident in 12 GB VRAM on RTX 4070; `--base-model Qwen/Qwen3-14B` supported). Full operator runbook: [`docs/TACTICIAN_GRPO_RUNBOOK.md`](TACTICIAN_GRPO_RUNBOOK.md).
+
+---
+
+## 12. Automated Observation-Tensor Completeness & Card-Fidelity Fuzzing — **Shipped**
+
+Implemented as strictly read-only tooling in `code/tools/puzzle_lab/tensor_fuzzer.py` (`puzzle-lab fuzz-tensor` & `puzzle-lab audit-set`):
+- Differential zero-LLM state-pair fuzzing across 5 core rule families (`opt_spent_vs_unspent`, `delay_armed_vs_placing_turn`, `modifier_active_vs_absent`, `facedown_vs_faceup_source`, `linked_vs_unlinked`) + optional `plasticity_probe`, paired with LLM `GameEvent` card-set fidelity auditing (`audit-set`). See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
+
 

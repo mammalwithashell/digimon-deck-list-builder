@@ -45,6 +45,7 @@ struct Args {
     macro_substep_min_prior: f32,
     adversary_sims: u32,
     verify_adversary: bool,
+    belief_gap: bool,
     json: Option<String>,
 }
 
@@ -63,11 +64,16 @@ fn parse_args() -> Args {
         macro_substep_min_prior: 0.0,
         adversary_sims: 0,
         verify_adversary: false,
+        belief_gap: false,
         json: None,
     };
     while let Some(flag) = it.next() {
         if flag == "--verify-adversary" {
             args.verify_adversary = true;
+            continue;
+        }
+        if flag == "--belief-gap" {
+            args.belief_gap = true;
             continue;
         }
         let value = it.next().unwrap_or_else(|| panic!("{flag} needs a value"));
@@ -223,6 +229,8 @@ fn run() {
     let expectations = exam["expectations"].as_array().cloned().unwrap_or_default();
     let mut passes = vec![0u64; expectations.len()];
     let mut runs = Vec::new();
+    let mut closed_val_sum = 0.0f64;
+    let mut open_val_sum = 0.0f64;
     for k in 0..args.seeds {
         let mut config = DeterminizedConfig::default();
         config.worlds = worlds;
@@ -258,6 +266,18 @@ fn run() {
                 batch,
             ),
         };
+        closed_val_sum += result.root_value as f64;
+        if args.belief_gap && closed {
+            let open_res = determinized_search_batched(
+                &registry,
+                &game,
+                viewer,
+                eval.as_mut(),
+                &config,
+                batch,
+            );
+            open_val_sum += open_res.root_value as f64;
+        }
         let chosen = result.best_plan().unwrap().to_vec();
         let mut verdicts = Vec::new();
         for (i, e) in expectations.iter().enumerate() {
@@ -289,6 +309,15 @@ fn run() {
             .collect();
         println!("  seed {k}: chose {chosen:?}  top {}", top.join(", "));
     }
+    let belief_gap_metrics = (args.belief_gap && closed && args.seeds > 0).then(|| {
+        let closed_mean = (closed_val_sum / args.seeds as f64) as f32;
+        let open_mean = (open_val_sum / args.seeds as f64) as f32;
+        let gap = open_mean - closed_mean;
+        println!(
+            "  belief gap: closed_value_mean={closed_mean:+.3}, open_value_mean={open_mean:+.3}, information_gap={gap:+.3}"
+        );
+        (closed_mean, open_mean, gap)
+    });
     println!("expectations:");
     for (i, e) in expectations.iter().enumerate() {
         let what = match e["kind"].as_str().unwrap() {
@@ -422,6 +451,11 @@ fn run() {
         });
         if use_adversary {
             report["line_details"] = line_details;
+        }
+        if let Some((closed_mean, open_mean, gap)) = belief_gap_metrics {
+            report["closed_value_mean"] = json!(closed_mean);
+            report["open_value_mean"] = json!(open_mean);
+            report["information_gap"] = json!(gap);
         }
         std::fs::write(path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
     }

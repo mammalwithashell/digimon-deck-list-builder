@@ -25,15 +25,17 @@
 //! normalizes, keeping the total-simulation information available.
 
 use std::collections::{BTreeMap, HashMap};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use rand::rngs::StdRng;
-use rand::{Rng, SeedableRng};
+use rand::{Rng, RngCore, SeedableRng};
 
 use crate::action::build_action_mask;
 use crate::card_data::CardData;
 use crate::card_registry::CardRegistry;
+use crate::card_source::CardHandle;
 use crate::enums::{GamePhase, PlayerId};
+use crate::events::GameEvent;
 use crate::game::Game;
 use crate::observation::build_observation_tensor_with_mask;
 use crate::rules::Rules;
@@ -84,6 +86,10 @@ pub struct SelfPlayConfig {
     /// `full_search_fraction < 1`. Cheap searches run without root noise
     /// and their rows carry `policy_weight` 0 (value target only).
     pub cheap_simulations: u32,
+    /// Emit value-only rows (`policy_weight = 0.0`, `forced_selection = 1`) at
+    /// choiceless (`legal.len() == 1`) `PendingSelection` decisions without
+    /// advancing the non-forced temperature clock or mutating recurrent state.
+    pub include_forced_selection_value: bool,
     /// The determinized-search settings (mode, worlds, sims, PUCT,
     /// Dirichlet, observation profile).
     pub search: DeterminizedConfig,
@@ -104,6 +110,7 @@ impl Default for SelfPlayConfig {
             reduced_simulations: None,
             full_search_fraction: 1.0,
             cheap_simulations: 64,
+            include_forced_selection_value: false,
             search: DeterminizedConfig::default(),
         }
     }
@@ -149,11 +156,164 @@ struct PendingRecord {
     mover: PlayerId,
     game_id: u32,
     /// 1.0 when the row's search was a full search (policy target), 0.0 for
-    /// a cheap value-only search.
+    /// a cheap value-only search or forced selection value target.
     policy_weight: f32,
+    /// 1 when emitted on a choiceless (`legal.len() == 1`) `PendingSelection`.
+    forced_selection: u8,
+    /// Shard-local row index `j > i` of the post-resolution (or final-step)
+    /// anchor for a single-mover, non-RNG `PendingSelection` chain, else `-1`.
+    chain_anchor_idx: i64,
     /// Filled at game end.
     z: f32,
     terminated: bool,
+}
+
+struct PreStepRngSnapshot {
+    before_seq: u64,
+    before_rng_probe: u64,
+    before_sec_shuf: [u64; 2],
+    deck_handles: [Vec<CardHandle>; 2],
+    egg_handles: [Vec<CardHandle>; 2],
+    unseen_sec_handles: [Vec<CardHandle>; 2],
+}
+
+impl PreStepRngSnapshot {
+    fn capture(game: &Game, mover: PlayerId) -> Self {
+        let inspected_sec = game
+            .pending_selection
+            .as_ref()
+            .and_then(|s| s.card_choice.as_ref())
+            .and_then(|c| c.inspected_security_owner(mover));
+        let unseen_for = |p: usize| -> Vec<CardHandle> {
+            let pid = p as u8;
+            game.players[p]
+                .security
+                .iter()
+                .filter(|c| {
+                    inspected_sec != Some(pid) && !game.security_card_is_public(pid, c.handle())
+                })
+                .map(|c| c.handle())
+                .collect()
+        };
+        Self {
+            before_seq: game.event_seq,
+            before_rng_probe: game.rng.clone().next_u64(),
+            before_sec_shuf: game.security_shuffle_generations,
+            deck_handles: [
+                game.players[0].deck.iter().map(|c| c.handle()).collect(),
+                game.players[1].deck.iter().map(|c| c.handle()).collect(),
+            ],
+            egg_handles: [
+                game.players[0]
+                    .digitama_deck
+                    .iter()
+                    .map(|c| c.handle())
+                    .collect(),
+                game.players[1]
+                    .digitama_deck
+                    .iter()
+                    .map(|c| c.handle())
+                    .collect(),
+            ],
+            unseen_sec_handles: [unseen_for(0), unseen_for(1)],
+        }
+    }
+
+    fn did_occur(&self, game: &Game, mover: PlayerId) -> bool {
+        if game.rng.clone().next_u64() != self.before_rng_probe
+            || game.security_shuffle_generations != self.before_sec_shuf
+        {
+            return true;
+        }
+        let delta = game.event_seq.saturating_sub(self.before_seq) as usize;
+        let start = game.events.len().saturating_sub(delta);
+        for ev in &game.events[start..] {
+            if matches!(
+                ev,
+                GameEvent::Reveal { .. }
+                    | GameEvent::Mill { .. }
+                    | GameEvent::SecurityReveal { .. }
+                    | GameEvent::TurnStart { .. }
+            ) {
+                return true;
+            }
+        }
+        for p in 0..2 {
+            let after_deck = &game.players[p].deck;
+            if self.deck_handles[p]
+                .iter()
+                .any(|h| !after_deck.iter().any(|c| c.handle() == *h))
+            {
+                return true;
+            }
+            let after_egg = &game.players[p].digitama_deck;
+            if self.egg_handles[p]
+                .iter()
+                .any(|h| !after_egg.iter().any(|c| c.handle() == *h))
+            {
+                return true;
+            }
+        }
+        let after_inspected = game
+            .pending_selection
+            .as_ref()
+            .and_then(|s| s.card_choice.as_ref())
+            .and_then(|c| c.inspected_security_owner(mover));
+        for p in 0..2 {
+            let pid = p as u8;
+            for &h in &self.unseen_sec_handles[p] {
+                let still_concealed_in_sec = game.players[p]
+                    .security
+                    .iter()
+                    .any(|c| c.handle() == h)
+                    && after_inspected != Some(pid)
+                    && !game.security_card_is_public(pid, h);
+                if !still_concealed_in_sec {
+                    let became_known = after_inspected == Some(pid)
+                        || game.security_card_is_public(pid, h)
+                        || game.players[mover as usize]
+                            .hand
+                            .iter()
+                            .any(|c| c.handle() == h)
+                        || game.revealed_cards.iter().any(|c| c.handle() == h)
+                        || game.players.iter().any(|pl| {
+                            pl.trash.iter().any(|c| c.handle() == h)
+                                || pl.battle_area.iter().any(|perm| {
+                                    perm.card_sources
+                                        .iter()
+                                        .chain(&perm.linked_cards)
+                                        .any(|c| c.handle() == h && !c.face_down)
+                                })
+                        });
+                    if became_known {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+}
+
+fn close_chain_at_last_member(open_chain: &mut Vec<usize>, records: &mut [PendingRecord]) {
+    if open_chain.len() >= 2 {
+        let last = *open_chain.last().expect("len >= 2");
+        for &idx in &open_chain[..open_chain.len() - 1] {
+            if idx < last {
+                records[idx].chain_anchor_idx = last as i64;
+            }
+        }
+    }
+    open_chain.clear();
+}
+
+fn anchor_chain_to(target_idx: usize, open_chain: &mut Vec<usize>, records: &mut [PendingRecord]) {
+    for &idx in open_chain.iter() {
+        if idx < target_idx {
+            records[idx].chain_anchor_idx = target_idx as i64;
+        }
+    }
+    open_chain.clear();
 }
 
 /// Rows accumulated toward the next shard flush.
@@ -180,6 +340,8 @@ impl ShardBuffer {
         let mut actions: Vec<i32> = Vec::new();
         let mut visits: Vec<f32> = Vec::new();
         let mut policy_weight: Vec<f32> = Vec::with_capacity(rows);
+        let mut forced_selection: Vec<u8> = Vec::with_capacity(rows);
+        let mut chain_anchor_idx: Vec<i64> = Vec::with_capacity(rows);
         let mut z: Vec<f32> = Vec::with_capacity(rows);
         let mut terminated: Vec<u8> = Vec::with_capacity(rows);
         let mut mover: Vec<u8> = Vec::with_capacity(rows);
@@ -192,6 +354,8 @@ impl ShardBuffer {
             visits.extend_from_slice(&r.policy);
             offsets.push(actions.len() as i64);
             policy_weight.push(r.policy_weight);
+            forced_selection.push(r.forced_selection);
+            chain_anchor_idx.push(r.chain_anchor_idx);
             z.push(r.z);
             terminated.push(u8::from(r.terminated));
             mover.push(r.mover);
@@ -203,6 +367,8 @@ impl ShardBuffer {
         npy::write_i32_1d(&dir.join("policy_actions.npy"), &actions)?;
         npy::write_f32_1d(&dir.join("policy_visits.npy"), &visits)?;
         npy::write_f32_1d(&dir.join("policy_weight.npy"), &policy_weight)?;
+        npy::write_u8_1d(&dir.join("forced_selection.npy"), &forced_selection)?;
+        npy::write_i64_1d(&dir.join("chain_anchor_idx.npy"), &chain_anchor_idx)?;
         npy::write_f32_1d(&dir.join("z.npy"), &z)?;
         npy::write_u8_1d(&dir.join("terminated.npy"), &terminated)?;
         npy::write_u8_1d(&dir.join("mover.npy"), &mover)?;
@@ -389,6 +555,8 @@ pub fn run_self_play_with_opponents(
         let mut decisions = 0u32;
         let mut non_forced = 0u32;
         let game_first_record = buffer.records.len();
+        let mut open_chain: Vec<usize> = Vec::new();
+        let mut chain_mover: Option<PlayerId> = None;
         evaluator.reset_episode();
         if let (Some(pool), Some(index)) = (opponents.as_deref_mut(), historical) {
             pool.evaluators[index].reset_episode();
@@ -399,6 +567,10 @@ pub fn run_self_play_with_opponents(
 
         while !game.game_over && decisions < config.decision_cap {
             let pid = decision_player(&game);
+            if chain_mover.is_some() && chain_mover != Some(pid) {
+                close_chain_at_last_member(&mut open_chain, &mut buffer.records);
+                chain_mover = None;
+            }
             if trace_decisions {
                 eprintln!(
                     "game {game_idx} decision {decisions}: player {pid}, phase {:?}, memory {}",
@@ -432,14 +604,51 @@ pub fn run_self_play_with_opponents(
                     ));
                 }
                 1 => {
-                    // Forced: apply without search, emit no record (D10).
+                    // Forced: apply without search, never advance temperature clock
+                    // or recurrent state. Optionally emit value-only row on PendingSelection.
+                    if config.include_forced_selection_value
+                        && !config.policy_only
+                        && game.pending_selection.is_some()
+                        && learner.is_none_or(|current| current == pid)
+                    {
+                        let obs = build_observation_tensor_with_mask(
+                            &game, pid, &registry, profile, &mask,
+                        );
+                        if buffer.obs_dim == 0 {
+                            buffer.obs_dim = obs.len();
+                        }
+                        let rec_idx = buffer.records.len();
+                        buffer.records.push(PendingRecord {
+                            obs,
+                            actions: vec![legal[0]],
+                            policy: vec![1.0],
+                            mover: pid,
+                            game_id: game_idx,
+                            policy_weight: 0.0,
+                            forced_selection: 1,
+                            chain_anchor_idx: -1,
+                            z: 0.0,
+                            terminated: false,
+                        });
+                        rows_by_seat[pid as usize] += 1;
+                        chain_mover = Some(pid);
+                        open_chain.push(rec_idx);
+                    }
                     if trace_decisions {
                         eprintln!(
                             "game {game_idx} decision {decisions}: forced action {}",
                             legal[0]
                         );
                     }
+                    let rng_snap =
+                        (!open_chain.is_empty()).then(|| PreStepRngSnapshot::capture(&game, pid));
                     game.decode_action(legal[0], pid);
+                    if let Some(snap) = rng_snap {
+                        if snap.did_occur(&game, pid) {
+                            close_chain_at_last_member(&mut open_chain, &mut buffer.records);
+                            chain_mover = None;
+                        }
+                    }
                     decisions += 1;
                     stats.forced_decisions_total += 1;
                     continue;
@@ -653,6 +862,7 @@ pub fn run_self_play_with_opponents(
                     step_mask[action as usize] > 0.5,
                     "search route must respect the live mask"
                 );
+                let in_pending = game.pending_selection.is_some();
                 if step_mask.iter().filter(|&&m| m > 0.5).count() > 1 {
                     // The temperature clock covers BOTH actors even when only
                     // the current actor's rows are retained for training.
@@ -681,6 +891,14 @@ pub fn run_self_play_with_opponents(
                             if buffer.obs_dim == 0 {
                                 buffer.obs_dim = obs.len();
                             }
+                            if !in_pending && !open_chain.is_empty() {
+                                anchor_chain_to(
+                                    buffer.records.len(),
+                                    &mut open_chain,
+                                    &mut buffer.records,
+                                );
+                                chain_mover = None;
+                            }
                             // Shards also encode the complete engine legality mask.
                             // Rejected/backward page moves remain legal with ZERO
                             // target mass, so fitting can learn not to browse in circles.
@@ -688,6 +906,7 @@ pub fn run_self_play_with_opponents(
                                 .training_visits(&route[..index], step_mask)
                                 .into_iter()
                                 .unzip();
+                            let rec_idx = buffer.records.len();
                             buffer.records.push(PendingRecord {
                                 obs,
                                 actions,
@@ -695,19 +914,61 @@ pub fn run_self_play_with_opponents(
                                 mover: pid,
                                 game_id: game_idx,
                                 policy_weight: if full_search { 1.0 } else { 0.0 },
+                                forced_selection: 0,
+                                chain_anchor_idx: -1,
                                 z: 0.0,
                                 terminated: false,
                             });
                             rows_by_seat[pid as usize] += 1;
+                            if in_pending {
+                                chain_mover = Some(pid);
+                                open_chain.push(rec_idx);
+                            }
                         }
                     }
                 } else {
                     stats.forced_decisions_total += 1;
+                    if config.include_forced_selection_value
+                        && !config.policy_only
+                        && in_pending
+                        && learner.is_none_or(|current| current == pid)
+                    {
+                        let obs = build_observation_tensor_with_mask(
+                            &game, pid, &registry, profile, step_mask,
+                        );
+                        if buffer.obs_dim == 0 {
+                            buffer.obs_dim = obs.len();
+                        }
+                        let rec_idx = buffer.records.len();
+                        buffer.records.push(PendingRecord {
+                            obs,
+                            actions: vec![action],
+                            policy: vec![1.0],
+                            mover: pid,
+                            game_id: game_idx,
+                            policy_weight: 0.0,
+                            forced_selection: 1,
+                            chain_anchor_idx: -1,
+                            z: 0.0,
+                            terminated: false,
+                        });
+                        rows_by_seat[pid as usize] += 1;
+                        chain_mover = Some(pid);
+                        open_chain.push(rec_idx);
+                    }
                 }
                 if trace_decisions {
                     eprintln!("game {game_idx} decision {decisions}: search action {action}");
                 }
+                let rng_snap =
+                    (!open_chain.is_empty()).then(|| PreStepRngSnapshot::capture(&game, pid));
                 game.decode_action(action, pid);
+                if let Some(snap) = rng_snap {
+                    if snap.did_occur(&game, pid) {
+                        close_chain_at_last_member(&mut open_chain, &mut buffer.records);
+                        chain_mover = None;
+                    }
+                }
                 executed_route.push(action);
                 decisions += 1;
             }
@@ -715,6 +976,9 @@ pub fn run_self_play_with_opponents(
                 crate::search::opportunity::record_execution(row, &executed_route)?;
                 writeln!(opportunity_log.as_mut().unwrap(), "{}", row).map_err(|e|e.to_string())?;
             }
+        }
+        if !open_chain.is_empty() {
+            close_chain_at_last_member(&mut open_chain, &mut buffer.records);
         }
 
         // z backfill for this game's records.
@@ -808,6 +1072,7 @@ pub fn run_self_play_with_opponents(
             "reduced_simulations": config.reduced_simulations,
             "full_search_fraction": config.full_search_fraction,
             "cheap_simulations": config.cheap_simulations,
+            "include_forced_selection_value": config.include_forced_selection_value,
         },
         "temperature_decisions": config.temperature_decisions,
         "search_opportunity_telemetry": if opportunity_log.is_some() {serde_json::json!({"schema":"search-opportunities-v1","path":"search_opportunities.jsonl","scope":"nonforced searched roots; direct routes only; effect-sequence opportunities unmeasured"})} else {serde_json::Value::Null},
@@ -863,3 +1128,182 @@ pub fn run_self_play_with_opponents(
 
     Ok(stats)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::search::UniformEvaluator;
+
+    fn load_cards() -> HashMap<String, CardData> {
+        let p = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../data/cards.json");
+        CardData::load_from_file(&p).expect("load cards.json")
+    }
+
+    fn groundramon_selection_deck() -> Vec<String> {
+        let mut d = vec!["EX13-005".to_string(); 4];
+        d.extend(vec!["ST1-02".to_string(); 26]);
+        d.extend(vec!["EX13-041".to_string(); 24]);
+        d
+    }
+
+    #[test]
+    fn forced_selection_and_chain_anchor_sidecars_preserve_non_forced_trajectory() {
+        std::thread::Builder::new()
+            .stack_size(128 * 1024 * 1024)
+            .spawn(|| {
+                let card_data = load_cards();
+                let deck = groundramon_selection_deck();
+                let decks = vec![deck.clone(), deck];
+                let names = vec!["groundramon-a".to_string(), "groundramon-b".to_string()];
+
+                let root = std::env::temp_dir().join(format!(
+                    "digimon_selfplay_forced_chain_{}",
+                    std::process::id()
+                ));
+                let _ = std::fs::remove_dir_all(&root);
+                let dir_off = root.join("off");
+                let dir_on = root.join("on");
+
+                let mut cfg_off = SelfPlayConfig {
+                    games: 3,
+                    seed: 19,
+                    temperature_decisions: 8,
+                    decision_cap: 80,
+                    shard_rows: 100_000,
+                    evaluation_batch_size: 2,
+                    include_forced_selection_value: false,
+                    ..Default::default()
+                };
+                cfg_off.search.worlds = 2;
+                cfg_off.search.search.simulations = 4;
+
+                let mut cfg_on = cfg_off.clone();
+                cfg_on.include_forced_selection_value = true;
+
+                let stats_off = run_self_play(
+                    &card_data,
+                    &decks,
+                    &names,
+                    &mut UniformEvaluator,
+                    &cfg_off,
+                    &dir_off,
+                    "uniform",
+                )
+                .expect("selfplay off");
+                let stats_on = run_self_play(
+                    &card_data,
+                    &decks,
+                    &names,
+                    &mut UniformEvaluator,
+                    &cfg_on,
+                    &dir_on,
+                    "uniform",
+                )
+                .expect("selfplay on");
+
+                assert_eq!(stats_off.decisions_total, stats_on.decisions_total);
+                assert_eq!(stats_off.forced_decisions_total, stats_on.forced_decisions_total);
+                assert_eq!(stats_off.wins, stats_on.wins);
+
+                let s_off = dir_off.join("shard-000");
+                let s_on = dir_on.join("shard-000");
+
+                let fs_off = npy::read(&s_off.join("forced_selection.npy"))
+                    .unwrap()
+                    .as_u8()
+                    .unwrap();
+                let ca_off = npy::read(&s_off.join("chain_anchor_idx.npy"))
+                    .unwrap()
+                    .as_i64()
+                    .unwrap();
+                assert_eq!(fs_off.len(), stats_off.rows);
+                assert_eq!(ca_off.len(), stats_off.rows);
+                assert!(fs_off.iter().all(|&b| b == 0));
+
+                let fs_on = npy::read(&s_on.join("forced_selection.npy"))
+                    .unwrap()
+                    .as_u8()
+                    .unwrap();
+                let ca_on = npy::read(&s_on.join("chain_anchor_idx.npy"))
+                    .unwrap()
+                    .as_i64()
+                    .unwrap();
+                let pw_on = npy::read(&s_on.join("policy_weight.npy"))
+                    .unwrap()
+                    .as_f32()
+                    .unwrap();
+                let offsets_on = npy::read(&s_on.join("policy_offsets.npy"))
+                    .unwrap()
+                    .as_i64()
+                    .unwrap();
+                let movers_on = npy::read(&s_on.join("mover.npy"))
+                    .unwrap()
+                    .as_u8()
+                    .unwrap();
+                let gids_on = npy::read(&s_on.join("game_id.npy"))
+                    .unwrap()
+                    .as_i32()
+                    .unwrap();
+                let z_on = npy::read(&s_on.join("z.npy")).unwrap().as_f32().unwrap();
+                let z_off = npy::read(&s_off.join("z.npy")).unwrap().as_f32().unwrap();
+                let movers_off = npy::read(&s_off.join("mover.npy"))
+                    .unwrap()
+                    .as_u8()
+                    .unwrap();
+
+                assert_eq!(fs_on.len(), stats_on.rows);
+                assert_eq!(ca_on.len(), stats_on.rows);
+                let forced_emitted = fs_on.iter().filter(|&&b| b == 1).count();
+                assert!(
+                    forced_emitted > 0,
+                    "Groundramon single-target PendingSelection should emit forced_selection=1 rows"
+                );
+                assert_eq!(stats_on.rows - forced_emitted, stats_off.rows);
+
+                // Non-forced rows in `on` must align 1:1 with `off`.
+                let kept_movers: Vec<u8> = movers_on
+                    .iter()
+                    .zip(&fs_on)
+                    .filter_map(|(&m, &f)| (f == 0).then_some(m))
+                    .collect();
+                let kept_z: Vec<f32> = z_on
+                    .iter()
+                    .zip(&fs_on)
+                    .filter_map(|(&zv, &f)| (f == 0).then_some(zv))
+                    .collect();
+                assert_eq!(kept_movers, movers_off);
+                assert_eq!(kept_z, z_off);
+
+                let mut anchored_count = 0usize;
+                for i in 0..stats_on.rows {
+                    if fs_on[i] == 1 {
+                        assert_eq!(pw_on[i], 0.0, "forced selection row must have policy_weight 0");
+                        assert_eq!(
+                            offsets_on[i + 1] - offsets_on[i],
+                            1,
+                            "forced selection row must carry exactly 1 legal action"
+                        );
+                    }
+                    let anchor = ca_on[i];
+                    assert!(anchor == -1 || (anchor > i as i64 && (anchor as usize) < stats_on.rows));
+                    if anchor >= 0 {
+                        anchored_count += 1;
+                        let j = anchor as usize;
+                        assert_eq!(gids_on[i], gids_on[j], "anchor must stay within same game");
+                        assert_eq!(movers_on[i], movers_on[j], "anchor must stay within same mover");
+                        assert_eq!(ca_on[j], -1, "anchor row itself must carry -1");
+                    }
+                }
+                assert!(
+                    anchored_count > 0,
+                    "expected non-RNG Groundramon PendingSelection chains to record positive chain_anchor_idx"
+                );
+
+                let _ = std::fs::remove_dir_all(&root);
+            })
+            .unwrap()
+            .join()
+            .unwrap();
+    }
+}
+

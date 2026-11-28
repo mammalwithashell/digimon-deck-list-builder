@@ -330,6 +330,46 @@ def warm_start_from_champion(root: Path, arch: str, gen: int):
         atomic_json(run_dir / 'state.json', dict(state, prev=prev))
 
 
+def _resolve_specialist_extra_shards(root: Path, training: dict, arch: str) -> list[str]:
+    found: list[str] = []
+    configured = training.get('extra_shards')
+    if isinstance(configured, dict):
+        arch_val = configured.get(arch)
+        if arch_val is None:
+            arch_val = configured.get(slug(arch))
+        if isinstance(arch_val, (list, tuple)):
+            found.extend(str(p) for p in arch_val if p)
+        elif isinstance(arch_val, (str, Path)) and str(arch_val):
+            found.append(str(arch_val))
+    elif isinstance(configured, (list, tuple)):
+        found.extend(str(p) for p in configured if p)
+    elif isinstance(configured, (str, Path)) and str(configured):
+        found.append(str(configured))
+
+    arch_extra_dir = root / 'extra_shards' / slug(arch)
+    if arch_extra_dir.is_dir():
+        if (arch_extra_dir / 'manifest.json').exists():
+            found.append(str(arch_extra_dir))
+        else:
+            manifest_children = [
+                str(c)
+                for c in sorted(arch_extra_dir.iterdir())
+                if c.is_dir() and (c / 'manifest.json').exists()
+            ]
+            if manifest_children:
+                found.extend(manifest_children)
+            else:
+                found.append(str(arch_extra_dir))
+
+    deduped: list[str] = []
+    seen_paths: set[str] = set()
+    for item in found:
+        if item not in seen_paths:
+            seen_paths.add(item)
+            deduped.append(item)
+    return deduped
+
+
 def generation_command(root: Path, plan: dict, arch: str, pool: Path, index: int) -> list[str]:
     t = plan['training']
     base = root / 'inputs/base'
@@ -360,6 +400,12 @@ def generation_command(root: Path, plan: dict, arch: str, pool: Path, index: int
         cmd += ['--weight-decay', str(t['weight_decay'])]
     if t.get('value_label_smoothing', 0.0):
         cmd += ['--value-label-smoothing', str(t['value_label_smoothing'])]
+    extra_dirs = _resolve_specialist_extra_shards(root, t, arch)
+    if extra_dirs:
+        max_share = float(t.get('max_extra_shard_share', 0.10))
+        if not (0.0 < max_share < 1.0):
+            raise ValueError(f'max_extra_shard_share must lie in (0, 1), got {max_share}')
+        cmd += ['--extra-shards', *extra_dirs, '--max-extra-shard-share', str(max_share)]
     return cmd
 
 
@@ -403,6 +449,9 @@ def prepare(args):
         atomic_json(run / 'state.json', dict(next_gen=1, prev=dict(
             model_zip=str(gen0 / 'model.zip'), model_onnx=str(gen0 / 'model.onnx'))))
         bind_prepared_run(run)
+    max_extra_share = float(getattr(args, 'max_extra_shard_share', 0.10))
+    if not (0.0 < max_extra_share < 1.0):
+        raise ValueError(f'max_extra_shard_share must lie in (0, 1), got {max_extra_share}')
     training = dict(
         trainer_kind=trainer_kind, epochs=4, lr=0.0001, batch_size=512, seq_batch_size=getattr(args, 'seq_batch_size', 16),
         value_holdout_fraction=0.2, value_activation='tanh',
@@ -412,6 +461,12 @@ def prepare(args):
         value_label_smoothing=getattr(args, 'value_label_smoothing', 0.0),
         train_device=getattr(args, 'train_device', 'cpu'),
     )
+    arg_extra_shards = getattr(args, 'extra_shards', None)
+    if arg_extra_shards:
+        training['extra_shards'] = [str(p) for p in arg_extra_shards]
+        training['max_extra_shard_share'] = max_extra_share
+    elif max_extra_share != 0.10:
+        training['max_extra_shard_share'] = max_extra_share
     gen1_mix = dict(base_selfplay=0.7 if extra_anchors else 0.8, cp8=0.2)
     later_mix = dict(champions=0.7, base=0.15, cp8=0.10 if extra_anchors else 0.15)
     plan = dict(schema=SCHEMA, image=image, controller_commit=args.source_commit,
@@ -511,6 +566,12 @@ def run(args):
     for name, digest in plan['files'].items():
         if sha256(root / name) != digest:
             raise ValueError(f'Input hash mismatch: {name}')
+    arg_extra_shards = getattr(args, 'extra_shards', None)
+    if arg_extra_shards:
+        plan.setdefault('training', {})['extra_shards'] = [str(p) for p in arg_extra_shards]
+    arg_max_share = getattr(args, 'max_extra_shard_share', None)
+    if arg_max_share is not None:
+        plan.setdefault('training', {})['max_extra_shard_share'] = float(arg_max_share)
     remote = bool(plan.get('gate', {}).get('remote'))
     inline = plan.get('gate') and not remote
     with controller_lock(root / 'league.lock'):
@@ -638,11 +699,15 @@ def main():
     p.add_argument('--macro-substep-min-prior', type=float, default=0.0)
     p.add_argument('--weight-decay', type=float, default=0.0)
     p.add_argument('--value-label-smoothing', type=float, default=0.0)
+    p.add_argument('--extra-shards', type=Path, nargs='*', default=[])
+    p.add_argument('--max-extra-shard-share', type=float, default=0.10)
     p.add_argument('--train-device', choices=('cpu', 'cuda'), default='cpu')
     p.add_argument('--cli-bin', type=str, default=CLI_BIN)
     p.add_argument('--cards-json', type=str, default=CARDS_JSON)
     r = sub.add_parser('run')
     r.add_argument('--root', type=Path, default=Path('/experiment'))
+    r.add_argument('--extra-shards', type=Path, nargs='*', default=None)
+    r.add_argument('--max-extra-shard-share', type=float, default=None)
     e = sub.add_parser('enable-gate')
     e.add_argument('--root', type=Path, default=Path('/experiment'))
     e.add_argument('--source-commit', required=True)

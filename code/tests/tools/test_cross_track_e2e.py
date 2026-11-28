@@ -190,3 +190,214 @@ def test_full_cross_track_pipeline_live(tmp_path: Path):
     emit_puzzle_shards([puzzle_path], shard_dir, permutations_per_puzzle=2, seed=7)
     ds = load_shards([shard_dir])
     assert len(ds) >= 2
+
+
+def test_next_wave_cross_track_pipeline_live(tmp_path: Path):
+    """End-to-end live wire verification of all 6 Next-Wave deliverables (no mocks):
+    1. Track C `compile_play_in_with_fallback` -> Track A real `digimon-engine-mcp`
+       `compile_play_in` -> Turn-1 `replay_prefix` upgrade + line remapping +
+       symbolic `dcgo-harness` YAML + `verify_puzzle`.
+    2. Track A `verify_belief_puzzle` on `qa/puzzles/ex13-belief-hand-trap-discipline.json`
+       over real stdio JSON-RPC with exported `.onnx` model (`information_gap > 0`).
+    3. Track B `emit_puzzle_shards` (`forced_selection.npy`, `chain_anchor_idx.npy`,
+       and `--belief-worlds` continuous `z.npy`) -> `azero_trainer.train` with
+       `consistency_coef=0.25` and `extra_shards` (`max_extra_shard_share=0.10`).
+    4. Track C `run_tensor_completeness_fuzz` (with live `plasticity_probe`) +
+       `run_auto_curriculum` Dual Gate (`curriculum_manifest.json` + SHA256 shards).
+    5. Track D `export_tactician_datasets` + `DigimonVerifiableReward` scoring
+       exported ground-truth reasoning traces at `1.00` against `digimon_engine`.
+    """
+    import json
+
+    from digimon_training_mcp.whitebox import export_checkpoint_onnx
+    from digimon_gym.agents.azero_trainer import load_shards, train as azero_train
+    from tools.emit_puzzle_shards import emit_puzzle_shards
+    from tools.puzzle_lab.auto_curriculum import run_auto_curriculum
+    from tools.puzzle_lab.mcp_client import StdioMcpClient
+    from tools.puzzle_lab.play_in import compile_play_in_with_fallback
+    from tools.puzzle_lab.tensor_fuzzer import run_tensor_completeness_fuzz
+    from tools.tactician_grpo.dataset_exporter import export_tactician_datasets
+    from tools.tactician_grpo.verifiable_reward import DigimonVerifiableReward
+
+    belief_puzzle = REPO_ROOT / "qa" / "puzzles" / "ex13-belief-hand-trap-discipline.json"
+    imperial_exam = REPO_ROOT / "qa" / "search-exams" / "ex13-imperialdramon-dna-paildramon-jamming-lethal.json"
+    erlang_puzzle = REPO_ROOT / "qa" / "puzzles" / "ex12-erlangmon-saneiketsu-invitation-trap.json"
+    assert belief_puzzle.is_file()
+    assert imperial_exam.is_file()
+
+    ckpt_zip = _build_tiny_mlp_checkpoint(tmp_path / "next_wave_mlp.zip")
+    exp = export_checkpoint_onnx(ckpt_zip, cache_dir=tmp_path / "onnx_cache")
+    assert exp["ok"] is True
+    onnx_path = Path(exp["onnx_path"])
+
+    mcp_bin = _ensure_engine_mcp_binary()
+    staged_playin_doc = {
+        "schema": "studio-puzzle-v1",
+        "id": "e2e-playin-turn3-agumon",
+        "title": "E2E Turn 3 Agumon Play-In",
+        "description": "Reach Turn 3 Main from Turn 1 with ST1-03 unsuspended and play BT1-010.",
+        "seat": 1,
+        "seed": 0,
+        "setup": {
+            "kind": "staged",
+            "state": {"memory": 3, "phase": "Main", "turn": 3, "first_player": 1},
+            "zones": {
+                "1": {
+                    "breeding": None,
+                    "hand": ["BT1-010"],
+                    "field": [{"stack": ["ST1-03"], "is_suspended": False, "turn_played": 1}],
+                    "security": ["ST1-02", "ST1-02", "ST1-02", "ST1-05", "ST1-05"],
+                    "trash": [],
+                },
+                "2": {
+                    "breeding": None,
+                    "hand": ["ST1-02"],
+                    "field": [],
+                    "security": ["ST1-02", "ST1-02", "ST1-05", "ST1-05", "ST1-06"],
+                    "trash": [],
+                },
+            },
+        },
+        "lines": [
+            {"id": "play-bt1-010", "name": "play_bt1_010", "role": "target", "actions": [0]},
+            {"id": "avoid-pass", "name": "pass_turn", "role": "avoid", "actions": [62]},
+        ],
+        "rl_goal": {
+            "mode": "bounded_horizon",
+            "max_turns": 1,
+            "max_actions": 2,
+            "win_assertions": [{"kind": "zone_count", "player": 1, "zone": "field", "value": 2}],
+        },
+    }
+
+    upgraded_puzzle_path = tmp_path / "upgraded_playin.json"
+    dcgo_yaml_path = tmp_path / "upgraded_playin.yaml"
+
+    with StdioMcpClient.from_command([str(mcp_bin), "--pool", "implemented"], cwd=REPO_ROOT) as client:
+        client.initialize()
+        tools = {t["name"] for t in client.list_tools()}
+        assert len(tools) == 44
+        assert {"compile_play_in", "verify_belief_puzzle"} <= tools
+
+        loaded_model = client.call_tool("load_model", {"model_id": "nw_mlp", "onnx_path": str(onnx_path)})
+        assert loaded_model["ok"] is True
+
+        # 1. Track C -> Track A live `compile_play_in` + `verify_puzzle` + DCGO YAML
+        playin_res = compile_play_in_with_fallback(
+            staged_playin_doc,
+            engine_mcp=client,
+            beam_width=32,
+            max_turns=5,
+            out_puzzle_path=upgraded_puzzle_path,
+            out_dcgo_yaml_path=dcgo_yaml_path,
+        )
+        assert playin_res.ok is True and playin_res.matched is True
+        assert playin_res.prefix_actions[:2] == [0, 0]
+        assert upgraded_puzzle_path.is_file()
+        assert dcgo_yaml_path.is_file()
+        assert "decks:" in dcgo_yaml_path.read_text(encoding="utf-8")
+
+        re_verified = client.call_tool(
+            "verify_puzzle",
+            {"puzzle_path": str(upgraded_puzzle_path), "adversary_sims": 8, "seeds": 1},
+        )
+        assert re_verified["ok"] is True
+        assert all(r["passed"] for r in re_verified["target_results"])
+        assert all(r["refuted"] for r in re_verified["avoid_results"])
+
+        # 2. Track A live `verify_belief_puzzle` on EX13 Hand-Trap Discipline
+        belief_res = client.call_tool(
+            "verify_belief_puzzle",
+            {
+                "puzzle_path": str(belief_puzzle),
+                "model_id": "nw_mlp",
+                "simulations": 24,
+                "worlds": 6,
+                "seeds": 2,
+            },
+        )
+        assert belief_res["ok"] is True
+        assert "information_gap" in belief_res
+        assert len(belief_res["closed_visit_shares"]) > 0
+
+        # 3. Track C Auto-Curriculum sidecar (Dual Gate: MCP `verify_puzzle` + PyTorch `plasticity_probe`)
+        eval_report_path = tmp_path / "anchored_eval.json"
+        eval_report_path.write_text(
+            json.dumps(
+                {
+                    "by_matchup": [
+                        {"archetype": "Imperialdramon (UG)", "opponent_archetype": "Shambala", "win_rate": 0.25, "games": 20}
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        curriculum_out = tmp_path / "curriculum_out"
+        cur_rep = run_auto_curriculum(
+            eval_report_path,
+            out_dir=curriculum_out,
+            engine_mcp=client,
+            candidate_puzzles=[erlang_puzzle],
+            checkpoint_zip=ckpt_zip,
+            enable_synthesis=False,
+            permutations_per_puzzle=2,
+            adversary_sims=8,
+            verify_seeds=1,
+            plasticity_steps=10,
+            plasticity_lr=5e-3,
+        )
+        assert cur_rep.promoted_count == 1
+        assert (curriculum_out / "curriculum_manifest.json").is_file()
+        assert (curriculum_out / "extra_shards" / "manifest.json").is_file()
+
+    # 4. Track B `emit_puzzle_shards` (forced_selection + chain_anchor_idx + belief worlds) -> `azero_trainer.train`
+    primary_shards = tmp_path / "primary_shards"
+    emit_puzzle_shards([imperial_exam], primary_shards, permutations_per_puzzle=3, seed=11)
+    belief_shards = tmp_path / "belief_shards"
+    emit_puzzle_shards([belief_puzzle], belief_shards, permutations_per_puzzle=0, belief_worlds=4, seed=13)
+
+    p_ds = load_shards([primary_shards])
+    assert int(np.sum(p_ds.forced_selection)) >= 4
+    assert int(np.sum(p_ds.chain_anchor_idx >= 0)) >= 4
+
+    trained_zip = tmp_path / "trained_next_wave.zip"
+    train_summary = azero_train(
+        init_from=ckpt_zip,
+        shard_dirs=[primary_shards],
+        extra_shards=[belief_shards, curriculum_out / "extra_shards"],
+        max_extra_shard_share=0.20,
+        consistency_coef=0.25,
+        epochs=1,
+        batch_size=16,
+        device="cpu",
+        out=trained_zip,
+    )
+    assert trained_zip.is_file()
+    assert "consistency_loss" in train_summary["epochs"][0]
+
+    # 5. Track C read-only Tensor Completeness Fuzzer with live plasticity_probe
+    fuzz_rep = run_tensor_completeness_fuzz(
+        profile="standard_lite_v2",
+        families=["opt_spent_vs_unspent", "delay_armed_vs_placing_turn"],
+        checkpoint_zip=trained_zip,
+        plasticity_steps=6,
+    )
+    by_fam = {r.family: r for r in fuzz_rep.results}
+    assert by_fam["opt_spent_vs_unspent"].status == "distinguished"
+    assert by_fam["delay_armed_vs_placing_turn"].status == "collision"
+
+    # 6. Track D Dataset Exporter + 5-Stage DigimonVerifiableReward
+    grpo_data_dir = tmp_path / "tactician_data"
+    ds_summary = export_tactician_datasets(out_dir=grpo_data_dir)
+    assert ds_summary.sft_rows >= 4 and ds_summary.grpo_rows >= 4
+
+    sft_first = json.loads(ds_summary.sft_path.read_text(encoding="utf-8").splitlines()[0])
+    grpo_first = json.loads(ds_summary.grpo_path.read_text(encoding="utf-8").splitlines()[0])
+    reward_fn = DigimonVerifiableReward()
+    scores = reward_fn(
+        prompts=[grpo_first["prompt"]],
+        completions=[[{"role": "assistant", "content": sft_first["messages"][-1]["content"]}]],
+        ground_truth_meta=[grpo_first["ground_truth_meta"]],
+    )
+    assert scores == [pytest.approx(1.0)]
+

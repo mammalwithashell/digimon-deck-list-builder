@@ -90,6 +90,8 @@ def search_budget_flags(args) -> list[str]:
     macro_flags = ["--macro-substeps", str(macro)] if macro > 0 else []
     if macro > 0 and macro_min_prior > 0.0:
         macro_flags += ["--macro-substep-min-prior", str(macro_min_prior)]
+    if getattr(args, "include_forced_selection_value", False):
+        macro_flags += ["--include-forced-selection-value"]
     if getattr(args, "full_search", False):
         return macro_flags
     flags: list[str] = []
@@ -444,6 +446,10 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
     model_onnx = gen_dir / "model.onnx"
     t1 = time.time()
     trainer_kind = getattr(args, "trainer_kind", "mlp")
+    raw_extra = getattr(args, "extra_shards", None) or []
+    extra_shard_paths = [Path(p) for p in raw_extra] if raw_extra else None
+    max_extra_share = float(getattr(args, "max_extra_shard_share", 0.10))
+    consistency_coef = float(getattr(args, "consistency_coef", 0.25))
     if trainer_kind == "lstm":
         from digimon_gym.agents.azero_lstm_distill import distill_lstm  # noqa: E402
 
@@ -455,9 +461,12 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
             seq_batch_size=getattr(args, "seq_batch_size", 16),
             lr=args.lr,
             value_coef=args.value_coef,
+            consistency_coef=consistency_coef,
             holdout_fraction=getattr(args, "value_holdout_fraction", 0.15),
             weight_decay=getattr(args, "weight_decay", 0.0),
             value_label_smoothing=getattr(args, "value_label_smoothing", 0.0),
+            extra_shards=extra_shard_paths,
+            max_extra_shard_share=max_extra_share,
             device=args.train_device,
             seed=args.seed + gen,
             export_onnx=model_onnx,
@@ -473,6 +482,9 @@ def _run_one_generation(args: argparse.Namespace, gen: int, prev: dict | None) -
             batch_size=args.batch_size,
             lr=args.lr,
             value_coef=args.value_coef,
+            consistency_coef=consistency_coef,
+            extra_shards=extra_shard_paths,
+            max_extra_shard_share=max_extra_share,
             device=args.train_device,
             seed=args.seed + gen,
             export_onnx=model_onnx,
@@ -601,6 +613,8 @@ def build_parser() -> argparse.ArgumentParser:
         help="interior non-combat pending-selection macro-substeps per MCTS expansion (0 = unchanged)")
     p.add_argument("--macro-substep-min-prior", type=float, default=0.0,
         help="minimum top prior probability required to auto-advance an interior macro-substep (0.0 = always)")
+    p.add_argument("--include-forced-selection-value", action="store_true",
+        help="emit value-only rows (policy_weight=0, forced_selection=1) on choiceless PendingSelection nodes")
     p.add_argument("--eval-batch-size", type=int, default=4,
         help="independent PIMC worlds per evaluation batch; 1 is the serial reference")
     p.add_argument("--mode", default="pimc")
@@ -615,6 +629,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--window", type=int, default=3, help="sliding-window generations of shards for training")
     p.add_argument("--replay-games-per-generation", type=int,
                    help="cap each source generation at this many games using whole chunks")
+    p.add_argument("--extra-shards", nargs="+", default=None,
+                   help="auxiliary puzzle/curriculum shard directories mixed at <= --max-extra-shard-share")
+    p.add_argument("--max-extra-shard-share", type=float, default=0.10,
+                   help="maximum fraction of total training rows drawn from --extra-shards (default 0.10)")
     p.add_argument("--trainer-kind", choices=("mlp", "lstm"), default="mlp",
                    help="trainer used for AlphaZero fitting: mlp (azero_trainer) or lstm (azero_lstm_distill)")
     p.add_argument("--epochs", type=int, default=2)
@@ -627,6 +645,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--value-label-smoothing", type=float, default=0.0,
                    help="shrink training value targets z by (1 - eps); held-out MSE uses raw z")
     p.add_argument("--value-coef", type=float, default=1.0)
+    p.add_argument("--consistency-coef", type=float, default=0.25,
+                   help="continuation-consistency critic MSE weight across non-RNG PendingSelection chains (0 disables)")
     p.add_argument("--value-holdout-fraction", type=float, default=0.0,
                    help="hold out this share of WHOLE games from fitting and save the best held-out epoch")
     p.add_argument("--value-activation", choices=("identity", "tanh"), default=None,

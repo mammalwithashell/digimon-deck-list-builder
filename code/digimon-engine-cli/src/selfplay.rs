@@ -99,6 +99,7 @@ pub fn run(
     reduced_sims: Option<u32>,
     full_search_fraction: f32,
     cheap_sims: u32,
+    include_forced_selection_value: bool,
     root_noise_epsilon: Option<f32>,
     macro_substeps: u32,
     macro_substep_min_prior: f32,
@@ -251,6 +252,7 @@ pub fn run(
         reduced_simulations: reduced_sims,
         full_search_fraction,
         cheap_simulations: cheap_sims,
+        include_forced_selection_value,
         search: DeterminizedConfig::default(),
     };
     config.search.mode = mode;

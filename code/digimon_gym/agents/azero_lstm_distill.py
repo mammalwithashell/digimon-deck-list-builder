@@ -38,7 +38,7 @@ SCHEMA = "selfplay-shards-v1"
 
 @dataclass
 class SeatSequence:
-    """Chronological non-forced trajectory for one seat in one game."""
+    """Chronological trajectory for one seat in one game."""
 
     game_id: int
     mover: int
@@ -51,6 +51,8 @@ class SeatSequence:
     terminated: np.ndarray     # (T,) bool
     avoid_offsets: np.ndarray = field(default_factory=lambda: np.zeros(1, dtype=np.int64))
     avoid_actions: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.int32))
+    forced_selection: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.uint8))
+    chain_anchor_idx: np.ndarray = field(default_factory=lambda: np.full(0, -1, dtype=np.int64))
 
     @property
     def length(self) -> int:
@@ -71,8 +73,77 @@ class SequenceDataset:
         return sum(s.length for s in self.sequences)
 
 
-def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
-    """Load validated selfplay-shards-v1 directories as chronological per-seat sequences."""
+def _truncate_seat_sequence(seq: SeatSequence, max_steps: int) -> SeatSequence:
+    k = min(seq.length, int(max_steps))
+    if k >= seq.length:
+        return seq
+    end_act = int(seq.offsets[k])
+    end_av = int(seq.avoid_offsets[k]) if len(seq.avoid_offsets) > k else 0
+    anc = seq.chain_anchor_idx[:k].copy() if len(seq.chain_anchor_idx) >= k else np.full(k, -1, dtype=np.int64)
+    anc = np.where((anc >= 0) & (anc < k), anc, -1).astype(np.int64)
+    return SeatSequence(
+        game_id=seq.game_id,
+        mover=seq.mover,
+        obs=seq.obs[:k].copy(),
+        offsets=seq.offsets[: k + 1].copy(),
+        actions=seq.actions[:end_act].copy(),
+        visits=seq.visits[:end_act].copy(),
+        policy_weight=seq.policy_weight[:k].copy(),
+        z=seq.z[:k].copy(),
+        terminated=seq.terminated[:k].copy(),
+        avoid_offsets=seq.avoid_offsets[: k + 1].copy() if len(seq.avoid_offsets) > k else np.zeros(k + 1, dtype=np.int64),
+        avoid_actions=seq.avoid_actions[:end_av].copy() if end_av > 0 else np.zeros(0, dtype=np.int32),
+        forced_selection=seq.forced_selection[:k].copy() if len(seq.forced_selection) >= k else np.zeros(k, dtype=np.uint8),
+        chain_anchor_idx=anc,
+    )
+
+
+def _subsample_extra_sequences(
+    extra_seqs: list[SeatSequence],
+    max_rows: int,
+    seed: int,
+) -> list[SeatSequence]:
+    total = sum(s.length for s in extra_seqs)
+    if total <= max_rows:
+        return list(extra_seqs)
+    rng = np.random.default_rng(seed)
+    by_game: dict[int, list[SeatSequence]] = {}
+    for s in extra_seqs:
+        by_game.setdefault(int(s.game_id), []).append(s)
+    unique_gids = np.asarray(sorted(by_game.keys()), dtype=np.int64)
+    perm_gids = rng.permutation(unique_gids)
+
+    kept: list[SeatSequence] = []
+    kept_rows = 0
+    for gid in perm_gids.tolist():
+        g_seqs = by_game[int(gid)]
+        g_rows = sum(s.length for s in g_seqs)
+        if kept_rows + g_rows <= max_rows:
+            kept.extend(g_seqs)
+            kept_rows += g_rows
+
+    if not kept:
+        for gid in perm_gids.tolist():
+            for s in by_game[int(gid)]:
+                if s.length <= max_rows and kept_rows + s.length <= max_rows:
+                    kept.append(s)
+                    kept_rows += s.length
+            if kept:
+                break
+
+    if not kept and extra_seqs:
+        first_seq = by_game[int(perm_gids[0])][0]
+        kept.append(_truncate_seat_sequence(first_seq, max_rows))
+
+    return kept
+
+
+def _load_sequence_shards_single_pool(
+    dirs: list[Path],
+    *,
+    include_forced_selection: bool = False,
+    enforce_same_info: bool = True,
+) -> SequenceDataset:
     sequences: list[SeatSequence] = []
     manifests: list[dict] = []
     exclusions: list[dict] = []
@@ -141,19 +212,24 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                     f"{manifest_path}: observation_profile {manifest['observation_profile']!r} != {profile!r}"
                 )
 
-        from digimon_gym.agents.belief_contract import require_same_information
+        from digimon_gym.agents.belief_contract import information_contract, require_same_information
 
-        require_same_information(manifests + [manifest])
+        if enforce_same_info:
+            require_same_information(manifests + [manifest])
+        else:
+            information_contract(manifest)
         manifests.append(manifest)
 
-        # Accumulate rows per (rebased_game_id, mover) across shards in manifest order.
+        # Accumulate rows per (rebased_game_id, mover) across shards in manifest order,
+        # tracking (shard_idx, raw_row_idx) -> (gid, mv, local_seq_step) for chain anchor rebasing.
         by_key: dict[
             tuple[int, int],
-            list[tuple[np.ndarray, np.ndarray, np.ndarray, float, float, bool, np.ndarray]],
+            list[tuple[np.ndarray, np.ndarray, np.ndarray, float, float, bool, np.ndarray, int, int, int]],
         ] = {}
+        kept_pos_map: dict[tuple[int, int], tuple[int, int, int]] = {}
         max_game = -1
 
-        for shard in manifest["shards"]:
+        for shard_idx, shard in enumerate(manifest["shards"]):
             s = d / shard["dir"]
             obs = np.load(s / "obs.npy")
             off = np.load(s / "policy_offsets.npy")
@@ -173,7 +249,12 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                 or games.shape != (rows,)
             ):
                 raise ValueError(f"{s}: row bookkeeping inconsistent")
-            if not np.all(np.isin(z, [-1.0, 0.0, 1.0])) or not np.all(np.isin(terminated, [0, 1])):
+            if (
+                not np.isfinite(z).all()
+                or np.any(z < -1.0)
+                or np.any(z > 1.0)
+                or not np.all(np.isin(terminated, [0, 1]))
+            ):
                 raise ValueError(f"{s}: invalid terminal targets")
             if off[0] != 0 or off[-1] != len(act) or len(act) != len(vis) or not np.all(np.diff(off) > 0):
                 raise ValueError(f"{s}: invalid sparse policy offsets")
@@ -193,6 +274,27 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                     raise ValueError(f"{s}: invalid policy_weight array")
             else:
                 weight = np.ones(rows, dtype=np.float32)
+
+            forced_path = s / "forced_selection.npy"
+            if forced_path.exists():
+                forced = np.load(forced_path)
+                if forced.shape != (rows,) or not np.all(np.isin(forced, [0, 1])):
+                    raise ValueError(f"{s}: invalid forced_selection array")
+                forced = forced.astype(np.uint8, copy=False)
+                weight = np.where(forced != 0, 0.0, weight).astype(np.float32, copy=False)
+            else:
+                forced = np.zeros(rows, dtype=np.uint8)
+
+            anchor_path = s / "chain_anchor_idx.npy"
+            if anchor_path.exists():
+                anchor = np.load(anchor_path)
+                if anchor.shape != (rows,) or not np.issubdtype(anchor.dtype, np.integer):
+                    raise ValueError(f"{s}: invalid chain_anchor_idx array")
+                anchor = anchor.astype(np.int64, copy=True)
+                if np.any((anchor != -1) & ((anchor < 0) | (anchor >= rows))):
+                    raise ValueError(f"{s}: chain_anchor_idx out of bounds")
+            else:
+                anchor = np.full(rows, -1, dtype=np.int64)
 
             av_off_path = s / "avoid_offsets.npy"
             av_act_path = s / "avoid_actions.npy"
@@ -222,11 +324,17 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                 if raw_gid in excluded_ids:
                     excluded_rows += 1
                     continue
+                is_forced = int(forced[row_idx]) != 0
+                if is_forced and not include_forced_selection:
+                    continue
                 gid = raw_gid + game_base
                 mv = int(movers[row_idx])
                 s_idx, e_idx = int(off[row_idx]), int(off[row_idx + 1])
                 av_s, av_e = int(av_off[row_idx]), int(av_off[row_idx + 1])
-                by_key.setdefault((gid, mv), []).append(
+                seq_list = by_key.setdefault((gid, mv), [])
+                local_step_idx = len(seq_list)
+                kept_pos_map[(shard_idx, row_idx)] = (gid, mv, local_step_idx)
+                seq_list.append(
                     (
                         obs[row_idx].astype(np.float32, copy=True),
                         act[s_idx:e_idx].astype(np.int32, copy=True),
@@ -235,6 +343,9 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                         float(z[row_idx]),
                         bool(terminated[row_idx]),
                         av_act[av_s:av_e].astype(np.int32, copy=True),
+                        int(forced[row_idx]),
+                        shard_idx,
+                        int(anchor[row_idx]),
                     )
                 )
 
@@ -262,6 +373,14 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
             av_lengths = [len(a) for a in av_parts]
             local_offsets = np.concatenate(([0], np.cumsum(lengths, dtype=np.int64)))
             local_av_offsets = np.concatenate(([0], np.cumsum(av_lengths, dtype=np.int64)))
+            local_anchors = np.full(len(steps), -1, dtype=np.int64)
+            for step_t, st in enumerate(steps):
+                s_i, raw_anc = st[8], st[9]
+                if raw_anc >= 0:
+                    mapped = kept_pos_map.get((s_i, raw_anc))
+                    if mapped is not None and mapped[0] == gid and mapped[1] == mv and mapped[2] >= step_t:
+                        local_anchors[step_t] = int(mapped[2])
+
             sequences.append(
                 SeatSequence(
                     game_id=gid,
@@ -279,6 +398,8 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                         if any(av_lengths)
                         else np.zeros(0, dtype=np.int32)
                     ),
+                    forced_selection=np.asarray([st[7] for st in steps], dtype=np.uint8),
+                    chain_anchor_idx=local_anchors,
                 )
             )
             del steps
@@ -293,6 +414,73 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
         observation_profile=profile,
         manifests=manifests,
         exclusions=exclusions,
+    )
+
+
+def load_sequence_shards(
+    dirs: list[Path],
+    *,
+    include_forced_selection: bool = False,
+    extra_shards: Optional[list[Path]] = None,
+    max_extra_shard_share: float = 0.10,
+    seed: int = 0,
+) -> SequenceDataset:
+    """Load validated selfplay-shards-v1 directories as chronological per-seat sequences."""
+    if not (0.0 < max_extra_shard_share < 1.0):
+        raise ValueError(f"max_extra_shard_share must lie in (0, 1), got {max_extra_shard_share}")
+    primary_ds = _load_sequence_shards_single_pool(
+        list(dirs),
+        include_forced_selection=include_forced_selection,
+        enforce_same_info=True,
+    )
+    extra_list = [Path(p) for p in (extra_shards or [])]
+    if not extra_list:
+        return primary_ds
+    extra_ds = _load_sequence_shards_single_pool(
+        extra_list,
+        include_forced_selection=include_forced_selection,
+        enforce_same_info=False,
+    )
+    if extra_ds.obs_dim != primary_ds.obs_dim or extra_ds.action_dim != primary_ds.action_dim:
+        raise ValueError("extra_shards dimensions disagree with primary shards")
+    if extra_ds.observation_profile != primary_ds.observation_profile:
+        raise ValueError(
+            f"extra_shards observation_profile {extra_ds.observation_profile!r} "
+            f"!= primary {primary_ds.observation_profile!r}"
+        )
+    kept_extra = list(extra_ds.sequences)
+    n_primary = primary_ds.total_rows
+    if n_primary > 0 and extra_ds.total_rows > 0:
+        max_rows = max(1, int(n_primary * max_extra_shard_share / (1.0 - max_extra_shard_share)))
+        if extra_ds.total_rows > max_rows:
+            kept_extra = _subsample_extra_sequences(kept_extra, max_rows=max_rows, seed=seed)
+    game_shift = (max((s.game_id for s in primary_ds.sequences), default=-1) + 1)
+    rebased_extra = [
+        copy.replace(s, game_id=int(s.game_id) + game_shift) if hasattr(copy, "replace")
+        else SeatSequence(
+            game_id=int(s.game_id) + game_shift,
+            mover=s.mover,
+            obs=s.obs,
+            offsets=s.offsets,
+            actions=s.actions,
+            visits=s.visits,
+            policy_weight=s.policy_weight,
+            z=s.z,
+            terminated=s.terminated,
+            avoid_offsets=s.avoid_offsets,
+            avoid_actions=s.avoid_actions,
+            forced_selection=s.forced_selection,
+            chain_anchor_idx=s.chain_anchor_idx,
+        )
+        for s in kept_extra
+    ]
+    return SequenceDataset(
+        sequences=list(primary_ds.sequences) + rebased_extra,
+        obs_dim=primary_ds.obs_dim,
+        action_dim=primary_ds.action_dim,
+        observation_profile=primary_ds.observation_profile,
+        manifests=list(primary_ds.manifests),
+        exclusions=list(primary_ds.exclusions) + list(extra_ds.exclusions),
     )
 
 
@@ -490,6 +678,33 @@ def _evaluate_sequences(
     }
 
 
+def _consistency_loss_sequences(
+    values: torch.Tensor,
+    seqs: list[SeatSequence],
+) -> torch.Tensor:
+    """Continuation-consistent critic loss across local PendingSelection chain anchors within each SeatSequence."""
+    mid_t: list[int] = []
+    anc_t: list[int] = []
+    b_idx: list[int] = []
+    for b, seq in enumerate(seqs):
+        if len(seq.chain_anchor_idx) == 0:
+            continue
+        valid = np.flatnonzero((seq.chain_anchor_idx >= 0) & (seq.chain_anchor_idx < seq.length))
+        for t in valid.tolist():
+            mid_t.append(int(t))
+            anc_t.append(int(seq.chain_anchor_idx[t]))
+            b_idx.append(b)
+    if not mid_t:
+        return values.sum() * 0.0
+    dev = values.device
+    mt = torch.as_tensor(mid_t, dtype=torch.long, device=dev)
+    at = torch.as_tensor(anc_t, dtype=torch.long, device=dev)
+    bt = torch.as_tensor(b_idx, dtype=torch.long, device=dev)
+    v_mid = values[mt, bt]
+    v_anc = values[at, bt].detach()
+    return torch.mean((v_mid - v_anc) ** 2)
+
+
 def _write_lstm_meta_sidecar(
     out_zip: Path,
     contract: dict,
@@ -499,6 +714,7 @@ def _write_lstm_meta_sidecar(
     features_dim: int,
     embedding_dim: int,
     information: dict,
+    skip_forced_steps: bool = True,
 ) -> Path:
     from digimon_engine import REGISTRY_CAPACITY
     from digimon_gym.agents.pilot_training import current_action_space_structure
@@ -513,7 +729,7 @@ def _write_lstm_meta_sidecar(
         "lstm_hidden_size": int(lstm_hidden_size),
         "net_arch": list(net_arch),
         "value_semantics": "terminal_outcome",
-        "skip_forced_steps": True,
+        "skip_forced_steps": bool(skip_forced_steps),
         "information": information,
     }
     meta_path = out_zip.with_suffix(".meta.json")
@@ -535,12 +751,16 @@ def distill_lstm(
     seq_batch_size: int = 16,
     lr: float = 3e-4,
     value_coef: float = 1.0,
+    consistency_coef: float = 0.25,
     max_grad_norm: float = 1.0,
     holdout_fraction: float = 0.15,
     weight_decay: float = 0.0,
     value_label_smoothing: float = 0.0,
     avoid_margin_coef: Optional[float] = None,
     avoid_margin: float = 1.0,
+    include_forced_selection: bool = False,
+    extra_shards: Optional[list[Path]] = None,
+    max_extra_shard_share: float = 0.10,
     device: str = "cpu",
     seed: int = 0,
     export_onnx: Optional[Path] = None,
@@ -555,9 +775,74 @@ def distill_lstm(
     )
     from sb3_contrib import MaskablePPO
 
+    if consistency_coef < 0.0:
+        raise ValueError(f"consistency_coef must be >= 0.0, got {consistency_coef}")
+    if not (0.0 < max_extra_shard_share < 1.0):
+        raise ValueError(f"max_extra_shard_share must lie in (0, 1), got {max_extra_shard_share}")
+
     torch.manual_seed(seed)
     np.random.seed(seed)
-    ds = load_sequence_shards(shard_dirs)
+    primary_ds = _load_sequence_shards_single_pool(
+        list(shard_dirs),
+        include_forced_selection=include_forced_selection,
+        enforce_same_info=True,
+    )
+    extra_list = [Path(p) for p in (extra_shards or [])]
+    extra_rows_loaded = 0
+    extra_rows_used = 0
+    if extra_list:
+        raw_extra_ds = _load_sequence_shards_single_pool(
+            extra_list,
+            include_forced_selection=include_forced_selection,
+            enforce_same_info=False,
+        )
+        if raw_extra_ds.obs_dim != primary_ds.obs_dim or raw_extra_ds.action_dim != primary_ds.action_dim:
+            raise ValueError("extra_shards dimensions disagree with primary shards")
+        if raw_extra_ds.observation_profile != primary_ds.observation_profile:
+            raise ValueError(
+                f"extra_shards observation_profile {raw_extra_ds.observation_profile!r} "
+                f"!= primary {primary_ds.observation_profile!r}"
+            )
+        extra_rows_loaded = raw_extra_ds.total_rows
+        kept_extra = list(raw_extra_ds.sequences)
+        if primary_ds.total_rows > 0 and extra_rows_loaded > 0:
+            max_rows = max(
+                1,
+                int(primary_ds.total_rows * max_extra_shard_share / (1.0 - max_extra_shard_share)),
+            )
+            if extra_rows_loaded > max_rows:
+                kept_extra = _subsample_extra_sequences(kept_extra, max_rows=max_rows, seed=seed)
+        extra_rows_used = sum(s.length for s in kept_extra)
+        game_shift = max((s.game_id for s in primary_ds.sequences), default=-1) + 1
+        rebased_extra = [
+            SeatSequence(
+                game_id=int(s.game_id) + game_shift,
+                mover=s.mover,
+                obs=s.obs,
+                offsets=s.offsets,
+                actions=s.actions,
+                visits=s.visits,
+                policy_weight=s.policy_weight,
+                z=s.z,
+                terminated=s.terminated,
+                avoid_offsets=s.avoid_offsets,
+                avoid_actions=s.avoid_actions,
+                forced_selection=s.forced_selection,
+                chain_anchor_idx=s.chain_anchor_idx,
+            )
+            for s in kept_extra
+        ]
+        ds = SequenceDataset(
+            sequences=list(primary_ds.sequences) + rebased_extra,
+            obs_dim=primary_ds.obs_dim,
+            action_dim=primary_ds.action_dim,
+            observation_profile=primary_ds.observation_profile,
+            manifests=list(primary_ds.manifests),
+            exclusions=list(primary_ds.exclusions) + list(raw_extra_ds.exclusions),
+        )
+    else:
+        ds = primary_ds
+
     if not ds.sequences:
         raise ValueError("No trajectory sequences found in shards")
 
@@ -686,7 +971,7 @@ def distill_lstm(
         policy.set_training_mode(True)
         order = rng.permutation(len(fit_seqs))
         # Sort within coarse buckets or shuffle directly; shuffling preserves unbiased gradients.
-        pol_sum = val_sum = av_sum = 0.0
+        pol_sum = val_sum = av_sum = cc_sum = 0.0
         batches = 0
         for start in range(0, len(order), seq_batch_size):
             batch = [fit_seqs[int(i)] for i in order[start : start + seq_batch_size]]
@@ -711,6 +996,13 @@ def distill_lstm(
                 else values.sum() * 0.0
             )
             loss = policy_loss + value_coef * value_loss
+
+            if consistency_coef > 0.0:
+                consistency_loss = _consistency_loss_sequences(values, batch)
+                loss = loss + float(consistency_coef) * consistency_loss
+            else:
+                consistency_loss = values.sum() * 0.0
+
             if eff_avoid_coef > 0.0:
                 avoid_loss = _avoid_margin_loss_sequences(logits, pi_t, batch, avoid_margin)
                 loss = loss + eff_avoid_coef * avoid_loss
@@ -726,12 +1018,14 @@ def distill_lstm(
             pol_sum += float(policy_loss.detach().item())
             val_sum += float(value_loss.detach().item())
             av_sum += float(avoid_loss.detach().item())
+            cc_sum += float(consistency_loss.detach().item())
             batches += 1
 
         epoch_stats: dict = {
             "epoch": epoch,
             "policy_loss": pol_sum / max(batches, 1),
             "value_loss": val_sum / max(batches, 1),
+            "consistency_loss": cc_sum / max(batches, 1),
         }
         if eff_avoid_coef > 0.0:
             epoch_stats["avoid_loss"] = av_sum / max(batches, 1)
@@ -749,7 +1043,8 @@ def distill_lstm(
         history.append(epoch_stats)
         print(
             f"  [lstm_distill] epoch {epoch}: policy_loss={epoch_stats['policy_loss']:.4f} "
-            f"value_loss={epoch_stats['value_loss']:.4f}"
+            f"value_loss={epoch_stats['value_loss']:.4f} "
+            f"consistency_loss={epoch_stats['consistency_loss']:.4f}"
             + (f" avoid_loss={epoch_stats['avoid_loss']:.4f}" if "avoid_loss" in epoch_stats else "")
             + (
                 f" | heldout loss={epoch_stats['heldout']['loss']:.4f} "
@@ -773,11 +1068,12 @@ def distill_lstm(
         }
         print(f"  [lstm_distill] restored best held-out epoch {best['epoch']} of {epochs}", flush=True)
 
+    skip_forced = not bool(include_forced_selection)
     policy.set_training_mode(False)
     model.digimon_contract = contract
     model.digimon_value_semantics = "terminal_outcome"
     model.digimon_information = information
-    model.digimon_skip_forced_steps = True
+    model.digimon_skip_forced_steps = skip_forced
 
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -793,6 +1089,7 @@ def distill_lstm(
         features_dim=actual_features,
         embedding_dim=actual_embed,
         information=information,
+        skip_forced_steps=skip_forced,
     )
 
     if export_onnx is not None:
@@ -819,6 +1116,10 @@ def distill_lstm(
         "fit_sequences": len(fit_seqs),
         "heldout_sequences": len(heldout_seqs),
         "total_rows": ds.total_rows,
+        "extra_rows_loaded": int(extra_rows_loaded),
+        "extra_rows_used": int(extra_rows_used),
+        "include_forced_selection": bool(include_forced_selection),
+        "consistency_coef": float(consistency_coef),
         "excluded_games": sum(len(q["games"]) for q in ds.exclusions),
         "weight_decay": float(weight_decay),
         "value_label_smoothing": float(value_label_smoothing),
@@ -834,6 +1135,19 @@ def distill_lstm(
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     p.add_argument("--shards", type=Path, nargs="+", required=True)
+    p.add_argument(
+        "--extra-shards",
+        type=Path,
+        nargs="*",
+        default=[],
+        help="auxiliary puzzle/curriculum shard directories (capped by --max-extra-shard-share)",
+    )
+    p.add_argument(
+        "--max-extra-shard-share",
+        type=float,
+        default=0.10,
+        help="maximum row share in (0, 1) permitted for --extra-shards relative to total rows",
+    )
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--init-from", type=Path, default=None)
     p.add_argument("--init-extractor-from", type=Path, default=None)
@@ -845,6 +1159,18 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seq-batch-size", type=int, default=16)
     p.add_argument("--lr", type=float, default=3e-4)
     p.add_argument("--value-coef", type=float, default=1.0)
+    p.add_argument(
+        "--consistency-coef",
+        type=float,
+        default=0.25,
+        help="continuation-consistent critic loss coefficient on PendingSelection chains (0.0 disables)",
+    )
+    p.add_argument(
+        "--include-forced-selection",
+        action="store_true",
+        default=False,
+        help="include forced_selection == 1 steps in SeatSequences instead of filtering them out",
+    )
     p.add_argument("--max-grad-norm", type=float, default=1.0)
     p.add_argument("--holdout-fraction", type=float, default=0.15)
     p.add_argument("--weight-decay", type=float, default=0.0)
@@ -876,12 +1202,16 @@ def main(argv: list[str] | None = None) -> int:
         seq_batch_size=args.seq_batch_size,
         lr=args.lr,
         value_coef=args.value_coef,
+        consistency_coef=args.consistency_coef,
         max_grad_norm=args.max_grad_norm,
         holdout_fraction=args.holdout_fraction,
         weight_decay=args.weight_decay,
         value_label_smoothing=args.value_label_smoothing,
         avoid_margin_coef=args.avoid_margin_coef,
         avoid_margin=args.avoid_margin,
+        include_forced_selection=args.include_forced_selection,
+        extra_shards=list(args.extra_shards),
+        max_extra_shard_share=args.max_extra_shard_share,
         device=args.device,
         seed=args.seed,
         export_onnx=args.export_onnx,
