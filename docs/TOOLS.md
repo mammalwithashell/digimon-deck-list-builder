@@ -913,7 +913,30 @@ Old pilots still work — their saved model checkpoint contains the `nn.Embeddin
 
 ---
 
-## 9. Archive
+## 9. Tactical Puzzle Lab, Dual-MCP & Warm-Start Shards
+
+**Scripts & Modules:** `code/tools/emit_puzzle_shards.py`, `code/tools/puzzle_lab/` (`mine-replays`, `synthesize-archetype`, `compose-boss-matrix`), `code/digimon-engine-mcp/`, `code/digimon-training-mcp/`
+
+Full operator guide and `.mcp.json` configuration: [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
+
+```bash
+# Emit slot/hand-permuted selfplay-shards-v1 (+ contrastive avoid edges) from Studio puzzles
+python code/tools/emit_puzzle_shards.py \
+  --inputs qa/puzzles qa/search-exams/ex13-imperialdramon-dna-paildramon-jamming-lethal.json \
+  --out runs/puzzle_shards/ex13_drills \
+  --permutations-per-puzzle 32
+
+# Sweep a parameterized Boss-Board template across Challenger archetypes & security/memory knobs
+PYTHONPATH=code python -m tools.puzzle_lab compose-boss-matrix \
+  --boss-template ex12-erlangmon-invitation \
+  --archetypes "Imperialdramon (UG),Examon" \
+  --security-counts 1,2 --memories 2,4 \
+  --provider ollama
+```
+
+---
+
+## 10. Archive
 
 **Directory:** `code/tools/archive/`
 

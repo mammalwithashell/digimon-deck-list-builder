@@ -47,11 +47,20 @@ Once v1 ships and dependencies are installed, add the following to `.mcp.json` a
 | `run_recordings`    | Inventory recordings (with crash / draw / all filter)                      |
 | `run_checkpoints`   | Inventory `step_*.zip` model checkpoints                                   |
 | `run_deck_pool`     | Read the `deck_pool_snapshot.json` for a generalist run                    |
+| `run_per_game_evals`| Filter per-game telemetry rows across evaluation windows                   |
+| `run_anchored_evals`| Read seat-balanced anchored evaluation results for a run                   |
+| `champion_standings`| Read current champion registry standings                                   |
+| `run_elo_ladder`    | Read Elo ladder ratings for a run                                          |
+| `run_exploitability`| Read exploitability audit metrics for a run                                |
+| `card_embedding_neighbors` | *(Optional `[whitebox]`)* Inspect `nn.Embedding` L2 norms & top-k cosine neighbors in a `.zip` checkpoint |
+| `position_saliency` | *(Optional `[whitebox]`)* Compute PyTorch `grad * obs` attribution mapped onto tensor layout sections & card slots |
+| `plasticity_probe`  | *(Optional `[whitebox]`)* Run in-memory trial gradient steps on a puzzle to verify learnability vs. tensor blindness |
+| `export_checkpoint_onnx` | *(Optional `[whitebox]`)* Export any `.zip` checkpoint into a content-addressed `.onnx` cache for `digimon-engine-mcp` |
 
-All read-only. No start/stop/checkpoint controls. To inspect a specific recording's per-step engine state, pass `run_recordings`' returned `path` to `digimon-engine-mcp`'s `load_recording`.
+All tools are strictly read-only over `runs/` and `models/` (white-box probes load `.zip` bytes in memory on CPU, lazy-import PyTorch so base installs only need `mcp` + `tensorboard`, and write `.onnx` exports only to a scratch cache directory).
 
 ## See also
 
-- [docs/TRAINING_MCP.md](../../docs/TRAINING_MCP.md) — user-facing reference (forthcoming)
-- [docs/DEBUG_MCP.md](../../docs/DEBUG_MCP.md) — the engine MCP
+- [docs/PUZZLE_LAB_AND_MCP.md](../../docs/PUZZLE_LAB_AND_MCP.md) — full ModelPilot + LLM Puzzle Lab & Dual-MCP operator guide
+- [docs/DEBUG_MCP.md](../../docs/DEBUG_MCP.md) — the Rust engine MCP (`digimon-engine-mcp`)
 - [openspec/changes/add-training-status-mcp/](../../openspec/changes/add-training-status-mcp/) — design / spec / tasks

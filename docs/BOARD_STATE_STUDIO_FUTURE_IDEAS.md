@@ -58,9 +58,59 @@ Future idea:
 
 ## 6. Supervised Imitation Training & Curriculum Scheduling Pipelines
 
-In the MVP, `studio-puzzle-v1` files store recorded `target` / `avoid` lines and wire up an RL `PuzzleResetWrapper` for episode resets from staged boards.
+`studio-puzzle-v1` files store recorded `target` / `avoid` lines, optional `refutation_triggers`, and wire up `PuzzleResetWrapper` (with `permute_staged_puzzle` slot/hand shuffling and `AdaptivePuzzleScheduler` EMA solve-rate weighting in `code/digimon_gym/agents/studio_puzzles.py`) plus `code/tools/emit_puzzle_shards.py` (emitting `selfplay-shards-v1` + contrastive `avoid` hinge edges for `azero_trainer.py` and `azero_lstm_distill.py`). See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
 
-Future ideas:
-- **Behavior-cloning / auxiliary policy-loss trainer**: Dedicated training script/wrapper that converts recorded `target` (positive) and `avoid` (negative/margin) lines from `qa/puzzles/` into supervised policy/value fine-tuning batches mixed into PPO/AlphaZero updates.
-- **Adaptive curriculum scheduler**: Track per-puzzle solve rates during RL training and dynamically up-weight unsolved puzzles while retiring mastered ones.
+Remaining UI/ops idea:
 - **CI / Nightly puzzle regression dashboard**: Aggregate pass rates across all `qa/puzzles/` and `qa/search-exams/` in the training monitor dashboard.
+
+---
+
+## 7. Closed-Loop "Matchup Blind-Spot -> Puzzle -> Warm-Start" Daemon
+
+Connect anchored/league evaluation, replay mining, white-box gating, and shard warm-starting into an automated between-generation daemon:
+- After an `anchored_eval` or Specialist League generation finishes, automatically select the **bottom-K worst-performing matchups** and run `puzzle_lab mine-replays` on their highest non-RNG value drops and policy-vs-MCTS disagreements.
+- Synthesize 10–20 engine-verified `studio-puzzle-v1` drills targeting those exact matchup blind spots.
+- Gate every candidate drill with `digimon-training-mcp`'s `plasticity_probe`:
+  - **Learnable drills** (`learnable: true`) automatically emit permuted shards mixed at `5–10%` share into the next generation's replay buffer.
+  - **Unlearnable drills** (`observation_blindness`) quarantine automatically into a tensor/engine gap report rather than wasting RL timesteps.
+
+---
+
+## 8. Guided "Play-In Compiler" (Staged Puzzles -> `closed-list` Beliefs, Warm LSTMs & DCGO Exams)
+
+Mid-game staged boards (`setup.staged`) are fast to compose, but start with zeroed LSTM `(h, c)` state, cannot reconstruct Turn-1 `KnowledgeLedger` history for `closed-list` determinized search (`docs/FAIR_BELIEF_TRAINING.md`), and cannot export directly to Turn-1 DCGO YAML exams (§5 above):
+- Build a **Guided Play-In Compiler** (`compile_staged_to_replay`) that takes a composed `studio-puzzle-v1` board, stacks legal opening hands + `deck_top` orders for both seats so required pieces draw naturally over Turns 1–3, and runs a lightweight Rust beam search (or fast LLM driver) playing **100% legal Turn-1 actions** that arrive at the target staged board.
+- **Triple payoff**: realistic pre-warmed LSTM hidden states, full `closed-list` `KnowledgeLedger` compatibility, and symbolic export to `qa/dcgo-exams/` YAML.
+
+---
+
+## 9. Imperfect-Information & "Hand-Trap Discipline" Belief Puzzles
+
+Extend `studio-puzzle-v1` and `search_exam` beyond deterministic or fixed-hand interrupts to test **probabilistic opponent-hand reading** (`<Blast Digivolve>` Aces, security traps, unseen `[All Turns]` hand options):
+- Define **Belief Puzzles** where Seat 2's public trash, breeding, and battle area telegraph a specific archetype while Seat 2's hand remains unpinned (`closed-list` regime conditioned on `WeightedDeckPrior`).
+- Grade `closed-list` PIMC / IS-MCTS across $W$ sampled worlds (`e.g., W = 32`) to measure whether the model down-weights reckless swings into high-probability Ace windows or baits `[Once Per Turn]` / `<Counter>` timing appropriately compared to an omniscient `open-list` baseline.
+
+---
+
+## 10. "Continuation-Consistent" Critic Loss (Global Fix for Mid-Prompt Value Cliffs)
+
+Multi-step single-card effects (`<Training>`, `<Delay>`, DNA material selection, multi-target prompts) often suffer intermediate value-head cliffs (e.g., `-0.76` mid-Training in `ex13-examon-training-before-wingdramon.json`) before the effect finishes resolving, starving MCTS visits before search reaches the post-resolution payoff:
+- Use `score_line` traces across `qa/puzzles/` and self-play trajectories to identify single-mover committed resolution chains (`PendingSelection` sub-steps belonging to one initiated effect).
+- Add an auxiliary **temporal-consistency critic loss** in `azero_trainer.py` / `azero_lstm_distill.py` penalizing $|V(s_{\text{pre-commit}}) - V(s_{\text{mid-selection}})|$ along committed resolution chains (alongside MCTS `macro_substeps` refinements), teaching the value head globally not to panic mid-prompt.
+
+---
+
+## 11. GRPO / LoRA Distillation into a Local 8B "Digimon Tactician" (RTX 4070)
+
+Because `verify_puzzle` and `digimon-engine` provide an **exact, non-gameable ground-truth reward** (board legality, `target` win/goal satisfaction against adversary `[All Turns]` interrupts, and `avoid` refutation), Digimon puzzle authoring and tactical play are ideal for **Reinforcement Learning with Verifiable Rewards (GRPO)**:
+- Distill engine-verified reasoning traces + `compose-boss-matrix` solves into an Apache-2.0 open-weight 8B/14B model (`Qwen3-8B` / `Qwen3-14B`) via QLoRA + GRPO on RunPod.
+- Export quantized `Q4_K_M` weights to run locally via `Ollama` / `llama.cpp` on a single 12 GB RTX 4070—providing fast, zero-API-cost local Digimon card-interaction reasoning and puzzle synthesis.
+
+---
+
+## 12. Automated Observation-Tensor Completeness & Card-Fidelity Fuzzing
+
+Combine `digimon-engine-mcp` (`inspect_stack`, `events`) and `digimon-training-mcp` (`plasticity_probe`) to audit newly admitted card sets automatically before launching large training runs:
+- **Card-Fidelity Audit**: Prompt an LLM with printed `effect_text` / `inherited_text` from `data/cards.json` to stage minimal boundary cases and compare emitted `GameEvent`s against Comprehensive Rules, routing discrepancies to `qa/archetype-qa/engine-gaps.md`.
+- **Observation-Tensor Completeness Fuzzing**: Construct pairs of legally distinct game states (e.g., `[Once Per Turn]` spent vs. unspent, active vs. expired `CannotUnsuspend`, face-down vs. face-up digivolution sources) where optimal actions differ, and assert `obs_a != obs_b` + `plasticity_probe.learnable == True`—automatically catching unencoded state features for future observation-profile revisions.
+
