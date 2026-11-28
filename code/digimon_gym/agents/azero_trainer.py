@@ -73,6 +73,8 @@ class ShardDataset:
     policy_weight: np.ndarray
     manifests: list[dict] = field(default_factory=list)
     exclusions: list[dict] = field(default_factory=list)
+    avoid_offsets: np.ndarray = field(default_factory=lambda: np.zeros(1, dtype=np.int64))
+    avoid_actions: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.int32))
     # Own the temporary backing file for as long as the dataset is alive.
     _observation_storage: object | None = field(default=None, repr=False)
 
@@ -88,6 +90,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
     """
     off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], []
     weight_parts = []
+    av_off_parts, av_act_parts = [], []
     observation_storage = tempfile.TemporaryFile(prefix="digimon-replay-")
     observation_rows = 0
     manifests: list[dict] = []
@@ -168,6 +171,26 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                     raise ValueError(f"{s}: invalid policy_weight array")
             else:
                 weight = np.ones(rows, np.float32)
+
+            av_off_path = s / "avoid_offsets.npy"
+            av_act_path = s / "avoid_actions.npy"
+            if av_off_path.exists() or av_act_path.exists():
+                if not (av_off_path.exists() and av_act_path.exists()):
+                    raise ValueError(f"{s}: avoid_offsets.npy and avoid_actions.npy must be provided together")
+                av_off = np.load(av_off_path)
+                av_act = np.load(av_act_path)
+                if (
+                    av_off.shape != (rows + 1,)
+                    or av_off[0] != 0
+                    or av_off[-1] != len(av_act)
+                    or np.any(np.diff(av_off) < 0)
+                    or (len(av_act) > 0 and (np.any(av_act < 0) or np.any(av_act >= manifest["action_dim"])))
+                ):
+                    raise ValueError(f"{s}: invalid sparse avoid targets")
+            else:
+                av_off = np.zeros(rows + 1, dtype=np.int64)
+                av_act = np.zeros(0, dtype=np.int32)
+
             # Preserve rebasing across chunks even when their highest game ID
             # is excluded. Filtering is local to this manifest, before rebasing.
             max_game = max(max_game, int(games.max(initial=-1)))
@@ -181,11 +204,19 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                 weight = weight[keep]
                 act, vis = act[edges], vis[edges]
                 off = np.concatenate(([0], np.cumsum(lengths[keep], dtype=np.int64)))
+
+                av_lengths = np.diff(av_off)
+                av_edges = np.repeat(keep, av_lengths)
+                av_act = av_act[av_edges]
+                av_off = np.concatenate(([0], np.cumsum(av_lengths[keep], dtype=np.int64)))
+
             # Rebase this shard's offsets onto the pooled nnz axis. The
             # first shard keeps its leading 0; later shards drop theirs
             # (it duplicates the previous shard's final offset).
             base = sum(a.shape[0] for a in act_parts)
             off_parts.append((off if not off_parts else off[1:]).astype(np.int64) + base)
+            av_base = sum(a.shape[0] for a in av_act_parts)
+            av_off_parts.append((av_off if not av_off_parts else av_off[1:]).astype(np.int64) + av_base)
             # Stream each validated shard once. Retaining every dense array and
             # then concatenating it doubles peak RAM for multi-generation replay.
             # The mapping preserves row order/float bits and supports the same
@@ -198,6 +229,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             end_parts.append(terminated.astype(bool))
             game_parts.append(games.astype(np.int64) + game_base)
             weight_parts.append(weight.astype(np.float32, copy=False))
+            av_act_parts.append(av_act.astype(np.int32, copy=False))
         if excluded_ids - seen_ids:
             raise ValueError(f"{quarantine_path}: exclusion refers to absent game IDs {sorted(excluded_ids - seen_ids)}")
         if quarantine is not None:
@@ -225,8 +257,60 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
         policy_weight=np.concatenate(weight_parts),
         manifests=manifests,
         exclusions=exclusions,
+        avoid_offsets=np.concatenate(av_off_parts),
+        avoid_actions=np.concatenate(av_act_parts).astype(np.int32),
         _observation_storage=observation_storage,
     )
+
+
+def _avoid_margin_loss(
+    logits,
+    pi_np: np.ndarray,
+    ds: ShardDataset,
+    idx: np.ndarray,
+    avoid_margin: float,
+):
+    """Contrastive hinge loss `relu(margin - (logit_target - logit_avoid))` on rows with avoid actions."""
+    import torch
+
+    if len(ds.avoid_actions) == 0:
+        return logits.sum() * 0.0
+
+    row_indices: list[int] = []
+    target_actions: list[int] = []
+    avoid_acts_flat: list[int] = []
+    edge_weights: list[float] = []
+    for b_row, ds_i in enumerate(idx):
+        av_s, av_e = int(ds.avoid_offsets[ds_i]), int(ds.avoid_offsets[ds_i + 1])
+        if av_e <= av_s:
+            continue
+        w = float(ds.policy_weight[ds_i])
+        if w <= 0.0:
+            continue
+        tgt_a = int(np.argmax(pi_np[b_row]))
+        av_slice = [int(a) for a in ds.avoid_actions[av_s:av_e] if int(a) != tgt_a]
+        if not av_slice:
+            continue
+        per_edge_w = w / len(av_slice)
+        for av_a in av_slice:
+            row_indices.append(b_row)
+            target_actions.append(tgt_a)
+            avoid_acts_flat.append(av_a)
+            edge_weights.append(per_edge_w)
+
+    if not row_indices:
+        return logits.sum() * 0.0
+
+    dev = logits.device
+    r_t = torch.as_tensor(row_indices, dtype=torch.long, device=dev)
+    tgt_t = torch.as_tensor(target_actions, dtype=torch.long, device=dev)
+    av_t = torch.as_tensor(avoid_acts_flat, dtype=torch.long, device=dev)
+    ew_t = torch.as_tensor(edge_weights, dtype=logits.dtype, device=dev)
+    logit_target = logits[r_t, tgt_t]
+    logit_avoid = logits[r_t, av_t]
+    hinge = torch.relu(float(avoid_margin) - (logit_target - logit_avoid))
+    w_sum = ew_t.sum()
+    return (hinge * ew_t).sum() / w_sum if float(w_sum) > 0.0 else logits.sum() * 0.0
 
 
 def _dense_targets(
@@ -355,6 +439,8 @@ def train(
     value_activation_name: str | None = None,
     weight_decay: float = 0.0,
     value_label_smoothing: float = 0.0,
+    avoid_margin_coef: float | None = None,
+    avoid_margin: float = 1.0,
 ) -> dict:
     """Run the AZ update and save the new checkpoint. Returns a summary dict.
 
@@ -376,9 +462,18 @@ def train(
         raise ValueError(f"weight_decay must be >= 0.0, got {weight_decay}")
     if not (0.0 <= value_label_smoothing < 1.0):
         raise ValueError(f"value_label_smoothing must lie in [0, 1), got {value_label_smoothing}")
+    if avoid_margin_coef is not None and avoid_margin_coef < 0.0:
+        raise ValueError(f"avoid_margin_coef must be >= 0.0, got {avoid_margin_coef}")
+    if avoid_margin < 0.0:
+        raise ValueError(f"avoid_margin must be >= 0.0, got {avoid_margin}")
 
     torch.manual_seed(seed)
     ds = load_shards(shard_dirs)
+    eff_avoid_coef = (
+        (0.2 if len(ds.avoid_actions) > 0 else 0.0)
+        if avoid_margin_coef is None
+        else float(avoid_margin_coef)
+    )
     if not ds.terminated.any():
         raise ValueError("No completed-game value targets; refusing to label an untrained critic terminal_outcome")
     model = MaskablePPO.load(str(init_from), device=device)
@@ -438,7 +533,7 @@ def train(
     history: list[dict] = []
     for epoch in range(epochs):
         order = rng.permutation(fit_rows)
-        pol_sum = val_sum = 0.0
+        pol_sum = val_sum = av_sum = 0.0
         batches = 0
         for start in range(0, len(order), batch_size):
             idx = order[start : start + batch_size]
@@ -466,18 +561,26 @@ def train(
             terminal = torch.as_tensor(ds.terminated[idx], device=dev)
             value_loss = torch.nn.functional.mse_loss(values[terminal], z_t[terminal]) if terminal.any() else values.sum() * 0.0
             loss = policy_loss + value_coef * value_loss
+            if eff_avoid_coef > 0.0:
+                avoid_loss = _avoid_margin_loss(logits, pi_np, ds, idx, avoid_margin)
+                loss = loss + eff_avoid_coef * avoid_loss
+            else:
+                avoid_loss = logits.sum() * 0.0
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             pol_sum += float(policy_loss.detach())
             val_sum += float(value_loss.detach())
+            av_sum += float(avoid_loss.detach())
             batches += 1
         epoch_stats = {
             "epoch": epoch,
             "policy_loss": pol_sum / max(batches, 1),
             "value_loss": val_sum / max(batches, 1),
         }
+        if eff_avoid_coef > 0.0:
+            epoch_stats["avoid_loss"] = av_sum / max(batches, 1)
         heldout_stats = score()
         if heldout_stats is not None:
             epoch_stats["heldout"] = heldout_stats
@@ -488,6 +591,7 @@ def train(
         print(
             f"  epoch {epoch}: policy_loss {epoch_stats['policy_loss']:.4f} "
             f"value_loss {epoch_stats['value_loss']:.4f}"
+            + (f" avoid_loss {epoch_stats['avoid_loss']:.4f}" if "avoid_loss" in epoch_stats else "")
             + (f" | held-out value_mse {heldout_stats['value_mse']} vs constant "
                f"{heldout_stats['constant_mse']}, policy_ce {heldout_stats['policy_ce']}"
                if heldout_stats else ""),
@@ -674,6 +778,10 @@ def build_parser() -> argparse.ArgumentParser:
                    help="AdamW weight decay (0.0 uses plain Adam)")
     p.add_argument("--value-label-smoothing", type=float, default=0.0,
                    help="shrink training terminal z targets by (1 - eps); held-out MSE uses raw z")
+    p.add_argument("--avoid-margin-coef", type=float, default=None,
+                   help="contrastive hinge weight on avoid_actions.npy (default: 0.2 when present, else 0.0)")
+    p.add_argument("--avoid-margin", type=float, default=1.0,
+                   help="logit margin for relu(margin - (logit_target - logit_avoid))")
     p.add_argument("--calibrate-value-only", action="store_true",
                    help="refit only the critic (actor bitwise frozen) on a whole-game split, keeping "
                         "the best held-out epoch; ignores --value-coef and --holdout-fraction")
@@ -707,6 +815,8 @@ def main(argv: list[str] | None = None) -> int:
         value_activation_name=args.value_activation,
         weight_decay=args.weight_decay,
         value_label_smoothing=args.value_label_smoothing,
+        avoid_margin_coef=args.avoid_margin_coef,
+        avoid_margin=args.avoid_margin,
     )
     return 0
 

@@ -22,7 +22,7 @@ import hashlib
 import json
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -49,6 +49,8 @@ class SeatSequence:
     policy_weight: np.ndarray  # (T,) f32
     z: np.ndarray              # (T,) f32
     terminated: np.ndarray     # (T,) bool
+    avoid_offsets: np.ndarray = field(default_factory=lambda: np.zeros(1, dtype=np.int64))
+    avoid_actions: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.int32))
 
     @property
     def length(self) -> int:
@@ -145,7 +147,10 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
         manifests.append(manifest)
 
         # Accumulate rows per (rebased_game_id, mover) across shards in manifest order.
-        by_key: dict[tuple[int, int], list[tuple[np.ndarray, np.ndarray, np.ndarray, float, float, bool]]] = {}
+        by_key: dict[
+            tuple[int, int],
+            list[tuple[np.ndarray, np.ndarray, np.ndarray, float, float, bool, np.ndarray]],
+        ] = {}
         max_game = -1
 
         for shard in manifest["shards"]:
@@ -189,6 +194,25 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
             else:
                 weight = np.ones(rows, dtype=np.float32)
 
+            av_off_path = s / "avoid_offsets.npy"
+            av_act_path = s / "avoid_actions.npy"
+            if av_off_path.exists() or av_act_path.exists():
+                if not (av_off_path.exists() and av_act_path.exists()):
+                    raise ValueError(f"{s}: avoid_offsets.npy and avoid_actions.npy must be provided together")
+                av_off = np.load(av_off_path)
+                av_act = np.load(av_act_path)
+                if (
+                    av_off.shape != (rows + 1,)
+                    or av_off[0] != 0
+                    or av_off[-1] != len(av_act)
+                    or np.any(np.diff(av_off) < 0)
+                    or (len(av_act) > 0 and (np.any(av_act < 0) or np.any(av_act >= action_dim)))
+                ):
+                    raise ValueError(f"{s}: invalid sparse avoid targets")
+            else:
+                av_off = np.zeros(rows + 1, dtype=np.int64)
+                av_act = np.zeros(0, dtype=np.int32)
+
             max_game = max(max_game, int(games.max(initial=-1)))
             if excluded_ids:
                 seen_ids.update(int(g) for g in np.unique(games))
@@ -201,6 +225,7 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                 gid = raw_gid + game_base
                 mv = int(movers[row_idx])
                 s_idx, e_idx = int(off[row_idx]), int(off[row_idx + 1])
+                av_s, av_e = int(av_off[row_idx]), int(av_off[row_idx + 1])
                 by_key.setdefault((gid, mv), []).append(
                     (
                         obs[row_idx].astype(np.float32, copy=True),
@@ -209,6 +234,7 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                         float(weight[row_idx]),
                         float(z[row_idx]),
                         bool(terminated[row_idx]),
+                        av_act[av_s:av_e].astype(np.int32, copy=True),
                     )
                 )
 
@@ -231,8 +257,11 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
             obs_arr = np.stack([st[0] for st in steps], axis=0)
             act_parts = [st[1] for st in steps]
             vis_parts = [st[2] for st in steps]
+            av_parts = [st[6] for st in steps]
             lengths = [len(a) for a in act_parts]
+            av_lengths = [len(a) for a in av_parts]
             local_offsets = np.concatenate(([0], np.cumsum(lengths, dtype=np.int64)))
+            local_av_offsets = np.concatenate(([0], np.cumsum(av_lengths, dtype=np.int64)))
             sequences.append(
                 SeatSequence(
                     game_id=gid,
@@ -244,6 +273,12 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                     policy_weight=np.asarray([st[3] for st in steps], dtype=np.float32),
                     z=np.asarray([st[4] for st in steps], dtype=np.float32),
                     terminated=np.asarray([st[5] for st in steps], dtype=bool),
+                    avoid_offsets=local_av_offsets,
+                    avoid_actions=(
+                        np.concatenate(av_parts).astype(np.int32)
+                        if any(av_lengths)
+                        else np.zeros(0, dtype=np.int32)
+                    ),
                 )
             )
             del steps
@@ -259,6 +294,60 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
         manifests=manifests,
         exclusions=exclusions,
     )
+
+
+def _avoid_margin_loss_sequences(
+    logits: torch.Tensor,
+    pi_t: torch.Tensor,
+    seqs: list[SeatSequence],
+    avoid_margin: float,
+) -> torch.Tensor:
+    """Contrastive hinge loss `relu(margin - (logit_target - logit_avoid))` on sequence steps with avoid actions."""
+    t_indices: list[int] = []
+    b_indices: list[int] = []
+    tgt_actions: list[int] = []
+    av_actions: list[int] = []
+    edge_weights: list[float] = []
+
+    pi_cpu = pi_t.detach().cpu().numpy()
+    for b, seq in enumerate(seqs):
+        if len(seq.avoid_actions) == 0:
+            continue
+        for t in range(seq.length):
+            if t + 1 >= len(seq.avoid_offsets):
+                break
+            av_s, av_e = int(seq.avoid_offsets[t]), int(seq.avoid_offsets[t + 1])
+            if av_e <= av_s:
+                continue
+            w = float(seq.policy_weight[t])
+            if w <= 0.0:
+                continue
+            tgt_a = int(np.argmax(pi_cpu[t, b]))
+            av_slice = [int(a) for a in seq.avoid_actions[av_s:av_e] if int(a) != tgt_a]
+            if not av_slice:
+                continue
+            per_w = w / len(av_slice)
+            for av_a in av_slice:
+                t_indices.append(t)
+                b_indices.append(b)
+                tgt_actions.append(tgt_a)
+                av_actions.append(av_a)
+                edge_weights.append(per_w)
+
+    if not t_indices:
+        return logits.sum() * 0.0
+
+    dev = logits.device
+    t_t = torch.as_tensor(t_indices, dtype=torch.long, device=dev)
+    b_t = torch.as_tensor(b_indices, dtype=torch.long, device=dev)
+    tgt_t = torch.as_tensor(tgt_actions, dtype=torch.long, device=dev)
+    av_t = torch.as_tensor(av_actions, dtype=torch.long, device=dev)
+    ew_t = torch.as_tensor(edge_weights, dtype=logits.dtype, device=dev)
+    logit_target = logits[t_t, b_t, tgt_t]
+    logit_avoid = logits[t_t, b_t, av_t]
+    hinge = torch.relu(float(avoid_margin) - (logit_target - logit_avoid))
+    w_sum = ew_t.sum()
+    return (hinge * ew_t).sum() / w_sum if float(w_sum) > 0.0 else logits.sum() * 0.0
 
 
 def _collate_batch(
@@ -450,6 +539,8 @@ def distill_lstm(
     holdout_fraction: float = 0.15,
     weight_decay: float = 0.0,
     value_label_smoothing: float = 0.0,
+    avoid_margin_coef: Optional[float] = None,
+    avoid_margin: float = 1.0,
     device: str = "cpu",
     seed: int = 0,
     export_onnx: Optional[Path] = None,
@@ -576,6 +667,12 @@ def distill_lstm(
         raise ValueError(f"weight_decay must be >= 0.0, got {weight_decay}")
     if not (0.0 <= value_label_smoothing < 1.0):
         raise ValueError(f"value_label_smoothing must lie in [0, 1), got {value_label_smoothing}")
+    if avoid_margin_coef is not None and avoid_margin_coef < 0.0:
+        raise ValueError(f"avoid_margin_coef must be >= 0.0, got {avoid_margin_coef}")
+    if avoid_margin < 0.0:
+        raise ValueError(f"avoid_margin must be >= 0.0, got {avoid_margin}")
+    has_avoid = any(len(s.avoid_actions) > 0 for s in ds.sequences)
+    eff_avoid_coef = (0.2 if has_avoid else 0.0) if avoid_margin_coef is None else float(avoid_margin_coef)
     if weight_decay > 0.0:
         optimizer = torch.optim.AdamW(policy.parameters(), lr=lr, weight_decay=weight_decay)
     else:
@@ -589,7 +686,7 @@ def distill_lstm(
         policy.set_training_mode(True)
         order = rng.permutation(len(fit_seqs))
         # Sort within coarse buckets or shuffle directly; shuffling preserves unbiased gradients.
-        pol_sum = val_sum = 0.0
+        pol_sum = val_sum = av_sum = 0.0
         batches = 0
         for start in range(0, len(order), seq_batch_size):
             batch = [fit_seqs[int(i)] for i in order[start : start + seq_batch_size]]
@@ -614,6 +711,11 @@ def distill_lstm(
                 else values.sum() * 0.0
             )
             loss = policy_loss + value_coef * value_loss
+            if eff_avoid_coef > 0.0:
+                avoid_loss = _avoid_margin_loss_sequences(logits, pi_t, batch, avoid_margin)
+                loss = loss + eff_avoid_coef * avoid_loss
+            else:
+                avoid_loss = logits.sum() * 0.0
 
             optimizer.zero_grad()
             loss.backward()
@@ -623,6 +725,7 @@ def distill_lstm(
 
             pol_sum += float(policy_loss.detach().item())
             val_sum += float(value_loss.detach().item())
+            av_sum += float(avoid_loss.detach().item())
             batches += 1
 
         epoch_stats: dict = {
@@ -630,6 +733,8 @@ def distill_lstm(
             "policy_loss": pol_sum / max(batches, 1),
             "value_loss": val_sum / max(batches, 1),
         }
+        if eff_avoid_coef > 0.0:
+            epoch_stats["avoid_loss"] = av_sum / max(batches, 1)
         if heldout_seqs:
             heldout_stats = _evaluate_sequences(
                 policy, heldout_seqs, ds.action_dim, seq_batch_size, constant_z, value_coef
@@ -645,6 +750,7 @@ def distill_lstm(
         print(
             f"  [lstm_distill] epoch {epoch}: policy_loss={epoch_stats['policy_loss']:.4f} "
             f"value_loss={epoch_stats['value_loss']:.4f}"
+            + (f" avoid_loss={epoch_stats['avoid_loss']:.4f}" if "avoid_loss" in epoch_stats else "")
             + (
                 f" | heldout loss={epoch_stats['heldout']['loss']:.4f} "
                 f"(ce={epoch_stats['heldout']['policy_ce']:.4f}, "
@@ -743,6 +849,10 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--holdout-fraction", type=float, default=0.15)
     p.add_argument("--weight-decay", type=float, default=0.0)
     p.add_argument("--value-label-smoothing", type=float, default=0.0)
+    p.add_argument("--avoid-margin-coef", type=float, default=None,
+                   help="contrastive hinge weight on avoid_actions.npy (default: 0.2 when present, else 0.0)")
+    p.add_argument("--avoid-margin", type=float, default=1.0,
+                   help="logit margin for relu(margin - (logit_target - logit_avoid))")
     p.add_argument("--device", default="cpu")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--export-onnx", type=Path, default=None)
@@ -770,6 +880,8 @@ def main(argv: list[str] | None = None) -> int:
         holdout_fraction=args.holdout_fraction,
         weight_decay=args.weight_decay,
         value_label_smoothing=args.value_label_smoothing,
+        avoid_margin_coef=args.avoid_margin_coef,
+        avoid_margin=args.avoid_margin,
         device=args.device,
         seed=args.seed,
         export_onnx=args.export_onnx,

@@ -45,6 +45,10 @@ def test_tool_definitions_has_expected_entries():
         "champion_standings",
         "run_elo_ladder",
         "run_exploitability",
+        "card_embedding_neighbors",
+        "position_saliency",
+        "plasticity_probe",
+        "export_checkpoint_onnx",
     ])
 
 
@@ -91,6 +95,14 @@ async def test_each_tool_handler_returns_structured_dict(ctx: ServerContext):
         "champion_standings": {},
         "run_elo_ladder": {"name": "missing"},
         "run_exploitability": {"name": "missing"},
+        "card_embedding_neighbors": {"checkpoint_path": "missing.zip", "card_ids": ["BT16-025"]},
+        "position_saliency": {"checkpoint_path": "missing.zip", "puzzle_path": "missing.json"},
+        "plasticity_probe": {
+            "checkpoint_path": "missing.zip",
+            "puzzle_path": "missing.json",
+            "target_action_id": 62,
+        },
+        "export_checkpoint_onnx": {"checkpoint_path": "missing.zip"},
     }
     # run_per_game_evals returns ok=True with empty rows for missing runs
     # (consistent with the spec's "empty list, not error" scenario).

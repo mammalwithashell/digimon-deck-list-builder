@@ -145,7 +145,21 @@ fn tools_list_includes_lifecycle_state_action() {
     ] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
-    assert_eq!(names.len(), 33);
+    // Phase 1A & 1B: ONNX models, valuation, stack inspection, and puzzle lab
+    for n in &[
+        "load_model",
+        "unload_model",
+        "list_models",
+        "inspect_position",
+        "score_line",
+        "inspect_stack",
+        "load_puzzle",
+        "save_puzzle",
+        "verify_puzzle",
+    ] {
+        assert!(names.contains(n), "tools/list missing {}", n);
+    }
+    assert_eq!(names.len(), 42);
 }
 
 /// Build a small ST1 deck of 5 ST1-01 + 45 ST1-03 as a Vec<Value>.

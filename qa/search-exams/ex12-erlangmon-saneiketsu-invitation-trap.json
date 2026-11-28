@@ -1,0 +1,371 @@
+{
+  "schema": "search-exam-v1",
+  "id": "ex12-erlangmon-saneiketsu-invitation-trap",
+  "title": "Examon vs Saiyu Warriors: Suspend Kotenken Token with BT20 Groundramon Instead of Triggering EX12 Erlangmon + Saneiketsu Invitation Trap",
+  "why": "Examon (Seat 1) enters Turn 4 Main at 5 memory after promoting EX13-018 Coredramon from breeding, holding BT1-094 Oblivion Bird and BT20-042 Groundramon against 0 opponent security. Saiyu Warriors (Seat 2) controls suspended EX12-034 Erlangmon (with Lv.5 [SW] EX12-015 Gokuumon in its digivolution cards), unsuspended 9000 DP [Kotenken] Blocker Token, armed EX12-071 Saneiketsu Invitation <Delay>, and EX12-019 Nezhamon (Lv.6 [Saneiketsu] Blocker) in hand. Deleting [Kotenken] Token with BT1-094 Oblivion Bird springs EX12-034's WhenWouldLeave interrupt to free-play EX12-015 Gokuumon from sources, which triggers EX12-034's [All Turns] bottom-deck bounce of Coredramon AND EX12-071's <Delay> free digivolve into unsuspended EX12-019 Nezhamon. Digivolving BT20-042 Groundramon onto Coredramon for 3 memory suspends [Kotenken] Token without removing it from the battle area and attacks for immediate lethal.",
+  "source": {
+    "kind": "composed",
+    "matchup": "Examon vs Saiyu Warriors",
+    "turn_count": 4
+  },
+  "model": {
+    "name": "generalist-benchmark",
+    "sha256": ""
+  },
+  "setup": {
+    "decks": [
+      [
+        "EX13-005",
+        "EX13-005",
+        "EX13-005",
+        "EX13-005",
+        "EX13-008",
+        "EX13-008",
+        "EX13-008",
+        "EX13-008",
+        "EX13-018",
+        "EX13-018",
+        "EX13-018",
+        "EX13-018",
+        "BT20-042",
+        "BT20-042",
+        "BT20-042",
+        "BT20-042",
+        "EX13-021",
+        "EX13-021",
+        "EX13-021",
+        "EX13-021",
+        "EX13-024",
+        "EX13-024",
+        "EX13-024",
+        "EX13-039",
+        "EX13-039",
+        "EX13-039",
+        "EX13-039",
+        "EX13-041",
+        "EX13-041",
+        "EX13-041",
+        "EX13-044",
+        "EX13-044",
+        "EX13-045",
+        "EX13-045",
+        "EX13-045",
+        "BT20-007",
+        "BT20-007",
+        "BT20-093",
+        "BT20-093",
+        "BT20-093",
+        "BT21-046",
+        "BT21-046",
+        "BT21-046",
+        "BT21-046",
+        "BT23-047",
+        "BT23-047",
+        "BT23-047",
+        "EX3-037",
+        "EX3-037",
+        "LM-051",
+        "LM-051",
+        "LM-051",
+        "LM-051",
+        "BT1-094"
+      ],
+      [
+        "EX12-002",
+        "EX12-002",
+        "EX12-002",
+        "EX12-002",
+        "EX12-006",
+        "EX12-006",
+        "EX12-006",
+        "EX12-006",
+        "EX12-012",
+        "EX12-012",
+        "EX12-012",
+        "EX12-015",
+        "EX12-015",
+        "EX12-019",
+        "EX12-019",
+        "EX12-022",
+        "EX12-022",
+        "EX12-022",
+        "EX12-022",
+        "EX12-025",
+        "EX12-025",
+        "EX12-029",
+        "EX12-029",
+        "EX12-034",
+        "EX12-034",
+        "EX12-034",
+        "EX12-039",
+        "EX12-039",
+        "EX12-039",
+        "EX12-043",
+        "EX12-043",
+        "EX12-043",
+        "EX12-043",
+        "EX12-045",
+        "EX12-045",
+        "EX12-045",
+        "EX12-045",
+        "EX12-048",
+        "EX12-056",
+        "EX12-056",
+        "EX12-056",
+        "EX12-057",
+        "EX12-057",
+        "EX12-057",
+        "EX12-071",
+        "EX12-071",
+        "EX12-071",
+        "EX12-071",
+        "EX12-074",
+        "EX12-074",
+        "EX12-075",
+        "EX12-075",
+        "EX12-076",
+        "BT26-104"
+      ]
+    ],
+    "game_seed": 0,
+    "actions": [
+      400,
+      59,
+      0,
+      0,
+      0,
+      62,
+      62,
+      61
+    ],
+    "staged": {
+      "state": {
+        "memory": 6,
+        "phase": "Main",
+        "turn": 3,
+        "first_player": 2
+      },
+      "zones": {
+        "1": {
+          "breeding": [
+            "EX13-005",
+            "EX13-008",
+            "EX13-018"
+          ],
+          "deck_top": [
+            "BT20-042",
+            "EX13-008",
+            "BT20-007",
+            "BT20-007",
+            "BT20-042",
+            "BT20-042",
+            "BT20-042",
+            "BT20-093",
+            "BT20-093",
+            "BT20-093",
+            "BT21-046",
+            "BT21-046",
+            "BT21-046",
+            "BT21-046",
+            "BT23-047",
+            "BT23-047",
+            "BT23-047",
+            "EX13-008",
+            "EX13-008",
+            "EX13-018",
+            "EX13-018",
+            "EX13-018",
+            "EX13-021",
+            "EX13-021",
+            "EX13-021",
+            "EX13-021",
+            "EX13-024",
+            "EX13-024",
+            "EX13-024",
+            "EX13-039",
+            "EX13-039",
+            "EX13-039",
+            "EX13-041",
+            "EX13-041",
+            "EX13-041",
+            "EX13-044",
+            "EX13-044",
+            "EX13-045",
+            "EX13-045",
+            "EX13-045",
+            "EX3-037",
+            "EX3-037",
+            "LM-051",
+            "LM-051"
+          ],
+          "egg_deck": [
+            "EX13-005",
+            "EX13-005",
+            "EX13-005"
+          ],
+          "field": [],
+          "hand": [
+            "BT1-094"
+          ],
+          "security": [
+            "LM-051",
+            "LM-051",
+            "EX13-039"
+          ],
+          "trash": []
+        },
+        "2": {
+          "breeding": null,
+          "deck_top": [
+            "EX12-022",
+            "EX12-019",
+            "EX12-057",
+            "EX12-006",
+            "EX12-006",
+            "EX12-006",
+            "EX12-012",
+            "EX12-012",
+            "EX12-015",
+            "EX12-019",
+            "EX12-022",
+            "EX12-022",
+            "EX12-022",
+            "EX12-025",
+            "EX12-025",
+            "EX12-029",
+            "EX12-029",
+            "EX12-034",
+            "EX12-034",
+            "EX12-039",
+            "EX12-039",
+            "EX12-043",
+            "EX12-043",
+            "EX12-043",
+            "EX12-043",
+            "EX12-045",
+            "EX12-045",
+            "EX12-045",
+            "EX12-045",
+            "EX12-048",
+            "EX12-056",
+            "EX12-056",
+            "EX12-056",
+            "EX12-057",
+            "EX12-057",
+            "EX12-071",
+            "EX12-071",
+            "EX12-071",
+            "EX12-074",
+            "EX12-074",
+            "EX12-075",
+            "EX12-075",
+            "EX12-076"
+          ],
+          "egg_deck": [
+            "EX12-002",
+            "EX12-002",
+            "EX12-002"
+          ],
+          "field": [
+            {
+              "is_suspended": true,
+              "stack": [
+                "EX12-002",
+                "EX12-015"
+              ],
+              "turn_played": 2
+            }
+          ],
+          "hand": [
+            "EX12-034",
+            "EX12-071",
+            "EX12-006",
+            "BT26-104"
+          ],
+          "security": [],
+          "trash": [
+            "EX12-012",
+            "EX12-039"
+          ]
+        }
+      }
+    }
+  },
+  "search": {
+    "viewer": 0,
+    "regime": "open-list",
+    "simulations": 320,
+    "worlds": 4,
+    "batch": 4,
+    "search_seed": 2026
+  },
+  "expectations": [
+    {
+      "kind": "chosen",
+      "plan": [
+        415
+      ],
+      "label": "Digivolve BT20-042 Groundramon onto Coredramon (root action 415) to suspend [Kotenken] Token cleanly"
+    },
+    {
+      "kind": "visit_share_at_least",
+      "plan": [
+        415
+      ],
+      "share": 0.5,
+      "label": "BT20-042 Groundramon non-removal bypass receives at least 50% of root search visits"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        0
+      ],
+      "label": "Do NOT play BT1-094 Oblivion Bird \u2014 deleting [Kotenken] Token springs EX12-034 + EX12-071 trap"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        114
+      ],
+      "label": "Do NOT swing Coredramon directly into unsuspended 9000 DP [Kotenken] Blocker Token"
+    }
+  ],
+  "lines": {
+    "groundramon_suspend_kotenken_lethal": [
+      415,
+      30,
+      101,
+      101,
+      114,
+      62
+    ],
+    "avoid_oblivion_bird_triggers_erlangmon_invitation_trap": [
+      0,
+      101
+    ],
+    "avoid_direct_coredramon_into_kotenken_blocker": [
+      114,
+      62
+    ]
+  },
+  "refutation_triggers": [
+    {
+      "source_card_id": "EX12-034",
+      "phase": null,
+      "accept_optional": true,
+      "prefer_label_contains": "Sources"
+    },
+    {
+      "source_card_id": "EX12-071",
+      "phase": null,
+      "accept_optional": true,
+      "prefer_label_contains": null
+    },
+    {
+      "source_card_id": null,
+      "phase": "BlockTiming",
+      "accept_optional": true,
+      "prefer_label_contains": null
+    }
+  ]
+}
