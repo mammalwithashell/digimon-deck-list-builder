@@ -15,6 +15,8 @@ use serde::Serialize;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub const DEVELOPMENT_VERSION: &str = "development_v1";
+pub const DEVELOPMENT_V2_VERSION: &str = "development_v2";
+pub const DEVELOPMENT_HYBRID_V2_VERSION: &str = "development_hybrid_v2";
 
 /// A deliberately narrow static description. Only literal, unconditional own
 /// draws are fully known. Conditional/search/payment bodies stay unknown; this
@@ -86,16 +88,38 @@ pub struct DevelopmentPolicy {
 
 impl DevelopmentPolicy {
     pub fn decide(&mut self, game: &Game, mask: &[f32]) -> Result<DevelopmentDecision, String> {
-        self.decide_with_tamer_priority(game, mask, false)
+        self.decide_with_mode(game, mask, false, false, false)
     }
 
     /// Separately versioned strict-priority baseline. Preserve scoring and
     /// repeated-state safeguards; do not rewrite the original teacher.
     pub fn decide_tamer_first(&mut self, game: &Game, mask: &[f32]) -> Result<DevelopmentDecision, String> {
-        self.decide_with_tamer_priority(game, mask, true)
+        self.decide_with_mode(game, mask, true, false, false)
     }
 
-    fn decide_with_tamer_priority(&mut self, game: &Game, mask: &[f32], tamer_first: bool) -> Result<DevelopmentDecision, String> {
+    /// Version 2 development teacher: preserves `development_v1` scoring while
+    /// penalizing empty-board Lv.5/Lv.6 memory dumps (`>= 6` opponent memory).
+    pub fn decide_v2(&mut self, game: &Game, mask: &[f32]) -> Result<DevelopmentDecision, String> {
+        self.decide_with_mode(game, mask, false, true, false)
+    }
+
+    /// Version 2 Hybrid-pilot teacher:
+    /// - Prioritizes legal Tamer digivolutions,
+    /// - Actively rewards playing Tamers from hand (and Hybrid support Options)
+    ///   so Hybrid pilots actually establish Tamers instead of passing at 0 memory,
+    /// - Enforces the empty-board Lv.5/Lv.6 `>= 6` memory-dump guard.
+    pub fn decide_hybrid_v2(&mut self, game: &Game, mask: &[f32]) -> Result<DevelopmentDecision, String> {
+        self.decide_with_mode(game, mask, true, true, true)
+    }
+
+    fn decide_with_mode(
+        &mut self,
+        game: &Game,
+        mask: &[f32],
+        tamer_first: bool,
+        guard_empty_board_dump: bool,
+        hybrid_tamer_setup: bool,
+    ) -> Result<DevelopmentDecision, String> {
         let tamer_routes = if tamer_first {super::tamer_first::legal_tamer_digivolutions(game,mask)} else {Vec::new()};
         let player = current_decision_player(game);
         let turn = game.turn_count as u32;
@@ -111,9 +135,46 @@ impl DevelopmentPolicy {
         if valid.is_empty() {
             return Err("development_v1: no non-concede legal action".into());
         }
+        let own_tamers = if hybrid_tamer_setup {
+            super::tamer_first::own_tamer_count(game, player)
+        } else {
+            0
+        };
         let mut candidates: Vec<_> = valid
             .iter()
-            .map(|a| score_action(game, player, *a))
+            .map(|a| {
+                let mut c = score_action(game, player, *a);
+                if guard_empty_board_dump
+                    && super::tamer_first::is_empty_board_high_level_dump(game, player, *a)
+                {
+                    c.score -= 25.0;
+                    c.route = "empty_board_high_level_dump".into();
+                }
+                if hybrid_tamer_setup
+                    && game.current_phase == GamePhase::Main
+                    && game.pending_selection.is_none()
+                    && (PLAY_HAND_START..PLAY_HAND_END).contains(a)
+                {
+                    let hand_idx = (*a - PLAY_HAND_START) as usize;
+                    if let Some(card) = game.player(player).hand.get(hand_idx) {
+                        let data = &game.card_data[card.data_index];
+                        if data.card_kind == CardKind::Tamer {
+                            let base_bonus = if own_tamers < 2 { 11.0 } else { 7.0 };
+                            let inh_bonus = if !data.inherited_text.trim().is_empty() {
+                                1.5
+                            } else {
+                                0.0
+                            };
+                            c.score += base_bonus + inh_bonus;
+                            c.route = "hybrid_tamer_play".into();
+                        } else if super::tamer_first::is_hybrid_support_option(data) {
+                            c.score += 9.0;
+                            c.route = "hybrid_option_play".into();
+                        }
+                    }
+                }
+                c
+            })
             .collect();
         if let Some(selection) = &game.pending_selection {
             if selection.prompt == crate::selection::DNA_SECOND_MATERIAL_PROMPT {
@@ -202,8 +263,14 @@ impl DevelopmentPolicy {
                 self.dna_first = Some((selection.source_card, action as usize));
             }
         }
+        let version = match (tamer_first, guard_empty_board_dump, hybrid_tamer_setup) {
+            (true, true, true) => DEVELOPMENT_HYBRID_V2_VERSION,
+            (false, true, false) => DEVELOPMENT_V2_VERSION,
+            (true, false, false) => "development_tamer_first_v1",
+            _ => DEVELOPMENT_VERSION,
+        };
         Ok(DevelopmentDecision {
-            version: if tamer_first {"development_tamer_first_v1"} else {DEVELOPMENT_VERSION},
+            version,
             player,
             action,
             candidates,

@@ -81,11 +81,23 @@ def _apply_zone(game: RustDebugGame, pid: int, zone: DebugZoneSpec) -> None:
         # in reverse: last list element goes in first (bottom).
         for cid in reversed(zone.deck_top):
             game.inject_card(pid, cid, "deck_top")
+    if zone.egg_deck is not None:
+        game.clear_zone(pid, "egg_deck")
+        for cid in reversed(zone.egg_deck):
+            game.inject_card(pid, cid, "egg_deck_top")
     if zone.security is not None:
         game.clear_zone(pid, "security")
         # security[0] = top = end of vec; inject bottom-first.
-        for cid in reversed(zone.security):
-            game.inject_card(pid, cid, "security_top")
+        for item in reversed(zone.security):
+            if isinstance(item, dict):
+                cid = str(item.get("card_id", ""))
+                zname = "security_top_face_up" if item.get("face_up") else "security_top"
+                game.inject_card(pid, cid, zname)
+            else:
+                game.inject_card(pid, str(item), "security_top")
+    if zone.face_up_security:
+        for top_idx in zone.face_up_security:
+            game.set_security_face_up(pid, int(top_idx), True)
     if zone.trash is not None:
         game.clear_zone(pid, "trash")
         for cid in zone.trash:
@@ -93,7 +105,10 @@ def _apply_zone(game: RustDebugGame, pid: int, zone: DebugZoneSpec) -> None:
     if zone.field is not None:
         game.clear_zone(pid, "battle_area")
         for fs in zone.field:
-            game.place_on_field(pid, fs.stack, fs.is_suspended, fs.turn_played)
+            if fs.linked_cards:
+                game.place_on_field(pid, fs.stack, fs.is_suspended, fs.turn_played, fs.linked_cards)
+            else:
+                game.place_on_field(pid, fs.stack, fs.is_suspended, fs.turn_played)
     if zone.breeding is not None:
         game.clear_zone(pid, "breeding")
         if zone.breeding:

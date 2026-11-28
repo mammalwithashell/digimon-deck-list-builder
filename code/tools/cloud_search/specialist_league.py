@@ -52,9 +52,14 @@ SCHEMA = 'specialist-league-v1'
 ROSTER_ALIASES = {'Beelstarmon (3M)': 'Three Musketeers', 'Jupitermon': 'TS Jupitermon',
                   'Medusamon/Styracomon': 'Medusamon'}
 MODEL_SUFFIXES = ('.zip', '.onnx', '.onnx.meta.json')
+LSTM_EXTRA_SUFFIXES = ('.value.onnx', '.value.onnx.meta.json')
 CLI_BIN = '/usr/local/bin/digimon-engine-cli'
 CARDS_JSON = '/app/data/cards.json'
 GATE_SCHEMA = 'specialist-gate-v1'
+
+
+def model_suffixes(trainer_kind: str = 'mlp') -> tuple[str, ...]:
+    return MODEL_SUFFIXES + (LSTM_EXTRA_SUFFIXES if trainer_kind == 'lstm' else ())
 
 
 def archetype(name: str) -> str:
@@ -109,6 +114,23 @@ def specialist_dir(root: Path, arch: str) -> Path:
     return root / 'specialists' / slug(arch) / 'generation'
 
 
+def _extra_anchor_entries(root: Path, plan: dict, arch: str, weight_key: str) -> list[dict]:
+    from tools.search_opponents import checkpoint_entry
+    inputs = root / 'inputs'
+    out = []
+    for anchor in plan.get('extra_anchors') or ():
+        decks = [a for a in anchor['archetypes'] if a != arch]
+        weight = float(anchor.get(weight_key, 0.0))
+        if not decks or weight <= 0.0:
+            continue
+        entry = dict(
+            checkpoint_entry(anchor['id'], inputs / anchor['file'], weight=weight, mode=anchor.get('mode')),
+            decks=decks,
+        )
+        out.append(entry)
+    return out
+
+
 def opponent_pool(root: Path, plan: dict, arch: str, gen: int) -> dict:
     from tools.search_opponents import SCHEMA as POOL_SCHEMA, checkpoint_entry
     inputs = root / 'inputs'
@@ -116,13 +138,23 @@ def opponent_pool(root: Path, plan: dict, arch: str, gen: int) -> dict:
     cp8 = dict(checkpoint_entry('cp8', inputs / 'opponents/cp8.onnx'), decks=anchors)
     if gen == 1:
         mix = plan['mixture']['gen1']
-        cp8['weight'] = 1.0
+        extra = _extra_anchor_entries(root, plan, arch, 'gen1_weight')
+        if not extra:
+            cp8['weight'] = 1.0
+            return dict(schema=POOL_SCHEMA, selfplay_probability=mix['base_selfplay'],
+                        learner_decks=[arch], opponents=[cp8])
+        cp8_w = float(mix['cp8'])
+        entries = [dict(cp8, weight=cp8_w), *extra]
+        total_w = sum(e['weight'] for e in entries)
+        for e in entries:
+            e['weight'] = e['weight'] / total_w
         return dict(schema=POOL_SCHEMA, selfplay_probability=mix['base_selfplay'],
-                    learner_decks=[arch], opponents=[cp8])
+                    learner_decks=[arch], opponents=entries)
     mix = plan['mixture']['later']
     others = [a for a in plan['archetypes'] if a != arch]
+    extra = _extra_anchor_entries(root, plan, arch, 'later_weight')
     if plan.get('gate'):
-        return gated_pool(root, arch, gen, cp8, others, mix)
+        return gated_pool(root, arch, gen, cp8, others, mix, extra_anchors=extra)
     entries = []
     for other in others:
         model = specialist_dir(root, other) / f'gen{gen - 1}' / 'model.onnx'
@@ -130,6 +162,11 @@ def opponent_pool(root: Path, plan: dict, arch: str, gen: int) -> dict:
                                              weight=mix['champions'] / len(others)), decks=[other]))
     entries.append(checkpoint_entry('base', inputs / 'opponents/base.onnx', weight=mix['base']))
     entries.append(dict(cp8, weight=mix['cp8']))
+    entries.extend(extra)
+    if extra:
+        total_w = sum(e['weight'] for e in entries)
+        for e in entries:
+            e['weight'] = e['weight'] / total_w
     return dict(schema=POOL_SCHEMA, selfplay_probability=0.0, learner_decks=[arch], opponents=entries)
 
 
@@ -148,7 +185,8 @@ def champion(root: Path, arch: str, gen: int) -> dict:
     return json.loads(record.read_text())['champion_after']
 
 
-def gated_pool(root: Path, arch: str, gen: int, cp8: dict, others: list, mix: dict) -> dict:
+def gated_pool(root: Path, arch: str, gen: int, cp8: dict, others: list, mix: dict,
+               extra_anchors: list[dict] | None = None) -> dict:
     """Generation ``gen`` trains against every other archetype's champion
     after ``gen - 1``. A champion that is still the base model merges into
     the base anchor (one model, one entry, decks of every other archetype);
@@ -172,6 +210,8 @@ def gated_pool(root: Path, arch: str, gen: int, cp8: dict, others: list, mix: di
     else:
         entries.append(checkpoint_entry('base', root / 'inputs/opponents/base.onnx', weight=base_weight))
     entries.append(dict(cp8, weight=mix['cp8']))
+    if extra_anchors:
+        entries.extend(extra_anchors)
     rest = sum(e['weight'] for e in entries)
     for entry in entries:  # weights are relative within the historical share
         entry['weight'] = entry['weight'] / rest
@@ -251,13 +291,18 @@ def run_gate(root: Path, plan: dict, arch: str, gen: int, index: int) -> dict:
             atomic_json(pool_path, pool)
         out = folder / role
         print(f'--- gate gen {gen} {arch}: {role} gen{model["generation"]} ({g["games"]} games) ---', flush=True)
+        budget_flags = ['--root-noise-epsilon', '0']
+        if g.get('macro_substeps', 0):
+            budget_flags += ['--macro-substeps', str(g['macro_substeps'])]
+            if g.get('macro_substep_min_prior', 0.0):
+                budget_flags += ['--macro-substep-min-prior', str(g['macro_substep_min_prior'])]
         dirs = run_selfplay_stage(
-            cli_bin=CLI_BIN, gen_dir=out, model_onnx=model['onnx'], uniform=False,
+            cli_bin=plan.get('cli_bin', CLI_BIN), gen_dir=out, model_onnx=model['onnx'], uniform=False,
             decks=root / 'inputs/decks.json', games=g['games'], procs=plan['workers'], sims=g['sims'],
             worlds=g['worlds'], mode='pimc', seed_base=seed, temperature_decisions=0, decision_cap=1200,
-            shard_rows=4096, cards_json=Path(CARDS_JSON), pool='implemented', eval_batch_size=4,
-            chunk_games=4, resume=out.exists(), worker_timeout_seconds=7200,
-            budget_flags=['--root-noise-epsilon', '0'], opponent_pool=pool_path)
+            shard_rows=4096, cards_json=Path(plan.get('cards_json', CARDS_JSON)), pool='implemented',
+            eval_batch_size=4, chunk_games=4, resume=out.exists(), worker_timeout_seconds=7200,
+            budget_flags=budget_flags, opponent_pool=pool_path)
         games[role] = gate_scores(dirs)
     result = decide(games['challenger'], games['champion'], g['games'])
     new, old = dict(new, sha256=sha256(Path(new['onnx']))), dict(old, sha256=sha256(Path(old['onnx'])))
@@ -288,26 +333,45 @@ def warm_start_from_champion(root: Path, arch: str, gen: int):
 def generation_command(root: Path, plan: dict, arch: str, pool: Path, index: int) -> list[str]:
     t = plan['training']
     base = root / 'inputs/base'
-    return [sys.executable, '-m', 'tools.run_selfplay_generation',
-            '--run-dir', str(specialist_dir(root, arch)),
-            '--seed-model', f'{base}.zip', '--seed-model-onnx', f'{base}.onnx',
-            '--decks', str(root / 'inputs/decks.json'), '--opponent-pool', str(pool),
-            '--cli-bin', CLI_BIN, '--cards-json', CARDS_JSON,
-            '--generations', '1', '--games', str(plan['games']), '--procs', str(plan['workers']),
-            '--chunk-games', '4', '--worker-timeout-seconds', '7200', '--sims', '320',
-            '--worlds', '4', '--eval-batch-size', '4', '--decision-cap', '1200',
-            '--fail-on-truncation', '--quarantine-truncation', '--window', str(plan['replay_window']),
-            '--replay-games-per-generation', str(plan['games']),
-            '--epochs', str(t['epochs']), '--batch-size', str(t['batch_size']), '--lr', str(t['lr']),
-            '--value-holdout-fraction', str(t['value_holdout_fraction']),
-            '--value-activation', t['value_activation'], '--train-device', 'cpu',
-            '--seed', str(plan['seed'] + 7919 * index), '--skip-eval']
+    trainer_kind = t.get('trainer_kind', 'mlp')
+    cmd = [sys.executable, '-m', 'tools.run_selfplay_generation',
+           '--run-dir', str(specialist_dir(root, arch)),
+           '--seed-model', f'{base}.zip', '--seed-model-onnx', f'{base}.onnx',
+           '--decks', str(root / 'inputs/decks.json'), '--opponent-pool', str(pool),
+           '--cli-bin', plan.get('cli_bin', CLI_BIN), '--cards-json', plan.get('cards_json', CARDS_JSON),
+           '--generations', '1', '--games', str(plan['games']), '--procs', str(plan['workers']),
+           '--chunk-games', '4', '--worker-timeout-seconds', '7200', '--sims', '320',
+           '--worlds', '4', '--eval-batch-size', '4', '--decision-cap', '1200',
+           '--fail-on-truncation', '--quarantine-truncation', '--window', str(plan['replay_window']),
+           '--replay-games-per-generation', str(plan['games']),
+           '--epochs', str(t['epochs']), '--lr', str(t['lr']),
+           '--value-holdout-fraction', str(t['value_holdout_fraction']),
+           '--train-device', t.get('train_device', 'cpu'),
+           '--seed', str(plan['seed'] + 7919 * index), '--skip-eval']
+    if trainer_kind == 'lstm':
+        cmd += ['--trainer-kind', 'lstm', '--seq-batch-size', str(t.get('seq_batch_size', 16))]
+    else:
+        cmd += ['--batch-size', str(t['batch_size']), '--value-activation', t['value_activation']]
+    if t.get('macro_substeps', 0):
+        cmd += ['--macro-substeps', str(t['macro_substeps'])]
+        if t.get('macro_substep_min_prior', 0.0):
+            cmd += ['--macro-substep-min-prior', str(t['macro_substep_min_prior'])]
+    if t.get('weight_decay', 0.0):
+        cmd += ['--weight-decay', str(t['weight_decay'])]
+    if t.get('value_label_smoothing', 0.0):
+        cmd += ['--value-label-smoothing', str(t['value_label_smoothing'])]
+    return cmd
 
 
 def prepare(args):
     from tools.selfplay_scheduler import atomic_json
     from digimon_gym.agents.belief_contract import bind_prepared_run
-    root, image = args.root, os.environ['DIGIMON_DEPLOYED_IMAGE']
+    root = args.root
+    image = os.environ.get('DIGIMON_DEPLOYED_IMAGE', 'bare-metal')
+    cli_bin = str(getattr(args, 'cli_bin', CLI_BIN))
+    cards_json = str(getattr(args, 'cards_json', CARDS_JSON))
+    trainer_kind = getattr(args, 'trainer_kind', 'mlp')
+    suffixes = model_suffixes(trainer_kind)
     inputs = root / 'inputs'
     decks = json.loads((inputs / 'decks.json').read_text())
     archetypes = sorted({archetype(d['name']) for d in decks})
@@ -316,29 +380,48 @@ def prepare(args):
         raise ValueError('CP8 archetypes must be in the league pool')
     if sha256(inputs / 'opponents/cp8.onnx') != args.cp8_sha256:
         raise ValueError('CP8 export hash differs')
-    for suffix in MODEL_SUFFIXES:
+    for suffix in suffixes:
         if sha256(inputs / f'base{suffix}') != sha256(inputs / f'opponents/base{suffix}'):
             raise ValueError('Frozen base opponent must be the base checkpoint')
+    extra_anchors = []
+    extra_anchors_path = inputs / 'extra_anchors.json'
+    if extra_anchors_path.exists():
+        extra_anchors = json.loads(extra_anchors_path.read_text(encoding='utf-8'))
+        for anchor in extra_anchors:
+            if not set(anchor['archetypes']) <= set(archetypes):
+                raise ValueError(f'Extra anchor {anchor["id"]} names unknown archetype')
+            if not (inputs / anchor['file']).exists():
+                raise FileNotFoundError(inputs / anchor['file'])
     for arch in archetypes:
         run = specialist_dir(root, arch)
         gen0 = run / 'gen0'
         if (run / 'state.json').exists():
             raise FileExistsError(f'{run} already prepared')
         gen0.mkdir(parents=True)
-        for suffix in MODEL_SUFFIXES:
+        for suffix in suffixes:
             shutil.copy2(inputs / f'base{suffix}', gen0 / f'model{suffix}')
         atomic_json(run / 'state.json', dict(next_gen=1, prev=dict(
             model_zip=str(gen0 / 'model.zip'), model_onnx=str(gen0 / 'model.onnx'))))
         bind_prepared_run(run)
+    training = dict(
+        trainer_kind=trainer_kind, epochs=4, lr=0.0001, batch_size=512, seq_batch_size=getattr(args, 'seq_batch_size', 16),
+        value_holdout_fraction=0.2, value_activation='tanh',
+        macro_substeps=getattr(args, 'macro_substeps', 0),
+        macro_substep_min_prior=getattr(args, 'macro_substep_min_prior', 0.0),
+        weight_decay=getattr(args, 'weight_decay', 0.0),
+        value_label_smoothing=getattr(args, 'value_label_smoothing', 0.0),
+        train_device=getattr(args, 'train_device', 'cpu'),
+    )
+    gen1_mix = dict(base_selfplay=0.7 if extra_anchors else 0.8, cp8=0.2)
+    later_mix = dict(champions=0.7, base=0.15, cp8=0.10 if extra_anchors else 0.15)
     plan = dict(schema=SCHEMA, image=image, controller_commit=args.source_commit,
+                cli_bin=cli_bin, cards_json=cards_json,
                 spec='docs/superpowers/plans/2026-11-08-specialist-league.md',
                 base=args.base_label, archetypes=archetypes, cp8_archetypes=cp8_archetypes,
-                generations=args.generations, games=args.games, workers=8, seed=args.seed,
-                replay_window=3,
-                training=dict(epochs=4, lr=0.0001, batch_size=512, value_holdout_fraction=0.2,
-                              value_activation='tanh'),
-                mixture=dict(gen1=dict(base_selfplay=0.8, cp8=0.2),
-                             later=dict(champions=0.7, base=0.15, cp8=0.15)),
+                extra_anchors=extra_anchors,
+                generations=args.generations, games=args.games, workers=getattr(args, 'workers', 8),
+                seed=args.seed, replay_window=3, training=training,
+                mixture=dict(gen1=gen1_mix, later=later_mix),
                 promotion='none: champion = latest generation',
                 files={p.relative_to(root).as_posix(): sha256(p) for p in inputs.rglob('*') if p.is_file()})
     health = root / 'validation/health'
@@ -347,10 +430,10 @@ def prepare(args):
     pool_path.parent.mkdir(parents=True, exist_ok=True)
     atomic_json(pool_path, opponent_pool(root, plan, archetypes[0], 1))
     from tools.run_selfplay_generation import run_selfplay_stage
-    dirs = run_selfplay_stage(cli_bin='/usr/local/bin/digimon-engine-cli', gen_dir=health,
+    dirs = run_selfplay_stage(cli_bin=cli_bin, gen_dir=health,
         model_onnx=str(inputs / 'base.onnx'), uniform=False, decks=inputs / 'decks.json', games=8,
-        procs=4, sims=64, worlds=4, mode='pimc', seed_base=7, temperature_decisions=16,
-        decision_cap=1200, shard_rows=4096, cards_json=Path('/app/data/cards.json'), pool='implemented',
+        procs=min(4, plan['workers']), sims=64, worlds=4, mode='pimc', seed_base=7, temperature_decisions=16,
+        decision_cap=1200, shard_rows=4096, cards_json=Path(cards_json), pool='implemented',
         eval_batch_size=4, scheduling='dynamic', chunk_games=2, opponent_pool=pool_path)
     manifests = [json.loads((d / 'manifest.json').read_text()) for d in dirs]
     names = manifests[0]['deck_names']
@@ -423,7 +506,7 @@ def run(args):
     from tools.selfplay_scheduler import atomic_json, controller_lock
     root = args.root
     plan = json.loads((root / 'league-plan.json').read_text())
-    if os.environ.get('DIGIMON_DEPLOYED_IMAGE') != plan['image']:
+    if os.environ.get('DIGIMON_DEPLOYED_IMAGE', 'bare-metal') != plan['image']:
         raise ValueError('Image differs from the prepared league')
     for name, digest in plan['files'].items():
         if sha256(root / name) != digest:
@@ -481,14 +564,19 @@ def enable_gate(args):
         raise ValueError('Cannot shorten the league')
     if args.games < 4 or args.games % 2:
         raise ValueError('Gate games must be even (paired openings)')
-    image = os.environ['DIGIMON_DEPLOYED_IMAGE']
+    image = os.environ.get('DIGIMON_DEPLOYED_IMAGE', 'bare-metal')
     plan.setdefault('recoveries', []).append(dict(
         kind='enable-promotion-gate', time_unix=time.time(), previous_image=plan['image'], image=image,
         previous_generations=plan['generations'], generations=args.generations,
         previous_promotion=plan['promotion'], controller_commit=args.source_commit, reason=args.reason))
+    gate_cfg = dict(games=args.games, sims=320, worlds=4, temperature_decisions=0, root_noise_epsilon=0.0,
+                    field='base', seed=args.seed, rule='promote iff paired mean difference > 0')
+    if getattr(args, 'macro_substeps', 0):
+        gate_cfg['macro_substeps'] = args.macro_substeps
+        if getattr(args, 'macro_substep_min_prior', 0.0):
+            gate_cfg['macro_substep_min_prior'] = args.macro_substep_min_prior
     plan.update(image=image, generations=args.generations,
-                gate=dict(games=args.games, sims=320, worlds=4, temperature_decisions=0, root_noise_epsilon=0.0,
-                          field='base', seed=args.seed, rule='promote iff paired mean difference > 0'),
+                gate=gate_cfg,
                 promotion='paired gate vs the current champion on the base field (see gate)')
     atomic_json(root / 'league-plan.json', plan)
     print(json.dumps(dict(status='gate-enabled', generations=args.generations, gate=plan['gate'])), flush=True)
@@ -504,7 +592,7 @@ def enable_remote_gates(args):
         raise ValueError('The league has no promotion gate')
     if plan['gate'].get('remote'):
         raise ValueError('Remote gates are already enabled')
-    image = os.environ['DIGIMON_DEPLOYED_IMAGE']
+    image = os.environ.get('DIGIMON_DEPLOYED_IMAGE', 'bare-metal')
     plan.setdefault('recoveries', []).append(dict(
         kind='enable-remote-gates', time_unix=time.time(), previous_image=plan['image'], image=image,
         controller_commit=args.source_commit, reason=args.reason))
@@ -518,8 +606,8 @@ def gate_one(args):
     """Helper side: run one gate the coordinator claimed for this host."""
     root = args.root
     plan = json.loads((root / 'league-plan.json').read_text())
-    if os.environ.get('DIGIMON_DEPLOYED_IMAGE') != plan['image']:
-        raise ValueError('Image differs from the league plan')
+    if os.environ.get('DIGIMON_DEPLOYED_IMAGE', 'bare-metal') != plan['image']:
+        raise ValueError('Image differs from the prepared league')
     if not plan.get('gate', {}).get('remote'):
         raise ValueError('Remote gates are not enabled')
     index = plan['archetypes'].index(args.arch)
@@ -542,7 +630,17 @@ def main():
     p.add_argument('--cp8-sha256', required=True)
     p.add_argument('--generations', type=int, default=4)
     p.add_argument('--games', type=int, default=600)
+    p.add_argument('--workers', type=int, default=8)
     p.add_argument('--seed', type=int, default=90261108)
+    p.add_argument('--trainer-kind', choices=('mlp', 'lstm'), default='mlp')
+    p.add_argument('--seq-batch-size', type=int, default=16)
+    p.add_argument('--macro-substeps', type=int, default=0)
+    p.add_argument('--macro-substep-min-prior', type=float, default=0.0)
+    p.add_argument('--weight-decay', type=float, default=0.0)
+    p.add_argument('--value-label-smoothing', type=float, default=0.0)
+    p.add_argument('--train-device', choices=('cpu', 'cuda'), default='cpu')
+    p.add_argument('--cli-bin', type=str, default=CLI_BIN)
+    p.add_argument('--cards-json', type=str, default=CARDS_JSON)
     r = sub.add_parser('run')
     r.add_argument('--root', type=Path, default=Path('/experiment'))
     e = sub.add_parser('enable-gate')
@@ -551,6 +649,8 @@ def main():
     e.add_argument('--generations', type=int, required=True)
     e.add_argument('--games', type=int, default=120)
     e.add_argument('--seed', type=int, default=61109000)
+    e.add_argument('--macro-substeps', type=int, default=0)
+    e.add_argument('--macro-substep-min-prior', type=float, default=0.0)
     e.add_argument('--reason', required=True)
     m = sub.add_parser('enable-remote-gates')
     m.add_argument('--root', type=Path, default=Path('/experiment'))

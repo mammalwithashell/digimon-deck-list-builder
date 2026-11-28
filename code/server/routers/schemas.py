@@ -123,11 +123,12 @@ class CreateDebugGameRequest(BaseModel):
 
 class DebugFieldStack(BaseModel):
     """One battle-area permanent: a bottom-to-top digivolution stack with
-    suspend state and turn-played value."""
+    suspend state, turn-played value, and optional linked cards."""
 
     stack: list[str]
     is_suspended: bool = False
     turn_played: int = 0
+    linked_cards: list[str] = Field(default_factory=list)
 
 
 class DebugZoneSpec(BaseModel):
@@ -136,7 +137,9 @@ class DebugZoneSpec(BaseModel):
 
     hand: Optional[list[str]] = None
     deck_top: Optional[list[str]] = None  # index 0 = next draw
-    security: Optional[list[str]] = None  # top -> bottom
+    egg_deck: Optional[list[str]] = None  # index 0 = next hatch
+    security: Optional[list[Any]] = None  # top -> bottom (str or {card_id, face_up})
+    face_up_security: Optional[list[int]] = None  # 0-based indices from top
     trash: Optional[list[str]] = None
     field: Optional[list[DebugFieldStack]] = None
     breeding: Optional[list[str]] = None  # bottom -> top
@@ -145,7 +148,7 @@ class DebugZoneSpec(BaseModel):
 class DebugInjectCardRequest(BaseModel):
     player_id: int = Field(ge=1, le=2)
     card_id: str
-    zone: str = "hand"  # hand | deck_top | security_top | trash
+    zone: str = "hand"  # hand | deck_top | egg_deck_top | security_top | security_top_face_up | trash
 
 
 class DebugPlaceOnFieldRequest(BaseModel):
@@ -153,6 +156,7 @@ class DebugPlaceOnFieldRequest(BaseModel):
     stack: list[str]  # bottom-to-top
     is_suspended: bool = False
     turn_played: int = 0
+    linked_cards: list[str] = Field(default_factory=list)
 
 
 class DebugBulkSetupRequest(BaseModel):

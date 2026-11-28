@@ -226,7 +226,8 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                 }
             )
 
-        for (gid, mv), steps in by_key.items():
+        for (gid, mv) in list(by_key.keys()):
+            steps = by_key.pop((gid, mv))
             obs_arr = np.stack([st[0] for st in steps], axis=0)
             act_parts = [st[1] for st in steps]
             vis_parts = [st[2] for st in steps]
@@ -245,6 +246,7 @@ def load_sequence_shards(dirs: list[Path]) -> SequenceDataset:
                     terminated=np.asarray([st[5] for st in steps], dtype=bool),
                 )
             )
+            del steps
         game_base += max_game + 1
 
     if obs_dim is None or action_dim is None or profile is None:
@@ -488,7 +490,15 @@ def distill_lstm(
         raise ValueError("init_from and init_extractor_from are mutually exclusive")
 
     if init_from is not None:
-        model = MaskableRecurrentPPO.load(str(init_from), device=device)
+        model = MaskableRecurrentPPO.load(
+            str(init_from),
+            device=device,
+            custom_objects={
+                "learning_rate": lr,
+                "lr_schedule": lambda _: lr,
+                "clip_range": lambda _: 0.2,
+            },
+        )
         validate_checkpoint(model, ds.observation_profile)
     else:
         model = MaskableRecurrentPPO(

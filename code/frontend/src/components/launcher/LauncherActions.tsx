@@ -7,6 +7,11 @@ import { Window } from '@/design/components/Window';
  * terminal header in dark, a navy Win95 bar in light (add-desktop-menu-shell).
  */
 export function LauncherActions() {
+  const enableStudio =
+    import.meta.env.VITE_ENABLE_STUDIO !== undefined
+      ? import.meta.env.VITE_ENABLE_STUDIO === 'true'
+      : import.meta.env.DEV;
+
   return (
     <>
       <div className="launcher-actions">
@@ -27,6 +32,7 @@ export function LauncherActions() {
         <Link to="/patch-notes"><span>// Updates</span><b>Patch notes</b></Link>
         <Link to="/deckbuilder"><span>// Library</span><b>My decks</b></Link>
         <Link to="/deckbuilder/new"><span>// Build</span><b>Deck builder</b></Link>
+        {enableStudio && <Link to="/studio"><span>// Author</span><b>Board Studio</b></Link>}
       </div>
     </>
   );

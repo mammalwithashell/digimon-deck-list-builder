@@ -109,14 +109,52 @@ impl Game {
                 self.stage_inject_card(pid, id, "deck_top")?;
             }
         }
+        // `egg_deck` is ordered top->bottom (index 0 = next hatch = vec tail),
+        // so inject bottom-first: iterate reversed.
+        if let Some(eggs) = z.get("egg_deck").and_then(Value::as_array) {
+            self.stage_clear_zone(pid, "egg_deck")?;
+            for c in eggs.iter().rev() {
+                let id = c
+                    .as_str()
+                    .ok_or("apply_scenario: non-string egg_deck card")?;
+                self.stage_inject_card(pid, id, "egg_deck_top")?;
+            }
+        }
         // `security` is ordered top->bottom (top = vec tail): inject bottom-first.
+        // Accepts either legacy string entries ("BT1-010") or objects
+        // ({"card_id": "BT1-010", "face_up": true}).
         if let Some(sec) = z.get("security").and_then(Value::as_array) {
             self.stage_clear_zone(pid, "security")?;
             for c in sec.iter().rev() {
-                let id = c
-                    .as_str()
-                    .ok_or("apply_scenario: non-string security card")?;
-                self.stage_inject_card(pid, id, "security_top")?;
+                if let Some(id) = c.as_str() {
+                    self.stage_inject_card(pid, id, "security_top")?;
+                } else if let Some(obj) = c.as_object() {
+                    let id = obj
+                        .get("card_id")
+                        .and_then(Value::as_str)
+                        .ok_or("apply_scenario: security object missing 'card_id'")?;
+                    let face_up = obj
+                        .get("face_up")
+                        .and_then(Value::as_bool)
+                        .unwrap_or(false);
+                    let zone = if face_up {
+                        "security_top_face_up"
+                    } else {
+                        "security_top"
+                    };
+                    self.stage_inject_card(pid, id, zone)?;
+                } else {
+                    return Err("apply_scenario: invalid security card entry".to_string());
+                }
+            }
+        }
+        if let Some(fu_list) = z.get("face_up_security").and_then(Value::as_array) {
+            for idx_val in fu_list {
+                let top_idx = idx_val
+                    .as_u64()
+                    .ok_or("apply_scenario: face_up_security entry must be an integer")?
+                    as usize;
+                self.stage_set_security_face_up(pid, top_idx, true)?;
             }
         }
         if let Some(trash) = z.get("trash").and_then(Value::as_array) {
@@ -142,7 +180,12 @@ impl Game {
                     .and_then(Value::as_bool)
                     .unwrap_or(false);
                 let turn_played = fs.get("turn_played").and_then(Value::as_u64).unwrap_or(0) as u16;
-                self.stage_place_field_stack(pid, &stack, suspended, turn_played);
+                let linked: Vec<&str> = fs
+                    .get("linked_cards")
+                    .and_then(Value::as_array)
+                    .map(|arr| arr.iter().filter_map(Value::as_str).collect())
+                    .unwrap_or_default();
+                self.stage_place_field_stack_with_links(pid, &stack, suspended, turn_played, &linked);
             }
         }
         // `breeding` present (even null) REPLACES the breeding area.
@@ -187,6 +230,9 @@ impl Game {
             for cs in &perm.card_sources {
                 push(cs, &mut ids);
             }
+            for cs in &perm.linked_cards {
+                push(cs, &mut ids);
+            }
         }
         if let Some(perm) = &p.breeding_area {
             for cs in &perm.card_sources {
@@ -204,17 +250,38 @@ impl Game {
         let hand: Vec<String> = p.hand.iter().map(|cs| self.cs_id(cs)).collect();
         // top->bottom: vec tail is the top, so reverse the vec.
         let deck_top: Vec<String> = p.deck.iter().rev().map(|cs| self.cs_id(cs)).collect();
+        let egg_deck: Vec<String> = p
+            .digitama_deck
+            .iter()
+            .rev()
+            .map(|cs| self.cs_id(cs))
+            .collect();
         let security: Vec<String> = p.security.iter().rev().map(|cs| self.cs_id(cs)).collect();
+        let face_up_security: Vec<usize> = p
+            .security
+            .iter()
+            .rev()
+            .enumerate()
+            .filter_map(|(top_idx, cs)| p.face_up_security.contains(&cs.card_index).then_some(top_idx))
+            .collect();
         let trash: Vec<String> = p.trash.iter().map(|cs| self.cs_id(cs)).collect();
         let field: Vec<Value> = p
             .battle_area
             .iter()
             .map(|perm| {
-                json!({
+                let mut obj = json!({
                     "stack": perm.card_sources.iter().map(|cs| self.cs_id(cs)).collect::<Vec<_>>(),
                     "is_suspended": perm.is_suspended,
                     "turn_played": perm.turn_played,
-                })
+                });
+                if !perm.linked_cards.is_empty() {
+                    obj["linked_cards"] = json!(perm
+                        .linked_cards
+                        .iter()
+                        .map(|cs| self.cs_id(cs))
+                        .collect::<Vec<_>>());
+                }
+                obj
             })
             .collect();
         let breeding = match &p.breeding_area {
@@ -225,14 +292,19 @@ impl Game {
                 .collect::<Vec<_>>()),
             None => Value::Null,
         };
-        json!({
+        let mut out = json!({
             "hand": hand,
             "deck_top": deck_top,
+            "egg_deck": egg_deck,
             "security": security,
             "trash": trash,
             "field": field,
             "breeding": breeding,
-        })
+        });
+        if !face_up_security.is_empty() {
+            out["face_up_security"] = json!(face_up_security);
+        }
+        out
     }
 }
 

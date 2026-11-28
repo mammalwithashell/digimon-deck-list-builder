@@ -35,6 +35,14 @@ use crate::selection::SelectionKind;
 /// Python-parity heuristic. The returned id is guaranteed to be a valid
 /// entry in the provided mask (or `PASS` if the mask is empty).
 pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
+    greedy_action_with_options(game, mask, false)
+}
+
+pub(crate) fn greedy_action_with_options(
+    game: &Game,
+    mask: &[f32],
+    guard_empty_board_dump: bool,
+) -> u16 {
     let all_valid: Vec<u16> = mask
         .iter()
         .enumerate()
@@ -115,7 +123,7 @@ pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
             first_non_pass(&valid)
         }
         GamePhase::Main => {
-            if let Some(a) = best_setup_play(game, player_id, &valid) {
+            if let Some(a) = best_setup_play(game, player_id, &valid, guard_empty_board_dump) {
                 return a;
             }
             if let Some(a) = best_keep_turn_digivolve(game, player_id, &valid) {
@@ -124,7 +132,7 @@ pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
             if let Some(a) = best_attack(game, player_id, &valid) {
                 return a;
             }
-            if let Some(a) = best_play(game, player_id, &valid) {
+            if let Some(a) = best_play(game, player_id, &valid, guard_empty_board_dump) {
                 return a;
             }
             if valid.contains(&PASS) {
@@ -332,11 +340,21 @@ fn best_keep_turn_digivolve(game: &Game, pid: PlayerId, valid: &[u16]) -> Option
     best.map(|(_, a)| a)
 }
 
-fn best_setup_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
+fn best_setup_play(
+    game: &Game,
+    pid: PlayerId,
+    valid: &[u16],
+    guard_empty_board_dump: bool,
+) -> Option<u16> {
     let player = game.player(pid);
     let mut best: Option<((i32, i32, i32, i32, i32, i32), u16)> = None;
     for &action in valid {
         if !(PLAY_HAND_START..PLAY_HAND_END).contains(&action) {
+            continue;
+        }
+        if guard_empty_board_dump
+            && super::tamer_first::is_empty_board_high_level_dump(game, pid, action)
+        {
             continue;
         }
         let hand_idx = action - PLAY_HAND_START;
@@ -457,11 +475,21 @@ fn best_attack(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
 /// Best fallback play from hand: prefer Digimon that build a curve before
 /// expensive hard-plays, then sort non-Digimon by kind/cost/index. Tamers
 /// are normally handled earlier by `best_setup_play`.
-fn best_play(game: &Game, pid: PlayerId, valid: &[u16]) -> Option<u16> {
+fn best_play(
+    game: &Game,
+    pid: PlayerId,
+    valid: &[u16],
+    guard_empty_board_dump: bool,
+) -> Option<u16> {
     let player = game.player(pid);
     let mut best: Option<((i32, i32, i32, i32, i32), u16)> = None;
     for &action in valid {
         if !(PLAY_HAND_START..PLAY_HAND_END).contains(&action) {
+            continue;
+        }
+        if guard_empty_board_dump
+            && super::tamer_first::is_empty_board_high_level_dump(game, pid, action)
+        {
             continue;
         }
         let hand_idx = action - PLAY_HAND_START;
@@ -552,7 +580,7 @@ mod tests {
         let valid = vec![PLAY_HAND_START, PLAY_HAND_START + 1];
 
         assert_eq!(
-            best_play(&runner.game, 0, &valid),
+            best_play(&runner.game, 0, &valid, false),
             Some(PLAY_HAND_START + 1)
         );
     }
