@@ -1,23 +1,15 @@
 /*
- * Desktop design-system token layer (add-desktop-design-system).
+ * Dual-polarity x 3-preset design-system token layer.
  *
- * Role-based tokens are the single source of visual truth. Components consume
- * ONLY these role tokens — never raw hex or page-local palettes (--ib-*,
- * --bld-*, --bg-*). Each theme supplies a complete value set for every role.
+ * Polarity is selected by `data-theme="dark" | "light"` on <html>.
+ * Visual preset is selected by `data-style="aegis" | "digi-os" | "adventure"`.
  *
- * Theme is selected by the `data-theme` attribute on <html>. Dark is the
- * default (also applied to bare :root so the tokens exist before any attribute
- * is set). The light block overrides every theme-dependent role.
- *
- * The two sentinel-wrapped blocks below MUST define the exact same set of role
- * names — tokens.test.ts enforces that parity.
+ * Every sentinel-wrapped preset block below MUST define the exact same set of
+ * role names — tokens.test.ts enforces completeness and WCAG >= 4.5:1 contrast.
  */
 
 /* Shared, theme-independent scale tokens (not duplicated per theme). */
 :root {
-  /* User-adjustable text-size multiplier (Text size preference → uiStore →
-     `--font-scale` on <html>). Defaults to 1; the scale tokens below multiply
-     by it so all token-based text grows/shrinks together. */
   --font-scale: 1;
   --text-xs: calc(11px * var(--font-scale));
   --text-sm: calc(12px * var(--font-scale));
@@ -28,131 +20,423 @@
   --text-3xl: calc(48px * var(--font-scale));
   --text-display: calc(64px * var(--font-scale));
 
-  --track-tight: 0.02em;
-  --track-wide: 0.14em;
-  --track-wider: 0.2em;
+  --track-tight: 0.01em;
+  --track-wide: 0.08em;
+  --track-wider: 0.14em;
 
-  --radius: 0px;
+  --radius: 8px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 9999px;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   1. SOFT DIGI-OS (Base Dark / Light fallback when data-style is omitted)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 /* @tokens:dark:start */
 :root,
-[data-theme="dark"] {
-  /* surfaces */
-  --surface-bg: #070b09;
-  --surface: #0c1410;
-  --surface-raised: #11201a;
-  --surface-sunken: #050807;
-  --screen-bg: #050807;
-  --screen-line: rgba(57, 255, 136, 0.26);
-  --screen-ink: #c8e6d4;
+[data-theme="dark"],
+[data-theme="dark"][data-style="digi-os"] {
+  /* surfaces — calm slate-pine dark, no pitch black */
+  --surface-bg: #0d1314;
+  --surface: #131c1e;
+  --surface-raised: #1a2629;
+  --surface-sunken: #090e0f;
+  --screen-bg: #0a1011;
+  --screen-line: rgba(79, 209, 155, 0.14);
+  --screen-ink: #dceee7;
 
-  /* ink — secondary/tertiary brightened for legibility on the dark surface
-     (the old --ink-2/--ink-3 washed out, e.g. deck-card classification/count) */
-  --ink-0: #c8e6d4;
-  --ink-1: #9fc4b0;
-  --ink-2: #88ad9b;
-  --ink-3: #6c8f80;
+  /* ink */
+  --ink-0: #e2f0eb;
+  --ink-1: #b5cfc6;
+  --ink-2: #8eab9f;
+  --ink-3: #6e8d82;
 
   /* lines */
-  --line-0: rgba(57, 255, 136, 0.12);
-  --line-1: rgba(57, 255, 136, 0.25);
-  --line-strong: rgba(57, 255, 136, 0.5);
+  --line-0: rgba(155, 205, 188, 0.12);
+  --line-1: rgba(155, 205, 188, 0.22);
+  --line-strong: rgba(155, 205, 188, 0.42);
   --border-w: 1px;
 
   /* accent / signal / status */
-  --accent: #39ff88;
-  --accent-2: #1d8a4c;
-  --accent-ink: #070b09;
-  --accent-glow: rgba(57, 255, 136, 0.45);
-  --signal: #ff8a2a;
+  --accent: #4fd19b;
+  --accent-2: #2f9b70;
+  --accent-ink: #071410;
+  --accent-glow: rgba(79, 209, 155, 0.24);
+  --signal: #f0974b;
   --signal-ink: #1a0d02;
-  --good: #39ff88;
-  --warn: #ffb05a;
-  --danger: #ff4d5e;
+  --good: #4fd19b;
+  --warn: #f2b761;
+  --danger: #f06e7a;
 
-  /* game identity — orange (player) / blue (opponent), theme-stable hue */
-  --player: #ff7a18;
-  --player-2: #ffb05a;
-  --player-soft: rgba(255, 122, 24, 0.15);
-  --opp: #3aa6ff;
-  --opp-2: #8fd0ff;
-  --opp-soft: rgba(58, 166, 255, 0.15);
+  /* game identity — warm amber (player) vs calm sky (opponent) */
+  --player: #ea8c42;
+  --player-2: #f4b278;
+  --player-soft: rgba(234, 140, 66, 0.16);
+  --opp: #56a8ee;
+  --opp-2: #94cbff;
+  --opp-soft: rgba(86, 168, 238, 0.16);
+
+  /* arena / board tabletop surfaces */
+  --arena-bg: #0c1416;
+  --arena-felt: #111c1f;
+  --arena-dais: #172529;
+  --arena-dais-line: rgba(155, 205, 188, 0.2);
+  --arena-horizon: rgba(155, 205, 188, 0.34);
+  --arena-rim-ready: #4fd19b;
+  --arena-rim-attention: #f2b761;
+  --arena-rim-threat: #f06e7a;
 
   /* chrome treatment */
-  --frame-cut: 10px;
+  --frame-cut: 0px;
   --bevel-hi: transparent;
   --bevel-lo: transparent;
-  --bevel-shadow: none;
-  --scanline-opacity: 0.22;
-  --grid-line: rgba(57, 255, 136, 0.1);
-  --shadow-glow: 0 0 16px var(--accent-glow);
+  --bevel-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.32);
+  --shadow-overlay: 0 18px 48px rgba(0, 0, 0, 0.52);
+  --scanline-opacity: 0;
+  --grid-line: rgba(155, 205, 188, 0.05);
+  --shadow-glow: 0 0 14px var(--accent-glow);
 
-  /* fonts (families defined in fonts.css). Unified with the light theme's
-     "Adventure '99" choices so fonts no longer swap between themes — Silkscreen
-     for display/pixel headings, sans for UI, Plex Mono for monospace. */
-  --font-display: var(--ff-silkscreen);
+  /* fonts */
+  --font-display: var(--ff-display);
   --font-ui: var(--ff-sans);
-  --font-mono: var(--ff-plex-mono);
-  --font-pixel: var(--ff-silkscreen);
+  --font-mono: var(--ff-mono);
+  --font-pixel: var(--ff-display);
 }
 /* @tokens:dark:end */
 
 /* @tokens:light:start */
-[data-theme="light"] {
-  /* surfaces — teal "digital world" desktop, parchment windows (Win95 ref) */
-  --surface-bg: #1c8a8a;
-  --surface: #cbc6af;
-  --surface-raised: #e7e2d2;
-  --surface-sunken: #bdb89f;
-  --screen-bg: #0a0a0a;
-  --screen-line: rgba(28, 138, 138, 0.32);
-  --screen-ink: #e6efe8;
+[data-theme="light"],
+[data-theme="light"][data-style="digi-os"] {
+  /* surfaces — calm sage-mist light */
+  --surface-bg: #edf3f0;
+  --surface: #f7faf8;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e1eae6;
+  --screen-bg: #15221f;
+  --screen-line: rgba(79, 209, 155, 0.18);
+  --screen-ink: #e2f0eb;
 
-  /* ink — darkened for contrast on parchment (Win95 ref) */
-  --ink-0: #1b1a14;
-  --ink-1: #3a382c;
-  --ink-2: #54513f;
-  --ink-3: #6f6a52;
+  /* ink */
+  --ink-0: #13211d;
+  --ink-1: #2f453e;
+  --ink-2: #4b635b;
+  --ink-3: #647c74;
 
   /* lines */
-  --line-0: #b3ad92;
-  --line-1: #7a7560;
-  --line-strong: #4a4636;
-  --border-w: 2px;
+  --line-0: #d4e0db;
+  --line-1: #b8c9c2;
+  --line-strong: #7e968d;
+  --border-w: 1px;
 
   /* accent / signal / status */
-  --accent: #2b2f7a;
-  --accent-2: #1b1f5a;
+  --accent: #187956;
+  --accent-2: #115c41;
   --accent-ink: #ffffff;
-  --accent-glow: transparent;
-  --signal: #d61f26;
+  --accent-glow: rgba(24, 121, 86, 0.18);
+  --signal: #c9581a;
   --signal-ink: #ffffff;
-  --good: #2f6d2c;
-  --warn: #b5660f;
-  --danger: #c1272d;
+  --good: #187956;
+  --warn: #a65c0a;
+  --danger: #bf2c39;
 
-  /* game identity — deepened for contrast on beige */
-  --player: #e0631a;
-  --player-2: #b5470c;
-  --player-soft: rgba(224, 99, 26, 0.18);
-  --opp: #2f6db5;
-  --opp-2: #1b4a85;
-  --opp-soft: rgba(47, 109, 181, 0.18);
+  /* game identity */
+  --player: #c85c17;
+  --player-2: #9c430c;
+  --player-soft: rgba(200, 92, 23, 0.13);
+  --opp: #2665ad;
+  --opp-2: #194a85;
+  --opp-soft: rgba(38, 101, 173, 0.13);
+
+  /* arena / board tabletop surfaces */
+  --arena-bg: #dfe9e5;
+  --arena-felt: #e7efec;
+  --arena-dais: #f4f8f6;
+  --arena-dais-line: rgba(19, 33, 29, 0.14);
+  --arena-horizon: rgba(19, 33, 29, 0.22);
+  --arena-rim-ready: #187956;
+  --arena-rim-attention: #b8660a;
+  --arena-rim-threat: #bf2c39;
 
   /* chrome treatment */
   --frame-cut: 0px;
-  --bevel-hi: #efebd6;
-  --bevel-lo: #7a7560;
-  --bevel-shadow: inset 1.5px 1.5px 0 var(--bevel-hi), inset -2px -2px 0 var(--bevel-lo);
+  --bevel-hi: transparent;
+  --bevel-lo: transparent;
+  --bevel-shadow: 0 1px 3px rgba(19, 33, 29, 0.08);
+  --shadow-card: 0 2px 6px rgba(19, 33, 29, 0.08);
+  --shadow-overlay: 0 16px 40px rgba(19, 33, 29, 0.18);
   --scanline-opacity: 0;
-  --grid-line: rgba(0, 0, 0, 0.08);
+  --grid-line: rgba(19, 33, 29, 0.045);
   --shadow-glow: none;
 
   /* fonts */
-  --font-display: var(--ff-silkscreen);
+  --font-display: var(--ff-display);
   --font-ui: var(--ff-sans);
-  --font-mono: var(--ff-plex-mono);
-  --font-pixel: var(--ff-silkscreen);
+  --font-mono: var(--ff-mono);
+  --font-pixel: var(--ff-display);
 }
 /* @tokens:light:end */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   2. SOFT ADVENTURE (Warm Tactile Paper & Amber Charcoal — no Win95 teal/bevels)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* @tokens:adventure-dark:start */
+[data-theme="dark"][data-style="adventure"] {
+  --surface-bg: #151210;
+  --surface: #1e1a17;
+  --surface-raised: #28231e;
+  --surface-sunken: #0f0d0b;
+  --screen-bg: #120f0d;
+  --screen-line: rgba(235, 154, 77, 0.14);
+  --screen-ink: #f3ece2;
+
+  --ink-0: #f3ece2;
+  --ink-1: #d4c7b7;
+  --ink-2: #ab9c8a;
+  --ink-3: #877969;
+
+  --line-0: rgba(226, 206, 182, 0.12);
+  --line-1: rgba(226, 206, 182, 0.22);
+  --line-strong: rgba(226, 206, 182, 0.42);
+  --border-w: 1px;
+
+  --accent: #eb9a4d;
+  --accent-2: #c6762c;
+  --accent-ink: #1a0f05;
+  --accent-glow: rgba(235, 154, 77, 0.25);
+  --signal: #e9755a;
+  --signal-ink: #1a0805;
+  --good: #6bc48c;
+  --warn: #eb9a4d;
+  --danger: #e86f73;
+
+  --player: #eb9a4d;
+  --player-2: #f5be84;
+  --player-soft: rgba(235, 154, 77, 0.16);
+  --opp: #63a4e8;
+  --opp-2: #9bc8f7;
+  --opp-soft: rgba(99, 164, 232, 0.16);
+
+  --arena-bg: #181411;
+  --arena-felt: #211b16;
+  --arena-dais: #2c241d;
+  --arena-dais-line: rgba(226, 206, 182, 0.18);
+  --arena-horizon: rgba(226, 206, 182, 0.3);
+  --arena-rim-ready: #6bc48c;
+  --arena-rim-attention: #f0b55b;
+  --arena-rim-threat: #e86f73;
+
+  --frame-cut: 0px;
+  --bevel-hi: transparent;
+  --bevel-lo: transparent;
+  --bevel-shadow: 0 2px 10px rgba(0, 0, 0, 0.32);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.34);
+  --shadow-overlay: 0 18px 48px rgba(0, 0, 0, 0.56);
+  --scanline-opacity: 0;
+  --grid-line: rgba(226, 206, 182, 0.045);
+  --shadow-glow: 0 0 14px var(--accent-glow);
+
+  --font-display: var(--ff-display);
+  --font-ui: var(--ff-sans);
+  --font-mono: var(--ff-mono);
+  --font-pixel: var(--ff-display);
+}
+/* @tokens:adventure-dark:end */
+
+/* @tokens:adventure-light:start */
+[data-theme="light"][data-style="adventure"] {
+  --surface-bg: #f3efe6;
+  --surface: #fbf9f4;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e8e2d5;
+  --screen-bg: #1c1814;
+  --screen-line: rgba(235, 154, 77, 0.18);
+  --screen-ink: #f3ece2;
+
+  --ink-0: #231e18;
+  --ink-1: #473e34;
+  --ink-2: #665b4e;
+  --ink-3: #807365;
+
+  --line-0: #dfd7c8;
+  --line-1: #c7bcab;
+  --line-strong: #8e816f;
+  --border-w: 1px;
+
+  --accent: #b25214;
+  --accent-2: #8a3d0c;
+  --accent-ink: #ffffff;
+  --accent-glow: rgba(178, 82, 20, 0.18);
+  --signal: #c23b2b;
+  --signal-ink: #ffffff;
+  --good: #257347;
+  --warn: #a65c0a;
+  --danger: #b82d33;
+
+  --player: #c55d18;
+  --player-2: #98440e;
+  --player-soft: rgba(197, 93, 24, 0.13);
+  --opp: #2d66a8;
+  --opp-2: #1c4b82;
+  --opp-soft: rgba(45, 102, 168, 0.13);
+
+  /* Hearthstone-warm sandstone/parchment tabletop */
+  --arena-bg: #e7dfd1;
+  --arena-felt: #efe8dc;
+  --arena-dais: #f8f4ec;
+  --arena-dais-line: rgba(35, 30, 24, 0.14);
+  --arena-horizon: rgba(35, 30, 24, 0.22);
+  --arena-rim-ready: #257347;
+  --arena-rim-attention: #b25214;
+  --arena-rim-threat: #b82d33;
+
+  --frame-cut: 0px;
+  --bevel-hi: transparent;
+  --bevel-lo: transparent;
+  --bevel-shadow: 0 1px 3px rgba(35, 30, 24, 0.08);
+  --shadow-card: 0 2px 6px rgba(35, 30, 24, 0.08);
+  --shadow-overlay: 0 16px 40px rgba(35, 30, 24, 0.18);
+  --scanline-opacity: 0;
+  --grid-line: rgba(35, 30, 24, 0.045);
+  --shadow-glow: none;
+
+  --font-display: var(--ff-display);
+  --font-ui: var(--ff-sans);
+  --font-mono: var(--ff-mono);
+  --font-pixel: var(--ff-display);
+}
+/* @tokens:adventure-light:end */
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   3. AEGIS CLEAN (Crisp Neutral Slate-Navy Dark / Off-White Light)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* @tokens:aegis-dark:start */
+[data-theme="dark"][data-style="aegis"] {
+  --surface-bg: #0b0e14;
+  --surface: #121620;
+  --surface-raised: #1a202e;
+  --surface-sunken: #07090e;
+  --screen-bg: #090c12;
+  --screen-line: rgba(104, 165, 255, 0.16);
+  --screen-ink: #f1f3f7;
+
+  --ink-0: #f1f3f7;
+  --ink-1: #c8cedb;
+  --ink-2: #9ba3b5;
+  --ink-3: #768096;
+
+  --line-0: #1f2535;
+  --line-1: #2d3548;
+  --line-strong: #5b657d;
+  --border-w: 1px;
+
+  --accent: #68a5ff;
+  --accent-2: #3b7de0;
+  --accent-ink: #07111f;
+  --accent-glow: rgba(104, 165, 255, 0.26);
+  --signal: #f48c5b;
+  --signal-ink: #1a0c05;
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --danger: #f87171;
+
+  --player: #f29b4b;
+  --player-2: #fbc187;
+  --player-soft: rgba(242, 155, 75, 0.15);
+  --opp: #58b4ff;
+  --opp-2: #9cd4ff;
+  --opp-soft: rgba(88, 180, 255, 0.15);
+
+  --arena-bg: #0d121d;
+  --arena-felt: #131a29;
+  --arena-dais: #1b2436;
+  --arena-dais-line: rgba(200, 206, 219, 0.16);
+  --arena-horizon: rgba(200, 206, 219, 0.28);
+  --arena-rim-ready: #6fe8f5;
+  --arena-rim-attention: #ffc75a;
+  --arena-rim-threat: #ff9061;
+
+  --frame-cut: 0px;
+  --bevel-hi: transparent;
+  --bevel-lo: transparent;
+  --bevel-shadow: 0 2px 12px rgba(0, 0, 0, 0.34);
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.38);
+  --shadow-overlay: 0 20px 56px rgba(0, 0, 0, 0.6);
+  --scanline-opacity: 0;
+  --grid-line: rgba(200, 206, 219, 0.04);
+  --shadow-glow: 0 0 14px var(--accent-glow);
+
+  --font-display: var(--ff-display);
+  --font-ui: var(--ff-sans);
+  --font-mono: var(--ff-mono);
+  --font-pixel: var(--ff-display);
+}
+/* @tokens:aegis-dark:end */
+
+/* @tokens:aegis-light:start */
+[data-theme="light"][data-style="aegis"] {
+  --surface-bg: #f4f6f9;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #e9edf3;
+  --screen-bg: #0f172a;
+  --screen-line: rgba(104, 165, 255, 0.2);
+  --screen-ink: #f1f5f9;
+
+  --ink-0: #0f172a;
+  --ink-1: #334155;
+  --ink-2: #526075;
+  --ink-3: #6b798e;
+
+  --line-0: #e2e7ef;
+  --line-1: #cbd3df;
+  --line-strong: #8793a6;
+  --border-w: 1px;
+
+  --accent: #225ad1;
+  --accent-2: #1945a3;
+  --accent-ink: #ffffff;
+  --accent-glow: rgba(34, 90, 209, 0.16);
+  --signal: #c2410c;
+  --signal-ink: #ffffff;
+  --good: #166534;
+  --warn: #a16207;
+  --danger: #b91c1c;
+
+  --player: #c85a17;
+  --player-2: #9a420d;
+  --player-soft: rgba(200, 90, 23, 0.12);
+  --opp: #1d63b8;
+  --opp-2: #154887;
+  --opp-soft: rgba(29, 99, 184, 0.12);
+
+  --arena-bg: #e5eaf1;
+  --arena-felt: #eef2f7;
+  --arena-dais: #ffffff;
+  --arena-dais-line: rgba(15, 23, 42, 0.12);
+  --arena-horizon: rgba(15, 23, 42, 0.2);
+  --arena-rim-ready: #0891b2;
+  --arena-rim-attention: #d97706;
+  --arena-rim-threat: #c2410c;
+
+  --frame-cut: 0px;
+  --bevel-hi: transparent;
+  --bevel-lo: transparent;
+  --bevel-shadow: 0 1px 3px rgba(15, 23, 42, 0.07);
+  --shadow-card: 0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-overlay: 0 16px 48px rgba(15, 23, 42, 0.16);
+  --scanline-opacity: 0;
+  --grid-line: rgba(15, 23, 42, 0.04);
+  --shadow-glow: none;
+
+  --font-display: var(--ff-display);
+  --font-ui: var(--ff-sans);
+  --font-mono: var(--ff-mono);
+  --font-pixel: var(--ff-display);
+}
+/* @tokens:aegis-light:end */

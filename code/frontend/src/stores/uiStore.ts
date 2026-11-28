@@ -13,6 +13,7 @@ const DECK_BUILDER_VIEW_STORAGE_KEY = 'deckBuilder.viewMode';
 const MOTION_STORAGE_KEY = 'desktop.motion';
 const LIVE_BG_STORAGE_KEY = 'desktop.liveBackground';
 const TEXT_SCALE_STORAGE_KEY = 'desktop.textScale';
+const BATTLE_LANES_STORAGE_KEY = 'gameplay.battleLanes';
 
 /** Deck builder card-pool layout emphasis. `browse` is the dense grid that
  *  emphasizes the card search; `inspect` emphasizes the selected card and its
@@ -203,6 +204,35 @@ export function applyTextScaleVar(value: TextScale): void {
   );
 }
 
+/** Whether the Battle Area separates Digimon (front row) and Tamers/Delay
+ *  Options (back row) into two rows (`two`), or keeps all permanents in a
+ *  single combined row (`one`). Persisted across sessions. */
+export type BattleLanes = 'two' | 'one';
+
+const BATTLE_LANES_VALUES: BattleLanes[] = ['two', 'one'];
+const DEFAULT_BATTLE_LANES: BattleLanes = 'two';
+
+function loadPersistedBattleLanes(): BattleLanes {
+  if (typeof window === 'undefined') return DEFAULT_BATTLE_LANES;
+  try {
+    const raw = window.localStorage.getItem(BATTLE_LANES_STORAGE_KEY);
+    return BATTLE_LANES_VALUES.includes(raw as BattleLanes)
+      ? (raw as BattleLanes)
+      : DEFAULT_BATTLE_LANES;
+  } catch {
+    return DEFAULT_BATTLE_LANES;
+  }
+}
+
+function persistBattleLanes(value: BattleLanes): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(BATTLE_LANES_STORAGE_KEY, value);
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
 /** Read a persisted preset from localStorage, falling back to the
  *  default. Validates that the persisted dimensions match one of the
  *  known presets — if a stale or hand-edited value is present, drops
@@ -317,6 +347,10 @@ interface UiStore {
   /** User-adjustable interface text size; projected onto `--font-scale`. */
   textScale: TextScale;
 
+  /** Battle Area row layout: `'two'` separates Digimon front row and
+   *  Tamers/Delays back row; `'one'` combines them into a single row. */
+  battleLanes: BattleLanes;
+
   setHoveredCard: (cardId: string | null) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
@@ -333,6 +367,7 @@ interface UiStore {
   setMotion: (value: Motion) => void;
   setLiveBackground: (value: boolean) => void;
   setTextScale: (value: TextScale) => void;
+  setBattleLanes: (value: BattleLanes) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -348,6 +383,7 @@ export const useUiStore = create<UiStore>((set) => ({
   motion: loadPersistedMotion(),
   liveBackground: loadPersistedLiveBackground(),
   textScale: loadPersistedTextScale(),
+  battleLanes: loadPersistedBattleLanes(),
 
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
   openModal: (modal) => set({ activeModal: modal }),
@@ -402,6 +438,10 @@ export const useUiStore = create<UiStore>((set) => ({
     applyTextScaleVar(value);
     set({ textScale: value });
   },
+  setBattleLanes: (value) => {
+    persistBattleLanes(value);
+    set({ battleLanes: value });
+  },
 }));
 
 /** Effective live-background: animated atmosphere renders only when motion is
@@ -426,6 +466,7 @@ export const __uiStoreInternals = {
   MOTION_STORAGE_KEY,
   LIVE_BG_STORAGE_KEY,
   TEXT_SCALE_STORAGE_KEY,
+  BATTLE_LANES_STORAGE_KEY,
   TEXT_SCALE_VALUES,
   loadPersistedPreset,
   loadPersistedFullscreen,
@@ -436,4 +477,5 @@ export const __uiStoreInternals = {
   deriveDefaultMotion,
   loadPersistedLiveBackground,
   loadPersistedTextScale,
+  loadPersistedBattleLanes,
 };

@@ -12,6 +12,7 @@ const TYPE_ALIASES: Record<string, string> = {
   CardToDeck: 'card_to_deck',
   Mill: 'mill',
   SecurityReveal: 'security_reveal',
+  EffectActivated: 'effect_activated',
   EffectTarget: 'effect_target',
   Reveal: 'reveal',
   InfiniteLoop: 'infinite_loop',

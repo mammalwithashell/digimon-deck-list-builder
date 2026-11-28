@@ -29,6 +29,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException
 from digimon_engine import RustDebugGame, RustHeadlessGame, parse_deck
 
+from server.routers.desktop_models import OnnxGamePolicy, create_policy_for_model
 from server.routers.schemas import (
     CreateGameRequest,
     GameActionRequest,
@@ -63,6 +64,9 @@ class GameMeta:
     deck2: list[str]
     seed: int
     human_action_history: list[int] = field(default_factory=list)
+    p1_policy: OnnxGamePolicy | None = None
+    p2_policy: OnnxGamePolicy | None = None
+    observation_profile: str | None = None
 
 
 game_meta: dict[str, GameMeta] = {}
@@ -101,6 +105,16 @@ def _is_human_turn(game: RustHeadlessGame, meta: GameMeta) -> bool:
     return False
 
 
+def _choose_agent_action(game: RustHeadlessGame, meta: GameMeta) -> int:
+    cur = game.current_player_id
+    policy = meta.p1_policy if cur == 1 else meta.p2_policy
+    if policy is not None:
+        obs = game.get_board_tensor(cur)
+        mask = game.get_action_mask()
+        return policy.predict(obs, mask)
+    return game.greedy_action()
+
+
 def _autoplay_agent_turns(
     game: RustHeadlessGame,
     meta: GameMeta,
@@ -119,7 +133,7 @@ def _autoplay_agent_turns(
     while not game.is_game_over and steps < max_steps:
         if _is_human_turn(game, meta):
             return
-        action = game.greedy_action()
+        action = _choose_agent_action(game, meta)
         game.step(action)
         for log_line in game.get_last_log():
             log_buffer.append(log_line)
@@ -177,33 +191,45 @@ def create_game(request: CreateGameRequest):
     if not deck1 or not deck2:
         raise HTTPException(status_code=400, detail="Both decks must be provided")
 
+    p1_human = request.player1_type.lower() == "human"
+    p2_human = request.player2_type.lower() == "human"
+    p1_policy: OnnxGamePolicy | None = None
+    p2_policy: OnnxGamePolicy | None = None
+    if not p1_human and request.player1_policy.lower() == "trained" and request.player1_model:
+        p1_policy = create_policy_for_model(request.player1_model)
+    if not p2_human and request.player2_policy.lower() == "trained" and request.player2_model:
+        p2_policy = create_policy_for_model(request.player2_model)
+
+    obs_profile: str | None = None
+    if p1_policy is not None:
+        obs_profile = p1_policy.observation_profile
+    elif p2_policy is not None:
+        obs_profile = p2_policy.observation_profile
+
     game_id = str(uuid4())
-    # Scenario staging: honor an explicit `seed` if provided, otherwise
-    # generate a cryptographic one. Either way the seed lands in meta so
-    # /debug can export it and a later create can replay it. The engine
-    # accepts u64; `secrets.randbits(64)` stays inside that range.
     seed = request.seed if request.seed is not None else secrets.randbits(64)
     try:
         # record_actions=True so the game can be persisted via
         # POST /games/{id}/recordings and replayed through RustReplayRunner.
-        game = RustHeadlessGame(deck1, deck2, False, True, False, seed)
+        game = RustHeadlessGame(deck1, deck2, False, True, False, seed, obs_profile)
     except Exception as exc:  # PyValueError from the Rust binding
         raise HTTPException(status_code=400, detail=f"Engine construction failed: {exc}")
 
-    p1_human = request.player1_type.lower() == "human"
-    p2_human = request.player2_type.lower() == "human"
     meta = GameMeta(
         p1_human=p1_human,
         p2_human=p2_human,
         last_log=[],
         last_events=[],
         player_labels={
-            1: "You" if p1_human else "Agent",
-            2: "You" if p2_human else "Agent",
+            1: "You" if p1_human else (p1_policy.name if p1_policy else "Agent"),
+            2: "You" if p2_human else (p2_policy.name if p2_policy else "Agent"),
         },
         deck1=list(deck1),
         deck2=list(deck2),
         seed=seed,
+        p1_policy=p1_policy,
+        p2_policy=p2_policy,
+        observation_profile=obs_profile,
     )
 
     active_games[game_id] = game
@@ -484,9 +510,15 @@ def undo_game(game_id: str):
     # turns (if any) are auto-played to mirror what the original /games
     # POST response would have produced.
     try:
-        new_game = RustHeadlessGame(meta.deck1, meta.deck2, False, False, False, meta.seed)
+        new_game = RustHeadlessGame(
+            meta.deck1, meta.deck2, False, False, False, meta.seed, meta.observation_profile
+        )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Engine rebuild failed: {exc}")
+    if meta.p1_policy is not None:
+        meta.p1_policy.reset()
+    if meta.p2_policy is not None:
+        meta.p2_policy.reset()
 
     log_buffer: list[str] = []
     event_buffer: list[dict[str, Any]] = []

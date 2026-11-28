@@ -1,3 +1,5 @@
+import '@/components/game/decisions/decisions.css';
+
 interface ResultOverlayProps {
   isGameOver: boolean;
   winner: number | null;
@@ -5,9 +7,16 @@ interface ResultOverlayProps {
   playerLabels: Record<number, string>;
   surrenderedBy?: number | null;
   gameSeed?: string | null;
+  turnCount?: number;
+  ownSecurity?: number;
+  opponentSecurity?: number;
   onReturnToMenu: () => void;
 }
 
+/**
+ * Modernized Hearthstone/Aegis-styled post-match result card using unified
+ * design tokens across all 6 theme presets.
+ */
 export function ResultOverlay({
   isGameOver,
   winner,
@@ -15,75 +24,82 @@ export function ResultOverlay({
   playerLabels,
   surrenderedBy,
   gameSeed,
+  turnCount,
+  ownSecurity,
+  opponentSecurity,
   onReturnToMenu,
 }: ResultOverlayProps) {
   if (!isGameOver) return null;
 
   const getLabel = (id: number) => playerLabels[id] ?? `Player ${id}`;
-
   const isWin = winner === localPlayer;
   const isDraw = winner === null;
   const isSurrender = surrenderedBy != null;
 
   let headingText: string;
-  let headingColor: string;
-  let bgGradient: string;
   let subText: string;
+  let crestSymbol: string;
 
   if (isDraw) {
     headingText = 'Draw';
-    headingColor = 'text-gray-200';
-    bgGradient = 'from-gray-900/95 to-gray-800/95';
-    subText = 'The game ended in a draw.';
+    subText = 'The match ended in a draw.';
+    crestSymbol = '=';
   } else if (isWin) {
-    headingText = 'Victory!';
-    headingColor = 'text-yellow-300';
-    bgGradient = 'from-yellow-900/95 to-amber-900/95';
-    subText = isSurrender && surrenderedBy !== localPlayer
-      ? `${getLabel(surrenderedBy)} surrendered.`
-      : 'Congratulations!';
+    headingText = 'Victory';
+    subText =
+      isSurrender && surrenderedBy !== localPlayer
+        ? `${getLabel(surrenderedBy)} surrendered.`
+        : `You defeated ${getLabel(localPlayer === 1 ? 2 : 1)}.`;
+    crestSymbol = '★';
   } else {
     headingText = isSurrender && surrenderedBy === localPlayer ? 'Surrendered' : 'Defeat';
-    headingColor = 'text-red-300';
-    bgGradient = 'from-red-900/95 to-gray-900/95';
-    subText = isSurrender && surrenderedBy === localPlayer
-      ? 'You surrendered the game.'
-      : `${getLabel(winner!)} wins.`;
+    subText =
+      isSurrender && surrenderedBy === localPlayer
+        ? 'You conceded the match.'
+        : `${getLabel(winner!)} won the match.`;
+    crestSymbol = '✕';
   }
 
   return (
-    <div
-      data-testid="result-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center"
-    >
-      <div className="absolute inset-0 bg-black/70" />
+    <div data-testid="result-overlay" className="hs-result-backdrop">
       <div
-        className={`relative flex flex-col items-center gap-6 px-16 py-12 rounded-2xl bg-gradient-to-b ${bgGradient} shadow-2xl border border-white/10`}
+        role="dialog"
+        aria-label={headingText}
+        className={`hs-result-card ${isWin ? 'hs-result-card--win' : isDraw ? '' : 'hs-result-card--loss'}`}
       >
-        {/* Decorative top line */}
-        <div
-          className={`w-24 h-1 rounded-full ${
-            isWin ? 'bg-yellow-400' : isDraw ? 'bg-gray-400' : 'bg-red-500'
-          }`}
-        />
+        <div className="hs-result-card__crest" aria-hidden="true">
+          {crestSymbol}
+        </div>
 
-        <h1 className={`text-5xl font-extrabold tracking-wide ${headingColor}`}>
-          {headingText}
-        </h1>
+        <h1 className="hs-result-card__title">{headingText}</h1>
+        <p className="hs-result-card__sub">{subText}</p>
 
-        <p className="text-lg text-gray-300">{subText}</p>
+        {turnCount != null && ownSecurity != null && opponentSecurity != null && (
+          <div className="hs-result-stats">
+            <div className="hs-result-stat">
+              <span className="hs-result-stat__k">Turns</span>
+              <span className="hs-result-stat__v">{turnCount}</span>
+            </div>
+            <div className="hs-result-stat">
+              <span className="hs-result-stat__k">Your Sec</span>
+              <span className="hs-result-stat__v">{ownSecurity}</span>
+            </div>
+            <div className="hs-result-stat">
+              <span className="hs-result-stat__k">Opp Sec</span>
+              <span className="hs-result-stat__v">{opponentSecurity}</span>
+            </div>
+          </div>
+        )}
 
         {gameSeed && (
-          <div className="grid gap-2 text-center">
-            <span className="text-xs uppercase tracking-widest text-white/55">Shuffle seed</span>
-            <code className="select-all rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white">
-              {gameSeed}
-            </code>
+          <div className="hs-result-seed">
+            <span className="hs-result-stat__k">Shuffle Seed</span>
+            <code className="select-all">{gameSeed}</code>
             <button
               type="button"
               aria-label="Copy seed"
               onClick={() => void navigator.clipboard?.writeText(gameSeed)}
-              className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white font-semibold text-sm rounded-lg transition-colors"
+              className="ds-btn ds-btn--ghost"
             >
               Copy Seed
             </button>
@@ -91,9 +107,10 @@ export function ResultOverlay({
         )}
 
         <button
+          type="button"
           data-testid="result-return"
           onClick={onReturnToMenu}
-          className="mt-4 px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-lg rounded-lg transition-colors"
+          className="ds-btn ds-btn--primary w-full justify-center py-2.5 text-sm"
         >
           Return to Launcher
         </button>

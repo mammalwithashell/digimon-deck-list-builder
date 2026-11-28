@@ -1,22 +1,33 @@
+import './arena.css';
 import { useGameStore } from '@/stores/gameStore';
-import { useEffectiveLiveBackground } from '@/stores/uiStore';
 import { usePeekStore } from '@/stores/peekStore';
-import { LiveAtmosphere } from '@/components/layout/LiveAtmosphere';
+import { ArenaSurface } from './ArenaSurface';
+import { ArenaHud } from './ArenaHud';
 import { PlayerHalf } from './PlayerHalf';
 import { HandZone } from './HandZone';
-import { MemoryGauge } from './MemoryGauge';
+import { MemoryBand } from './MemoryBand';
 import { RevealedCardsZone } from './RevealedCardsZone';
-import { ActionTraceTicker } from './ActionTraceTicker';
 import { TensorDebugBadge } from './TensorDebugBadge';
 import { anyFieldSelectionHighlights, fieldSelectionHighlights } from '@/utils/selectionTargets';
-import { GamePhase, type ActionTrace, type TensorSummary } from '@/types/game';
+import { GamePhase, type ActionTrace, type GameState, type TensorSummary } from '@/types/game';
 
 interface GameBoardProps {
+  /** Optional presented snapshot from the presentation queue (defaults to live store state). */
+  presentedState?: GameState | null;
+  actionMask?: number[];
+  isBusy?: boolean;
+  isPresenting?: boolean;
+  memoryDelta?: number | null;
+  gameSeed?: string | null;
+  canAttackSecurity?: boolean;
+  onAttackSecurity?: () => void;
+  onAction?: (actionId: number) => void;
+  onUndo?: () => void;
+  onSurrender?: () => void;
+  onSkipPresentation?: () => void;
   onPlayCard?: (handIndex: number) => void;
   onSlotClick?: (isOpponent: boolean, slotIndex: number) => void;
-  /** Right-click (context-menu) a permanent to open the stack inspector. */
   onSlotInspect?: (isOpponent: boolean, slotIndex: number) => void;
-  /** Right-click a breeding-area permanent to inspect it. */
   onBreedingInspect?: (isOpponent: boolean) => void;
   onHatch?: () => void;
   onMove?: () => void;
@@ -29,24 +40,19 @@ interface GameBoardProps {
   playableHandIndices?: Set<number>;
   highlightedOwnSlots?: Set<number>;
   highlightedEnemySlots?: Set<number>;
-  /** Own/enemy slots already picked during a board-driven "choose N" selection. */
   selectedOwnSlots?: Set<number>;
   selectedEnemySlots?: Set<number>;
   targetedSlots?: Set<number>;
+  attackableSlots?: Set<number>;
   validRevealedIndices?: Set<number>;
-  /** Field slot indices where dragged hand card can digivolve */
   dragValidDropSlots?: Set<number>;
-  /** Whether a hand card is currently being dragged */
   isDraggingHandCard?: boolean;
-  /** Whether the dragged hand card can be played (to empty slots) */
   canPlayDragged?: boolean;
+  isDraggingAttacker?: boolean;
   onOwnTrashClick?: () => void;
   onOpponentTrashClick?: () => void;
-  /** Memory cost preview (positive = costs memory) */
   previewCost?: number | null;
-  /** Callback when hovering a hand card by index */
   onHandCardHoverIndex?: (index: number | null) => void;
-  /** Right-click (context-menu) a hand card to open the enlarged card detail. */
   onHandCardInspect?: (cardId: string) => void;
   actionTraces?: ActionTrace[];
   latestTensorSummary?: TensorSummary | null;
@@ -59,6 +65,18 @@ interface GameBoardProps {
 }
 
 export function GameBoard({
+  presentedState,
+  actionMask: propActionMask,
+  isBusy = false,
+  isPresenting = false,
+  memoryDelta = null,
+  gameSeed = null,
+  canAttackSecurity = false,
+  onAttackSecurity,
+  onAction,
+  onUndo,
+  onSurrender,
+  onSkipPresentation,
   onPlayCard,
   onSlotClick,
   onSlotInspect,
@@ -77,64 +95,53 @@ export function GameBoard({
   selectedOwnSlots,
   selectedEnemySlots,
   targetedSlots,
+  attackableSlots,
   validRevealedIndices,
   dragValidDropSlots,
   isDraggingHandCard = false,
   canPlayDragged = false,
+  isDraggingAttacker = false,
   onOwnTrashClick,
   onOpponentTrashClick,
   previewCost,
   onHandCardHoverIndex,
   onHandCardInspect,
-  actionTraces = [],
   latestTensorSummary = null,
   dualSeat = false,
   flipped = false,
   playableOpponentHandIndices,
   onOpponentPlayCard,
 }: GameBoardProps) {
-  const {
-    player1,
-    player2,
-    memoryGauge,
-    currentPhase,
-    currentPlayer,
-    turnCount,
-    revealedCards,
-    pendingSelection,
-    playerLabels,
-  } = useGameStore();
-
-  // Board atmosphere animates only when effective live-background is on
-  // (motion full + toggle). Drives the `is-live` gate on the board's
-  // scanline-roll / grid-drift CSS (animate-board-atmosphere).
-  const liveBg = useEffectiveLiveBackground();
-
-  // "Peek the board" also fades the centered revealed-cards strip (a reveal
-  // selection is one of the modal surfaces the PeekButton shows for), so the
-  // player can read the board behind it before picking.
+  const store = useGameStore();
   const peeking = usePeekStore((s) => s.peeking);
+
+  const player1 = presentedState?.player1 ?? store.player1;
+  const player2 = presentedState?.player2 ?? store.player2;
+  const memoryGauge = presentedState?.memoryGauge ?? store.memoryGauge;
+  const currentPhase = presentedState?.currentPhase ?? store.currentPhase;
+  const currentPlayer = presentedState?.currentPlayer ?? store.currentPlayer;
+  const turnCount = presentedState?.turnCount ?? store.turnCount;
+  const isGameOver = presentedState?.isGameOver ?? store.isGameOver;
+  const revealedCards = presentedState?.revealedCards ?? store.revealedCards;
+  const pendingSelection = store.pendingSelection;
+  const playerLabels = store.playerLabels;
+  const effectiveMask = propActionMask ?? store.actionMask;
 
   if (!player1 || !player2) {
     return (
-      <div data-testid="game-board" className="flex items-center justify-center h-full text-gray-400">
+      <div
+        data-testid="game-board"
+        className="flex items-center justify-center h-full text-[var(--ink-2)]"
+      >
         Loading game...
       </div>
     );
   }
 
-  // During selection phases, highlight valid field targets. The engine
-  // encodes own- and opponent-field targets in the same
-  // `OWN_FIELD_START + slot` range and disambiguates by
-  // `pendingSelection.kind`, so route by `kind` (not id range) — otherwise an
-  // opponent-target prompt lights up the player's own slots. See
-  // `utils/selectionTargets.ts`.
   const fieldHighlights = fieldSelectionHighlights(
     pendingSelection?.kind,
     pendingSelection?.validIndices ?? [],
   );
-  // `AnyField` selections (`select_any_permanent`) span both battle areas and
-  // decode the side from each action id — see `utils/selectionTargets.ts`.
   const anyFieldHighlights = anyFieldSelectionHighlights(
     pendingSelection?.kind,
     pendingSelection?.validIndices ?? [],
@@ -151,103 +158,89 @@ export function GameBoard({
     ...fieldHighlights.enemy,
     ...anyFieldHighlights.enemy,
   ]);
-  const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
+
+  const topPlayer = flipped ? player1 : player2;
+  const bottomPlayer = flipped ? player2 : player1;
+  const topLabels: Record<number, string> = flipped
+    ? { 1: playerLabels[2] ?? 'Player 2', 2: playerLabels[1] ?? 'Player 1' }
+    : playerLabels;
 
   return (
-    <div data-testid="game-board" className={`ib-board${liveBg ? ' is-live' : ''}`}>
-      <div className="ib-board__mat" />
-      <LiveAtmosphere surface="board" />
-      <div className="ib-board__horizon" />
-      <div className="ib-board__scanlines" />
-      <div className="ib-board__vignette" />
+    <div data-testid="game-board" className="hs-board">
+      <ArenaSurface />
 
-      <div className="ib-board__top-chrome">
-        <div className="ib-chrome-tag"><span className="ib-dot" />{dualSeat ? 'STUDIO DUAL-SEAT' : 'MATCH LIVE'}</div>
-        <div className="ib-chrome-tag">TURN {String(turnCount).padStart(2, '0')}</div>
-        <div className="ib-chrome-tag">
-          {dualSeat
-            ? `P${pendingSelection?.selectingPlayer ?? currentPlayer} PRIORITY`
-            : currentPlayer === 1
-              ? 'YOUR PRIORITY'
-              : 'OPP PRIORITY'}
-        </div>
-        <ActionTraceTicker traces={actionTraces} />
-      </div>
-
-      <PlayerTag
-        className="ib-player-tag--opp"
-        accent="opp"
-        label={flipped ? (playerLabels[1] ?? 'Player 1') : (playerLabels[2] ?? 'Opponent')}
-        sublabel={
-          flipped
-            ? `${player1.handCount} hand · ${player1.deckCount} deck`
-            : `${player2.handCount} hand · ${player2.deckCount} deck`
-        }
-      />
-      <PlayerTag
-        className="ib-player-tag--you"
-        accent="you"
-        label={flipped ? (playerLabels[2] ?? 'Player 2') : (playerLabels[1] ?? 'You')}
-        sublabel={
-          flipped
-            ? `${player2.trashIds.length} trash · ${player2.eggDeckCount} eggs`
-            : `${player1.trashIds.length} trash · ${player1.eggDeckCount} eggs`
-        }
+      <ArenaHud
+        turnCount={turnCount}
+        player1={bottomPlayer}
+        player2={topPlayer}
+        playerLabels={topLabels}
+        isGameOver={isGameOver}
+        gameSeed={gameSeed}
+        onUndo={onUndo}
+        onSurrender={onSurrender}
+        onSkipPresentation={onSkipPresentation}
+        isPresenting={isPresenting}
       />
 
-      <div className="ib-board__opponent-hand">
+      <div className="hs-board__opp-hand">
         <HandZone
-          cardIds={flipped ? player1.handIds : player2.handIds}
+          cardIds={topPlayer.handIds}
           isOpponent
           showFaceUp={dualSeat}
           interactive={dualSeat}
           highlightedIndices={flipped ? playableHandIndices : playableOpponentHandIndices}
-          handCards={flipped ? player1.handCards : player2.handCards}
+          handCards={topPlayer.handCards}
           onCardClick={flipped ? onPlayCard : onOpponentPlayCard}
           onCardInspect={onHandCardInspect}
         />
       </div>
 
-      {/* Flow stage: opponent field / memory gauge / player field share the
-          vertical space as a flex column (see .ib-board__stage). The two
-          fields are flex:1 (equal), so neither half is smushed. */}
-      <div className="ib-board__stage">
-        <div className="ib-board__side ib-board__side--opp">
+      <div className="hs-board__stage">
+        <div className="hs-board__half">
           <PlayerHalf
-            player={flipped ? player1 : player2}
+            player={topPlayer}
             isOpponent
             highlightedSlots={flipped ? ownSlots : enemySlots}
             selectedSlots={flipped ? selectedOwnSlots : selectedEnemySlots}
+            canAttackSecurity={canAttackSecurity}
+            onAttackSecurity={onAttackSecurity}
             onTrashClick={flipped ? onOwnTrashClick : onOpponentTrashClick}
             targetedSlots={targetedSlots}
+            isDraggingAttacker={isDraggingAttacker}
             onSlotClick={(i) => onSlotClick?.(!flipped, i)}
             onSlotInspect={(i) => onSlotInspect?.(!flipped, i)}
+            onInspectCard={onHandCardInspect}
             onBreedingInspect={() => onBreedingInspect?.(!flipped)}
           />
         </div>
 
-        <div className="ib-board__gauge">
-          <MemoryGauge
-            value={memoryGauge}
-            localPlayer={flipped ? 2 : 1}
-            currentPhase={currentPhase}
-            previewCost={previewCost}
-            latestActionLabel={latestActionLabel}
-          />
-        </div>
+        <MemoryBand
+          value={memoryGauge}
+          localPlayer={flipped ? 2 : 1}
+          currentPhase={currentPhase}
+          currentPlayer={currentPlayer}
+          actionMask={effectiveMask}
+          isGameOver={isGameOver}
+          isBusy={isBusy}
+          previewCost={previewCost}
+          memoryDelta={memoryDelta}
+          onAction={(id) => onAction?.(id)}
+        />
 
-        <div className="ib-board__side ib-board__side--player">
+        <div className="hs-board__half">
           <PlayerHalf
-            player={flipped ? player2 : player1}
+            player={bottomPlayer}
             isOpponent={false}
             highlightedSlots={flipped ? enemySlots : ownSlots}
             selectedSlots={flipped ? selectedEnemySlots : selectedOwnSlots}
+            attackableSlots={attackableSlots}
             canHatch={canHatch}
             canMove={canMove}
             canDigivolveBreeding={canDigivolveBreeding}
             highlightBreeding={highlightBreeding}
             onSlotClick={(i) => onSlotClick?.(flipped, i)}
             onSlotInspect={(i) => onSlotInspect?.(flipped, i)}
+            onInspectCard={onHandCardInspect}
             onBreedingInspect={() => onBreedingInspect?.(flipped)}
             onHatch={onHatch}
             onMove={onMove}
@@ -260,9 +253,12 @@ export function GameBoard({
         </div>
       </div>
 
-      {/* Revealed-cards zone overlays the gauge area (absolute), so it lives
-          outside the flow stage. */}
-      {revealedCards.length > 0 && (
+      {revealedCards.length > 0 &&
+        !(
+          pendingSelection?.selectingPlayer === 1 &&
+          (currentPhase === GamePhase.SelectReveal ||
+            currentPhase === GamePhase.SelectPermutation)
+        ) && (
         <div
           className={`ib-board__revealed transition-opacity duration-150 ${
             peeking ? 'pointer-events-none opacity-0' : ''
@@ -281,50 +277,19 @@ export function GameBoard({
         </div>
       )}
 
-      <div className="ib-board__hand">
+      <div className="hs-board__hand">
         <HandZone
-          cardIds={flipped ? player2.handIds : player1.handIds}
+          cardIds={bottomPlayer.handIds}
           isOpponent={false}
-          showFaceUp
-          interactive
           highlightedIndices={flipped ? playableOpponentHandIndices : playableHandIndices}
-          handCards={flipped ? player2.handCards : player1.handCards}
+          handCards={bottomPlayer.handCards}
           onCardClick={flipped ? onOpponentPlayCard : onPlayCard}
           onCardHoverIndex={onHandCardHoverIndex}
           onCardInspect={onHandCardInspect}
         />
       </div>
 
-      {/* Dev-only tensor telemetry — gated to dev builds so it never ships,
-          and anchored bottom-left so it can't overlap the hand-count chip. */}
       {import.meta.env.DEV && <TensorDebugBadge summary={latestTensorSummary} />}
-      <div className="ib-hand-count-chip" aria-label={`${player1.handCount} cards in your hand`}>
-        <span className="ib-hand-count-chip__label">YOUR HAND</span>
-        <span className="ib-hand-count-chip__value">{player1.handCount}</span>
-      </div>
     </div>
   );
 }
-
-function PlayerTag({
-  className,
-  accent,
-  label,
-  sublabel,
-}: {
-  className: string;
-  accent: 'opp' | 'you';
-  label: string;
-  sublabel: string;
-}) {
-  return (
-    <div className={`ib-player-tag ${className} ib-player-tag--${accent}`}>
-      <div className="ib-player-tag__avatar">{accent === 'you' ? 'Y' : 'O'}</div>
-      <div>
-        <div className="ib-player-tag__name">{label}</div>
-        <div className="ib-player-tag__sub">{sublabel}</div>
-      </div>
-    </div>
-  );
-}
-

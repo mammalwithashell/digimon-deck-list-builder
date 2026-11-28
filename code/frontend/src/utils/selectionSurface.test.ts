@@ -60,6 +60,38 @@ describe('isBoardDrivenSelection', () => {
     ).toBe(false);
   });
 
+  it('is false for a Digi-Xros cardChoice pick in SelectMaterial so Hand + Field cards open in SelectionPanel', () => {
+    expect(
+      isBoardDrivenSelection(
+        pending({
+          kind: 'Material',
+          validIndices: [30, 31, 62],
+          cardChoice: {
+            prompt_id: '1',
+            page_generation: '0',
+            page_index: '0',
+            page_count: '1',
+            rows: [
+              {
+                action_id: 30,
+                operation: 'commit_card',
+                zone: 'hand',
+                owner: 0,
+                carrier_slot: null,
+                carrier_identity: null,
+                position: '0',
+                card_id: 'BT10-009',
+                card_registry_index: 1,
+                identity_visible: true,
+              },
+            ],
+          },
+        }),
+        GamePhase.SelectMaterial,
+      ),
+    ).toBe(false);
+  });
+
   it('is false for modal selections (hand / trash / reveal / effect-choice)', () => {
     expect(
       isBoardDrivenSelection(pending({ kind: 'Hand' }), GamePhase.SelectHand),

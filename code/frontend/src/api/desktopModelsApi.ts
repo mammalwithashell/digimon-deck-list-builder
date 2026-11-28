@@ -9,6 +9,7 @@ import type { ModelContract } from '@/utils/modelContract';
 // for uploading/publishing models) to avoid conflating the two.
 
 import { invoke } from '@tauri-apps/api/core';
+import { httpJson, isInTauriRuntime } from '@/api/engineRuntime';
 
 export type ModelArchitecture = 'mlp' | 'lstm';
 
@@ -51,14 +52,23 @@ export interface EngineContract extends ModelContract {
 }
 
 export async function engineContract(): Promise<EngineContract> {
+  if (!isInTauriRuntime()) {
+    return httpJson<EngineContract>('/desktop-models/contract');
+  }
   return invoke<EngineContract>('models_engine_contract');
 }
 
 export async function fetchManifest(baseUrl: string): Promise<ManifestModel[]> {
+  if (!isInTauriRuntime()) {
+    return [];
+  }
   return invoke<ManifestModel[]>('models_fetch_manifest', { baseUrl });
 }
 
 export async function listLocal(): Promise<LocalModelMeta[]> {
+  if (!isInTauriRuntime()) {
+    return httpJson<LocalModelMeta[]>('/desktop-models/local');
+  }
   return invoke<LocalModelMeta[]>('models_list_local');
 }
 
@@ -67,10 +77,20 @@ export async function downloadModel(model: ManifestModel): Promise<LocalModelMet
 }
 
 export async function deleteModel(modelId: string): Promise<boolean> {
+  if (!isInTauriRuntime()) {
+    return httpJson<boolean>(`/desktop-models/${encodeURIComponent(modelId)}`, {
+      method: 'DELETE',
+    });
+  }
   return invoke<boolean>('models_delete', { modelId });
 }
 
 export async function loadCached(modelId: string): Promise<LocalModelMeta> {
+  if (!isInTauriRuntime()) {
+    return httpJson<LocalModelMeta>(`/desktop-models/${encodeURIComponent(modelId)}/load`, {
+      method: 'POST',
+    });
+  }
   return invoke<LocalModelMeta>('models_load_cached', { modelId });
 }
 

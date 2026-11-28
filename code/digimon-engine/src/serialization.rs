@@ -504,7 +504,7 @@ fn perm_data(
     json!({
         "topCardId": top.card_id(data),
         "topCardName": top_data.card_name,
-        "dp": base_dp,
+        "dp": total_dp,
         "level": level,
         "isSuspended": perm.is_suspended,
         // Digivolution cards only — the top card is NOT a digivolution card
@@ -566,6 +566,13 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
     );
     m.insert("isOptional".into(), Value::from(v.is_optional));
     m.insert("prompt".into(), Value::String(v.prompt.clone()));
+    if let Some(cd) = game.card_data_for_handle(v.source_card) {
+        m.insert("sourceCardId".into(), Value::String(cd.card_id.clone()));
+        m.insert("sourceCardName".into(), Value::String(cd.card_name.clone()));
+    }
+    if let Some(perm) = v.source_permanent {
+        m.insert("sourceSlot".into(), Value::from(perm.index));
+    }
     if let Some(choices) = v.effect_choices.as_ref() {
         m.insert(
             "effectChoices".into(),
@@ -586,11 +593,42 @@ fn pending_selection_data(v: &PendingSelectionView, game: &Game) -> Value {
                             "actionId": c.action_id,
                             "cardId": card.map(|cd| cd.card_id.clone()),
                             "cardName": card.map(|cd| cd.card_name.clone()),
+                            "isOptional": c.is_optional,
+                            "timing": c.timing.map(|t| format!("{:?}", t)),
+                            "keyword": c.keyword.map(|k| format!("{:?}", k)),
                         })
                     })
                     .collect(),
             ),
         );
+        // Surface older parked triggers behind the currently offered bundle
+        // (CR §15-4-5-2/3 derived-trigger precedence) so the UI can show a
+        // collapsible "Waiting Effects" drawer without changing action space.
+        if game.effect_queue.len() > choices.len() {
+            let offered_cards: std::collections::HashSet<(u16, u8)> = choices
+                .iter()
+                .filter_map(|c| c.source_card.map(|h| (h.0, c.timing.map_or(255, |t| t as u8))))
+                .collect();
+            let waiting: Vec<Value> = game
+                .effect_queue
+                .iter()
+                .filter(|qe| !offered_cards.contains(&(qe.source_card.0, qe.timing as u8)))
+                .map(|qe| {
+                    let card_name = game
+                        .card_data_for_handle(qe.source_card)
+                        .map(|cd| cd.card_name.clone());
+                    json!({
+                        "cardId": qe.card_id,
+                        "cardName": card_name,
+                        "timing": format!("{:?}", qe.timing),
+                        "isOptional": qe.is_optional,
+                    })
+                })
+                .collect();
+            if !waiting.is_empty() {
+                m.insert("waitingTriggers".into(), Value::Array(waiting));
+            }
+        }
     }
     Value::Object(m)
 }

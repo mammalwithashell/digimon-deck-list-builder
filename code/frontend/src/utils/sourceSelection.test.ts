@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   isSourceSelectAction,
   sourceSelectionCards,
+  sourceSelectionHosts,
   SOURCE_SELECT_START,
 } from './sourceSelection';
 
@@ -41,5 +42,43 @@ describe('sourceSelectionCards', () => {
   it('skips ids whose permanent or source index does not resolve', () => {
     // field 3 has no permanent; source index 5 on field 0 has no such source.
     expect(sourceSelectionCards([2000 + 3 * 12, 2000 + 5], battleArea)).toEqual([]);
+  });
+});
+
+describe('sourceSelectionHosts', () => {
+  const twoHostArea = [
+    {
+      sources: [
+        { cardId: 'BT1-025', cardName: 'WarGreymon', isTop: true },
+        { cardId: 'BT1-010', cardName: 'Agumon', isTop: false },
+      ],
+    },
+    {
+      sources: [
+        { cardId: 'BT1-044', cardName: 'MetalGarurumon', isTop: true },
+        { cardId: 'BT1-029', cardName: 'Gabumon', isTop: false },
+        { cardId: 'BT1-036', cardName: 'Garurumon', isTop: false },
+      ],
+    },
+  ];
+
+  it('groups source tiles by host permanent fieldIndex for two-step picking', () => {
+    const groups = sourceSelectionHosts([2000, 2012, 2013], twoHostArea);
+    expect(groups).toHaveLength(2);
+    expect(groups[0]).toEqual({
+      fieldIndex: 0,
+      hostCardId: 'BT1-025',
+      hostCardName: 'WarGreymon',
+      tiles: [{ actionId: 2000, cardId: 'BT1-010', cardName: 'Agumon' }],
+    });
+    expect(groups[1]).toEqual({
+      fieldIndex: 1,
+      hostCardId: 'BT1-044',
+      hostCardName: 'MetalGarurumon',
+      tiles: [
+        { actionId: 2012, cardId: 'BT1-029', cardName: 'Gabumon' },
+        { actionId: 2013, cardId: 'BT1-036', cardName: 'Garurumon' },
+      ],
+    });
   });
 });

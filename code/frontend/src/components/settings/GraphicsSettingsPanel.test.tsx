@@ -67,4 +67,13 @@ describe('GraphicsSettingsPanel', () => {
     });
     expect(useUiStore.getState().textScale).toBe('lg');
   });
+
+  it('shows Card & Digi-Egg Sleeves row and opens SleevePickerModal', () => {
+    render(<GraphicsSettingsPanel />);
+    expect(screen.getByText('Card & Digi-Egg Sleeves')).toBeInTheDocument();
+    act(() => {
+      screen.getByTestId('graphics-sleeves-open').click();
+    });
+    expect(screen.getByTestId('sleeve-picker-modal')).toBeInTheDocument();
+  });
 });

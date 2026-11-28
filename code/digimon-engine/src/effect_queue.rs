@@ -5375,9 +5375,25 @@ impl Game {
         }
 
         if let Some(process) = &effect.process {
+            let source_card_handle = qe.attribution_source_card.unwrap_or(qe.source_card);
+            let card_name = self
+                .card_data_for_handle(source_card_handle)
+                .map(|cd| cd.card_name.clone())
+                .unwrap_or_else(|| qe.card_id.clone());
+            let summary = (!effect.name.is_empty()).then(|| effect.name.clone());
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::EffectActivated {
+                seq,
+                player: qe.controller,
+                source_card_id: qe.card_id.clone(),
+                source_card_name: card_name,
+                source_slot: qe.source_permanent.map(|p| p.index),
+                timing: format!("{:?}", qe.timing),
+                summary,
+            });
             let mut ctx = EffectContext::new_with_source_kind(
                 self,
-                qe.attribution_source_card.unwrap_or(qe.source_card),
+                source_card_handle,
                 qe.source_permanent,
                 qe.attribution_source_kind.unwrap_or(qe.source_kind),
                 qe.controller,
@@ -5426,9 +5442,25 @@ impl Game {
         }
 
         if let Some(process) = &effect.process {
+            let source_card_handle = qe.attribution_source_card.unwrap_or(qe.source_card);
+            let card_name = self
+                .card_data_for_handle(source_card_handle)
+                .map(|cd| cd.card_name.clone())
+                .unwrap_or_else(|| qe.card_id.clone());
+            let summary = (!effect.name.is_empty()).then(|| effect.name.clone());
+            let seq = self.next_event_seq();
+            self.events.push(crate::events::GameEvent::EffectActivated {
+                seq,
+                player: qe.controller,
+                source_card_id: qe.card_id.clone(),
+                source_card_name: card_name,
+                source_slot: qe.source_permanent.map(|p| p.index),
+                timing: format!("{:?}", qe.timing),
+                summary,
+            });
             let mut ctx = EffectContext::new_with_source_kind(
                 self,
-                qe.attribution_source_card.unwrap_or(qe.source_card),
+                source_card_handle,
                 qe.source_permanent,
                 qe.attribution_source_kind.unwrap_or(qe.source_kind),
                 qe.controller,

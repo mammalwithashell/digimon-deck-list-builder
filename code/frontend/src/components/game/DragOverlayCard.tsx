@@ -44,9 +44,9 @@ export function DragOverlayCard({ cardId, isOverValid }: DragOverlayCardProps) {
   if (typeof document === 'undefined') return null;
 
   const overlay = !cardId ? (
-    <DragOverlay />
+    <DragOverlay dropAnimation={null} />
   ) : (
-    <DragOverlay>
+    <DragOverlay dropAnimation={null}>
       <div
         className={`${isOverValid ? 'opacity-80' : 'opacity-40'} pointer-events-none`}
         style={{

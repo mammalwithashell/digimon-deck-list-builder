@@ -24,20 +24,25 @@ export function RevealedCardsZone({
 
   return (
     <div
-      className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
-        hasClickable
-          ? 'bg-amber-900/30 border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.15)]'
-          : 'bg-gray-800/50 border-gray-600/40'
-      }`}
+      className="flex items-center gap-3 px-4 py-2 rounded-[var(--radius-md)] border shadow-[var(--shadow-card)] backdrop-blur-sm"
+      style={{
+        background: 'color-mix(in srgb, var(--surface) 92%, transparent)',
+        borderColor: hasClickable ? 'var(--warn)' : 'var(--line-1)',
+      }}
     >
-      <div className="flex flex-col items-center mr-1 max-w-[120px]">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 text-center leading-tight">
+      <div className="flex flex-col items-center mr-1 max-w-[136px]">
+        <span
+          className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight"
+          style={{ color: hasClickable ? 'var(--warn)' : 'var(--ink-1)', fontFamily: 'var(--font-mono)' }}
+        >
           {title}
         </span>
-        {subtitle && <span className="text-[9px] text-gray-400">{subtitle}</span>}
+        {subtitle && (
+          <span className="text-[10px] text-[var(--ink-2)] text-center">{subtitle}</span>
+        )}
       </div>
-      <div className="w-px h-10 bg-gray-600/50" />
-      <div className="flex gap-1.5">
+      <div className="w-px h-10 bg-[var(--line-0)]" />
+      <div className="flex gap-2">
         {cards.map((card, i) => (
           <Card
             key={`${card.cardId}-${i}`}

@@ -368,3 +368,39 @@ describe('invalidated owned card choices', () => {
     expect(onAction.mock.calls).toEqual([[62]]);
   });
 });
+
+describe('SelectionPanel revealed card selection', () => {
+  it('opens a roomy reveal modal, marks eligible cards, and dispatches revealed action IDs', () => {
+    const onAction = vi.fn();
+    const mask = new Array(2192).fill(0);
+    mask[30] = 1; // revealed index 0 valid
+    mask[32] = 1; // revealed index 2 valid
+    renderPanel({
+      currentPhase: GamePhase.SelectReveal,
+      pendingSelection: {
+        phase: GamePhase.SelectReveal,
+        selectingPlayer: 1,
+        validIndices: [30, 32],
+        isOptional: false,
+        prompt: 'Select 1 card with the [VB] trait to add to your hand',
+        kind: 'Reveal',
+      } as PendingSelection,
+      actionMask: mask,
+      revealedCards: [
+        { cardId: 'EX12-069', owner: 1 },
+        { cardId: 'BT24-001', owner: 1 },
+        { cardId: 'EX12-066', owner: 1 },
+      ],
+      onAction,
+    });
+
+    expect(screen.getByTestId('selection-panel')).toBeInTheDocument();
+    expect(screen.getByText('Revealed From Deck · Select Card')).toBeInTheDocument();
+    expect(
+      screen.getByText('Select 1 card with the [VB] trait to add to your hand'),
+    ).toBeInTheDocument();
+    expect(screen.getByTitle('BT24-001').closest('button')).toBeDisabled();
+    fireEvent.click(screen.getByTitle('EX12-066'));
+    expect(onAction).toHaveBeenCalledWith(32);
+  });
+});

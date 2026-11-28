@@ -1,10 +1,11 @@
 import { useTheme } from '../theme/ThemeProvider';
+import { STYLE_PRESETS } from '../theme/themeStore';
 
 export interface ThemeSwitchProps {
   className?: string;
 }
 
-/** Dual-theme toggle. Dark = CRT power-toggle; light = Win95 switch. */
+/** Calm dual-polarity toggle (Dark / Light). */
 export function ThemeSwitch({ className = '' }: ThemeSwitchProps) {
   const { theme, toggle } = useTheme();
   const label = theme === 'dark' ? 'Dark' : 'Light';
@@ -21,5 +22,34 @@ export function ThemeSwitch({ className = '' }: ThemeSwitchProps) {
         <span className="ds-themeswitch__knob" />
       </span>
     </button>
+  );
+}
+
+/** 3-preset palette picker (Aegis Clean / Soft Digi-OS / Soft Adventure). */
+export function StylePresetSwitch({ className = '' }: { className?: string }) {
+  const { stylePreset, setStylePreset } = useTheme();
+  return (
+    <div
+      className={`ds-style-picker ${className}`.trim()}
+      role="group"
+      aria-label="Visual style preset"
+    >
+      {STYLE_PRESETS.map((preset) => {
+        const active = stylePreset === preset.id;
+        return (
+          <button
+            key={preset.id}
+            type="button"
+            data-testid={`style-preset-${preset.id}`}
+            aria-pressed={active}
+            title={preset.description}
+            onClick={() => setStylePreset(preset.id)}
+            className={`ds-style-picker__btn${active ? ' is-active' : ''}`}
+          >
+            {preset.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }

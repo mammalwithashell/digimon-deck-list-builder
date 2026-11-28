@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useGameStore } from '@/stores/gameStore';
+import { usePresentationStore } from '@/stores/presentationStore';
 import { useUiStore, BOT_SPEED_DELAY_MS } from '@/stores/uiStore';
 import * as gameApi from '@/api/gameApi';
 import type { ActionTrace, GameEvent, GameState } from '@/types/game';
@@ -43,6 +44,7 @@ export function usePacedAgentDriver(opts: {
   const agentPending = useGameStore((s) => s.agentPending);
   const isGameOver = useGameStore((s) => s.isGameOver);
   const actionMask = useGameStore((s) => s.actionMask);
+  const isPresenting = usePresentationStore((s) => s.isPresenting);
   const [pacingStalled, setPacingStalled] = useState(false);
 
   const advanceAgentBeat = useCallback(async () => {
@@ -92,6 +94,9 @@ export function usePacedAgentDriver(opts: {
       })();
       return;
     }
+    // Wait until any in-flight event animations finish before scheduling the
+    // next bot action beat, then honor the configured speed delay.
+    if (isPresenting) return;
     const timer = setTimeout(() => {
       void advanceAgentBeat();
     }, BOT_SPEED_DELAY_MS[botSpeed]);
@@ -101,11 +106,11 @@ export function usePacedAgentDriver(opts: {
     advanceAgentBeat,
     agentPending,
     applyGameResponse,
-    // Re-arm key: a fresh mask array arrives with every applied response.
     actionMask,
     botSpeed,
     gameId,
     isGameOver,
+    isPresenting,
     pacingStalled,
   ]);
 

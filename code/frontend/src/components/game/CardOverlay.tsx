@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Card } from '@/components/shared/Card';
-import { KeywordBadges } from '@/components/board/KeywordBadges';
+import { KeywordBadges, getKeywordMeta } from '@/components/board/KeywordBadges';
 import type { PermanentInfo, SourceInfo } from '@/types/game';
 import { useGameStore } from '@/stores/gameStore';
 import { COLOR_HEX, COLOR_NAMES } from '@/utils/constants';
@@ -48,19 +48,22 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
 
   if (!permanent) return null;
 
+  const effectiveDp = permanent.dpBreakdown?.total ?? permanent.dp;
   const saValue = 1 + permanent.securityAttackModifier;
   const nonZeroSourceDp = permanent.dpBreakdown.sources.filter((s) => s.value !== 0);
-  const hasDpBreakdown = permanent.dpBreakdown.total != null &&
+  const hasDpBreakdown =
+    permanent.dpBreakdown.total != null &&
     (nonZeroSourceDp.length > 0 || permanent.dpBreakdown.temporary !== 0);
 
   // Reverse sources so top card (last in array) comes first visually
   const stackSources = [...permanent.sources].reverse();
   // Linked cards (from linkedCardIds), each with its printed link effect —
   // the text this Digimon gains from it (rules 4-2-6).
-  const linkedIds = permanent.linkedCardIds;
+  const linkedIds = permanent.linkedCardIds ?? [];
   const linkEffects = permanent.linkEffects ?? [];
   // Active modifiers, grouped (immunities / restrictions / stat changes / other)
   const modifierGroups = groupModifiers(permanent.modifiers ?? []);
+  const gainedSet = new Set(permanent.keywordBreakdown?.gained ?? []);
 
   const inspectOnRightClick = (cardId: string) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -87,19 +90,31 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
       <div className="px-3 py-2 border-b border-[var(--ib-line)] shrink-0 space-y-1.5">
         {/* Stat badges */}
         <div className="flex flex-wrap gap-1.5">
-          {permanent.level != null && (
+          {permanent.level != null && permanent.level > 0 && (
             <span className="px-2 py-0.5 bg-yellow-600/80 text-white text-xs font-bold rounded">
               Lv.{permanent.level}
             </span>
           )}
-          {permanent.dp != null && (
+          {effectiveDp != null && (effectiveDp > 0 || (permanent.level != null && permanent.level > 0)) && (
             <span className="px-2 py-0.5 bg-[var(--ib-panel-2)] text-[var(--ib-bone)] text-xs font-bold rounded">
-              {permanent.dp.toLocaleString()} DP
+              {effectiveDp.toLocaleString()} DP
             </span>
           )}
           {permanent.securityAttackModifier !== 0 && (
             <span className="px-2 py-0.5 bg-red-700/80 text-white text-xs font-bold rounded">
-              SA{permanent.securityAttackModifier > 0 ? '+' : ''}{permanent.securityAttackModifier}
+              SA{permanent.securityAttackModifier > 0 ? '+' : ''}
+              {permanent.securityAttackModifier}
+            </span>
+          )}
+          {linkedIds.length > 0 && (
+            <span
+              data-testid="overlay-linked-summary"
+              className="px-2 py-0.5 bg-purple-700/75 text-purple-100 text-xs font-bold rounded inline-flex items-center gap-1"
+            >
+              <span aria-hidden="true">🔗</span>
+              <span>
+                {linkedIds.length} Linked
+              </span>
             </span>
           )}
         </div>
@@ -111,19 +126,29 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
 
         {/* Keywords */}
         {permanent.keywords.length > 0 && (
-          <KeywordBadges keywords={permanent.keywords} />
+          <KeywordBadges
+            keywords={permanent.keywords}
+            gainedKeywords={permanent.keywordBreakdown?.gained}
+            innateKeywords={permanent.keywordBreakdown?.innate}
+            variant="inspector"
+          />
         )}
 
-        {/* Active effects summary (DCGO bulleted list) */}
+        {/* Active effects summary (readable keyword breakdown with innate vs granted distinction) */}
         {permanent.keywords.length > 0 && (
           <div className="text-[11px] text-[var(--ib-bone-dd)] space-y-0.5">
             {permanent.keywords.map((kw) => {
-              const isGained = permanent.keywordBreakdown.gained.includes(kw);
+              const isGained = gainedSet.has(kw);
+              const meta = getKeywordMeta(kw);
               return (
-                <div key={kw}>
+                <div key={kw} title={meta.description}>
                   <span className="text-[var(--ib-bone-dd)]">-</span>{' '}
-                  <span className={isGained ? 'text-cyan-300' : 'text-[var(--ib-bone-d)]'}>{kw}</span>
-                  {isGained && <span className="text-[var(--ib-bone-dd)] text-[9px] ml-1">(granted)</span>}
+                  <span className={isGained ? 'text-cyan-300 font-medium' : 'text-[var(--ib-bone-d)]'}>
+                    {meta.label}
+                  </span>
+                  <span className="text-[var(--ib-bone-dd)] text-[9px] ml-1">
+                    {isGained ? '(granted)' : '(innate)'}
+                  </span>
                 </div>
               );
             })}
@@ -174,40 +199,49 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
           </div>
         )}
 
-        {/* Source cards (non-top, in stack order) */}
-        {stackSources
-          .filter((src) => !src.isTop)
-          .map((src, i) => (
-            <StackCardEntry
-              key={`${src.cardId}-${i}`}
-              source={src}
-              onInspectCard={onInspectCard}
-            />
-          ))}
-
-        {/* Linked cards */}
+        {/* Linked cards — highlighted prominently so active Link Effects are easy to read */}
         {linkedIds.length > 0 && (
-          <>
+          <div data-testid="linked-cards-section" className="space-y-1.5">
+            <div className="flex items-center justify-between px-1 pt-1">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 flex items-center gap-1">
+                <span aria-hidden="true">🔗</span>
+                <span>Linked Cards ({linkedIds.length})</span>
+              </span>
+              <span className="text-[9px] text-[var(--ib-bone-dd)]">Right-click to zoom</span>
+            </div>
             {linkedIds.map((cardId, i) => {
               const linkEffect = linkEffects.find((e) => e.linkIndex === i);
               return (
                 <div
                   key={`link-${cardId}-${i}`}
                   data-testid="linked-card"
-                  className="rounded-lg overflow-hidden border-l-3"
+                  className="rounded-lg overflow-hidden border border-purple-500/40"
                   style={{ borderLeft: '3px solid #a855f7' }}
                 >
-                  <div className="p-2 bg-purple-900/20">
-                    <div className="text-[9px] text-purple-400 font-bold uppercase mb-1">Linked</div>
+                  <div className="p-2 bg-purple-950/35">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="px-1.5 py-0.5 rounded bg-purple-600/80 text-white text-[9px] font-bold uppercase shrink-0">
+                          Linked #{i + 1}
+                        </span>
+                        {linkEffect?.cardName && (
+                          <span className="text-[11px] font-semibold text-purple-100 truncate">
+                            {linkEffect.cardName}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-mono text-purple-300 shrink-0">{cardId}</span>
+                    </div>
                     <div className="flex items-start gap-2">
                       <Card
                         cardId={cardId}
+                        cardName={linkEffect?.cardName ?? undefined}
                         size="md"
                         onContextMenu={inspectOnRightClick(cardId)}
                       />
                       {linkEffect && (
-                        <div className="flex-1 min-w-0 pt-1">
-                          <div className="text-[9px] text-purple-400 font-bold uppercase mb-0.5">
+                        <div className="flex-1 min-w-0 pt-0.5">
+                          <div className="text-[9px] text-purple-300 font-bold uppercase mb-0.5">
                             Link Effect
                           </div>
                           <CardEffectText text={linkEffect.text} />
@@ -218,8 +252,19 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
                 </div>
               );
             })}
-          </>
+          </div>
         )}
+
+        {/* Source cards (non-top, in stack order) */}
+        {stackSources
+          .filter((src) => !src.isTop)
+          .map((src, i) => (
+            <StackCardEntry
+              key={`${src.cardId}-${i}`}
+              source={src}
+              onInspectCard={onInspectCard}
+            />
+          ))}
       </div>
 
       {/* ── DP Breakdown (bottom) ── */}
@@ -232,13 +277,17 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
             </span>
             {nonZeroSourceDp.map((src, i) => (
               <span key={`${src.cardId}-${i}`} className="text-[var(--ib-bone-dd)]">
-                {src.cardName ?? src.cardId}: <span className="text-cyan-300">{src.value > 0 ? `+${src.value}` : src.value}</span>
+                {src.cardName ?? src.cardId}:{' '}
+                <span className="text-cyan-300">{src.value > 0 ? `+${src.value}` : src.value}</span>
               </span>
             ))}
             {permanent.dpBreakdown.temporary !== 0 && (
               <span className="text-[var(--ib-bone-dd)]">
-                Temp: <span className="text-amber-300">
-                  {permanent.dpBreakdown.temporary > 0 ? `+${permanent.dpBreakdown.temporary}` : permanent.dpBreakdown.temporary}
+                Temp:{' '}
+                <span className="text-amber-300">
+                  {permanent.dpBreakdown.temporary > 0
+                    ? `+${permanent.dpBreakdown.temporary}`
+                    : permanent.dpBreakdown.temporary}
                 </span>
               </span>
             )}

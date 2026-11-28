@@ -28,6 +28,11 @@ export function isBoardDrivenSelection(
 ): boolean {
   if (!pending) return false;
 
+  // Owned physical-card pages (e.g. Digi-Xros materials from hand + field +
+  // sources, union picks, deep security) always render in SelectionPanel so
+  // every zone's rows — including Hand — are directly selectable.
+  if (pending.cardChoice) return false;
+
   // Field / any-field target clicks happen on the board.
   if (isFieldSelectionKind(pending.kind) || isAnyFieldSelectionKind(pending.kind)) {
     return true;

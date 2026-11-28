@@ -1,4 +1,11 @@
+import { useEffect, useState } from 'react';
 import { useCardImage } from '@/hooks/useCardImage';
+import {
+  DEFAULT_CARD_SLEEVE,
+  DEFAULT_EGG_SLEEVE,
+  useCardSleeve,
+  useEggSleeve,
+} from '@/stores/sleeveStore';
 import { COLOR_HEX, COLOR_NAMES } from '@/utils/constants';
 
 type CardSize = 'sm' | 'md' | 'lg' | 'xl' | 'inspector';
@@ -13,6 +20,7 @@ const SIZE_MAP: Record<CardSize, { width: number; height: number }> = {
 
 interface CardOverlay {
   dp?: number;
+  dpState?: 'normal' | 'buff' | 'debuff';
   level?: number | null;
   keywords?: string[];
   saModifier?: number;
@@ -24,6 +32,10 @@ interface CardProps {
   cardColor?: number;
   size?: CardSize;
   faceDown?: boolean;
+  /** Render Digi-Egg sleeve when faceDown is true. */
+  isEgg?: boolean;
+  /** Force the standard default sleeve instead of the player's customized sleeve. */
+  useDefaultSleeve?: boolean;
   suspended?: boolean;
   dimmed?: boolean;
   highlighted?: boolean;
@@ -45,6 +57,8 @@ export function Card({
   cardColor,
   size = 'md',
   faceDown = false,
+  isEgg = false,
+  useDefaultSleeve = false,
   suspended = false,
   dimmed = false,
   highlighted = false,
@@ -59,6 +73,22 @@ export function Card({
   className = '',
 }: CardProps) {
   const { src, isLoading, hasError } = useCardImage(faceDown ? null : cardId, isAltArt);
+  const cardSleeve = useCardSleeve();
+  const eggSleeve = useEggSleeve();
+  const activeSleeve = useDefaultSleeve
+    ? isEgg
+      ? DEFAULT_EGG_SLEEVE
+      : DEFAULT_CARD_SLEEVE
+    : isEgg
+      ? eggSleeve
+      : cardSleeve;
+  const [sleeveImgError, setSleeveImgError] = useState(false);
+
+  useEffect(() => {
+    setSleeveImgError(false);
+  }, [activeSleeve.src]);
+
+  const showSleeveImage = Boolean(activeSleeve.src) && !sleeveImgError;
   const { width, height } = SIZE_MAP[size];
 
   const colorName = cardColor !== undefined ? COLOR_NAMES[cardColor] : undefined;
@@ -80,18 +110,49 @@ export function Card({
         ${!dimmed && !highlighted && !targeted && !selected ? 'hover:shadow-[0_0_8px_rgba(34,211,238,0.3)] hover:ring-1 hover:ring-cyan-500/40' : ''}
         ${borderClass} ${className}`}
       style={{ width, height }}
-      title={faceDown ? undefined : cardId}
+      title={
+        faceDown
+          ? undefined
+          : cardName && cardName !== cardId
+            ? `${cardName} (${cardId})`
+            : cardId
+      }
       onClick={onClick}
       onContextMenu={onContextMenu}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
       {faceDown ? (
-        <div
-          className="w-full h-full bg-gradient-to-br from-blue-900 to-blue-700 border border-blue-600 rounded flex items-center justify-center"
-        >
-          <span className="text-blue-300 text-xs font-bold">DCG</span>
-        </div>
+        showSleeveImage ? (
+          <div
+            data-testid="card-back-sleeve"
+            data-sleeve-id={activeSleeve.id}
+            className="relative w-full h-full rounded overflow-hidden bg-slate-950 border border-white/15"
+          >
+            <img
+              src={activeSleeve.src}
+              alt={activeSleeve.label}
+              className="w-full h-full object-cover rounded select-none"
+              draggable={false}
+              onError={() => setSleeveImgError(true)}
+            />
+            <span className="sr-only">DCG</span>
+          </div>
+        ) : (
+          <div
+            data-testid="card-back-classic"
+            data-sleeve-id={activeSleeve.id}
+            className={`w-full h-full rounded flex items-center justify-center border ${
+              isEgg
+                ? 'bg-gradient-to-br from-slate-100 to-slate-300 border-slate-400'
+                : 'bg-gradient-to-br from-blue-900 to-blue-700 border-blue-600'
+            }`}
+          >
+            <span className={`text-xs font-bold ${isEgg ? 'text-slate-700' : 'text-blue-300'}`}>
+              DCG
+            </span>
+          </div>
+        )
       ) : isLoading ? (
         <div
           className="w-full h-full animate-pulse rounded"
@@ -121,15 +182,24 @@ export function Card({
         />
       )}
 
-      {/* DP badge */}
+      {/* DP badge (color-coded when buffed/debuffed) */}
       {!faceDown && overlay?.dp != null && src && (
-        <div className="absolute bottom-0 left-0 bg-black/80 text-white text-[9px] font-bold px-1 rounded-tr">
+        <div
+          data-testid="card-dp-badge"
+          className={`absolute bottom-0 left-0 bg-black/85 text-[10px] font-extrabold px-1.5 py-0.5 rounded-tr ${
+            overlay.dpState === 'buff'
+              ? 'text-emerald-300'
+              : overlay.dpState === 'debuff'
+                ? 'text-rose-300'
+                : 'text-white'
+          }`}
+        >
           {overlay.dp}
         </div>
       )}
 
-      {/* Level badge */}
-      {!faceDown && overlay?.level != null && src && (
+      {/* Level badge (hidden for levelless tokens / Tamers / Options) */}
+      {!faceDown && overlay?.level != null && overlay.level > 0 && src && (
         <div className="absolute top-0 left-0 bg-yellow-600/90 text-white text-[9px] font-bold px-1 rounded-br">
           Lv.{overlay.level}
         </div>

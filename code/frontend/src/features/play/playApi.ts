@@ -7,7 +7,8 @@ import * as matchmaking from '@/api/matchmaking';
 import type { DeckResponse } from '@/types/deck';
 import type { PlayFormatId } from './formatCatalog';
 import { formatToQueueType } from './formatCatalog';
-import { resolveModelForDeck } from '@/api/desktopModelsApi';
+import { loadCached, resolveModelForDeck } from '@/api/desktopModelsApi';
+import { useUiStore } from '@/stores/uiStore';
 import { isStarterDeckId, STARTER_DECKS } from './starterDecks.generated';
 import type { StarterDeckId } from './starterDecks.generated';
 import { fnv1a } from './hash';
@@ -96,26 +97,22 @@ export async function createBotGame(params: {
   deck: DeckResponse;
   opponentDeck: DeckResponse;
   seed?: string | null;
+  modelId?: string | null;
 }): Promise<{ game_id: string; seed?: string }> {
   const deck1 = [...params.deck.egg_deck, ...params.deck.main_deck];
   const deck2 = [...params.opponentDeck.egg_deck, ...params.opponentDeck.main_deck];
-  if (!hasTauriBridge()) {
-    const { data } = await client.post<{ game_id: string; seed?: string }>('/games', {
-      deck1,
-      deck2,
-      player1_type: 'human',
-      player2_type: 'agent',
-      player2_policy: 'greedy',
-      seed: params.seed,
-    });
-    return { game_id: data.game_id, seed: data.seed };
+  const modelId = params.modelId ?? null;
+  if (modelId) {
+    await loadCached(modelId);
   }
+  const paced = useUiStore.getState().botSpeed !== 'instant';
   const response = await gameApi.createGame({
     deck1,
     deck2,
-    player_kinds: ['human', 'greedy'],
-    player_model_ids: [null, null],
+    player_kinds: ['human', modelId ? 'trained' : 'greedy'],
+    player_model_ids: [null, modelId],
     seed: params.seed,
+    paced,
   });
   return { game_id: response.game_id, seed: response.seed };
 }

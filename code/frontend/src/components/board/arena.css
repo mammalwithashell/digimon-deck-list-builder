@@ -1,0 +1,1317 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Hearthstone / Aegis-inspired Match Arena Stylesheet
+   Consumes exclusively unified design-system role tokens so every
+   (dark | light) x (aegis | digi-os | adventure) preset harmonizes cleanly.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.hs-board {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--arena-bg);
+  color: var(--ink-0);
+  font-family: var(--font-ui);
+}
+
+/* ── Tactile CSS/SVG Playmat Surface ──────────────────────────────────────── */
+.hs-arena-surface {
+  position: absolute;
+  inset: 0;
+  z-index: -4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hs-arena-surface__felt {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(62% 40% at 50% 14%, var(--opp-soft), transparent 72%),
+    radial-gradient(62% 40% at 50% 86%, var(--player-soft), transparent 72%),
+    radial-gradient(110% 78% at 50% 50%, var(--arena-felt), var(--arena-bg));
+}
+
+.hs-arena-surface__geometry {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.hs-arena-surface__dais {
+  fill: var(--arena-dais);
+  opacity: 0.55;
+}
+
+.hs-arena-surface__dais-rim {
+  stroke: var(--arena-dais-line);
+  stroke-width: 2;
+}
+
+.hs-arena-surface__horizon {
+  stroke: var(--arena-horizon);
+  stroke-width: 1.25;
+  stroke-dasharray: 6 6;
+  opacity: 0.6;
+}
+
+.hs-arena-surface__vignette {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 88% 90% at 50% 50%, transparent 62%, rgba(0, 0, 0, 0.24) 100%);
+}
+[data-theme="light"] .hs-arena-surface__vignette {
+  background: radial-gradient(ellipse 88% 90% at 50% 50%, transparent 68%, rgba(15, 23, 42, 0.09) 100%);
+}
+
+/* ── Compact Corner HUD ───────────────────────────────────────────────────── */
+.hs-hud {
+  position: absolute;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.hs-hud--top-left { top: 10px; left: 14px; }
+.hs-hud--top-right { top: 10px; right: 94px; }
+.hs-hud--bottom-left { bottom: 10px; left: 14px; }
+.hs-hud--bottom-right { bottom: 10px; right: 14px; }
+
+.hs-player-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 5px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.hs-player-pill__avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-ink);
+}
+.hs-player-pill--you .hs-player-pill__avatar { background: var(--player); color: #ffffff; }
+.hs-player-pill--opp .hs-player-pill__avatar { background: var(--opp); color: #ffffff; }
+.hs-player-pill__name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-0);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hs-counter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-0);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+.hs-counter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-0);
+}
+.hs-counter-chip__k {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: var(--ink-2);
+}
+
+.hs-turn-badge {
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-1);
+  box-shadow: var(--shadow-card);
+}
+
+.hs-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: var(--surface);
+  color: var(--ink-0);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.14s ease, background 0.14s ease, transform 0.1s ease;
+}
+.hs-icon-btn:hover { background: var(--surface-raised); border-color: var(--accent); }
+.hs-icon-btn.is-open { border-color: var(--accent); background: var(--surface-raised); }
+.hs-icon-btn--accent { border-color: var(--accent); color: var(--accent); }
+.hs-icon-btn--danger { color: var(--danger); }
+.hs-icon-btn--danger:hover { border-color: var(--danger); background: var(--danger); color: #ffffff; }
+
+.hs-settings-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 300px;
+  padding: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line-1);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.hs-settings-popover__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.hs-settings-popover__col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.hs-settings-popover__label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.hs-seg-group {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-0);
+}
+.hs-seg-btn {
+  flex: 1;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.hs-seg-btn:hover { color: var(--ink-0); }
+.hs-seg-btn.is-active {
+  background: var(--surface-raised);
+  color: var(--ink-0);
+  border-color: var(--accent);
+}
+
+/* ── Main Board Flow Stage ────────────────────────────────────────────────── */
+.hs-board__opp-hand {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  z-index: 8;
+  transform: translateX(-50%);
+  height: 54px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hs-board__opp-hand .ib-hand-zone {
+  transform: scale(0.46);
+  transform-origin: top center;
+}
+
+.hs-board__stage {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 48px;
+  bottom: 156px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.hs-board__half {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.hs-player-half {
+  display: grid;
+  grid-template-columns: 164px minmax(0, 1fr) 208px;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  max-width: 1480px;
+  margin: 0 auto;
+  height: 100%;
+}
+
+/* Left raising dock: Eggs + Breeding side by side (Aegis/Hearthstone layout) */
+.hs-player-half__raise {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.hs-player-half__center {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+/* Right resource dock: Security Shields clearly separated above Deck + Trash */
+.hs-player-half__resources {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.hs-player-half__piles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ── Open Centered Battle Arena ───────────────────────────────────────────── */
+.hs-battle-area {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 142px;
+  padding: 4px 10px;
+}
+
+.hs-battle-area--laned {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  justify-content: center;
+  gap: 6px;
+  min-height: 0;
+  max-height: 100%;
+  padding: 2px 8px;
+}
+
+.hs-player-half--you .hs-battle-area--laned {
+  justify-content: flex-start;
+}
+
+.hs-player-half--opp .hs-battle-area--laned {
+  justify-content: flex-end;
+}
+
+.hs-battle-lane {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 0;
+}
+
+.hs-battle-lane--back {
+  gap: 8px;
+}
+
+/* Hairline separator on the edge facing the front Digimon lane */
+.hs-player-half--you .hs-battle-lane--front + .hs-battle-lane--back {
+  padding-top: 6px;
+  background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--player) 42%, var(--line-1)) 18%,
+      color-mix(in srgb, var(--player) 42%, var(--line-1)) 82%,
+      transparent
+    )
+    top / 100% 1px no-repeat;
+}
+
+.hs-player-half--opp .hs-battle-lane--back:has(+ .hs-battle-lane--front) {
+  padding-bottom: 6px;
+  background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--opp) 42%, var(--line-1)) 18%,
+      color-mix(in srgb, var(--opp) 42%, var(--line-1)) 82%,
+      transparent
+    )
+    bottom / 100% 1px no-repeat;
+}
+
+.hs-battle-area--empty-hint {
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--line-1);
+  background: color-mix(in srgb, var(--surface) 35%, transparent);
+  padding: 16px 28px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.hs-play-drop-mat {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 134px;
+  border-radius: var(--radius-md);
+  border: 2px dashed var(--arena-rim-ready);
+  background: color-mix(in srgb, var(--arena-rim-ready) 14%, transparent);
+  color: var(--arena-rim-ready);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  transition: transform 0.14s ease, background 0.14s ease;
+}
+
+/* ── Permanent Frame, Linked Card Peeks, Keyword Badges & State Halos ────── */
+.hs-perm-card-frame {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hs-perm-main-card {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), filter 0.18s ease;
+}
+
+.ib-permanent-slot:hover .hs-perm-main-card {
+  transform: translateY(-4px);
+}
+
+.hs-perm--has-links {
+  padding-right: 26px;
+}
+
+.hs-perm-links {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hs-perm-link-peek {
+  position: absolute;
+  left: calc(100% - 56px);
+  width: 84px;
+  height: 60px;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.2, 0, 0, 1), filter 0.18s ease;
+}
+
+.hs-perm-link-peek:hover,
+.hs-perm--has-links:hover .hs-perm-link-peek {
+  transform: translateX(4px);
+}
+
+.hs-perm-link-peek__card {
+  width: 60px;
+  height: 84px;
+  transform-origin: top left;
+  transform: rotate(-90deg) translateX(-100%);
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(168, 85, 247, 0.55);
+}
+
+.hs-link-badge {
+  position: absolute;
+  right: -8px;
+  top: 22px;
+  z-index: 9;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: var(--radius-pill);
+  border: 1px solid #c084fc;
+  background: rgba(30, 16, 48, 0.92);
+  color: #f3e8ff;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
+  cursor: help;
+}
+
+.hs-perm-card-frame .ib-source-count {
+  right: 4px;
+  bottom: 4px;
+  z-index: 4;
+}
+
+/* Distinct state halos & corner badges */
+.hs-perm--can-attack .hs-perm-main-card {
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--player) 55%, transparent));
+}
+
+.hs-perm--highlighted .hs-perm-main-card {
+  animation: hsHaloCyan 1.7s ease-in-out infinite;
+}
+
+.hs-perm--selected .hs-perm-main-card {
+  filter: drop-shadow(0 0 10px rgba(52, 211, 153, 0.72));
+}
+
+.hs-perm--targeted .hs-perm-main-card {
+  animation: hsHaloTarget 1.3s ease-in-out infinite;
+}
+
+.hs-perm--effect-source .hs-perm-main-card {
+  filter: drop-shadow(0 0 14px color-mix(in srgb, var(--warn) 85%, transparent));
+}
+
+@keyframes hsHaloCyan {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.45)); }
+  50% { filter: drop-shadow(0 0 13px rgba(34, 211, 238, 0.82)); }
+}
+
+@keyframes hsHaloTarget {
+  0%, 100% { filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.55)); }
+  50% { filter: drop-shadow(0 0 14px rgba(239, 68, 68, 0.92)); }
+}
+
+.hs-state-pill {
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+
+.hs-state-pill--effect {
+  background: var(--warn);
+  color: #1a0f02;
+  border: 1px solid #fef08a;
+}
+
+.hs-state-pill--target {
+  background: var(--danger);
+  color: #ffffff;
+  border: 1px solid #fecaca;
+}
+
+.hs-state-pill--attack {
+  background: var(--player);
+  color: #ffffff;
+  border: 1px solid #fed7aa;
+}
+
+/* Live untruncated keyword badges (innate vs gained) */
+.hs-kw-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+}
+
+.hs-kw-list--slot {
+  max-width: 118px;
+  margin-top: 2px;
+}
+
+.hs-kw-list--inspector {
+  justify-content: flex-start;
+  gap: 5px;
+  max-width: none;
+}
+
+.hs-kw-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  border-radius: var(--radius-pill);
+  background: var(--kw-color, #4b5563);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.15;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  cursor: help;
+}
+
+.hs-kw-badge--innate {
+  border: 1px solid rgba(255, 255, 255, 0.24);
+}
+
+.hs-kw-badge--gained {
+  border: 1px solid #fde047;
+  box-shadow: 0 0 8px rgba(250, 204, 21, 0.45), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.hs-kw-badge--more {
+  background: var(--surface-raised);
+  color: var(--ink-0);
+  border: 1px solid var(--line-strong);
+  font-family: var(--font-mono);
+}
+
+.hs-kw-badge__icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.hs-kw-badge__label {
+  letter-spacing: 0.01em;
+}
+
+.hs-kw-badge__origin {
+  font-size: 8px;
+  color: #fef08a;
+  line-height: 1;
+}
+
+/* Modifier & restriction chips directly beneath permanents */
+.hs-perm-modifiers {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 3px;
+  max-width: 124px;
+  margin-top: 2px;
+}
+.hs-mod-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  white-space: nowrap;
+  cursor: help;
+}
+.hs-mod-pill__icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.hs-mod-pill--restrict {
+  background: color-mix(in srgb, var(--danger) 22%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 65%, transparent);
+  color: var(--ink-0);
+}
+.hs-mod-pill--buff {
+  background: color-mix(in srgb, var(--good) 20%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--good) 55%, transparent);
+  color: var(--ink-0);
+}
+.hs-mod-pill--info {
+  background: color-mix(in srgb, var(--warn) 20%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--warn) 55%, transparent);
+  color: var(--ink-0);
+}
+
+/* ── Duplicate Tamer / Delay Option Layered Stacks & Drag-Attack Target ──── */
+.hs-perm-cluster {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.hs-dup-stack__behind {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.78;
+  filter: brightness(0.84);
+  transition: transform 0.2s ease;
+}
+.hs-dup-stack__badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  z-index: 8;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--accent);
+  background: var(--surface);
+  color: var(--ink-0);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 800;
+  display: inline-grid;
+  place-items: center;
+  box-shadow: var(--shadow-card);
+}
+.ib-drop-slot--attack {
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 3px var(--danger), 0 0 18px color-mix(in srgb, var(--danger) 55%, transparent);
+  transform: scale(1.04);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* ── Security Shields Dock (Clear of Fanned Hand) ─────────────────────────── */
+.hs-shields {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  max-width: 204px;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-1);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  box-shadow: var(--shadow-card);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background 0.16s ease;
+}
+.hs-shields__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+.hs-shields__title {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--ink-2);
+}
+.hs-shields.is-attack-target {
+  cursor: pointer;
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--surface));
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--danger) 55%, transparent),
+    0 0 18px color-mix(in srgb, var(--warn) 38%, transparent),
+    var(--shadow-card);
+  animation: hsTargetPulse 1.6s ease-in-out infinite;
+}
+.hs-shields.is-attack-target:hover,
+.hs-shields.is-drop-over {
+  transform: scale(1.04);
+  border-color: var(--warn);
+  box-shadow:
+    0 0 0 3px var(--danger),
+    0 0 24px color-mix(in srgb, var(--warn) 55%, transparent);
+}
+@keyframes hsTargetPulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, var(--danger) 52%, transparent),
+      0 0 14px color-mix(in srgb, var(--warn) 30%, transparent),
+      var(--shadow-card);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px color-mix(in srgb, var(--danger) 78%, transparent),
+      0 0 22px color-mix(in srgb, var(--warn) 52%, transparent),
+      var(--shadow-card);
+  }
+}
+.hs-shields__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64px;
+  padding: 2px 4px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.hs-shields--opp .hs-shields__row {
+  flex-direction: row-reverse;
+}
+.hs-shields__row.is-target-mat {
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed color-mix(in srgb, var(--warn) 80%, var(--danger));
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+.hs-shield-card {
+  position: relative;
+  flex: none;
+  width: 44px;
+  height: 62px;
+  border-radius: 5px;
+  overflow: hidden;
+  box-shadow:
+    -2px 2px 6px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(255, 255, 255, 0.14);
+  transition: transform 0.16s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.16s ease, filter 0.16s ease;
+}
+.hs-shield-card + .hs-shield-card {
+  margin-left: -22px;
+}
+.hs-shields--opp .hs-shield-card + .hs-shield-card {
+  margin-left: 0;
+  margin-right: -22px;
+}
+.hs-shield-card__media {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: inherit;
+}
+.hs-shield-card__media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hs-shield-card.is-top {
+  box-shadow: 0 0 10px var(--opp-soft), -2px 2px 6px rgba(0, 0, 0, 0.4);
+}
+.hs-shields--you .hs-shield-card.is-top {
+  box-shadow: 0 0 10px var(--player-soft), -2px 2px 6px rgba(0, 0, 0, 0.4);
+}
+.hs-shield-card.is-breaking {
+  animation: hsShieldBreak 0.55s ease-out;
+}
+@keyframes hsShieldBreak {
+  0% { transform: scale(1.22); filter: brightness(1.5); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+.hs-shield-card--faceup {
+  padding: 0;
+  border: 1.5px solid var(--warn);
+  background: transparent;
+  cursor: pointer;
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--warn) 48%, transparent),
+    0 3px 8px rgba(0, 0, 0, 0.42);
+}
+.hs-shield-card--faceup:hover {
+  transform: translateY(-6px) scale(1.1);
+  z-index: 20 !important;
+  box-shadow:
+    0 0 14px color-mix(in srgb, var(--warn) 75%, transparent),
+    0 8px 16px rgba(0, 0, 0, 0.5);
+}
+.hs-shield-card__eye {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  z-index: 3;
+  width: 15px;
+  height: 15px;
+  border-radius: 9999px;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 22, 0.85);
+  border: 1px solid color-mix(in srgb, var(--warn) 75%, transparent);
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: none;
+}
+.hs-shield-card__badge {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  transform: translateX(-50%);
+  z-index: 3;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(10, 14, 22, 0.9);
+  border: 1px solid color-mix(in srgb, var(--warn) 75%, transparent);
+  color: #fde68a;
+  font-family: var(--font-mono);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.hs-shields__count {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-sunken);
+  border: 1px solid var(--line-1);
+  display: inline-grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-0);
+}
+.hs-shields__overflow {
+  margin-left: 6px;
+}
+.hs-shields--opp .hs-shields__overflow {
+  margin-left: 0;
+  margin-right: 6px;
+}
+.hs-shields__overflow,
+.hs-shields__empty {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.hs-shields__empty.is-direct-target {
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1.5px dashed var(--warn);
+  color: var(--warn);
+  background: color-mix(in srgb, var(--danger) 16%, transparent);
+}
+.hs-shields__attack-cta {
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(90deg, var(--danger), color-mix(in srgb, var(--warn) 45%, var(--danger)));
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--danger) 45%, transparent);
+}
+.hs-shields__eye-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid color-mix(in srgb, var(--warn) 65%, var(--line-1));
+  background: color-mix(in srgb, var(--warn) 16%, var(--surface-raised));
+  color: var(--ink-0);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.14s ease, background 0.14s ease;
+}
+.hs-shields__eye-btn:hover {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 26%, var(--surface-raised));
+}
+.hs-shields__faceup-popover {
+  position: absolute;
+  right: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--warn);
+  background: var(--surface);
+  box-shadow: var(--shadow-overlay);
+  min-width: 160px;
+}
+.hs-shields__faceup-cards {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── Centered Midline MemoryBand + Hearthstone Turn Orb ──────────────────── */
+.hs-memory-band {
+  position: relative;
+  z-index: 12;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 4px 12px;
+}
+
+.hs-memory-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(8px);
+}
+
+.hs-mem-bead {
+  width: clamp(22px, 2.2vw, 30px);
+  height: clamp(22px, 2.2vw, 30px);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid var(--line-1);
+  background: var(--surface-sunken);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.hs-mem-bead--player.is-filled {
+  background: color-mix(in srgb, var(--player) 24%, var(--surface));
+  border-color: color-mix(in srgb, var(--player) 65%, var(--line-1));
+  color: var(--ink-0);
+}
+.hs-mem-bead--opp.is-filled {
+  background: color-mix(in srgb, var(--opp) 24%, var(--surface));
+  border-color: color-mix(in srgb, var(--opp) 65%, var(--line-1));
+  color: var(--ink-0);
+}
+.hs-mem-bead--zero {
+  border-color: var(--line-strong);
+  font-weight: 800;
+}
+.hs-mem-bead.is-active {
+  transform: scale(1.24);
+  z-index: 2;
+}
+.hs-mem-bead--player.is-active {
+  background: var(--player);
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px var(--player-soft), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.hs-mem-bead--opp.is-active {
+  background: var(--opp);
+  border-color: #ffffff;
+  color: #ffffff;
+  box-shadow: 0 0 0 3px var(--opp-soft), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.hs-mem-bead--zero.is-active {
+  background: var(--accent);
+  border-color: #ffffff;
+  color: var(--accent-ink);
+  box-shadow: 0 0 0 3px var(--accent-glow), 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+.hs-mem-bead.is-trail {
+  border-color: var(--warn);
+  background: color-mix(in srgb, var(--warn) 18%, var(--surface));
+}
+.hs-mem-bead.is-ghost {
+  border: 2px dashed var(--warn);
+  color: var(--warn);
+  transform: scale(1.12);
+}
+
+.hs-mem-delta {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: #ffffff;
+  pointer-events: none;
+  animation: hsFloatFade 0.9s ease-out forwards;
+}
+.hs-mem-delta.is-gain { background: var(--good); color: var(--accent-ink); }
+.hs-mem-delta.is-loss { background: var(--danger); }
+@keyframes hsFloatFade {
+  0% { opacity: 0; transform: translate(-50%, 6px); }
+  20% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, -10px); }
+}
+
+/* Turn Control Orb */
+.hs-turn-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.hs-phase-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: var(--surface);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-1);
+}
+.hs-phase-pill__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+.hs-phase-pill__dot.is-you { background: var(--player); }
+.hs-phase-pill__dot.is-opp { background: var(--opp); }
+
+.hs-turn-orb {
+  position: relative;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  background: var(--surface-raised);
+  color: var(--ink-2);
+  display: grid;
+  place-items: center;
+  padding: 6px;
+  cursor: not-allowed;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.14s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+.hs-turn-orb.is-ready {
+  cursor: pointer;
+  border-color: var(--player-2);
+  background: radial-gradient(circle at 32% 28%, var(--player-2), var(--player));
+  color: #ffffff;
+  box-shadow: 0 0 0 3px var(--player-soft), 0 8px 20px rgba(0, 0, 0, 0.34);
+}
+.hs-turn-orb.is-ready:hover {
+  transform: scale(1.06);
+}
+.hs-turn-orb.is-ready:active {
+  transform: scale(0.97);
+}
+.hs-turn-orb__ring {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  pointer-events: none;
+}
+.hs-turn-orb__label {
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.15;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Fanned Player Hand & Floating Contextual Actions ─────────────────────── */
+.hs-board__hand {
+  position: absolute;
+  z-index: 16;
+  left: 50%;
+  bottom: 4px;
+  width: min(960px, calc(100% - 280px));
+  transform: translateX(-50%);
+}
+
+.hs-floating-actions {
+  position: absolute;
+  left: 50%;
+  bottom: 162px;
+  z-index: 24;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+/* [Main] / [Delay] activatable effects dock seated to the left of the hand,
+   between the player's name badge and the hand arc. */
+.hs-main-effects-dock {
+  position: absolute;
+  left: 16px;
+  bottom: 54px;
+  z-index: 24;
+  max-width: min(300px, calc(50vw - 360px));
+  min-width: 196px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line-1);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-overlay);
+  backdrop-filter: blur(10px);
+}
+.hs-main-effects-dock__head {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.hs-main-effects-dock__list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+.hs-main-effects-dock__btn {
+  text-align: left;
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--player) 55%, var(--line-1));
+  background: color-mix(in srgb, var(--player) 14%, var(--surface-raised));
+  color: var(--ink-0);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.14s ease, background 0.14s ease;
+}
+.hs-main-effects-dock__btn:hover {
+  transform: translateX(2px);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--player) 22%, var(--surface-raised));
+}
+.hs-action-pill-bar {
+  pointer-events: auto;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-overlay);
+  backdrop-filter: blur(10px);
+}
+.hs-action-pill-bar__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-1);
+  margin-right: 2px;
+}
+.hs-pill-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
+  color: var(--ink-0);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s ease, background 0.14s ease, border-color 0.14s ease;
+}
+.hs-pill-btn:hover { transform: translateY(-1px); border-color: var(--accent); }
+.hs-pill-btn--primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.hs-pill-btn--accent { background: color-mix(in srgb, var(--player) 18%, var(--surface)); border-color: var(--player); color: var(--ink-0); }
+.hs-pill-btn--special { background: color-mix(in srgb, var(--opp) 22%, var(--surface)); border-color: var(--opp); color: var(--ink-0); }
+.hs-pill-btn--ghost { background: transparent; color: var(--ink-2); }
+
+/* Subtle fanned arc on hand cards — lift lives on the inner wrapper so the
+   outer hit box stays stationary under the pointer (no hover/drag bouncing). */
+.ib-hand-zone--you .ib-hand-card {
+  position: relative;
+  transform: none;
+}
+.ib-hand-zone--you .ib-hand-card__lift {
+  position: relative;
+  transform: rotate(var(--hand-fan-deg, 0deg)) translateY(var(--hand-fan-y, 0px));
+  transform-origin: bottom center;
+  transition: transform 0.14s cubic-bezier(0.2, 0, 0, 1);
+  will-change: transform;
+}
+.ib-hand-zone--you .ib-hand-card:hover:not(.ib-hand-card--dragging) {
+  z-index: 60 !important;
+}
+.ib-hand-zone--you .ib-hand-card:hover:not(.ib-hand-card--dragging) .ib-hand-card__lift {
+  transform: rotate(0deg) translateY(-18px) scale(1.06);
+}
+.ib-hand-zone--you .ib-hand-card--dragging {
+  opacity: 0.35;
+}
+.ib-hand-zone--you .ib-hand-card--dragging .ib-hand-card__lift {
+  transform: none;
+  transition: none;
+}
+
+/* Soften rounded corners on deck/trash/egg/breeding zones */
+.ib-zone__body,
+.ib-raise-zone__empty {
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--line-1);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  box-shadow: var(--shadow-card);
+}
+.ib-zone__body::before,
+.ib-zone__body::after,
+.ib-raise-zone__empty::before,
+.ib-raise-zone__empty::after {
+  display: none;
+}
+
+/* Honor reduced/off motion preferences for ambient board pulses */
+[data-motion="reduced"] .hs-shields.is-attack-target,
+[data-motion="reduced"] .hs-perm--highlighted .hs-perm-main-card,
+[data-motion="reduced"] .hs-perm--targeted .hs-perm-main-card,
+[data-motion="off"] .hs-shields.is-attack-target,
+[data-motion="off"] .hs-perm--highlighted .hs-perm-main-card,
+[data-motion="off"] .hs-perm--targeted .hs-perm-main-card {
+  animation: none;
+}

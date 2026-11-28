@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as library from '@/api/deckLibraryAdapter';
+import {
+  engineContract,
+  isCompatible,
+  listLocal,
+  type LocalModelMeta,
+} from '@/api/desktopModelsApi';
 import { normalizeSeedInput } from '@/api/gameApi';
 import { DeckEditOverlay } from '@/components/deckbuilder/DeckEditOverlay';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
 import { canUseDeckForFormat, getPlayFormat } from '@/features/play/formatCatalog';
 import { createBotGame } from '@/features/play/playApi';
+import { STARTER_DECKS } from '@/features/play/starterDecks.generated';
 import { usePlayFlowStore } from '@/features/play/playFlowStore';
 import type { DeckSummary } from '@/types/deck';
 import { getCardImageUrl } from '@/utils/cardImages';
@@ -29,6 +36,9 @@ export function DeckSelectPage() {
   const [seedInput, setSeedInput] = useState('');
   const [seedError, setSeedError] = useState('');
   const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+  const [availableModels, setAvailableModels] = useState<LocalModelMeta[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState<string>('');
+  const [opponentDeckChoice, setOpponentDeckChoice] = useState<string>('mirror');
   const format = getPlayFormat(formatId);
 
   // Decks visible in this queue: by default only those built for the current
@@ -54,6 +64,23 @@ export function DeckSelectPage() {
       })
       .catch(() => setDecks([]));
   }, [formatId, selectDeck]);
+
+  useEffect(() => {
+    if (opponentMode !== 'bot') return;
+    let cancelled = false;
+    void Promise.all([engineContract(), listLocal()])
+      .then(([contract, models]) => {
+        if (cancelled) return;
+        const compat = models.filter((m) => isCompatible(m, contract));
+        setAvailableModels(compat);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableModels([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [opponentMode]);
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -85,10 +112,26 @@ export function DeckSelectPage() {
         return;
       }
       const deck = await library.getDeck(selected.id);
+      let opponentDeck = deck;
+      if (opponentDeckChoice === 'random') {
+        const legalDecks = decks.filter((d) => canUseDeckForFormat(d, formatId).ok);
+        if (legalDecks.length > 0) {
+          const picked = legalDecks[Math.floor(Math.random() * legalDecks.length)]!;
+          opponentDeck = picked.id === deck.id ? deck : await library.getDeck(picked.id);
+        }
+      } else if (opponentDeckChoice.startsWith('starter:')) {
+        const sid = opponentDeckChoice.slice('starter:'.length);
+        const starter = STARTER_DECKS.find((s) => s.id === sid);
+        if (starter) opponentDeck = starter;
+      } else if (opponentDeckChoice.startsWith('deck:')) {
+        const did = opponentDeckChoice.slice('deck:'.length);
+        opponentDeck = did === deck.id ? deck : await library.getDeck(did);
+      }
       const response = await createBotGame({
         deck,
-        opponentDeck: deck,
+        opponentDeck,
         seed: normalizedSeed,
+        modelId: selectedModelId || null,
       });
       setQueue({ gameId: response.game_id, seed: response.seed ?? normalizedSeed });
       navigate(`/game/${response.game_id}`);
@@ -217,19 +260,69 @@ export function DeckSelectPage() {
           <div className="deck-confirm-info">
             <span>{selected ? selected.name : 'NO DECK SELECTED'}</span>
             {opponentMode === 'bot' && (
-              <label className="deck-seed-control">
-                <span>SHUFFLE SEED</span>
-                <input
-                  value={seedInput}
-                  onChange={(event) => {
-                    setSeedInput(event.target.value);
-                    setSeedError('');
-                  }}
-                  placeholder="Random"
-                  inputMode="numeric"
-                />
-                {seedError && <em>{seedError}</em>}
-              </label>
+              <>
+                <label className="deck-seed-control">
+                  <span>BOT DECK</span>
+                  <select
+                    aria-label="Bot Deck"
+                    value={opponentDeckChoice}
+                    onChange={(event) => setOpponentDeckChoice(event.target.value)}
+                    className="rounded border border-[var(--line-1)] bg-[var(--surface-raised)] px-2.5 py-1.5 text-xs text-[var(--ink-0)]"
+                  >
+                    <option value="mirror">Mirror My Deck</option>
+                    <option value="random">Random Legal Deck</option>
+                    {decks.filter((d) => canUseDeckForFormat(d, formatId).ok).length > 0 && (
+                      <optgroup label="Your & Imported Decks">
+                        {decks
+                          .filter((d) => canUseDeckForFormat(d, formatId).ok)
+                          .map((d) => (
+                            <option key={d.id} value={`deck:${d.id}`}>
+                              {d.name}
+                            </option>
+                          ))}
+                      </optgroup>
+                    )}
+                    <optgroup label="Starter Decks">
+                      {STARTER_DECKS.map((s) => (
+                        <option key={s.id} value={`starter:${s.id}`}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </label>
+                {availableModels.length > 0 && (
+                  <label className="deck-seed-control">
+                    <span>OPPONENT AI</span>
+                    <select
+                      aria-label="Opponent AI"
+                      value={selectedModelId}
+                      onChange={(event) => setSelectedModelId(event.target.value)}
+                      className="rounded border border-[var(--line-1)] bg-[var(--surface-raised)] px-2.5 py-1.5 text-xs text-[var(--ink-0)]"
+                    >
+                      <option value="">Greedy CPU</option>
+                      {availableModels.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.model_type.toUpperCase()})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+                <label className="deck-seed-control">
+                  <span>SHUFFLE SEED</span>
+                  <input
+                    value={seedInput}
+                    onChange={(event) => {
+                      setSeedInput(event.target.value);
+                      setSeedError('');
+                    }}
+                    placeholder="Random"
+                    inputMode="numeric"
+                  />
+                  {seedError && <em>{seedError}</em>}
+                </label>
+              </>
             )}
           </div>
           <div className="deck-confirm-actions">
