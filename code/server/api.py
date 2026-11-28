@@ -34,6 +34,7 @@ from server.db.routers import admin_releases as admin_releases_router
 from server.routers import debug_games
 from server.routers import deck_tools
 from server.routers import desktop_decks
+from server.routers import desktop_models
 from server.routers import games
 from server.routers import health
 from server.routers import lobby
@@ -97,6 +98,7 @@ app.add_middleware(
 # segment "tested-cards" as a deck_id and 401 on the auth middleware).
 app.include_router(deck_tools.router)
 app.include_router(desktop_decks.router)
+app.include_router(desktop_models.router)
 # Rust-backed scenario-staging debug router (add-ui-scenario-test-substrate).
 # Engine-only (no DB/auth), `/debug` prefix. Registered with the engine
 # routers so the browser-test workflow can reach it without DEBUG_MODE; it

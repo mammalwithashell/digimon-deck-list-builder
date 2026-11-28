@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { useUiStore, type Motion, type TextScale } from '@/stores/uiStore';
-import { ThemeSwitch } from '@/design/components/ThemeSwitch';
+import { ThemeSwitch, StylePresetSwitch } from '@/design/components/ThemeSwitch';
+import { SleevePickerModal } from '@/components/settings/SleevePicker';
+import { useCardSleeve, useEggSleeve } from '@/stores/sleeveStore';
 import {
   RESOLUTION_PRESETS,
   type ResolutionPreset,
@@ -37,6 +40,9 @@ export function GraphicsSettingsPanel() {
   const setLiveBackground = useUiStore((s) => s.setLiveBackground);
   const textScale = useUiStore((s) => s.textScale);
   const setTextScale = useUiStore((s) => s.setTextScale);
+  const [sleevesOpen, setSleevesOpen] = useState(false);
+  const cardSleeve = useCardSleeve();
+  const eggSleeve = useEggSleeve();
 
   const applyPreset = async (preset: ResolutionPreset) => {
     setGraphicsPreset(preset);
@@ -92,15 +98,77 @@ export function GraphicsSettingsPanel() {
         Ultrawide presets letterbox the canvas with side bars.
       </p>
 
-      <div className="mb-4 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
         <div>
           <div className="text-sm font-medium text-[var(--ink-0)]">Theme</div>
           <div className="text-xs text-[var(--ink-2)]">
-            Switch between the dark “Digi-OS” and light “Adventure ’99” looks.
+            Switch between Dark and Light mode.
           </div>
         </div>
         <ThemeSwitch />
       </div>
+
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
+        <div>
+          <div className="text-sm font-medium text-[var(--ink-0)]">Visual Style</div>
+          <div className="text-xs text-[var(--ink-2)]">
+            Choose Aegis Clean, Soft Digi-OS, or Soft Adventure palette.
+          </div>
+        </div>
+        <StylePresetSwitch />
+      </div>
+
+      <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center -space-x-2 shrink-0">
+            <span className="w-7 aspect-[5/7] rounded overflow-hidden border border-white/20 bg-slate-950 shadow-sm">
+              {cardSleeve.src ? (
+                <img
+                  src={cardSleeve.src}
+                  alt={cardSleeve.label}
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                <span className="w-full h-full grid place-items-center bg-blue-900 text-[7px] font-bold text-blue-200">
+                  DCG
+                </span>
+              )}
+            </span>
+            <span className="w-7 aspect-[5/7] rounded overflow-hidden border border-white/20 bg-slate-950 shadow-sm">
+              {eggSleeve.src ? (
+                <img
+                  src={eggSleeve.src}
+                  alt={eggSleeve.label}
+                  className="w-full h-full object-cover"
+                  draggable={false}
+                />
+              ) : (
+                <span className="w-full h-full grid place-items-center bg-slate-200 text-[7px] font-bold text-slate-700">
+                  DCG
+                </span>
+              )}
+            </span>
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-medium text-[var(--ink-0)]">
+              Card &amp; Digi-Egg Sleeves
+            </div>
+            <div className="text-xs text-[var(--ink-2)] truncate">
+              Main: {cardSleeve.label} · Egg: {eggSleeve.label}
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          data-testid="graphics-sleeves-open"
+          onClick={() => setSleevesOpen(true)}
+          className="shrink-0 border border-[var(--line-1)] bg-[var(--surface-sunken)] hover:border-[var(--accent)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-0)] transition-colors cursor-pointer"
+        >
+          Customize
+        </button>
+      </div>
+      <SleevePickerModal isOpen={sleevesOpen} onClose={() => setSleevesOpen(false)} />
 
       <div className="mb-4 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
         <div>

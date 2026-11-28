@@ -13,13 +13,13 @@ import { useGameStore } from '@/stores/gameStore';
 import { cardChoiceToken } from '@/types/cardChoice';
 import { useActionMask } from '@/hooks/useActionMask';
 import { useEffectHighlight } from '@/hooks/useEffectHighlight';
-import { useDropZone, type DragData } from '@/hooks/useDropZone';
+import { useDropZone, type DragData, type DropZoneData } from '@/hooks/useDropZone';
 import { GameBoard } from '@/components/board/GameBoard';
-import { ActionBar } from '@/components/game/ActionBar';
-import { PhaseIndicator } from '@/components/game/PhaseIndicator';
-import { PromptBar } from '@/components/game/PromptBar';
-import { SelectionPanel } from '@/components/game/SelectionPanel';
-import { TrashSelectModal } from '@/components/game/TrashSelectModal';
+import { CardActionPopover } from '@/components/game/CardActionPopover';
+import { DecisionRouter } from '@/components/game/decisions/DecisionRouter';
+import { NarrationStack } from '@/components/game/NarrationStack';
+import { OpponentShowcaseOverlay } from '@/components/game/OpponentShowcaseOverlay';
+import { CardFlightOverlay } from '@/components/game/CardFlightOverlay';
 import { TrashViewer } from '@/components/game/TrashViewer';
 import { ResultOverlay } from '@/components/game/ResultOverlay';
 import { AttackArrow } from '@/components/game/AttackArrow';
@@ -31,10 +31,10 @@ import { CardDetailOverlay } from '@/components/game/CardDetailOverlay';
 import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
 import { EffectPopup } from '@/components/game/EffectPopup';
-import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
-import { PeekButton } from '@/components/game/PeekButton';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { ConnectionStatusScreen } from '@/components/game/ConnectionStatusScreen';
+import { usePresentationQueue } from '@/hooks/usePresentationQueue';
+import { isActivatableEffect } from '@/utils/effectLabel';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
 import { connectionScreenState } from '@/utils/connectionScreen';
 import { pickAlias, liveGameLabels } from '@/features/play/botNames';
@@ -61,7 +61,7 @@ import {
   isAnyFieldSelectionKind,
   isFieldSelectionKind,
 } from '@/utils/selectionTargets';
-import { isBoardDrivenSelection } from '@/utils/selectionSurface';
+import { isSourceSelectAction, sourceSelectionHosts } from '@/utils/sourceSelection';
 import {
   GamePhase,
   type ActionTrace,
@@ -70,7 +70,6 @@ import {
   type PermanentInfo,
 } from '@/types/game';
 import { useUiStore } from '@/stores/uiStore';
-import { BotSpeedControl } from '@/components/game/BotSpeedControl';
 import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
 import { useWatchReplay } from '@/hooks/useWatchReplay';
 import { WatchOverlay } from '@/components/game/WatchOverlay';
@@ -110,15 +109,22 @@ export function GamePage() {
   const store = useGameStore();
   const { seed: flowSeed, clearLaunchState } = usePlayFlowStore();
   useEffectHighlight();
+  const {
+    presentedState,
+    isPresenting,
+    memoryDelta,
+    presentTransition,
+    skipPresentation,
+  } = usePresentationQueue();
   // Bot action pacing (add-bot-action-pacing): non-instant speeds advance
   // local bot games one agent action per request, paced by the driver
   // effect below. WebSocket games are server-paced and never use this.
   const botSpeed = useUiStore((s) => s.botSpeed);
   const paced = !useWebSocket && botSpeed !== 'instant';
-  // While the bot's beats are draining, all mask-derived affordances are
-  // locked — the in-flight mask belongs to the agent, not the human.
+  // While the bot's beats or presentation animations are draining, all
+  // mask-derived affordances are locked.
   const parsedMask = useActionMask(
-    store.agentPending || isWatching ? EMPTY_MASK : store.actionMask,
+    store.agentPending || isPresenting || isWatching ? EMPTY_MASK : store.actionMask,
   );
   const actionPendingRef = useRef(false);
 
@@ -135,16 +141,13 @@ export function GamePage() {
           store.setGameSeed(payload.seed ?? null);
         }
         if (payload.events) store.appendEvents(payload.events);
-        // Opponent shown under a cosmetic Digimon alias, seeded by game id so
-        // it stays constant across state updates / reloads and is identical on
-        // both clients and for spectators. The local player keeps "You";
-        // spectators (no seat) see both seats aliased. (anonymize-opponent-names)
+        presentTransition(payload.state, payload.events);
         store.setPlayerLabels(liveGameLabels(urlGameId, payload.your_player_id));
       },
       onGameOver: () => {},
       onError: (msg) => console.error('WebSocket error:', msg),
     };
-  }, [urlGameId, useWebSocket, isSpectator, isVsAiOnline]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [urlGameId, useWebSocket, isSpectator, isVsAiOnline, presentTransition]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ws = useWebSocketGame(wsOptions);
 
@@ -158,7 +161,7 @@ export function GamePage() {
   );
 
   // Apply any step/action-shaped response to the store, including the
-  // paced-mode `agent_pending` flag the pacing driver keys off.
+  // paced-mode `agent_pending` flag and client-side presentation beats.
   const applyGameResponse = useCallback(
     (res: {
       state: GameState;
@@ -174,10 +177,11 @@ export function GamePage() {
         store.setGameSeed(res.seed ?? null);
       }
       if (res.events) store.appendEvents(res.events);
+      presentTransition(res.state, res.events);
       appendResponseActionTraces(res);
       store.setAgentPending(res.agent_pending ?? false);
     },
-    [appendResponseActionTraces, store],
+    [appendResponseActionTraces, presentTransition, store],
   );
 
   // Use WebSocket sendAction for PvP / vs-AI-online / spectator; HTTP for local games.
@@ -426,6 +430,9 @@ export function GamePage() {
   // selection resolves, so we mark them as selected. Reset whenever a new
   // selection opens (see the identity effect below).
   const [pickedSelectionIds, setPickedSelectionIds] = useState<number[]>([]);
+  const [selectedSourceHostSlot, setSelectedSourceHostSlot] = useState<number | null>(null);
+  const [handGridOverride, setHandGridOverride] = useState(false);
+  const [draggedAttackerSlot, setDraggedAttackerSlot] = useState<number | null>(null);
   const selectionIdentityRef = useRef<string | null>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
@@ -434,12 +441,7 @@ export function GamePage() {
     decks.listDecks().then(setSavedDecks).catch(() => {});
   });
 
-  // Clear the "already-picked" set whenever a genuinely new selection opens.
-  // A capped multi-select RE-prompts after each pick with the same prompt /
-  // kind / player (only the hidden `picked` count changes), so keying the
-  // identity off those three fields keeps the set accumulating across the
-  // re-prompts of one selection and resets it the moment a different selection
-  // (or none) takes over.
+  // Clear local selection state whenever a genuinely new selection opens.
   const sel = store.pendingSelection;
   const selectionIdentity = sel
     ? `${sel.prompt}::${sel.kind ?? ''}::${sel.selectingPlayer}`
@@ -448,8 +450,37 @@ export function GamePage() {
     if (selectionIdentity !== selectionIdentityRef.current) {
       selectionIdentityRef.current = selectionIdentity;
       setPickedSelectionIds([]);
+      setSelectedSourceHostSlot(null);
+      setHandGridOverride(false);
     }
   }, [selectionIdentity]);
+
+  // Multi-host SOURCE_SELECT detection (Step 1: click host Digimon on board -> Step 2: stack modal)
+  const multiHostSourceInfo = useMemo(() => {
+    const pending = store.pendingSelection;
+    if (
+      !pending ||
+      pending.selectingPlayer !== 1 ||
+      pending.cardChoice ||
+      store.currentPhase === GamePhase.SelectPermutation ||
+      !pending.validIndices.some(isSourceSelectAction)
+    ) {
+      return { active: false, isOpponentSide: false, hostSlots: new Set<number>() };
+    }
+    const isOpponentSide = pending.zoneOwner != null && pending.zoneOwner !== 1;
+    const area = isOpponentSide
+      ? (store.player2?.battleArea ?? [])
+      : (store.player1?.battleArea ?? []);
+    const groups = sourceSelectionHosts(pending.validIndices, area);
+    if (groups.length < 2) {
+      return { active: false, isOpponentSide, hostSlots: new Set<number>() };
+    }
+    return {
+      active: true,
+      isOpponentSide,
+      hostSlots: new Set(groups.map((g) => g.fieldIndex)),
+    };
+  }, [store.currentPhase, store.pendingSelection, store.player1?.battleArea, store.player2?.battleArea]);
 
   // DnD sensors: pointer with 8px activation distance, touch with 150ms delay
   const sensors = useSensors(
@@ -644,6 +675,19 @@ export function GamePage() {
       if (store.currentPhase === GamePhase.Mulligan) {
         return;
       }
+      // Direct-in-hand SelectHand: clicking a highlighted card in the fanned hand
+      // dispatches the selection action directly without forcing a modal.
+      if (
+        store.currentPhase === GamePhase.SelectHand &&
+        store.pendingSelection?.selectingPlayer === 1 &&
+        !store.pendingSelection.cardChoice
+      ) {
+        const selAction = SELECTION.HAND_START + handIndex;
+        if (store.pendingSelection.validIndices.includes(selAction)) {
+          handleAction(selAction);
+        }
+        return;
+      }
       const canPlay = parsedMask.canPlayFromHand.has(handIndex);
       const fieldTargets = parsedMask.canDigivolve.get(handIndex);
       const canBreeding = parsedMask.canDigivolveBreeding.has(handIndex);
@@ -693,7 +737,7 @@ export function GamePage() {
         handleAction(ACTION.DNA_START + handIndex);
       }
     },
-    [parsedMask, handleAction, store.currentPhase],
+    [parsedMask, handleAction, store.currentPhase, store.pendingSelection],
   );
 
   const handleActionChoicePlay = useCallback(() => {
@@ -732,6 +776,18 @@ export function GamePage() {
     (isOpponent: boolean, slotIndex: number) => {
       const phase = store.currentPhase;
 
+      // Two-step SourceHostPicker (Step 1): clicking a highlighted host Digimon
+      // opens Step 2 showing only that Digimon's digivolution cards.
+      if (
+        multiHostSourceInfo.active &&
+        selectedSourceHostSlot === null &&
+        isOpponent === multiHostSourceInfo.isOpponentSide &&
+        multiHostSourceInfo.hostSlots.has(slotIndex)
+      ) {
+        setSelectedSourceHostSlot(slotIndex);
+        return;
+      }
+
       // Digivolve target selection mode
       if (digivolvingHandIndex !== null && !isOpponent) {
         const fieldTargets = parsedMask.canDigivolve.get(digivolvingHandIndex);
@@ -756,7 +812,7 @@ export function GamePage() {
       // SelectTarget..SelectSecurity range) so it isn't mis-encoded as
       // 100+slot. See `Game::initiate_dna_digivolve` (valid_action_ids =
       // battle_area indices) + `dna_digivolve_user_action.rs`.
-      if (phase === GamePhase.SelectMaterial && !isOpponent) {
+      if (phase === GamePhase.SelectMaterial && !isOpponent && !store.pendingSelection?.cardChoice) {
         // Read the LIVE mask via getState(), not the closure's
         // `store.actionMask`: the two DNA material picks happen in quick
         // succession and the second click can fire before this callback's
@@ -859,7 +915,7 @@ export function GamePage() {
         setInspectedPerm(player.battleArea[slotIndex] ?? null);
       }
     },
-    [store, parsedMask, handleAction, digivolvingHandIndex],
+    [store, parsedMask, handleAction, digivolvingHandIndex, multiHostSourceInfo, selectedSourceHostSlot],
   );
 
   // Right-click inspect: open the stack inspector for ANY permanent (own,
@@ -904,38 +960,52 @@ export function GamePage() {
     store.selectAttacker(null);
   }, [store, handleAction]);
 
-  // Drag-and-drop handlers
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    const data = event.active.data.current as DragData | undefined;
-    if (data?.type === 'hand-card') {
-      setDraggedHandIndex(data.handIndex ?? null);
-      if (data.cardId) setDraggedCardId(data.cardId);
-    } else if (data?.type === 'breeding-perm' && store.player1?.breedingArea) {
-      setDraggedCardId(store.player1.breedingArea.topCardId);
-      setDraggedHandIndex(null);
-    }
-  }, [store.player1]);
+  // Drag-and-drop handlers (hand play/digivolve, breeding move, and drag-to-attack)
+  const handleDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const data = event.active.data.current as DragData | undefined;
+      if (data?.type === 'hand-card') {
+        setDraggedHandIndex(data.handIndex ?? null);
+        setDraggedAttackerSlot(null);
+        if (data.cardId) setDraggedCardId(data.cardId);
+      } else if (data?.type === 'breeding-perm' && store.player1?.breedingArea) {
+        setDraggedCardId(store.player1.breedingArea.topCardId);
+        setDraggedHandIndex(null);
+        setDraggedAttackerSlot(null);
+      } else if (data?.type === 'attacker-perm' && data.slotIndex !== undefined) {
+        setDraggedHandIndex(null);
+        setDraggedAttackerSlot(data.slotIndex);
+        setDraggedCardId(data.cardId ?? null);
+        store.selectAttacker(data.slotIndex);
+      }
+    },
+    [store],
+  );
 
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
+      const { active, over } = event;
+      const dragData = active.data.current as DragData | undefined;
+
       setDraggedCardId(null);
       setDraggedHandIndex(null);
+      setDraggedAttackerSlot(null);
       setIsOverValid(false);
 
-      const { active, over } = event;
-      if (!over) return;
+      if (dragData?.type === 'attacker-perm') {
+        store.selectAttacker(null);
+      }
+      if (!over || !dragData) return;
 
-      const dragData = active.data.current as DragData;
-      const dropZone = over.data.current as { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number };
-
-      if (!dragData || !dropZone) return;
+      const dropZone = over.data.current as DropZoneData | undefined;
+      if (!dropZone) return;
 
       const actionId = getDropAction(dragData, dropZone);
       if (actionId !== null) {
         handleAction(actionId);
       }
     },
-    [getDropAction, handleAction],
+    [getDropAction, handleAction, store],
   );
 
   const handleDragOver = useCallback(
@@ -945,7 +1015,7 @@ export function GamePage() {
         return;
       }
       const dragData = event.active.data.current as DragData;
-      const dropZone = event.over.data.current as { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number };
+      const dropZone = event.over.data.current as DropZoneData;
       if (!dragData || !dropZone) {
         setIsOverValid(false);
         return;
@@ -1166,7 +1236,7 @@ export function GamePage() {
   // battle_area index (the engine's encoding — see handleSlotClick), which
   // falls outside the 100+ range scanned above. Light up each eligible
   // own-field slot so the player sees which Digimon to combine.
-  if (store.currentPhase === GamePhase.SelectMaterial) {
+  if (store.currentPhase === GamePhase.SelectMaterial && !store.pendingSelection?.cardChoice) {
     for (let slot = 0; slot < FIELD_SLOTS; slot++) {
       if (store.actionMask[slot] === 1) highlightedOwnSlots.add(slot);
     }
@@ -1224,10 +1294,32 @@ export function GamePage() {
     ...parsedMask.canDigivolveBreeding,
   ]);
 
-  // Merge playable + digivolve highlights for hand
-  const highlightedHand = store.currentPhase === GamePhase.Mulligan
-    ? new Set<number>()
-    : new Set([...parsedMask.canPlayFromHand, ...digivolveHandIndices]);
+  // Highlight multi-host SOURCE_SELECT hosts during Step 1 (choose Digimon)
+  if (multiHostSourceInfo.active && selectedSourceHostSlot === null) {
+    const targetSet = multiHostSourceInfo.isOpponentSide
+      ? highlightedEnemySlots
+      : highlightedOwnSlots;
+    for (const slot of multiHostSourceInfo.hostSlots) targetSet.add(slot);
+  }
+
+  // Merge playable + digivolve highlights for hand (or valid SelectHand picks)
+  const highlightedHand = (() => {
+    if (store.currentPhase === GamePhase.Mulligan) return new Set<number>();
+    if (
+      store.currentPhase === GamePhase.SelectHand &&
+      store.pendingSelection?.selectingPlayer === 1 &&
+      !store.pendingSelection.cardChoice
+    ) {
+      const validHand = new Set<number>();
+      for (const id of store.pendingSelection.validIndices) {
+        if (id >= SELECTION.HAND_START && id <= SELECTION.HAND_END) {
+          validHand.add(id - SELECTION.HAND_START);
+        }
+      }
+      return validHand;
+    }
+    return new Set([...parsedMask.canPlayFromHand, ...digivolveHandIndices]);
+  })();
 
   // Memory cost preview: look up hovered hand card's play cost
   const previewCost = (() => {
@@ -1258,245 +1350,157 @@ export function GamePage() {
     }
   }
 
+  const effectiveMask = store.agentPending || isPresenting || isWatching ? EMPTY_MASK : store.actionMask;
+  const activatableMainEffects = (store.agentPending || isPresenting ? [] : store.decodedActions).filter(
+    isActivatableEffect,
+  );
+  const canAttackSecurityNow =
+    store.selectedAttacker !== null &&
+    Boolean(parsedMask.canAttackSecurity.get(store.selectedAttacker));
+
   return (
-    // `h-full` fills the parent `main` (Layout's flex-1 slot), which in
-    // the desktop build is 1080 - navbar; in web mode it's the
-    // viewport-equivalent. Previously this used `100vh - 56px` which
-    // referenced the actual window viewport (720px in the smallest
-    // preset) instead of the fixed canvas (1080px), causing ~360px of
-    // dead space below the hand at desktop's minimum preset.
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col relative">
       {isWatching && watchQueue && <WatchOverlay replay={watchReplay} queue={watchQueue} />}
-      {/* Full-width board area */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-0">
-        <div className="px-3 py-1 flex items-center justify-between">
-          <PhaseIndicator
-            phase={store.currentPhase}
-            turnCount={store.turnCount}
-            currentPlayer={store.currentPlayer}
-            isGameOver={store.isGameOver}
-            winner={store.winner}
-            playerLabels={store.playerLabels}
-          />
-          {store.selectedAttacker !== null && parsedMask.canAttackSecurity.get(store.selectedAttacker) && (
-            <button
-              onClick={handleAttackSecurity}
-              className="px-3 py-1 bg-red-600 hover:bg-red-500 text-white text-sm rounded"
-            >
-              Attack Security
-            </button>
-          )}
-          {/* Debug undo: rolls back one human action. Only useful in the
-              browser-dev workflow (FastAPI replays the saved seed +
-              decks - last action). The Tauri build's `gameApi.undoGame`
-              returns null so this button silently no-ops if it ever ends
-              up on the shipping desktop bundle. Wired here so QA can
-              walk back into a state and inspect the action mask /
-              pending_selection without restarting the match. */}
-          {!store.isGameOver && (
-            <button
-              data-testid="undo-step-button"
-              onClick={handleUndo}
-              title="Undo last action (debug)"
-              className="px-3 py-1 bg-amber-700 hover:bg-amber-600 text-white text-xs rounded ml-2"
-            >
-              ← Undo
-            </button>
-          )}
+      {pacingStalled && (
+        <div className="flex items-center justify-center gap-3 px-4 py-2 bg-red-900/50 border-b border-red-700/60 z-30">
+          <span className="text-sm text-red-200">
+            The bot&apos;s turn could not advance (connection problem?).
+          </span>
+          <button
+            type="button"
+            className="px-3 py-0.5 text-sm rounded border border-red-400 text-red-100 hover:bg-red-800/60"
+            onClick={resumePacing}
+          >
+            Continue
+          </button>
         </div>
-        {store.currentPhase === GamePhase.Mulligan && (
-          <div className="px-3 pb-1 text-xs text-amber-300" data-testid="mulligan-banner">
-            Opening Mulligan —{' '}
-            <span className="font-semibold">
-              {store.firstPlayer === 0 ? 'you go first' : 'you go second'}
-            </span>
-            : choose <span className="font-semibold">Keep Hand</span> or{' '}
-            <span className="font-semibold">Mulligan</span>.
-          </div>
-        )}
+      )}
 
-        <PromptBar
-          currentPhase={store.currentPhase}
-          pendingSelection={store.pendingSelection}
-          localPlayer={1}
-          isGameOver={store.isGameOver}
-          agentActing={store.agentPending}
-        />
-        {pacingStalled && (
-          <div className="flex items-center justify-center gap-3 px-4 py-2 bg-red-900/50 border-b border-red-700/60">
-            <span className="text-sm text-red-200">
-              The bot&apos;s turn could not advance (connection problem?).
-            </span>
-            <button
-              type="button"
-              className="px-3 py-0.5 text-sm rounded border border-red-400 text-red-100 hover:bg-red-800/60"
-              onClick={resumePacing}
-            >
-              Continue
-            </button>
-          </div>
-        )}
-
+      {/* Full-bleed Hearthstone-style Match Arena */}
+      <div className="flex-1 min-w-0 min-h-0 overflow-hidden relative" ref={boardContainerRef}>
         <PhaseBanner phase={store.currentPhase} isGameOver={store.isGameOver} />
         <DigivolveBanner />
         <BattleEffect />
+        <NarrationStack />
+        <OpponentShowcaseOverlay />
+        <CardFlightOverlay />
 
-        <div className="flex-1 min-h-0 overflow-hidden relative" ref={boardContainerRef}>
-          <CardOverlay
-            permanent={inspectedPerm}
-            onClose={() => setInspectedPerm(null)}
-            onInspectCard={setInspectedCardId}
-          />
-          <CardDetailOverlay
-            cardId={inspectedCardId}
-            onClose={() => setInspectedCardId(null)}
-          />
-          <SecurityRevealOverlay />
-          <EffectPopup />
-          <GameLogDrawer logs={gameLogLines} />
-          <AttackArrow
-            pendingAttack={store.pendingAttack}
-            selectedAttacker={store.selectedAttacker}
-            containerRef={boardContainerRef}
-          />
-          <DndContext
-            sensors={sensors}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
-          >
-            <GameBoard
-              onPlayCard={handlePlayCard}
-              onSlotClick={handleSlotClick}
-              onSlotInspect={handleSlotInspect}
-              onBreedingInspect={handleBreedingInspect}
-              onHatch={() => handleAction(ACTION.HATCH)}
-              onMove={() => handleAction(ACTION.MOVE)}
-              onBreedingClick={
-                digivolvingHandIndex !== null && parsedMask.canDigivolveBreeding.has(digivolvingHandIndex)
-                  ? () => {
-                      handleAction(ACTION.DIGIVOLVE_START + digivolvingHandIndex * DIGIVOLVE_FIELDS_PER_HAND + BREEDING_SLOT);
-                      setDigivolvingHandIndex(null);
-                    }
-                  : parsedMask.canMove
-                    ? () => handleAction(ACTION.MOVE)
-                    : undefined
-              }
-              onRevealedClick={handleRevealedClick}
-              onOwnTrashClick={() => setTrashViewerPlayer(1)}
-              onOpponentTrashClick={() => setTrashViewerPlayer(2)}
-              canHatch={parsedMask.canHatch}
-              canMove={parsedMask.canMove}
-              canDigivolveBreeding={parsedMask.canDigivolveBreeding.size > 0}
-              highlightBreeding={
-                (digivolvingHandIndex !== null && parsedMask.canDigivolveBreeding.has(digivolvingHandIndex))
-                || dragCanBreeding
-              }
-              playableHandIndices={highlightedHand}
-              highlightedOwnSlots={highlightedOwnSlots}
-              highlightedEnemySlots={highlightedEnemySlots}
-              selectedOwnSlots={selectedOwnSlots}
-              selectedEnemySlots={selectedEnemySlots}
-              targetedSlots={targetedSlots}
-              validRevealedIndices={validRevealedIndices}
-              dragValidDropSlots={draggedHandIndex !== null ? dragValidDropSlots : undefined}
-              isDraggingHandCard={draggedHandIndex !== null}
-              canPlayDragged={draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)}
-              previewCost={previewCost}
-              onHandCardHoverIndex={setHoveredHandIndex}
-              onHandCardInspect={setInspectedCardId}
-              actionTraces={store.actionTraces}
-              latestTensorSummary={store.latestTensorSummary}
-            />
-            <DragOverlayCard cardId={draggedCardId} isOverValid={isOverValid} />
-          </DndContext>
-        </div>
-
-        {/* Action choice dialog (Play / Digivolve / DNA Digivolve) */}
-        {actionChoice && (
-          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-[var(--ib-graphite)] border-t border-[var(--ib-line)]">
-            <span className="text-sm text-[var(--ib-bone-d)]">Choose action:</span>
-            {actionChoice.canPlay && (
-              <button
-                onClick={handleActionChoicePlay}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded"
-              >
-                Play
-              </button>
-            )}
-            {(actionChoice.digivolveTargets.size > 0 ||
-              actionChoice.canDigivolveBreeding) && (
-              <button
-                onClick={handleActionChoiceDigivolve}
-                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 text-white text-sm font-medium rounded"
-              >
-                Digivolve
-              </button>
-            )}
-            {actionChoice.canDnaDigivolve && (
-              <button
-                onClick={handleActionChoiceDna}
-                className="px-4 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-sm font-medium rounded"
-              >
-                DNA Digivolve
-              </button>
-            )}
-            <button
-              onClick={() => setActionChoice(null)}
-              className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-
-        {/* Digivolve target mode indicator */}
-        {digivolvingHandIndex !== null && (
-          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-purple-900/50 border-t border-purple-600">
-            <span className="text-sm text-purple-200">Select a digivolve target on the field</span>
-            <button
-              onClick={() => setDigivolvingHandIndex(null)}
-              className="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        )}
-
-        {/* Bot speed selector — only meaningful for locally-paced bot
-            games; hidden for server-paced WebSocket games. */}
-        {!useWebSocket && (
-          <div className="shrink-0 flex justify-end px-3 py-1">
-            <BotSpeedControl />
-          </div>
-        )}
-        {(store.gameSeed ?? flowSeed) && (
-          <div className="shrink-0 flex items-center justify-end gap-2 px-3 py-1 text-xs text-gray-300">
-            <span className="uppercase tracking-widest text-gray-500">Seed</span>
-            <code className="max-w-[260px] truncate rounded border border-white/10 bg-black/30 px-2 py-1">
-              {store.gameSeed ?? flowSeed}
-            </code>
-            <button
-              type="button"
-              aria-label="Copy seed"
-              onClick={() => void navigator.clipboard?.writeText((store.gameSeed ?? flowSeed) ?? '')}
-              className="rounded border border-white/15 px-2 py-1 text-gray-100 hover:bg-white/10"
-            >
-              Copy
-            </button>
-          </div>
-        )}
-        <div className="shrink-0">
-          <ActionBar
-            phase={store.currentPhase}
-            actionMask={store.agentPending ? EMPTY_MASK : store.actionMask}
+        <CardOverlay
+          permanent={inspectedPerm}
+          onClose={() => setInspectedPerm(null)}
+          onInspectCard={setInspectedCardId}
+        />
+        <CardDetailOverlay
+          cardId={inspectedCardId}
+          onClose={() => setInspectedCardId(null)}
+        />
+        <SecurityRevealOverlay onInspectCard={setInspectedCardId} />
+        <EffectPopup />
+        <GameLogDrawer logs={gameLogLines} />
+        <AttackArrow
+          pendingAttack={presentedState?.pendingAttack ?? store.pendingAttack}
+          selectedAttacker={store.selectedAttacker}
+          attackerIsOpponent={
+            (presentedState?.currentPlayer ?? store.currentPlayer) !==
+            (presentedState?.player1?.id ?? store.player1?.id)
+          }
+          boardLayoutKey={`${(presentedState?.player1 ?? store.player1)?.battleArea.map((p) => p.topCardId).join(',')}|${(presentedState?.player2 ?? store.player2)?.battleArea.map((p) => p.topCardId).join(',')}`}
+          containerRef={boardContainerRef}
+        />
+        <DndContext
+          sensors={sensors}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragOver={handleDragOver}
+        >
+          <GameBoard
+            presentedState={presentedState}
+            actionMask={effectiveMask}
+            isBusy={store.agentPending || isPresenting}
+            isPresenting={isPresenting}
+            memoryDelta={memoryDelta}
+            gameSeed={store.gameSeed ?? flowSeed}
+            canAttackSecurity={canAttackSecurityNow}
+            onAttackSecurity={handleAttackSecurity}
             onAction={handleAction}
+            onUndo={handleUndo}
             onSurrender={handleSurrender}
-            isGameOver={store.isGameOver}
-            canActivateEffect={parsedMask.canActivateEffect}
-            decodedActions={store.agentPending ? [] : store.decodedActions}
+            onSkipPresentation={skipPresentation}
+            onPlayCard={handlePlayCard}
+            onSlotClick={handleSlotClick}
+            onSlotInspect={handleSlotInspect}
+            onBreedingInspect={handleBreedingInspect}
+            onHatch={() => handleAction(ACTION.HATCH)}
+            onMove={() => handleAction(ACTION.MOVE)}
+            onBreedingClick={
+              digivolvingHandIndex !== null && parsedMask.canDigivolveBreeding.has(digivolvingHandIndex)
+                ? () => {
+                    handleAction(
+                      ACTION.DIGIVOLVE_START +
+                        digivolvingHandIndex * DIGIVOLVE_FIELDS_PER_HAND +
+                        BREEDING_SLOT,
+                    );
+                    setDigivolvingHandIndex(null);
+                  }
+                : parsedMask.canMove
+                  ? () => handleAction(ACTION.MOVE)
+                  : undefined
+            }
+            onRevealedClick={handleRevealedClick}
+            onOwnTrashClick={() => setTrashViewerPlayer(1)}
+            onOpponentTrashClick={() => setTrashViewerPlayer(2)}
+            canHatch={parsedMask.canHatch}
+            canMove={parsedMask.canMove}
+            canDigivolveBreeding={parsedMask.canDigivolveBreeding.size > 0}
+            highlightBreeding={
+              (digivolvingHandIndex !== null &&
+                parsedMask.canDigivolveBreeding.has(digivolvingHandIndex)) ||
+              dragCanBreeding
+            }
+            playableHandIndices={highlightedHand}
+            highlightedOwnSlots={highlightedOwnSlots}
+            highlightedEnemySlots={highlightedEnemySlots}
+            selectedOwnSlots={selectedOwnSlots}
+            selectedEnemySlots={selectedEnemySlots}
+            targetedSlots={targetedSlots}
+            attackableSlots={new Set(parsedMask.canAttack.keys())}
+            validRevealedIndices={validRevealedIndices}
+            dragValidDropSlots={draggedHandIndex !== null ? dragValidDropSlots : undefined}
+            isDraggingHandCard={draggedHandIndex !== null}
+            canPlayDragged={
+              draggedHandIndex !== null && parsedMask.canPlayFromHand.has(draggedHandIndex)
+            }
+            isDraggingAttacker={draggedAttackerSlot !== null}
+            previewCost={previewCost}
+            onHandCardHoverIndex={setHoveredHandIndex}
+            onHandCardInspect={setInspectedCardId}
+            actionTraces={store.actionTraces}
+            latestTensorSummary={store.latestTensorSummary}
           />
-        </div>
+          <DragOverlayCard cardId={draggedCardId} isOverValid={isOverValid} />
+        </DndContext>
+
+        <CardActionPopover
+          actionChoice={
+            actionChoice
+              ? {
+                  handIndex: actionChoice.handIndex,
+                  canPlay: actionChoice.canPlay,
+                  canDigivolve:
+                    actionChoice.digivolveTargets.size > 0 || actionChoice.canDigivolveBreeding,
+                  canDnaDigivolve: actionChoice.canDnaDigivolve,
+                }
+              : null
+          }
+          activatableEffects={activatableMainEffects}
+          isChoosingDigivolveTarget={digivolvingHandIndex !== null}
+          onPlay={handleActionChoicePlay}
+          onDigivolve={handleActionChoiceDigivolve}
+          onDna={handleActionChoiceDna}
+          onCancelChoice={() => setActionChoice(null)}
+          onCancelDigivolve={() => setDigivolvingHandIndex(null)}
+          onActivateEffect={handleAction}
+        />
       </div>
 
       {/* Win/Loss result overlay */}
@@ -1507,6 +1511,9 @@ export function GamePage() {
         playerLabels={store.playerLabels}
         surrenderedBy={surrenderedBy}
         gameSeed={store.gameSeed ?? flowSeed}
+        turnCount={store.turnCount}
+        ownSecurity={store.player1?.securityCount ?? 0}
+        opponentSecurity={store.player2?.securityCount ?? 0}
         onReturnToMenu={handleReturnToLauncher}
       />
 
@@ -1527,11 +1534,12 @@ export function GamePage() {
         onInspect={setInspectedCardId}
       />
 
-      {/* Selection panel modal for hand/security/effect-choice selections */}
-      <SelectionPanel
+      {/* Unified Aegis-inspired decision router (side rails, trigger plan chooser, ordering, galleries) */}
+      <DecisionRouter
         currentPhase={store.currentPhase}
         pendingSelection={store.pendingSelection}
-        actionMask={store.actionMask}
+        actionMask={effectiveMask}
+        firstPlayer={store.firstPlayer}
         handIds={store.player1?.handIds ?? []}
         securityCount={store.player1?.securityCount ?? 0}
         opponentSecurityCount={store.player2?.securityCount ?? 0}
@@ -1539,41 +1547,17 @@ export function GamePage() {
         opponentBattleArea={store.player2?.battleArea ?? []}
         trashIds={store.player1?.trashIds ?? []}
         opponentTrashIds={store.player2?.trashIds ?? []}
-        onAction={handleAction}
+        revealedCards={store.revealedCards}
         localPlayer={1}
-        onInspectCard={setInspectedCardId}
-      />
-
-      {/* Interactive trash-selection modal — single + capped multi-select,
-          either player's trash (replaces the old SelectionPanel trash path). */}
-      <TrashSelectModal
-        pendingSelection={store.pendingSelection}
-        actionMask={store.actionMask}
-        ownTrashIds={store.player1?.trashIds ?? []}
-        opponentTrashIds={store.player2?.trashIds ?? []}
-        localPlayer={1}
+        isGameOver={store.isGameOver}
+        isBusy={store.agentPending || isPresenting}
+        selectedSourceHostSlot={selectedSourceHostSlot}
+        onSelectSourceHost={setSelectedSourceHostSlot}
+        handGridOverride={handGridOverride}
+        onHandGridOverride={setHandGridOverride}
         onAction={handleAction}
         onInspectCard={setInspectedCardId}
       />
-
-      {/* Keyword prompt dialog for optional keyword activations */}
-      <KeywordPromptDialog
-        currentPhase={store.currentPhase}
-        pendingSelection={store.pendingSelection}
-        actionMask={store.actionMask}
-        onAction={handleAction}
-        localPlayer={1}
-      />
-
-      {/* Peek toggle — hides the blocking decision overlays so the player can
-          read the board before committing to a choice. Only meaningful when a
-          board-COVERING modal (SelectionPanel / TrashSelectModal / reveal /
-          keyword prompt) is up; for board-driven field/material picks there is
-          nothing to hide and the floating pill would just overlap the prompt
-          bar / effect description. */}
-      {store.pendingSelection?.selectingPlayer === 1 &&
-        !store.isGameOver &&
-        !isBoardDrivenSelection(store.pendingSelection, store.currentPhase) && <PeekButton />}
     </div>
   );
 }

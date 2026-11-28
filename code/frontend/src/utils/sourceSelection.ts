@@ -27,6 +27,8 @@ interface SourceLike {
   isTop: boolean;
 }
 interface PermLike {
+  topCardId?: string | null;
+  topCardName?: string | null;
   sources: SourceLike[];
   /** Link cards; a source index past the stack addresses `linkedCardIds[i - stack length]`. */
   linkedCardIds?: string[];
@@ -35,6 +37,58 @@ export interface SourceTile {
   actionId: number;
   cardId: string;
   cardName: string | null;
+}
+
+export interface SourceHostGroup {
+  fieldIndex: number;
+  hostCardId: string | null;
+  hostCardName: string | null;
+  tiles: SourceTile[];
+}
+
+/**
+ * Group battle-area SOURCE_SELECT action ids by their host permanent's
+ * field slot so multi-host source prompts can use a clean two-step picker:
+ * Step 1: click host Digimon on board -> Step 2: pick from that stack only.
+ */
+export function sourceSelectionHosts(
+  validIndices: number[],
+  battleArea: PermLike[],
+): SourceHostGroup[] {
+  const byField = new Map<number, SourceHostGroup>();
+  for (const id of validIndices) {
+    if (id < SOURCE_SELECT_START || id >= BREEDING_SOURCE_SELECT_START) continue;
+    const offset = id - SOURCE_SELECT_START;
+    const field = Math.floor(offset / SOURCES_PER_FIELD);
+    const sourceIndex = offset % SOURCES_PER_FIELD;
+    const perm = battleArea[field];
+    if (!perm) continue;
+
+    const top = perm.sources.find((s) => s.isTop);
+    const stack = [...perm.sources.filter((s) => !s.isTop), ...(top ? [top] : [])];
+    const card = stack[sourceIndex];
+    let tile: SourceTile | null = null;
+    if (card) {
+      tile = { actionId: id, cardId: card.cardId, cardName: card.cardName };
+    } else {
+      const linkId = perm.linkedCardIds?.[sourceIndex - stack.length];
+      if (linkId) tile = { actionId: id, cardId: linkId, cardName: null };
+    }
+    if (!tile) continue;
+
+    let group = byField.get(field);
+    if (!group) {
+      group = {
+        fieldIndex: field,
+        hostCardId: top?.cardId ?? perm.topCardId ?? null,
+        hostCardName: top?.cardName ?? perm.topCardName ?? null,
+        tiles: [],
+      };
+      byField.set(field, group);
+    }
+    group.tiles.push(tile);
+  }
+  return Array.from(byField.values());
 }
 
 /**

@@ -1,11 +1,28 @@
 import { useCallback } from 'react';
-import { ACTION, BREEDING_SLOT, DIGIVOLVE_FIELDS_PER_HAND } from '@/utils/constants';
+import {
+  ACTION,
+  ATTACK_TARGETS_PER_SLOT,
+  ATTACK_TARGET_SECURITY,
+  BREEDING_SLOT,
+  DIGIVOLVE_FIELDS_PER_HAND,
+} from '@/utils/constants';
 import type { ParsedMask } from './useActionMask';
 
 export interface DragData {
-  type: 'hand-card' | 'breeding-perm';
+  type: 'hand-card' | 'breeding-perm' | 'attacker-perm';
   handIndex?: number;
+  slotIndex?: number;
   cardId?: string;
+}
+
+export interface DropZoneData {
+  type:
+    | 'empty-field-slot'
+    | 'occupied-field-slot'
+    | 'breeding-slot'
+    | 'enemy-field-slot'
+    | 'enemy-security';
+  slotIndex: number;
 }
 
 export interface DropResult {
@@ -13,47 +30,70 @@ export interface DropResult {
 }
 
 /**
- * Compute the action ID for a drag-and-drop operation, or null if invalid.
+ * Compute the action ID for a drag-and-drop operation (play, digivolve,
+ * move from breeding, or drag-to-attack an enemy Digimon / Security), or null if invalid.
  */
 export function useDropZone(parsedMask: ParsedMask) {
   const getDropAction = useCallback(
-    (
-      dragData: DragData,
-      dropZone: { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number },
-    ): number | null => {
+    (dragData: DragData, dropZone: DropZoneData): number | null => {
       if (dragData.type === 'hand-card' && dragData.handIndex !== undefined) {
         const handIdx = dragData.handIndex;
 
         if (dropZone.type === 'empty-field-slot') {
-          // Play from hand
           if (parsedMask.canPlayFromHand.has(handIdx)) {
             return handIdx; // action 0-29
           }
         }
 
         if (dropZone.type === 'occupied-field-slot') {
-          // Digivolve onto existing permanent
           const fieldSlots = parsedMask.canDigivolve.get(handIdx);
           if (fieldSlots?.has(dropZone.slotIndex)) {
-            return ACTION.DIGIVOLVE_START + handIdx * DIGIVOLVE_FIELDS_PER_HAND + dropZone.slotIndex;
+            return (
+              ACTION.DIGIVOLVE_START +
+              handIdx * DIGIVOLVE_FIELDS_PER_HAND +
+              dropZone.slotIndex
+            );
           }
         }
 
         if (dropZone.type === 'breeding-slot') {
           if (parsedMask.canDigivolveBreeding.has(handIdx)) {
-            // Engine's BREEDING_TARGET = 14 (the 15th field in
-            // `FIELDS_PER_HAND = 15`). Hardcoding 12 here sent a regular
-            // field-slot action instead, which the engine rejected.
-            return ACTION.DIGIVOLVE_START + handIdx * DIGIVOLVE_FIELDS_PER_HAND + BREEDING_SLOT;
+            return (
+              ACTION.DIGIVOLVE_START +
+              handIdx * DIGIVOLVE_FIELDS_PER_HAND +
+              BREEDING_SLOT
+            );
           }
         }
       }
 
       if (dragData.type === 'breeding-perm') {
         if (dropZone.type === 'empty-field-slot') {
-          // Move from breeding
           if (parsedMask.canMove) {
             return ACTION.MOVE;
+          }
+        }
+      }
+
+      if (dragData.type === 'attacker-perm' && dragData.slotIndex !== undefined) {
+        const attacker = dragData.slotIndex;
+        if (dropZone.type === 'enemy-field-slot') {
+          const targets = parsedMask.canAttack.get(attacker);
+          if (targets?.has(dropZone.slotIndex)) {
+            return (
+              ACTION.ATTACK_START +
+              attacker * ATTACK_TARGETS_PER_SLOT +
+              dropZone.slotIndex
+            );
+          }
+        }
+        if (dropZone.type === 'enemy-security') {
+          if (parsedMask.canAttackSecurity.get(attacker)) {
+            return (
+              ACTION.ATTACK_START +
+              attacker * ATTACK_TARGETS_PER_SLOT +
+              ATTACK_TARGET_SECURITY
+            );
           }
         }
       }
@@ -65,7 +105,7 @@ export function useDropZone(parsedMask: ParsedMask) {
 
   const isValidDrop = useCallback(
     (dragData: DragData, dropZone: { type: string; slotIndex: number }): boolean => {
-      return getDropAction(dragData, dropZone as { type: 'empty-field-slot' | 'occupied-field-slot' | 'breeding-slot'; slotIndex: number }) !== null;
+      return getDropAction(dragData, dropZone as DropZoneData) !== null;
     },
     [getDropAction],
   );

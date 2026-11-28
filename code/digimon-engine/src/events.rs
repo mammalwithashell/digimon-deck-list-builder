@@ -248,6 +248,19 @@ pub enum GameEvent {
         card_name: String,
     },
 
+    /// A card effect activated and began resolving. Purely observational UI
+    /// telemetry used for source-focus glows and Narration Stack toasts; does
+    /// not participate in RL observation tensors or action space contracts.
+    EffectActivated {
+        seq: u64,
+        player: PlayerId,
+        source_card_id: String,
+        source_card_name: String,
+        source_slot: Option<u8>,
+        timing: String,
+        summary: Option<String>,
+    },
+
     /// A card effect committed a target selection. Carries the effect's
     /// source card and the chosen target card(s). Emitted at the selection
     /// commit choke point for every card-bearing selection kind, including
@@ -344,6 +357,7 @@ impl GameEvent {
             | GameEvent::CardToDeck { seq, .. }
             | GameEvent::Mill { seq, .. }
             | GameEvent::SecurityReveal { seq, .. }
+            | GameEvent::EffectActivated { seq, .. }
             | GameEvent::EffectTarget { seq, .. }
             | GameEvent::Reveal { seq, .. }
             | GameEvent::InfiniteLoop { seq, .. }
@@ -372,6 +386,7 @@ impl GameEvent {
             GameEvent::CardToDeck { .. } => "CardToDeck",
             GameEvent::Mill { .. } => "Mill",
             GameEvent::SecurityReveal { .. } => "SecurityReveal",
+            GameEvent::EffectActivated { .. } => "EffectActivated",
             GameEvent::EffectTarget { .. } => "EffectTarget",
             GameEvent::Reveal { .. } => "Reveal",
             GameEvent::InfiniteLoop { .. } => "InfiniteLoop",

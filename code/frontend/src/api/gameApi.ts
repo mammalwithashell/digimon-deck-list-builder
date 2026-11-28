@@ -122,6 +122,8 @@ interface CreateGameParams {
   player2_type?: string;
   player1_policy?: string;
   player2_policy?: string;
+  player1_model?: string | null;
+  player2_model?: string | null;
   agent_action_delay_ms?: number;
   player_kinds?: PlayerKind[];
   player_model_ids?: (string | null)[];
@@ -533,17 +535,23 @@ export async function createGame(
   // into the store.
   if (!isInTauriRuntime()) {
     const kinds = params.player_kinds ?? deriveKinds(params);
-    const p1Human = kinds ? kinds[0] === 'human' : false;
-    const p2Human = kinds ? kinds[1] === 'human' : false;
+    const modelIds = params.player_model_ids ?? [
+      params.player1_model ?? null,
+      params.player2_model ?? null,
+    ];
+    const p1Kind = kinds ? kinds[0] : 'greedy';
+    const p2Kind = kinds ? kinds[1] : 'greedy';
     const body = {
       deck1: params.deck1 ?? [],
       deck2: params.deck2 ?? [],
       deck1_raw: params.deck1_raw,
       deck2_raw: params.deck2_raw,
-      player1_type: p1Human ? 'human' : 'agent',
-      player2_type: p2Human ? 'human' : 'agent',
-      player1_policy: 'greedy',
-      player2_policy: 'greedy',
+      player1_type: p1Kind === 'human' ? 'human' : 'agent',
+      player2_type: p2Kind === 'human' ? 'human' : 'agent',
+      player1_policy: p1Kind === 'trained' ? 'trained' : 'greedy',
+      player2_policy: p2Kind === 'trained' ? 'trained' : 'greedy',
+      player1_model: p1Kind === 'trained' ? modelIds[0] : null,
+      player2_model: p2Kind === 'trained' ? modelIds[1] : null,
       paced: params.paced ?? false,
       seed: normalizeSeedInput(params.seed),
     };

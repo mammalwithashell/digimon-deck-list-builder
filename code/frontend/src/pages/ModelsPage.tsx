@@ -168,7 +168,7 @@ export function ModelsPage() {
         userDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
         opponentDeck: { main_deck: deck.main_deck, egg_deck: deck.egg_deck },
       });
-      navigate(`/game/${game_id}?mode=vsai&player=1`);
+      navigate(`/game/${game_id}`);
     });
   };
 
@@ -250,22 +250,33 @@ export function ModelsPage() {
           <tbody>
             {rows.map((row) => {
               const busy = busyIds.has(row.id);
+              const meta = row.manifest ?? row.local;
               const compatible =
                 !contract ||
-                !row.manifest ||
-                isCompatible(row.manifest, contract);
+                !meta ||
+                isCompatible(meta, contract);
               const have = !!row.local;
-              const name = row.manifest?.name ?? row.local?.name ?? row.id;
-              const type = (row.manifest?.model_type ?? row.local?.model_type ?? '').toUpperCase();
-              const size = row.manifest?.file_size_bytes ?? row.local?.file_size_bytes ?? 0;
+              const name = meta?.name ?? row.id;
+              const type = (meta?.model_type ?? '').toUpperCase();
+              const size = meta?.file_size_bytes ?? 0;
+              const notes = meta?.notes ?? null;
               return (
                 <tr key={row.id} className="border-t border-[var(--line-1)]">
-                  <td className="py-2 pr-4">{name}</td>
+                  <td className="py-2 pr-4">
+                    <div className="font-medium text-[var(--ink-0)]">{name}</div>
+                    {notes && (
+                      <div className="text-xs text-[var(--ink-2)] mt-0.5">{notes}</div>
+                    )}
+                  </td>
                   <td className="py-2 pr-4">{type}</td>
                   <td className="py-2 pr-4 text-[var(--ink-2)]">{formatBytes(size)}</td>
                   <td className="py-2 pr-4">
-                    {have ? (
-                      <span className="text-xs text-[var(--good)]">downloaded</span>
+                    {have && compatible ? (
+                      <span className="text-xs text-[var(--good)]">ready (local)</span>
+                    ) : have && !compatible ? (
+                      <span className="text-xs text-[var(--danger)]">
+                        incompatible ({meta?.tensor_size ?? '?'})
+                      </span>
                     ) : compatible ? (
                       <span className="text-xs text-[var(--ink-2)]">online only</span>
                     ) : (
@@ -274,11 +285,11 @@ export function ModelsPage() {
                   </td>
                   <td className="py-2 text-right">
                     <div className="flex justify-end gap-2">
-                      {row.manifest && compatible && (
+                      {have && compatible && (
                         <button
-                          disabled={busy || !playDeckId || !IS_DESKTOP || !have}
+                          disabled={busy || !playDeckId || !IS_DESKTOP}
                           onClick={() => void handleTryOnline(row)}
-                          className="rounded bg-[var(--accent)] px-2 py-1 text-xs text-[var(--accent-ink)] hover:opacity-90 disabled:opacity-40"
+                          className="rounded bg-[var(--accent)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-ink)] hover:opacity-90 disabled:opacity-40"
                         >
                           {busy ? 'Preparing…' : 'Play'}
                         </button>
@@ -294,13 +305,15 @@ export function ModelsPage() {
                       )}
                       {have && (
                         <>
-                          <button
-                            disabled={busy}
-                            onClick={() => void handleActivate(row.id)}
-                            className="rounded bg-[var(--good)] px-2 py-1 text-xs text-[var(--accent-ink)] hover:opacity-90 disabled:opacity-40"
-                          >
-                            Activate
-                          </button>
+                          {compatible && (
+                            <button
+                              disabled={busy}
+                              onClick={() => void handleActivate(row.id)}
+                              className="rounded bg-[var(--good)] px-2 py-1 text-xs text-[var(--accent-ink)] hover:opacity-90 disabled:opacity-40"
+                            >
+                              Preload
+                            </button>
+                          )}
                           <button
                             disabled={busy}
                             onClick={() => void handleDelete(row.id)}

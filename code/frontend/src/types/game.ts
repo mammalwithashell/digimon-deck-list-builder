@@ -120,11 +120,18 @@ export interface EffectChoice {
   cardId: string;
   cardName: string;
   label: string;
-  /** Concrete engine action ID for this branch. When present, the
-   *  SelectionPanel should dispatch this directly rather than computing
-   *  from `EFFECT_CHOICE_START + index` (engine uses HAND_EFFECT_START
-   *  range, not the frontend's 1000-range — they don't match). */
+  /** Concrete engine action ID for this branch. */
   actionId?: number;
+  isOptional?: boolean;
+  timing?: string | null;
+  keyword?: string | null;
+}
+
+export interface WaitingTriggerInfo {
+  cardId: string;
+  cardName?: string | null;
+  timing?: string | null;
+  isOptional?: boolean;
 }
 
 export interface KeywordPrompt {
@@ -140,22 +147,13 @@ export interface PendingSelection {
   isOptional: boolean;
   prompt: string;
   selectingPlayer: number;
-  /**
-   * Engine `SelectionKind` (e.g. `OwnField`, `OppField`, `Hand`, `Trash`).
-   * For field selections it is the ONLY signal of which player's field the
-   * `validIndices` (`OWN_FIELD_START + slot`) refer to — the engine encodes
-   * both sides in the same id range. See `utils/selectionTargets.ts`.
-   */
+  sourceCardId?: string | null;
+  sourceCardName?: string | null;
+  sourceSlot?: number | null;
   kind?: string;
-  /**
-   * For `Hand`/`Trash` kinds, the player whose zone `validIndices` index
-   * into (UI convention: 1 = you, 2 = opponent). Effects like EX11-012
-   * Medusamon prompt YOU to pick from the OPPONENT's trash — without this
-   * the panel zips the action ids against the wrong card list. Absent =
-   * the selecting player's own zone.
-   */
   zoneOwner?: number;
   effectChoices?: EffectChoice[];
+  waitingTriggers?: WaitingTriggerInfo[];
   keywordPrompt?: KeywordPrompt;
 }
 
@@ -182,7 +180,8 @@ export interface PlayerState {
   handIds: string[];
   handCards: HandCardInfo[];
   securityCount: number;
-  securityIds: string[];
+  securityIds: (string | null)[];
+  securityFaceUp?: boolean[];
   deckCount: number;
   eggDeckCount: number;
   battleAreaCount: number;

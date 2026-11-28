@@ -16,8 +16,15 @@
             localStorage.setItem('desktop.theme', t);
           }
           document.documentElement.setAttribute('data-theme', t);
+          var st = localStorage.getItem('desktop.stylePreset');
+          if (st !== 'aegis' && st !== 'digi-os' && st !== 'adventure') {
+            st = 'aegis';
+            localStorage.setItem('desktop.stylePreset', st);
+          }
+          document.documentElement.setAttribute('data-style', st);
         } catch (e) {
           document.documentElement.setAttribute('data-theme', 'dark');
+          document.documentElement.setAttribute('data-style', 'aegis');
         }
       })();
     </script>

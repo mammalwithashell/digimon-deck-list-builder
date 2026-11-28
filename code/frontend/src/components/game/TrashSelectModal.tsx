@@ -53,6 +53,7 @@ export function TrashSelectModal({
   onInspectCard,
 }: TrashSelectModalProps) {
   const peeking = usePeekStore((s) => s.peeking);
+  const togglePeek = usePeekStore((s) => s.toggle);
   // Local, ordered selection for deferred-toggle multi-select. Action ids.
   const [picked, setPicked] = useState<number[]>([]);
   // While draining the deferred picks to the engine, freeze the grid.
@@ -174,112 +175,126 @@ export function TrashSelectModal({
   const legalSelectable = cards.filter((c) => c.legalNow).length;
 
   return (
-    <div
-      data-testid="trash-select-modal"
-      className={`fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-150 ${peeking ? 'pointer-events-none opacity-0' : ''}`}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-      <div className="relative bg-[var(--ib-graphite)] rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col border border-[var(--ib-line)]">
-        {/* Header */}
-        <div className="bg-gradient-to-b from-[var(--ib-panel-2)] to-transparent px-5 py-4 border-b border-[var(--ib-line)]">
-          <div className="flex items-center justify-between gap-4">
+    <>
+      <div
+        data-testid="trash-select-modal"
+        className={`hs-modal-backdrop ${peeking ? 'is-peeking' : ''}`}
+      >
+        <div className="hs-modal-sheet">
+          {/* Header */}
+          <div className="hs-modal-sheet__header">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-[var(--ib-bone-dd)] font-semibold">
-                {ownerLabel}
-              </div>
-              <h2 className="text-base font-semibold text-[var(--ib-bone)]">{title}</h2>
-              {mode === 'multi' && cc ? (
-                <span data-testid="trash-select-counter" className="text-xs text-[var(--ib-bone-dd)] mt-0.5">
-                  {selectedCount} / {cc.max} selected
-                  {cc.min > 0 && selectedCount < cc.min ? ` — select at least ${cc.min}` : ''}
-                </span>
-              ) : (
-                legalSelectable > 0 && (
-                  <span className="text-xs text-[var(--ib-bone-dd)] mt-0.5">
-                    {legalSelectable} of {cards.length} selectable
+              <div className="hs-decision-rail__eyebrow">{ownerLabel}</div>
+              <h2 className="hs-modal-sheet__title">{title}</h2>
+              <div className="hs-modal-sheet__subtitle">
+                {mode === 'multi' && cc ? (
+                  <span data-testid="trash-select-counter">
+                    {selectedCount} / {cc.max} selected
+                    {cc.min > 0 && selectedCount < cc.min ? ` — select at least ${cc.min}` : ''}
                   </span>
-                )
-              )}
+                ) : (
+                  legalSelectable > 0 && (
+                    <span>
+                      {legalSelectable} of {cards.length} selectable
+                    </span>
+                  )
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               {mode === 'multi' && (
                 <button
+                  type="button"
                   data-testid="trash-select-done"
                   disabled={!doneEnabled || committing}
                   onClick={onDone}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
-                    doneEnabled && !committing
-                      ? 'bg-purple-600 hover:bg-purple-500 text-white'
-                      : 'bg-[var(--ib-panel)] text-[var(--ib-bone-dd)] cursor-not-allowed'
-                  }`}
+                  className={`ds-btn ${doneEnabled && !committing ? 'ds-btn--primary' : 'ds-btn--ghost opacity-50 cursor-not-allowed'}`}
                 >
                   {committing ? 'Resolving…' : 'Done'}
                 </button>
               )}
               {mode === 'single' && canDecline && (
                 <button
+                  type="button"
                   data-testid="trash-select-decline"
                   onClick={() => onAction(SELECTION.DECLINE)}
-                  className="px-4 py-2 bg-[var(--ib-panel-2)] hover:opacity-90 text-[var(--ib-bone)] text-sm font-medium rounded-lg border border-[var(--ib-line)] transition-colors"
+                  className="ds-btn ds-btn--ghost"
                 >
                   Decline
                 </button>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Card grid */}
-        <div className="overflow-y-auto p-5">
-          {cards.length === 0 ? (
-            <div className="text-center text-[var(--ib-bone-dd)] py-8">No cards in trash</div>
-          ) : (
-            <div className="grid grid-cols-5 gap-3 justify-items-center">
-              {cards.map((card) => {
-                const selected = isSelected(card);
-                const atCap = deferred && cc != null && picked.length >= cc.max && !selected;
-                // A card is interactable when: single & legal; deferred & (legal or
-                // already selected) & under cap; immediate & legal. Frozen while
-                // committing.
-                const interactable =
-                  !committing &&
-                  (mode === 'single'
-                    ? card.legalNow
-                    : deferred
-                      ? (card.legalNow || selected) && !atCap
-                      : card.legalNow);
-                const dimmed = !interactable && !selected;
-                return (
-                  <div
-                    key={`${card.cardId}-${card.actionId}`}
-                    data-testid={`trash-card-${card.actionId}`}
-                    data-selected={selected ? 'true' : 'false'}
-                    className={`relative transition-all ${
-                      interactable ? 'cursor-pointer hover:scale-105' : 'cursor-not-allowed'
-                    }`}
-                  >
-                    <Card
-                      cardId={card.cardId}
-                      size="md"
-                      highlighted={selected || (interactable && mode !== 'single')}
-                      dimmed={dimmed}
-                      onClick={interactable || selected ? () => onCardClick(card) : undefined}
-                      onContextMenu={inspectOnRightClick(card.cardId)}
-                    />
-                    {selected && (
-                      <div className="absolute top-1 right-1 w-5 h-5 rounded-full bg-purple-500 text-white text-xs font-bold flex items-center justify-center shadow">
-                        {deferred ? picked.indexOf(card.actionId) + 1 : '✓'}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          {/* Card gallery */}
+          <div className="hs-modal-sheet__body">
+            {cards.length === 0 ? (
+              <div className="text-center text-[var(--ink-2)] py-8">No cards in trash</div>
+            ) : (
+              <div
+                className={`hs-card-gallery ${cards.length > 6 ? 'hs-card-gallery--scroll' : ''}`}
+              >
+                {cards.map((card) => {
+                  const selected = isSelected(card);
+                  const atCap = deferred && cc != null && picked.length >= cc.max && !selected;
+                  const interactable =
+                    !committing &&
+                    (mode === 'single'
+                      ? card.legalNow
+                      : deferred
+                        ? (card.legalNow || selected) && !atCap
+                        : card.legalNow);
+                  const dimmed = !interactable && !selected;
+                  return (
+                    <div
+                      key={`${card.cardId}-${card.actionId}`}
+                      data-testid={`trash-card-${card.actionId}`}
+                      data-selected={selected ? 'true' : 'false'}
+                      className={`relative flex-none transition-transform ${
+                        interactable ? 'cursor-pointer hover:-translate-y-1' : 'cursor-not-allowed'
+                      }`}
+                    >
+                      <Card
+                        cardId={card.cardId}
+                        size="md"
+                        highlighted={selected || (interactable && mode !== 'single')}
+                        dimmed={dimmed}
+                        onClick={interactable || selected ? () => onCardClick(card) : undefined}
+                        onContextMenu={inspectOnRightClick(card.cardId)}
+                      />
+                      {selected && (
+                        <div className="absolute top-1 right-1 w-6 h-6 rounded-full bg-[var(--accent)] text-[var(--accent-ink)] text-xs font-bold flex items-center justify-center shadow">
+                          {deferred ? picked.indexOf(card.actionId) + 1 : '✓'}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="hs-modal-sheet__footer">
+            <button
+              type="button"
+              onClick={togglePeek}
+              className="ds-btn ds-btn--ghost"
+            >
+              View Board
+            </button>
+            <span className="text-[11px] text-[var(--ink-2)]">
+              Right-click any card to inspect
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+
+      {peeking && (
+        <button type="button" onClick={togglePeek} className="hs-peek-return">
+          Return to Trash Selection
+        </button>
+      )}
+    </>
   );
 }
 

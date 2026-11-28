@@ -125,10 +125,52 @@ describe('CardOverlay right-click inspect (DCGO CardInfo -> CardDetail)', () => 
     );
     const linked = screen.getAllByTestId('linked-card');
     expect(linked).toHaveLength(2);
+    expect(screen.getByTestId('overlay-linked-summary')).toHaveTextContent('2 Linked');
+    expect(screen.getByTestId('linked-cards-section')).toHaveTextContent('Linked Cards (2)');
+    expect(within(linked[0]!).getByText('Gatchmon')).toBeInTheDocument();
     expect(within(linked[0]!).getByText('Link Effect')).toBeInTheDocument();
     // CardEffectText splits keywords and timings into their own elements.
     expect(linked[0]).toHaveTextContent(/change the attack target to 1 of your opponent's unsuspended/);
     expect(within(linked[1]!).queryByText('Link Effect')).not.toBeInTheDocument();
+  });
+
+  it('right-clicking a linked card image opens that linked card enlarged', () => {
+    const onInspectCard = vi.fn();
+    render(
+      <CardOverlay
+        permanent={makePerm({
+          linkedCardIds: ['BT21-009'],
+          linkEffects: [{ linkIndex: 0, cardId: 'BT21-009', cardName: 'Gatchmon', text: '<Raid>' }],
+        })}
+        onClose={vi.fn()}
+        onInspectCard={onInspectCard}
+      />,
+    );
+    fireEvent.contextMenu(screen.getByTitle('Gatchmon (BT21-009)'));
+    expect(onInspectCard).toHaveBeenCalledWith('BT21-009');
+  });
+
+  it('displays full readable innate vs granted keywords in inspector', () => {
+    render(
+      <CardOverlay
+        permanent={makePerm({
+          keywords: ['armor_purge', 'alliance'],
+          keywordBreakdown: { innate: ['armor_purge'], gained: ['alliance'] },
+        })}
+        onClose={vi.fn()}
+      />,
+    );
+    const badgeSection = screen.getByTestId('keyword-badges-inspector');
+    expect(within(badgeSection).getByTestId('keyword-badge-armor_purge')).toHaveAttribute(
+      'data-keyword-origin',
+      'innate',
+    );
+    expect(within(badgeSection).getByTestId('keyword-badge-alliance')).toHaveAttribute(
+      'data-keyword-origin',
+      'gained',
+    );
+    expect(screen.getByText('(innate)')).toBeInTheDocument();
+    expect(screen.getByText('(granted)')).toBeInTheDocument();
   });
 });
 
