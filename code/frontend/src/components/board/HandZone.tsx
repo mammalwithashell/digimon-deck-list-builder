@@ -11,6 +11,8 @@ interface DraggableHandCardProps {
   cardId: string;
   index: number;
   isOpponent: boolean;
+  showFaceUp: boolean;
+  interactive: boolean;
   highlighted: boolean;
   cardInfo?: HandCardInfo;
   onClick: () => void;
@@ -19,13 +21,13 @@ interface DraggableHandCardProps {
   onInspect?: (cardId: string) => void;
 }
 
-function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, onClick, onHover, onHoverIndex, onInspect }: DraggableHandCardProps) {
+function DraggableHandCard({ cardId, index, isOpponent, showFaceUp, interactive, highlighted, cardInfo, onClick, onHover, onHoverIndex, onInspect }: DraggableHandCardProps) {
   const setHoveredCard = useGameStore((s) => s.setHoveredCard);
   const dragData: DragData = { type: 'hand-card', handIndex: index, cardId };
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `hand-card-${isOpponent ? 'opponent' : 'player'}-${index}`,
     data: dragData,
-    disabled: isOpponent,
+    disabled: !interactive,
   });
 
   const primaryColor = cardInfo?.colors[0];
@@ -40,21 +42,18 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
       className={`ib-hand-card ${highlighted ? 'ib-hand-card--ready' : ''} ${isDragging ? 'ib-hand-card--dragging' : ''}`}
       style={{ marginLeft: index > 0 ? '-12px' : 0, zIndex: isDragging ? 100 : index }}
       onContextMenu={(e) => {
-        // DCGO parity: right-click inspects your own (visible) hand cards;
-        // the opponent's face-down hand stays private. Always suppress the
-        // webview's native context menu over the hand.
         e.preventDefault();
-        if (!isOpponent && !isDragging) onInspect?.(cardId);
+        if (showFaceUp && !isDragging) onInspect?.(cardId);
       }}
     >
       <Card
         cardId={cardId}
         size="md"
-        faceDown={isOpponent}
+        faceDown={!showFaceUp}
         highlighted={highlighted}
         onClick={onClick}
         onMouseEnter={() => {
-          if (!isOpponent) {
+          if (showFaceUp) {
             setHoveredCard(cardId);
             onHover?.(cardId);
             onHoverIndex?.(index);
@@ -67,8 +66,8 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
         }}
       />
 
-      {/* Stat overlays — own hand only */}
-      {cardInfo && !isOpponent && (
+      {/* Stat overlays — visible hands only */}
+      {cardInfo && showFaceUp && (
         <>
           {/* Play cost (top-left) */}
           <div
@@ -110,6 +109,10 @@ function DraggableHandCard({ cardId, index, isOpponent, highlighted, cardInfo, o
 interface HandZoneProps {
   cardIds: string[];
   isOpponent: boolean;
+  /** Override to render opponent hand face-up (e.g. Studio dual-seat mode). */
+  showFaceUp?: boolean;
+  /** Override to allow clicking/dragging cards on this hand. */
+  interactive?: boolean;
   highlightedIndices?: Set<number>;
   handCards?: HandCardInfo[];
   onCardClick?: (handIndex: number) => void;
@@ -122,6 +125,8 @@ interface HandZoneProps {
 export function HandZone({
   cardIds,
   isOpponent,
+  showFaceUp,
+  interactive,
   highlightedIndices,
   handCards,
   onCardClick,
@@ -129,6 +134,8 @@ export function HandZone({
   onCardHoverIndex,
   onCardInspect,
 }: HandZoneProps) {
+  const faceUp = showFaceUp ?? !isOpponent;
+  const canInteract = interactive ?? !isOpponent;
   return (
     <div className={`ib-hand-zone ${isOpponent ? 'ib-hand-zone--opp' : 'ib-hand-zone--you'}`}>
       {cardIds.map((cardId, i) => (
@@ -137,6 +144,8 @@ export function HandZone({
           cardId={cardId}
           index={i}
           isOpponent={isOpponent}
+          showFaceUp={faceUp}
+          interactive={canInteract}
           highlighted={highlightedIndices?.has(i) ?? false}
           cardInfo={handCards?.[i]}
           onClick={() => onCardClick?.(i)}

@@ -26,6 +26,20 @@ impl Game {
         suspended: bool,
         turn_played: u16,
     ) -> usize {
+        self.stage_place_field_stack_with_links(player, card_ids, suspended, turn_played, &[])
+    }
+
+    /// Place a full digivolution stack (bottom-to-top) on `player`'s field
+    /// with explicit suspend state, turn-played value, and optional linked
+    /// cards. Returns the new battle-area index. Panics on an unknown card id.
+    pub fn stage_place_field_stack_with_links(
+        &mut self,
+        player: PlayerId,
+        card_ids: &[&str],
+        suspended: bool,
+        turn_played: u16,
+        linked_card_ids: &[&str],
+    ) -> usize {
         assert!(
             !card_ids.is_empty(),
             "stage_place_field_stack requires at least one card id"
@@ -50,6 +64,19 @@ impl Game {
         for (i, src) in sources.into_iter().enumerate() {
             perm.card_sources.insert(i, src);
         }
+        for linked_id in linked_card_ids {
+            let data_idx = self
+                .card_data
+                .iter()
+                .position(|c| c.card_id == *linked_id)
+                .unwrap_or_else(|| {
+                    panic!("stage_place_field_stack_with_links: unknown linked card_id {linked_id}")
+                });
+            let next_idx = self.next_card_index();
+            let mut card = crate::card_source::CardSource::new(data_idx, player, next_idx);
+            card.card_index = next_idx;
+            perm.linked_cards.push(card);
+        }
         perm.is_suspended = suspended;
         perm.turn_played = turn_played;
         self.players[player as usize].battle_area.push(perm);
@@ -57,8 +84,9 @@ impl Game {
     }
 
     /// Inject a single card directly into a named zone for `player`.
-    /// `zone` ∈ {"hand", "deck_top", "security_top", "trash"}. Panics on
-    /// an unknown card id; returns `Err` on an unknown zone.
+    /// `zone` ∈ {"hand", "deck_top", "egg_deck_top", "security_top",
+    /// "security_top_face_up", "trash"}. Returns `Err` on an unknown card id
+    /// or unknown zone.
     pub fn stage_inject_card(
         &mut self,
         player: PlayerId,
@@ -78,10 +106,42 @@ impl Game {
             "hand" => p.put_in_hand(card),
             // Deck top = end of the vec (draw pops from the end).
             "deck_top" => p.put_on_deck_top(card),
+            // Egg deck top = end of the vec (hatch pops from the end).
+            "egg_deck_top" => p.put_on_digi_egg_deck_top(card),
             // Security top = end of the vec.
             "security_top" => p.put_on_security_top(card),
+            "security_top_face_up" => {
+                let cidx = card.card_index;
+                p.put_on_security_top(card);
+                p.face_up_security.insert(cidx);
+            }
             "trash" => p.put_in_trash(card),
             other => return Err(format!("stage_inject_card: unknown zone {other}")),
+        }
+        Ok(())
+    }
+
+    /// Set whether a security card at `top_index` (0 = top of security) is
+    /// face-up.
+    pub fn stage_set_security_face_up(
+        &mut self,
+        player: PlayerId,
+        top_index: usize,
+        face_up: bool,
+    ) -> Result<(), String> {
+        let p = &mut self.players[player as usize];
+        let len = p.security.len();
+        if top_index >= len {
+            return Err(format!(
+                "stage_set_security_face_up: top_index {top_index} out of range (len {len})"
+            ));
+        }
+        let vec_idx = len - 1 - top_index;
+        let cidx = p.security[vec_idx].card_index;
+        if face_up {
+            p.face_up_security.insert(cidx);
+        } else {
+            p.face_up_security.remove(&cidx);
         }
         Ok(())
     }
@@ -135,14 +195,18 @@ impl Game {
 
     /// Empty a named zone for `player` so staged contents fully replace
     /// whatever was dealt at construction. `zone` ∈ {"hand", "deck",
-    /// "security", "trash", "battle_area", "breeding"}. Returns `Err` on
-    /// an unknown zone.
+    /// "egg_deck", "security", "trash", "battle_area", "breeding"}. Returns
+    /// `Err` on an unknown zone.
     pub fn stage_clear_zone(&mut self, player: PlayerId, zone: &str) -> Result<(), String> {
         let p = &mut self.players[player as usize];
         match zone {
             "hand" => p.hand.clear(),
             "deck" => p.deck.clear(),
-            "security" => p.security.clear(),
+            "egg_deck" => p.digitama_deck.clear(),
+            "security" => {
+                p.security.clear();
+                p.face_up_security.clear();
+            }
             "trash" => p.trash.clear(),
             "battle_area" => p.battle_area.clear(),
             "breeding" => p.breeding_area = None,

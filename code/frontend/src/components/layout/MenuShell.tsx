@@ -82,6 +82,11 @@ function MenuShellInner() {
   const deckCount = decks.length;
   const draftCount = decks.filter((d) => !d.is_valid).length;
 
+  const enableStudio =
+    import.meta.env.VITE_ENABLE_STUDIO !== undefined
+      ? import.meta.env.VITE_ENABLE_STUDIO === 'true'
+      : import.meta.env.DEV;
+
   const groups: NavGroup[] = [
     {
       key: 'main',
@@ -99,6 +104,7 @@ function MenuShellInner() {
       items: [
         { to: '/models', label: 'AI Models', glyph: 'M' },
         { to: '/watch', label: 'Watch AI', glyph: 'W' },
+        ...(enableStudio ? [{ to: '/studio', label: 'Studio', glyph: 'S' }] : []),
         { to: '/settings/graphics', label: 'Graphics', glyph: 'G' },
       ],
     },

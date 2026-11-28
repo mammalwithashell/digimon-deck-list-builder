@@ -50,6 +50,12 @@ interface GameBoardProps {
   onHandCardInspect?: (cardId: string) => void;
   actionTraces?: ActionTrace[];
   latestTensorSummary?: TensorSummary | null;
+  /** Studio dual-seat mode: render both hands face-up and playable. */
+  dualSeat?: boolean;
+  /** Studio manual perspective flip: swap visual top/bottom seats without mutating player IDs. */
+  flipped?: boolean;
+  playableOpponentHandIndices?: Set<number>;
+  onOpponentPlayCard?: (handIndex: number) => void;
 }
 
 export function GameBoard({
@@ -82,6 +88,10 @@ export function GameBoard({
   onHandCardInspect,
   actionTraces = [],
   latestTensorSummary = null,
+  dualSeat = false,
+  flipped = false,
+  playableOpponentHandIndices,
+  onOpponentPlayCard,
 }: GameBoardProps) {
   const {
     player1,
@@ -152,27 +162,50 @@ export function GameBoard({
       <div className="ib-board__vignette" />
 
       <div className="ib-board__top-chrome">
-        <div className="ib-chrome-tag"><span className="ib-dot" />MATCH LIVE</div>
+        <div className="ib-chrome-tag"><span className="ib-dot" />{dualSeat ? 'STUDIO DUAL-SEAT' : 'MATCH LIVE'}</div>
         <div className="ib-chrome-tag">TURN {String(turnCount).padStart(2, '0')}</div>
-        <div className="ib-chrome-tag">{currentPlayer === 1 ? 'YOUR PRIORITY' : 'OPP PRIORITY'}</div>
+        <div className="ib-chrome-tag">
+          {dualSeat
+            ? `P${pendingSelection?.selectingPlayer ?? currentPlayer} PRIORITY`
+            : currentPlayer === 1
+              ? 'YOUR PRIORITY'
+              : 'OPP PRIORITY'}
+        </div>
         <ActionTraceTicker traces={actionTraces} />
       </div>
 
       <PlayerTag
         className="ib-player-tag--opp"
         accent="opp"
-        label={playerLabels[2] ?? 'Opponent'}
-        sublabel={`${player2.handCount} hand · ${player2.deckCount} deck`}
+        label={flipped ? (playerLabels[1] ?? 'Player 1') : (playerLabels[2] ?? 'Opponent')}
+        sublabel={
+          flipped
+            ? `${player1.handCount} hand · ${player1.deckCount} deck`
+            : `${player2.handCount} hand · ${player2.deckCount} deck`
+        }
       />
       <PlayerTag
         className="ib-player-tag--you"
         accent="you"
-        label={playerLabels[1] ?? 'You'}
-        sublabel={`${player1.trashIds.length} trash · ${player1.eggDeckCount} eggs`}
+        label={flipped ? (playerLabels[2] ?? 'Player 2') : (playerLabels[1] ?? 'You')}
+        sublabel={
+          flipped
+            ? `${player2.trashIds.length} trash · ${player2.eggDeckCount} eggs`
+            : `${player1.trashIds.length} trash · ${player1.eggDeckCount} eggs`
+        }
       />
 
       <div className="ib-board__opponent-hand">
-        <HandZone cardIds={player2.handIds} isOpponent />
+        <HandZone
+          cardIds={flipped ? player1.handIds : player2.handIds}
+          isOpponent
+          showFaceUp={dualSeat}
+          interactive={dualSeat}
+          highlightedIndices={flipped ? playableHandIndices : playableOpponentHandIndices}
+          handCards={flipped ? player1.handCards : player2.handCards}
+          onCardClick={flipped ? onPlayCard : onOpponentPlayCard}
+          onCardInspect={onHandCardInspect}
+        />
       </div>
 
       {/* Flow stage: opponent field / memory gauge / player field share the
@@ -181,22 +214,22 @@ export function GameBoard({
       <div className="ib-board__stage">
         <div className="ib-board__side ib-board__side--opp">
           <PlayerHalf
-            player={player2}
+            player={flipped ? player1 : player2}
             isOpponent
-            highlightedSlots={enemySlots}
-            selectedSlots={selectedEnemySlots}
-            onTrashClick={onOpponentTrashClick}
+            highlightedSlots={flipped ? ownSlots : enemySlots}
+            selectedSlots={flipped ? selectedOwnSlots : selectedEnemySlots}
+            onTrashClick={flipped ? onOwnTrashClick : onOpponentTrashClick}
             targetedSlots={targetedSlots}
-            onSlotClick={(i) => onSlotClick?.(true, i)}
-            onSlotInspect={(i) => onSlotInspect?.(true, i)}
-            onBreedingInspect={() => onBreedingInspect?.(true)}
+            onSlotClick={(i) => onSlotClick?.(!flipped, i)}
+            onSlotInspect={(i) => onSlotInspect?.(!flipped, i)}
+            onBreedingInspect={() => onBreedingInspect?.(!flipped)}
           />
         </div>
 
         <div className="ib-board__gauge">
           <MemoryGauge
             value={memoryGauge}
-            localPlayer={1}
+            localPlayer={flipped ? 2 : 1}
             currentPhase={currentPhase}
             previewCost={previewCost}
             latestActionLabel={latestActionLabel}
@@ -205,21 +238,21 @@ export function GameBoard({
 
         <div className="ib-board__side ib-board__side--player">
           <PlayerHalf
-            player={player1}
+            player={flipped ? player2 : player1}
             isOpponent={false}
-            highlightedSlots={ownSlots}
-            selectedSlots={selectedOwnSlots}
+            highlightedSlots={flipped ? enemySlots : ownSlots}
+            selectedSlots={flipped ? selectedEnemySlots : selectedOwnSlots}
             canHatch={canHatch}
             canMove={canMove}
             canDigivolveBreeding={canDigivolveBreeding}
             highlightBreeding={highlightBreeding}
-            onSlotClick={(i) => onSlotClick?.(false, i)}
-            onSlotInspect={(i) => onSlotInspect?.(false, i)}
-            onBreedingInspect={() => onBreedingInspect?.(false)}
+            onSlotClick={(i) => onSlotClick?.(flipped, i)}
+            onSlotInspect={(i) => onSlotInspect?.(flipped, i)}
+            onBreedingInspect={() => onBreedingInspect?.(flipped)}
             onHatch={onHatch}
             onMove={onMove}
             onBreedingClick={onBreedingClick}
-            onTrashClick={onOwnTrashClick}
+            onTrashClick={flipped ? onOpponentTrashClick : onOwnTrashClick}
             dragValidDropSlots={dragValidDropSlots}
             isDraggingHandCard={isDraggingHandCard}
             canPlayDragged={canPlayDragged}
@@ -250,11 +283,13 @@ export function GameBoard({
 
       <div className="ib-board__hand">
         <HandZone
-          cardIds={player1.handIds}
+          cardIds={flipped ? player2.handIds : player1.handIds}
           isOpponent={false}
-          highlightedIndices={playableHandIndices}
-          handCards={player1.handCards}
-          onCardClick={onPlayCard}
+          showFaceUp
+          interactive
+          highlightedIndices={flipped ? playableOpponentHandIndices : playableHandIndices}
+          handCards={flipped ? player2.handCards : player1.handCards}
+          onCardClick={flipped ? onOpponentPlayCard : onPlayCard}
           onCardHoverIndex={onHandCardHoverIndex}
           onCardInspect={onHandCardInspect}
         />

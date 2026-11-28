@@ -41,6 +41,7 @@ from server.routers import matchmaking
 from server.routers import recordings
 from server.routers import replays
 from server.routers import simulations
+from server.routers import studio
 from server.routers import ws_games
 from server.routers import ws_matchmaking
 from server.routers import deck_optimizer
@@ -101,6 +102,7 @@ app.include_router(desktop_decks.router)
 # routers so the browser-test workflow can reach it without DEBUG_MODE; it
 # only stages in-memory games and cannot touch persisted data.
 app.include_router(debug_games.router)
+app.include_router(studio.router)
 
 # DB-backed routers
 app.include_router(auth_router.router)

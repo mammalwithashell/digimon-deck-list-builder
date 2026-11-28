@@ -28,8 +28,16 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUiStore, applyMotionAttribute, applyTextScaleVar } from '@/stores/uiStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+// Feature flag for Board-State Studio (add-board-state-studio): enabled in dev
+// builds and when VITE_ENABLE_STUDIO=true, tree-shaken out of production
+// desktop releases unless explicitly opted in.
+const ENABLE_STUDIO =
+  import.meta.env.VITE_ENABLE_STUDIO !== undefined
+    ? import.meta.env.VITE_ENABLE_STUDIO === 'true'
+    : import.meta.env.DEV;
 
 const LauncherPage = lazy(() => import('@/components/launcher/LauncherPage').then(m => ({ default: m.LauncherPage })));
+const StudioPage = lazy(() => import('@/pages/StudioPage').then(m => ({ default: m.StudioPage })));
 
 // Desktop-only in-app design-system kitchen sink (add-desktop-design-system).
 const StyleGuidePage = lazy(() => import('@/design/StyleGuidePage').then(m => ({ default: m.StyleGuidePage })));
@@ -82,6 +90,7 @@ function DesktopRoutes() {
         <Route path="/" element={suspended(LauncherPage)} />
         <Route path="/patch-notes" element={<PatchNotesPage />} />
         <Route path="/models" element={suspended(ModelsPage)} />
+        {ENABLE_STUDIO && <Route path="/studio" element={suspended(StudioPage)} />}
         <Route element={<AuthGuard />}>
           <Route path="/lobby" element={<LobbyPage />} />
           <Route path="/play" element={<ModeSelectPage />} />
@@ -112,6 +121,9 @@ function WebRoutes() {
         <Route path="/patch-notes" element={<PatchNotesPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        {ENABLE_STUDIO && import.meta.env.DEV && (
+          <Route path="/studio" element={suspended(StudioPage)} />
+        )}
         <Route element={<AuthGuard />}>
           <Route path="/lobby" element={<LobbyPage />} />
           <Route path="/play" element={<ModeSelectPage />} />
@@ -138,6 +150,9 @@ function WebRoutes() {
           <Route path="/admin/deck-pools/:id" element={suspended(DeckPoolPage)} />
           <Route path="/admin/patch-notes" element={suspended(AdminPatchNotesPage)} />
           <Route path="/admin/models" element={suspended(AdminModelsPage)} />
+          {ENABLE_STUDIO && !import.meta.env.DEV && (
+            <Route path="/studio" element={suspended(StudioPage)} />
+          )}
         </Route>
       </Route>
     </Routes>

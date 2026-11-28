@@ -881,6 +881,24 @@ impl RustHeadlessGame {
         PyArray1::from_vec_bound(py, mask)
     }
 
+    /// Finalize any outstanding mulligan by auto-keeping.
+    fn skip_mulligan(&mut self) {
+        while let Some(p) = self.inner.game.mulligan_current_player() {
+            let _ = self.inner.game.accept_mulligan(p, true);
+        }
+    }
+
+    /// Re-stage a scenario/puzzle fixture onto this live game (mirrors
+    /// `RustDebugGame.apply_scenario`). Used by `PuzzleResetWrapper`.
+    fn apply_scenario(&mut self, scenario_json: &str) -> PyResult<()> {
+        let val: Value = serde_json::from_str(scenario_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid scenario JSON: {e}")))?;
+        self.inner
+            .game
+            .apply_scenario(&val)
+            .map_err(PyValueError::new_err)
+    }
+
     /// Return the board tensor for `player_id` (Python 1/2, default = current).
     #[pyo3(signature = (player_id = None))]
     fn get_board_tensor<'py>(
@@ -1351,25 +1369,81 @@ impl RustDebugGame {
     }
 
     /// Place a bottom-to-top digivolution stack on `pid`'s field with
-    /// explicit suspend state and turn-played value. Returns the new
-    /// battle-area index.
-    #[pyo3(signature = (pid, stack, suspended = false, turn_played = 0))]
+    /// explicit suspend state, turn-played value, and optional linked cards.
+    /// Returns the new battle-area index.
+    #[pyo3(signature = (pid, stack, suspended = false, turn_played = 0, linked_cards = None))]
     fn place_on_field(
         &mut self,
         pid: u8,
         stack: Vec<String>,
         suspended: bool,
         turn_played: u16,
+        linked_cards: Option<Vec<String>>,
     ) -> PyResult<usize> {
         let rust_pid = to_rust_pid(pid)?;
         let refs: Vec<&str> = stack.iter().map(|s| s.as_str()).collect();
         if refs.is_empty() {
             return Err(PyValueError::new_err("place_on_field: empty stack"));
         }
-        Ok(self
-            .inner
+        let linked_owned = linked_cards.unwrap_or_default();
+        let linked_refs: Vec<&str> = linked_owned.iter().map(|s| s.as_str()).collect();
+        Ok(self.inner.game.stage_place_field_stack_with_links(
+            rust_pid,
+            &refs,
+            suspended,
+            turn_played,
+            &linked_refs,
+        ))
+    }
+
+    /// Set whether a security card at `top_index` (0 = top) is face-up.
+    fn set_security_face_up(&mut self, pid: u8, top_index: usize, face_up: bool) -> PyResult<()> {
+        let rust_pid = to_rust_pid(pid)?;
+        self.inner
             .game
-            .stage_place_field_stack(rust_pid, &refs, suspended, turn_played))
+            .stage_set_security_face_up(rust_pid, top_index, face_up)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Re-stage a full scenario fixture JSON string onto this game.
+    fn apply_scenario(&mut self, scenario_json: &str) -> PyResult<()> {
+        let val: Value = serde_json::from_str(scenario_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid scenario JSON: {e}")))?;
+        self.inner
+            .game
+            .apply_scenario(&val)
+            .map_err(PyValueError::new_err)
+    }
+
+    /// Human-readable label for `action_id` from the current decision player's perspective.
+    fn explain_action(&self, action_id: u16) -> String {
+        let pid = self.inner.current_decision_player();
+        ::digimon_engine::action::explain::explain_action(&self.inner.game, pid, action_id).label
+    }
+
+    /// Return the board tensor for `player_id` (Python 1/2, default = current).
+    #[pyo3(signature = (player_id = None))]
+    fn get_board_tensor<'py>(
+        &self,
+        py: Python<'py>,
+        player_id: Option<u8>,
+    ) -> PyResult<Bound<'py, PyArray1<f32>>> {
+        let rust_pid = match player_id {
+            None => None,
+            Some(pid) => Some(to_rust_pid(pid)?),
+        };
+        let tensor = self.inner.get_board_tensor(rust_pid);
+        Ok(PyArray1::from_vec_bound(py, tensor))
+    }
+
+    #[getter]
+    fn winner_id(&self) -> Option<u8> {
+        self.inner.game.winner.and_then(to_python_pid)
+    }
+
+    #[getter]
+    fn turn_count(&self) -> u16 {
+        self.inner.game.turn_count
     }
 
     /// Place a bottom-to-top digivolution stack into `pid`'s breeding area.
@@ -1540,7 +1614,24 @@ impl RustDebugGame {
                 .collect();
             pd.set_item("hand", hand)?;
             pd.set_item("deck_count", player.deck.len())?;
+            let egg_deck: Vec<String> = player
+                .digitama_deck
+                .iter()
+                .rev()
+                .map(|c| game.card_data[c.data_index].card_id.clone())
+                .collect();
+            pd.set_item("egg_deck", egg_deck)?;
             pd.set_item("security_count", player.security.len())?;
+            let face_up_sec: Vec<usize> = player
+                .security
+                .iter()
+                .rev()
+                .enumerate()
+                .filter_map(|(top_idx, c)| {
+                    player.face_up_security.contains(&c.card_index).then_some(top_idx)
+                })
+                .collect();
+            pd.set_item("face_up_security", face_up_sec)?;
             let trash: Vec<String> = player
                 .trash
                 .iter()
@@ -1558,6 +1649,12 @@ impl RustDebugGame {
                     .map(|c| game.card_data[c.data_index].card_id.clone())
                     .collect();
                 pdict.set_item("stack", stack)?;
+                let linked: Vec<String> = perm
+                    .linked_cards
+                    .iter()
+                    .map(|c| game.card_data[c.data_index].card_id.clone())
+                    .collect();
+                pdict.set_item("linked_cards", linked)?;
                 pdict.set_item("is_suspended", perm.is_suspended)?;
                 pdict.set_item("turn_played", perm.turn_played)?;
                 field.append(pdict)?;
@@ -1690,6 +1787,449 @@ impl RustReplayRunner {
             .seek(target_step)
             .map_err(|e| PyValueError::new_err(format!("{e:?}")))
     }
+}
+
+/// Unified PyO3 wrapper over `digimon_engine::runners::ReplaySession`
+/// supporting both native JSON recordings (`NativeAdapter`) and schema-v1
+/// DCGO JSONL recordings (`DcgoAdapter`) with non-fatal pausing divergences
+/// and `to_scenario()` snapshotting for the Board-State Studio.
+#[pyclass(module = "digimon_engine", name = "RustReplaySession")]
+pub struct RustReplaySession {
+    inner: ::digimon_engine::runners::ReplaySession,
+}
+
+#[pymethods]
+impl RustReplaySession {
+    #[staticmethod]
+    #[pyo3(signature = (recording_json, verify = false))]
+    fn from_native_json(recording_json: &str, verify: bool) -> PyResult<Self> {
+        let value: Value = serde_json::from_str(recording_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid native recording JSON: {e}")))?;
+        let db = card_db()?;
+        let inner = ::digimon_engine::runners::ReplaySession::new(value, db, verify)
+            .map_err(|e| PyValueError::new_err(format!("{e:?}")))?;
+        Ok(Self { inner })
+    }
+
+    #[staticmethod]
+    #[pyo3(signature = (jsonl_text, verify = true))]
+    fn from_dcgo_jsonl(jsonl_text: &str, verify: bool) -> PyResult<Self> {
+        let rec = ::digimon_engine::dcgo_recording::parse_jsonl(jsonl_text)
+            .map_err(|e| PyValueError::new_err(format!("invalid DCGO JSONL: {e}")))?;
+        let db = card_db()?;
+        let inner = ::digimon_engine::runners::ReplaySession::from_dcgo(rec, db, verify)
+            .map_err(|e| PyValueError::new_err(format!("{e:?}")))?;
+        Ok(Self { inner })
+    }
+
+    #[getter]
+    fn total_steps(&self) -> u32 {
+        self.inner.total_steps()
+    }
+
+    #[getter]
+    fn current_step(&self) -> u32 {
+        self.inner.current_step()
+    }
+
+    #[getter]
+    fn is_complete(&self) -> bool {
+        self.inner.is_complete()
+    }
+
+    #[getter]
+    fn is_game_over(&self) -> bool {
+        self.inner.is_game_over()
+    }
+
+    #[getter]
+    fn is_paused(&self) -> bool {
+        self.inner.is_paused()
+    }
+
+    #[getter]
+    fn winner_id(&self) -> Option<u8> {
+        self.inner.winner_id().and_then(to_python_pid)
+    }
+
+    #[getter]
+    fn skipped_incomplete_plays(&self) -> u32 {
+        self.inner.skipped_incomplete_plays()
+    }
+
+    /// True if any player zone currently holds an unrevealed opaque placeholder
+    /// card (PvP DCGO recordings).
+    #[getter]
+    fn has_opaque_placeholders(&self) -> bool {
+        self.inner.game.players.iter().any(|p| {
+            p.hand.iter().any(|c| c.is_opaque_placeholder)
+                || p.security.iter().any(|c| c.is_opaque_placeholder)
+                || p.deck.iter().any(|c| c.is_opaque_placeholder)
+                || p.digitama_deck.iter().any(|c| c.is_opaque_placeholder)
+        })
+    }
+
+    /// Per-player list of zones that currently contain unrevealed opaque
+    /// placeholder cards.
+    fn opaque_placeholder_zones(&self, py: Python) -> PyResult<PyObject> {
+        let out = PyDict::new_bound(py);
+        for (idx, p) in self.inner.game.players.iter().enumerate() {
+            let mut zones = Vec::new();
+            if p.hand.iter().any(|c| c.is_opaque_placeholder) {
+                zones.push("hand");
+            }
+            if p.security.iter().any(|c| c.is_opaque_placeholder) {
+                zones.push("security");
+            }
+            if p.deck.iter().any(|c| c.is_opaque_placeholder) {
+                zones.push("deck");
+            }
+            if p.digitama_deck.iter().any(|c| c.is_opaque_placeholder) {
+                zones.push("egg_deck");
+            }
+            if !zones.is_empty() {
+                out.set_item((idx + 1).to_string(), zones)?;
+            }
+        }
+        Ok(out.into_py(py))
+    }
+
+    fn get_state(&self, py: Python) -> PyResult<PyObject> {
+        let value = ::digimon_engine::serialization::to_ui_json(&self.inner.game);
+        json_to_pyobject(py, &value)
+    }
+
+    fn to_scenario(&self, py: Python) -> PyResult<PyObject> {
+        let value = self.inner.game.to_scenario();
+        json_to_pyobject(py, &value)
+    }
+
+    fn get_divergences(&self, py: Python) -> PyResult<PyObject> {
+        let val = serde_json::to_value(self.inner.divergences())
+            .map_err(|e| PyRuntimeError::new_err(format!("divergence serialize error: {e}")))?;
+        json_to_pyobject(py, &val)
+    }
+
+    fn step(&mut self, py: Python) -> PyResult<PyObject> {
+        let r = self.inner.step();
+        let d = PyDict::new_bound(py);
+        d.set_item("step_number", r.step_number)?;
+        d.set_item("player_id", to_python_pid(r.player_id))?;
+        d.set_item("action_id", r.action_id)?;
+        d.set_item("phase_before", r.phase_before)?;
+        d.set_item("phase_after", r.phase_after)?;
+        d.set_item("memory_before", r.memory_before)?;
+        d.set_item("memory_after", r.memory_after)?;
+        d.set_item("turn_number", r.turn_number)?;
+        d.set_item("is_game_over", r.is_game_over)?;
+        d.set_item("winner_id", r.winner_id.and_then(to_python_pid))?;
+        d.set_item("is_paused", self.inner.is_paused())?;
+        let state = ::digimon_engine::serialization::to_ui_json(&self.inner.game);
+        d.set_item("state", json_to_pyobject(py, &state)?)?;
+        d.set_item("divergences", self.get_divergences(py)?)?;
+        Ok(d.into_py(py))
+    }
+
+    fn step_back(&mut self) -> PyResult<()> {
+        self.inner
+            .step_back()
+            .map_err(|e| PyValueError::new_err(format!("{e:?}")))
+    }
+
+    fn seek(&mut self, target_step: u32) -> PyResult<()> {
+        self.inner
+            .seek(target_step)
+            .map_err(|e| PyValueError::new_err(format!("{e:?}")))
+    }
+}
+
+/// Evaluate a live `RustDebugGame` position using a local ONNX checkpoint
+/// (policy head + value head, plus optional determinized MCTS search when
+/// `simulations > 0`). Releases the Python GIL during Rust ONNX/MCTS work.
+#[pyfunction]
+#[pyo3(signature = (
+    game,
+    model_path,
+    simulations = 0,
+    worlds = 1,
+    seed = 0,
+    regime = "open_list",
+    profile = None,
+    top_k = 12,
+    expectations_json = None
+))]
+#[allow(clippy::too_many_arguments)]
+fn inspect_position(
+    py: Python,
+    game: &RustDebugGame,
+    model_path: &str,
+    simulations: u32,
+    worlds: u32,
+    seed: u64,
+    regime: &str,
+    profile: Option<String>,
+    top_k: usize,
+    expectations_json: Option<String>,
+) -> PyResult<PyObject> {
+    use ::digimon_engine::action::build_action_mask;
+    use ::digimon_engine::action::explain::explain_action;
+    use ::digimon_engine::inference::BatchedPolicyValueEvaluator;
+    use ::digimon_engine::observation::{
+        build_observation_tensor_with_mask, ObservationProfileId,
+    };
+    use ::digimon_engine::search::{
+        decision_player, determinized_search_batched, DeterminizedConfig, EvalRequest,
+        PolicyValueFn,
+    };
+    use serde_json::json;
+
+    let profile_id = match profile {
+        None => ObservationProfileId::StandardLiteV2,
+        Some(raw) => parse_observation_profile(&raw).map_err(PyValueError::new_err)?,
+    };
+    let expectations: Vec<Value> = match expectations_json {
+        None => Vec::new(),
+        Some(raw) => serde_json::from_str(&raw)
+            .map_err(|e| PyValueError::new_err(format!("invalid expectations JSON: {e}")))?,
+    };
+    let db = card_db()?;
+    let game_clone = game.inner.game.clone();
+    let model_path_owned = model_path.to_string();
+    let regime_owned = regime.to_string();
+
+    let result_val: Result<Value, String> = py.allow_threads(move || {
+        if game_clone.game_over {
+            return Err("Game is already over".to_string());
+        }
+        let viewer = decision_player(&game_clone);
+        let mask = build_action_mask(&game_clone, viewer);
+        let legal_ids: Vec<u16> = mask
+            .iter()
+            .enumerate()
+            .filter_map(|(i, &m)| (m > 0.5).then_some(i as u16))
+            .collect();
+        if legal_ids.is_empty() {
+            return Err("No legal actions available at this position".to_string());
+        }
+
+        let registry = RustCardRegistry::from_cards(db);
+        let mut eval = BatchedPolicyValueEvaluator::load_for_profile(
+            std::path::Path::new(&model_path_owned),
+            profile_id,
+        )
+        .map_err(|e| format!("failed to load ONNX model: {e}"))?;
+
+        let obs = build_observation_tensor_with_mask(
+            &game_clone,
+            viewer,
+            &registry,
+            profile_id,
+            &mask,
+        );
+        let raw_out = PolicyValueFn::evaluate_batch(
+            &mut eval,
+            &[EvalRequest {
+                obs,
+                mask: mask.clone(),
+            }],
+        );
+        let first_eval = raw_out
+            .into_iter()
+            .next()
+            .ok_or_else(|| "evaluator returned empty batch".to_string())?;
+        let policy_value = first_eval.value;
+
+        let mut scored_policy: Vec<(u16, f32)> = legal_ids
+            .iter()
+            .map(|&aid| (aid, first_eval.policy.get(aid as usize).copied().unwrap_or(0.0)))
+            .collect();
+        scored_policy.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.0.cmp(&b.0))
+        });
+
+        let policy_actions: Vec<Value> = scored_policy
+            .iter()
+            .take(top_k.max(1))
+            .map(|&(aid, prob)| {
+                let label = explain_action(&game_clone, viewer, aid).label;
+                json!({
+                    "action_id": aid,
+                    "label": label,
+                    "prob": prob,
+                })
+            })
+            .collect();
+
+        let mut chosen_action_id = scored_policy[0].0;
+        let mut chosen_plan: Vec<u16> = vec![chosen_action_id];
+        let mut mode = "policy_only";
+        let mut search_value: Option<f32> = None;
+        let mut simulations_run: u32 = 0;
+        let mut root_plans_json: Vec<Value> = Vec::new();
+        let mut root_q_json: Vec<Value> = Vec::new();
+        let mut plan_shares: Vec<(Vec<u16>, f64)> = Vec::new();
+
+        if simulations > 0 {
+            mode = "search";
+            let mut config = DeterminizedConfig::default();
+            config.worlds = worlds.max(1);
+            config.search.simulations = simulations;
+            config.search.dirichlet_epsilon = 0.0;
+            config.search.observation_profile = profile_id;
+            config.search.seed = seed;
+
+            let search_res = determinized_search_batched(
+                &registry,
+                &game_clone,
+                viewer,
+                &mut eval,
+                &config,
+                4,
+            );
+            search_value = Some(search_res.root_value);
+            simulations_run = search_res.simulations_run;
+
+            let total_visits: u32 = search_res.root_plans.iter().map(|p| p.1).sum();
+            let mut plans = search_res.root_plans.clone();
+            plans.sort_by(|a, b| b.1.cmp(&a.1));
+
+            if let Some(best) = search_res.best_plan() {
+                if !best.is_empty() {
+                    chosen_plan = best.to_vec();
+                    chosen_action_id = best[0];
+                }
+            }
+
+            for (plan, visits, q_val) in &plans {
+                let share = if total_visits == 0 {
+                    0.0
+                } else {
+                    *visits as f64 / total_visits as f64
+                };
+                plan_shares.push((plan.clone(), share));
+            }
+
+            for (plan, visits, q_val) in plans.iter().take(top_k.max(1)) {
+                let share = if total_visits == 0 {
+                    0.0
+                } else {
+                    *visits as f64 / total_visits as f64
+                };
+                let prior_prob = search_res
+                    .root_priors
+                    .iter()
+                    .find(|(p, _, _)| p == plan)
+                    .map(|(_, raw_p, _)| *raw_p)
+                    .unwrap_or(0.0);
+                let labels: Vec<String> = plan
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, &aid)| {
+                        if idx == 0 {
+                            explain_action(&game_clone, viewer, aid).label
+                        } else {
+                            format!("Action {aid}")
+                        }
+                    })
+                    .collect();
+                root_plans_json.push(json!({
+                    "actions": plan,
+                    "labels": labels,
+                    "visits": visits,
+                    "share": share,
+                    "q_value": q_val,
+                    "prior_prob": prior_prob,
+                }));
+            }
+
+            for &(aid, q) in &search_res.root_q {
+                root_q_json.push(json!({
+                    "action_id": aid,
+                    "label": explain_action(&game_clone, viewer, aid).label,
+                    "q_value": q,
+                }));
+            }
+        } else {
+            for &(aid, prob) in &scored_policy {
+                plan_shares.push((vec![aid], prob as f64));
+            }
+        }
+
+        let mut expectation_results = Vec::new();
+        for exp in &expectations {
+            let kind = exp.get("kind").and_then(Value::as_str).unwrap_or("");
+            let plan: Vec<u16> = exp
+                .get("plan")
+                .and_then(Value::as_array)
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|v| v.as_u64().map(|n| n as u16))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let observed_share = plan_shares
+                .iter()
+                .find(|(p, _)| *p == plan)
+                .map(|(_, s)| *s)
+                .unwrap_or(0.0);
+            let (passed, detail) = match kind {
+                "visits" | "visit_share_at_least" => {
+                    let min_share = exp
+                        .get("min_share")
+                        .or_else(|| exp.get("share"))
+                        .and_then(Value::as_f64)
+                        .unwrap_or(0.0);
+                    let ok = observed_share >= min_share;
+                    (
+                        ok,
+                        format!(
+                            "observed {:.1}% vs required >= {:.1}%",
+                            observed_share * 100.0,
+                            min_share * 100.0
+                        ),
+                    )
+                }
+                "avoid" | "not_chosen" => {
+                    let ok = chosen_plan != plan && !(plan.len() == 1 && plan[0] == chosen_action_id);
+                    (ok, format!("chosen={chosen_plan:?}, avoided={plan:?}"))
+                }
+                "choose" | "chosen" => {
+                    let ok = chosen_plan == plan || (plan.len() == 1 && plan[0] == chosen_action_id);
+                    (ok, format!("chosen={chosen_plan:?}, expected={plan:?}"))
+                }
+                other => (false, format!("unknown expectation kind {other:?}")),
+            };
+            expectation_results.push(json!({
+                "kind": kind,
+                "plan": plan,
+                "passed": passed,
+                "observed_share": observed_share,
+                "detail": detail,
+            }));
+        }
+
+        Ok(json!({
+            "mode": mode,
+            "regime": regime_owned,
+            "viewer": (viewer as u64) + 1,
+            "legal_count": legal_ids.len(),
+            "policy_value": policy_value,
+            "policy_actions": policy_actions,
+            "search_value": search_value,
+            "simulations_run": simulations_run,
+            "root_plans": root_plans_json,
+            "root_q": root_q_json,
+            "chosen_action_id": chosen_action_id,
+            "chosen_plan": chosen_plan,
+            "chosen_label": explain_action(&game_clone, viewer, chosen_action_id).label,
+            "expectation_results": expectation_results,
+        }))
+    });
+
+    let val = result_val.map_err(PyValueError::new_err)?;
+    json_to_pyobject(py, &val)
 }
 
 fn to_rust_pid(py_pid: u8) -> PyResult<u8> {
@@ -2039,6 +2579,8 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RustHeadlessGame>()?;
     m.add_class::<RustDebugGame>()?;
     m.add_class::<RustReplayRunner>()?;
+    m.add_class::<RustReplaySession>()?;
+    m.add_function(wrap_pyfunction!(inspect_position, m)?)?;
     m.add_class::<CardDatabase>()?;
     m.add_class::<PyCard>()?;
     m.add_class::<PyEvoCost>()?;
