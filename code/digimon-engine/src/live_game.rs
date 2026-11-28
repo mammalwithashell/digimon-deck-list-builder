@@ -130,6 +130,54 @@ pub struct CardInspection {
     pub has_rust_effect: bool,
 }
 
+/// Top-card summary for `LiveGame::inspect_stack`. Surfaces ONLY the top
+/// card's main `effect_text` alongside printed and effective stats.
+#[derive(Debug, Clone, Serialize)]
+pub struct StackTopCardInspection {
+    pub card_id: String,
+    pub card_name: String,
+    pub level: Option<u8>,
+    pub level_printed: Option<u8>,
+    pub dp_printed: Option<i32>,
+    pub dp_effective: Option<i32>,
+    pub colors: Vec<String>,
+    pub traits: Vec<String>,
+    pub effect_text: String,
+}
+
+/// Under-card summary for `LiveGame::inspect_stack`. Surfaces ONLY
+/// `inherited_text` (omitting main `effect_text`) and respects face-down
+/// source opacity.
+#[derive(Debug, Clone, Serialize)]
+pub struct StackInheritedSourceInspection {
+    pub index: usize,
+    pub card_id: String,
+    pub card_name: String,
+    pub face_down: bool,
+    pub inherited_text: String,
+}
+
+/// Linked-card summary for `LiveGame::inspect_stack`. Surfaces ONLY
+/// `link_text` and the active link DP bonus granted to the host.
+#[derive(Debug, Clone, Serialize)]
+pub struct StackLinkedCardInspection {
+    pub card_id: String,
+    pub card_name: String,
+    pub link_text: String,
+    pub dp_bonus: i32,
+}
+
+/// Stack-aware permanent inspection returned by `LiveGame::inspect_stack`.
+#[derive(Debug, Clone, Serialize)]
+pub struct StackInspection {
+    pub top_card: StackTopCardInspection,
+    pub inherited_sources: Vec<StackInheritedSourceInspection>,
+    pub linked_cards: Vec<StackLinkedCardInspection>,
+    pub is_suspended: bool,
+    pub turn_played: u16,
+    pub modifiers: Vec<crate::view::ModifierSummary>,
+}
+
 /// Per-card count entry in a `DeckCardsView`. Mirrors what an agent
 /// would see if they cracked open the printed decklist: card metadata
 /// plus how many copies of that card are in the deck.
@@ -627,6 +675,193 @@ impl LiveGame {
             security_text: cd.security_text.clone(),
             link_text: cd.link_text.clone(),
             has_rust_effect,
+        })
+    }
+
+    /// Return the original deck card-ID lists retained at construction.
+    pub fn deck_lists(&self) -> &[Vec<String>; 2] {
+        &self.deck_card_ids
+    }
+
+    /// Inspect a permanent stack in either `"battle"` or `"breeding"`, returning:
+    /// - top card's main `effect_text` + printed/effective DP/level/colors/traits,
+    /// - under-cards' `inherited_text` ONLY (omitting main `effect_text` and
+    ///   redacting face-down source identities unless `view == Perspective::God`,
+    ///   while always suppressing inactive `inherited_text` on face-down sources),
+    /// - linked cards' `link_text` ONLY + `dp_bonus`,
+    /// - `is_suspended`, `turn_played`, and active `modifiers`.
+    pub fn inspect_stack(
+        &self,
+        player: PlayerId,
+        zone: &str,
+        slot: usize,
+        view: Perspective,
+    ) -> Result<StackInspection, String> {
+        if (player as usize) >= self.game.players.len() {
+            return Err(format!("player {} out of range", player));
+        }
+        let p = self.game.player(player);
+        let (perm, handle, is_breeding) = match zone {
+            "battle" => {
+                let perm = p.battle_area.get(slot).ok_or_else(|| {
+                    format!(
+                        "battle slot {} out of range for player {} (battle_area len = {})",
+                        slot,
+                        player,
+                        p.battle_area.len()
+                    )
+                })?;
+                (
+                    perm,
+                    PermanentHandle {
+                        player,
+                        index: slot as u8,
+                    },
+                    false,
+                )
+            }
+            "breeding" => {
+                if slot != 0 {
+                    return Err(format!("breeding slot must be 0, got {}", slot));
+                }
+                let perm = p
+                    .breeding_area
+                    .as_ref()
+                    .ok_or_else(|| format!("player {} has no permanent in breeding area", player))?;
+                (
+                    perm,
+                    PermanentHandle {
+                        player,
+                        index: crate::action::space::BREEDING_TARGET as u8,
+                    },
+                    true,
+                )
+            }
+            other => {
+                return Err(format!(
+                    "unknown zone {:?} — expected \"battle\" or \"breeding\"",
+                    other
+                ));
+            }
+        };
+
+        let data = &self.game.card_data;
+        let top = perm.top_card();
+        let top_cd = &data[top.data_index];
+        let synth = perm.synth_identity(data, &self.game.modifiers, handle);
+        let (top_card_id, top_card_name, top_effect_text) = if top.is_opaque_placeholder {
+            (
+                crate::view::OPAQUE_PLACEHOLDER_CARD_ID.to_string(),
+                crate::view::OPAQUE_PLACEHOLDER_CARD_ID.to_string(),
+                String::new(),
+            )
+        } else {
+            (
+                top_cd.card_id.clone(),
+                synth.card_name.clone(),
+                top_cd.effect_text.clone(),
+            )
+        };
+        let dp_effective = if is_breeding {
+            synth.dp
+        } else {
+            self.game.effective_dp(handle)
+        };
+        let top_card = StackTopCardInspection {
+            card_id: top_card_id,
+            card_name: top_card_name,
+            level: synth.level,
+            level_printed: top_cd.level,
+            dp_printed: top_cd.dp,
+            dp_effective,
+            colors: synth.colors.iter().map(|c| format!("{c:?}")).collect(),
+            traits: synth.traits,
+            effect_text: top_effect_text,
+        };
+
+        let under_len = perm.card_sources.len().saturating_sub(1);
+        let mut inherited_sources = Vec::with_capacity(under_len);
+        for (idx, cs) in perm.card_sources[..under_len].iter().enumerate() {
+            let redact = cs.is_opaque_placeholder || (cs.face_down && view != Perspective::God);
+            if redact {
+                inherited_sources.push(StackInheritedSourceInspection {
+                    index: idx,
+                    card_id: crate::view::OPAQUE_PLACEHOLDER_CARD_ID.to_string(),
+                    card_name: crate::view::OPAQUE_PLACEHOLDER_CARD_ID.to_string(),
+                    face_down: cs.face_down,
+                    inherited_text: String::new(),
+                });
+            } else {
+                let cd = &data[cs.data_index];
+                inherited_sources.push(StackInheritedSourceInspection {
+                    index: idx,
+                    card_id: cd.card_id.clone(),
+                    card_name: cd.card_name.clone(),
+                    face_down: cs.face_down,
+                    inherited_text: if cs.face_down {
+                        String::new()
+                    } else {
+                        cd.inherited_text.clone()
+                    },
+                });
+            }
+        }
+
+        let mut linked_cards = Vec::with_capacity(perm.linked_cards.len());
+        for lc in &perm.linked_cards {
+            let cd = &data[lc.data_index];
+            let mut dp_bonus = 0i32;
+            if !is_breeding {
+                let source_card = lc.handle();
+                if let Some(effects) = self.game.effects_for_card(&cd.card_id, source_card) {
+                    for effect in effects.iter() {
+                        if !effect.declarative || !(effect.linked || effect.inherited) {
+                            continue;
+                        }
+                        if effect.materializes_declarative_state
+                            || effect.dp_modifier == 0
+                            || effect.dp_modifier_fn.is_some()
+                            || effect.applies_to_opponent_security_dp
+                        {
+                            continue;
+                        }
+                        let rctx = crate::effect_context::EffectReadContext::new(
+                            &self.game,
+                            source_card,
+                            Some(handle),
+                            handle.player,
+                        );
+                        if let Some(condition) = &effect.condition {
+                            if !condition(&rctx) {
+                                continue;
+                            }
+                        }
+                        dp_bonus += effect.dp_modifier;
+                    }
+                }
+            }
+            linked_cards.push(StackLinkedCardInspection {
+                card_id: cd.card_id.clone(),
+                card_name: cd.card_name.clone(),
+                link_text: cd.link_text.clone(),
+                dp_bonus,
+            });
+        }
+
+        let modifiers: Vec<crate::view::ModifierSummary> = self
+            .game
+            .modifiers
+            .permanent_modifiers_iter(handle)
+            .map(crate::view::ModifierSummary::from_entry)
+            .collect();
+
+        Ok(StackInspection {
+            top_card,
+            inherited_sources,
+            linked_cards,
+            is_suspended: perm.is_suspended,
+            turn_played: perm.turn_played,
+            modifiers,
         })
     }
 

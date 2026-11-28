@@ -4,11 +4,17 @@ use ort::session::Session;
 
 pub mod contract;
 pub mod evaluator;
+pub mod inspector;
 pub mod lstm;
 pub mod lstm_evaluator;
 pub mod mlp;
 
 pub use evaluator::{masked_softmax, BatchedPolicyValueEvaluator, EvalResult};
+pub use inspector::{
+    inspect_position_from_path, inspect_position_with_evaluator, load_inspector_evaluator,
+    match_refutation_trigger, score_line_with_evaluator, InspectPositionParams, LoadedModelInfo,
+    RefutationTrigger, ScoreLineParams, ScoreLineResult, ScoreLineStep,
+};
 pub use lstm::OnnxLstmPolicy;
 pub use lstm_evaluator::{is_lstm_onnx, BatchedLstmPolicyValueEvaluator};
 pub use mlp::OnnxMlpPolicy;

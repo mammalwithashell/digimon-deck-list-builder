@@ -718,7 +718,26 @@ class OpponentWrapper(gymnasium.Wrapper):
                  opponent_fn: Callable[[DigimonEnv], int] = greedy_policy):
         super().__init__(env)
         self.opponent_fn = opponent_fn
-        self._unwrapped_env: DigimonEnv = env
+        try:
+            self._unwrapped_env: DigimonEnv = _unwrap_to_digimon_env(env)
+        except Exception:
+            self._unwrapped_env = env  # type: ignore[assignment]
+
+    def _choose_opponent_action(self, env: DigimonEnv) -> int:
+        active_puzzle = getattr(env, "_active_studio_puzzle", None)
+        triggers = (
+            getattr(active_puzzle, "refutation_triggers", None)
+            if active_puzzle is not None
+            else None
+        )
+        if triggers:
+            from digimon_gym.agents.studio_puzzles import select_refutation_action
+
+            runner = getattr(env, "runner", None) or getattr(env, "game", None)
+            trig_act = select_refutation_action(runner, env.action_mask(), triggers)
+            if trig_act is not None:
+                return int(trig_act)
+        return int(self.opponent_fn(env))
 
     def reset(self, **kwargs):
         reset = getattr(self.opponent_fn, "reset_state", None)
@@ -764,7 +783,7 @@ class OpponentWrapper(gymnasium.Wrapper):
         env._skip_obs_build = True
         try:
             while env.current_player_id != 1 and not env.is_game_over:
-                opp_action = self.opponent_fn(env)
+                opp_action = self._choose_opponent_action(env)
                 _, _, terminated, truncated, _ = self.env.step(int(opp_action))
                 stepped = True
                 if terminated or truncated:
@@ -827,7 +846,7 @@ class OpponentWrapper(gymnasium.Wrapper):
         try:
             opp_actions = 0
             while not env.is_game_over and env.current_player_id != 1:
-                opp_action = self.opponent_fn(env)
+                opp_action = self._choose_opponent_action(env)
                 # Opponent-turn no-op guard: a stuck opponent (mask offers an
                 # action the engine refuses) loops here forever without ever
                 # yielding control back to the agent, so the agent-side obs
@@ -2272,7 +2291,10 @@ def make_env(opponent: str = "greedy",
              reward_profile_factory: Optional[Callable] = None,
              league_entries: Optional[List] = None,
              league_sampling_mode: str = "pfsp",
-             auto_advance_forced: bool = False) -> gymnasium.Env:
+             auto_advance_forced: bool = False,
+             studio_puzzles: Optional[List] = None,
+             puzzle_prob: float = 0.15,
+             puzzle_permute: bool = True) -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -2413,6 +2435,17 @@ def make_env(opponent: str = "greedy",
             bounty_bonus=bounty_bonus,
         )
 
+    if studio_puzzles:
+        from digimon_gym.agents.studio_puzzles import PuzzleResetWrapper
+        env = PuzzleResetWrapper(
+            env,
+            studio_puzzles,
+            puzzle_prob=puzzle_prob,
+            permute=puzzle_permute,
+            adaptive=True,
+            seed=curriculum_seed if curriculum_seed is not None else match_env_seed,
+        )
+
     # Always insert TrainingRecordingWrapper — it is the panic safety
     # rail that converts PyO3 engine panics into synthetic terminal
     # steps so training survives unexpected engine crashes. Recording is
@@ -2460,6 +2493,9 @@ def make_vec_env(
     reward_profile_factory: Optional[Callable] = None,
     league_entries: Optional[List] = None,
     league_sampling_mode: str = "pfsp",
+    studio_puzzles: Optional[List] = None,
+    puzzle_prob: float = 0.15,
+    puzzle_permute: bool = True,
 ):
     """Build ActionMasker-wrapped vector environments from TrainingConfig.
 
@@ -2525,6 +2561,17 @@ def make_vec_env(
                     deck_pool=generalist_deck_pool,
                     seed=seed,
                     opponent_pool=generalist_opponent_pool,
+                )
+            if studio_puzzles:
+                from digimon_gym.agents.studio_puzzles import PuzzleResetWrapper
+                p_seed = None if cfg.seed is None else cfg.seed + rank
+                wrapped = PuzzleResetWrapper(
+                    wrapped,
+                    studio_puzzles,
+                    puzzle_prob=puzzle_prob,
+                    permute=puzzle_permute,
+                    adaptive=True,
+                    seed=p_seed,
                 )
             # Panic safety rail — see comment in `make_env` above.
             wrapped = TrainingRecordingWrapper(
@@ -2731,6 +2778,9 @@ def train(total_timesteps: int = 100_000,
           league_pool_manifest: Optional[str] = None,
           cfg: Optional[TrainingConfig] = None,
           reward_profiles_override_mismatch: bool = False,
+          studio_puzzles_dir: Optional[str] = None,
+          puzzle_prob: float = 0.15,
+          puzzle_permute: bool = True,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
     """Train a Pilot Agent using MaskablePPO or MaskableRecurrentPPO.
 
@@ -2825,6 +2875,18 @@ def train(total_timesteps: int = 100_000,
     # message instead of dying partway through setup.
     if opponent == "self-play":
         raise ValueError(SELF_PLAY_RETIRED_MSG)
+
+    if not 0.0 <= float(puzzle_prob) <= 1.0:
+        raise ValueError(f"puzzle_prob must lie in [0, 1], got {puzzle_prob}")
+
+    studio_puzzles: Optional[List] = None
+    if studio_puzzles_dir:
+        from digimon_gym.agents.studio_puzzles import load_studio_puzzles_dir
+        studio_puzzles = load_studio_puzzles_dir(studio_puzzles_dir)
+        if not studio_puzzles:
+            raise ValueError(
+                f"No studio-puzzle-v1 files found in studio_puzzles_dir={studio_puzzles_dir!r}"
+            )
 
     _seed_everything(cfg.seed)
     observation_layout = get_tensor_profile(cfg.tensor_profile)
@@ -2988,6 +3050,11 @@ def train(total_timesteps: int = 100_000,
                 f"{generalist_deck_pool.deck_count} decks"
             )
             print(f"  Curriculum seed:{curriculum_seed}")
+        if studio_puzzles:
+            print(
+                f"  Studio puzzles: {len(studio_puzzles)} puzzles "
+                f"(prob={puzzle_prob}, permute={puzzle_permute})"
+            )
         print("=" * 60)
 
     pool_opponent_fn = None
@@ -3012,6 +3079,16 @@ def train(total_timesteps: int = 100_000,
         # Manifest stores opponent decks as archetype names; the env needs cards.
         _resolve_league_entry_decks(league_entries)
 
+    _puzzle_env_kwargs: Dict[str, Any] = (
+        {
+            "studio_puzzles": studio_puzzles,
+            "puzzle_prob": float(puzzle_prob),
+            "puzzle_permute": bool(puzzle_permute),
+        }
+        if studio_puzzles
+        else {}
+    )
+
     # Create training environment
     if league_entries is not None:
         env = make_vec_env(
@@ -3024,6 +3101,7 @@ def train(total_timesteps: int = 100_000,
             reward_profile_factory=reward_profile_factory,
             league_entries=league_entries,
             league_sampling_mode=cfg.opponent_pool_mode,
+            **_puzzle_env_kwargs,
         )
     elif pool_opponent_fn is not None:
         env = make_vec_env(
@@ -3037,6 +3115,7 @@ def train(total_timesteps: int = 100_000,
             recording_writer=recording_writer,
             mulligan_log_cfg=mulligan_log_cfg,
             reward_profile_factory=reward_profile_factory,
+            **_puzzle_env_kwargs,
         )
     elif cfg.n_envs > 1:
         opponent_policies = {"greedy": greedy_policy, "random": random_policy}
@@ -3053,6 +3132,7 @@ def train(total_timesteps: int = 100_000,
             recording_writer=recording_writer,
             mulligan_log_cfg=mulligan_log_cfg,
             reward_profile_factory=reward_profile_factory,
+            **_puzzle_env_kwargs,
         )
     else:
         env = make_env(
@@ -3080,6 +3160,7 @@ def train(total_timesteps: int = 100_000,
             match_env_seed=cfg.seed,
             reward_profile_factory=reward_profile_factory,
             auto_advance_forced=cfg.auto_advance_forced,
+            **_puzzle_env_kwargs,
         )
 
     # Load autoencoder embeddings for warm-start (if available)
@@ -3582,6 +3663,9 @@ def train(total_timesteps: int = 100_000,
     return model
 
 
+train_pilot = train
+
+
 # ─── CLI ─────────────────────────────────────────────────────────────
 
 def _build_argparser() -> argparse.ArgumentParser:
@@ -3896,6 +3980,24 @@ def _build_argparser() -> argparse.ArgumentParser:
         default=None,
         help="Override reward profile name in profiles.yaml (e.g. terminal_strategic_v1).",
     )
+    parser.add_argument(
+        "--studio-puzzles-dir",
+        type=str,
+        default=None,
+        help="Optional directory of studio-puzzle-v1 JSON files for puzzle curriculum resets.",
+    )
+    parser.add_argument(
+        "--puzzle-prob",
+        type=float,
+        default=0.15,
+        help="Probability of resetting a training episode onto a Studio puzzle (default: 0.15).",
+    )
+    parser.add_argument(
+        "--puzzle-permute",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Enable hand/field slot-permutation augmentation on staged puzzles (default: True).",
+    )
     return parser
 
 
@@ -3911,6 +4013,8 @@ def main():
         parser.error("--generalist samples deck1/deck2 and cannot be combined with explicit decks")
     if args.resume and args.init_from:
         parser.error("--resume and --init-from are mutually exclusive")
+    if not 0.0 <= args.puzzle_prob <= 1.0:
+        parser.error("--puzzle-prob must lie in [0, 1]")
 
     overrides = {}
     for kv in args.overrides:
@@ -4200,6 +4304,9 @@ def main():
         deck_pool_snapshot_path=cfg.curriculum_pool_out,
         cfg=cfg,
         reward_profiles_override_mismatch=args.reward_profiles_override_mismatch,
+        studio_puzzles_dir=args.studio_puzzles_dir,
+        puzzle_prob=args.puzzle_prob,
+        puzzle_permute=args.puzzle_permute,
     )
 
 

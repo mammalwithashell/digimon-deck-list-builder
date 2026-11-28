@@ -107,6 +107,8 @@ def test_tools_list_returns_all_tools(server_proc):
         "run_recordings", "run_checkpoints", "run_deck_pool",
         "run_per_game_evals", "run_anchored_evals",
         "champion_standings", "run_elo_ladder", "run_exploitability",
+        "card_embedding_neighbors", "position_saliency",
+        "plasticity_probe", "export_checkpoint_onnx",
     }
 
 

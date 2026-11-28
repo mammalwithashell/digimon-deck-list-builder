@@ -21,12 +21,12 @@ use digimon_engine::{
         closed::materialize_closed_with_diagnostics,
     },
     game::Game,
+    inference::{score_line_with_evaluator, RefutationTrigger, ScoreLineParams},
     observation::{build_observation_tensor_with_mask, ObservationProfileId},
     rules::Rules,
     search::{
         decision_player, determinized_search_batched, determinized_search_sampled,
-        load_search_evaluator_for_profile, DeterminizedConfig, EvalRequest, PolicyValueFn,
-        SearchResult,
+        load_search_evaluator_for_profile, DeterminizedConfig, EvalRequest, SearchResult,
     },
 };
 use serde_json::{json, Value};
@@ -43,6 +43,8 @@ struct Args {
     worlds: Option<u32>,
     macro_substeps: u32,
     macro_substep_min_prior: f32,
+    adversary_sims: u32,
+    verify_adversary: bool,
     json: Option<String>,
 }
 
@@ -59,9 +61,15 @@ fn parse_args() -> Args {
         worlds: None,
         macro_substeps: 0,
         macro_substep_min_prior: 0.0,
+        adversary_sims: 0,
+        verify_adversary: false,
         json: None,
     };
     while let Some(flag) = it.next() {
+        if flag == "--verify-adversary" {
+            args.verify_adversary = true;
+            continue;
+        }
         let value = it.next().unwrap_or_else(|| panic!("{flag} needs a value"));
         match flag.as_str() {
             "--model" => args.model = value,
@@ -70,9 +78,13 @@ fn parse_args() -> Args {
             "--worlds" => args.worlds = Some(value.parse().unwrap()),
             "--macro-substeps" => args.macro_substeps = value.parse().unwrap(),
             "--macro-substep-min-prior" => args.macro_substep_min_prior = value.parse().unwrap(),
+            "--adversary-sims" => args.adversary_sims = value.parse().unwrap(),
             "--json" => args.json = Some(value),
             _ => panic!("unknown flag {flag}"),
         }
+    }
+    if args.verify_adversary && args.adversary_sims == 0 {
+        args.adversary_sims = 64;
     }
     assert!(!args.model.is_empty(), "--model is required");
     args
@@ -297,58 +309,120 @@ fn run() {
     }
 
     // Value head along the exam's lines, from the searching seat's side.
+    let refutation_triggers: Vec<RefutationTrigger> = exam
+        .get("refutation_triggers")
+        .filter(|v| !v.is_null())
+        .map(|v| serde_json::from_value(v.clone()).expect("invalid refutation_triggers in exam"))
+        .unwrap_or_default();
+    let use_adversary =
+        args.verify_adversary || args.adversary_sims > 0 || !refutation_triggers.is_empty();
     let mut lines = json!({});
-    let root_states = [eval.root_recurrent_state(0), eval.root_recurrent_state(1)];
-    for (name, acts) in exam["lines"].as_object().cloned().unwrap_or_default() {
-        let mut g = game.clone();
-        let mut line_states = root_states.clone();
-        let mut values = Vec::new();
-        let acts = plan_of(&acts);
-        for step in 0..=acts.len() {
-            if g.game_over {
-                break;
-            }
-            let mover = decision_player(&g);
-            let mask = build_action_mask(&g, mover);
-            let obs = build_observation_tensor_with_mask(&g, mover, &registry, profile, &mask);
-            let st_in = line_states.get(mover as usize).and_then(|s| s.clone());
-            let (ev, st_out) = eval.evaluate_batch_recurrent(
-                &[EvalRequest {
-                    obs,
-                    mask: mask.clone(),
-                }],
-                &[st_in],
-            );
-            let v = ev[0].value;
-            if let Some(next_st) = st_out.into_iter().next().flatten() {
-                if let Some(slot) = line_states.get_mut(mover as usize) {
-                    *slot = Some(next_st);
+    let mut line_details = json!({});
+
+    if !use_adversary {
+        let root_states = [eval.root_recurrent_state(0), eval.root_recurrent_state(1)];
+        for (name, acts) in exam["lines"].as_object().cloned().unwrap_or_default() {
+            let mut g = game.clone();
+            let mut line_states = root_states.clone();
+            let mut values = Vec::new();
+            let acts = plan_of(&acts);
+            for step in 0..=acts.len() {
+                if g.game_over {
+                    break;
                 }
+                let mover = decision_player(&g);
+                let mask = build_action_mask(&g, mover);
+                let obs = build_observation_tensor_with_mask(&g, mover, &registry, profile, &mask);
+                let st_in = line_states.get(mover as usize).and_then(|s| s.clone());
+                let (ev, st_out) = eval.evaluate_batch_recurrent(
+                    &[EvalRequest {
+                        obs,
+                        mask: mask.clone(),
+                    }],
+                    &[st_in],
+                );
+                let v = ev[0].value;
+                if let Some(next_st) = st_out.into_iter().next().flatten() {
+                    if let Some(slot) = line_states.get_mut(mover as usize) {
+                        *slot = Some(next_st);
+                    }
+                }
+                values.push(if mover == viewer { v } else { -v });
+                if step == acts.len() {
+                    break;
+                }
+                assert!(
+                    mask[acts[step] as usize] > 0.5,
+                    "line {name}: action {} illegal at step {step}",
+                    acts[step]
+                );
+                g.decode_action(acts[step], mover);
             }
-            values.push(if mover == viewer { v } else { -v });
-            if step == acts.len() {
-                break;
-            }
-            assert!(
-                mask[acts[step] as usize] > 0.5,
-                "line {name}: action {} illegal at step {step}",
-                acts[step]
+            println!(
+                "  value along {name}: {}",
+                values
+                    .iter()
+                    .map(|v| format!("{v:+.2}"))
+                    .collect::<Vec<_>>()
+                    .join(" → ")
             );
-            g.decode_action(acts[step], mover);
+            lines[&name] = json!(values);
         }
-        println!(
-            "  value along {name}: {}",
-            values
-                .iter()
-                .map(|v| format!("{v:+.2}"))
-                .collect::<Vec<_>>()
-                .join(" → ")
-        );
-        lines[&name] = json!(values);
+    } else {
+        for (name, acts) in exam["lines"].as_object().cloned().unwrap_or_default() {
+            let params = ScoreLineParams {
+                actions: plan_of(&acts),
+                auto_adversary: true,
+                adversary_sims: args.adversary_sims,
+                adversary_seed: base_seed,
+                refutation_triggers: refutation_triggers.clone(),
+                max_adversary_steps: 64,
+            };
+            let res = score_line_with_evaluator(
+                &game,
+                &registry,
+                eval.as_mut(),
+                profile,
+                &params,
+            )
+            .unwrap_or_else(|e| panic!("line {name} failed during adversary evaluation: {e}"));
+            let mut values = Vec::with_capacity(1 + res.steps.len());
+            values.push(res.root_policy_value);
+            for st in &res.steps {
+                values.push(st.policy_value_for_root_mover);
+            }
+            let adv_count = res.steps.iter().filter(|s| s.auto_adversary).count();
+            println!(
+                "  value along {name} ({adv_count} adversary interrupt steps, winner={:?}): {}",
+                res.final_winner,
+                values
+                    .iter()
+                    .map(|v| format!("{v:+.2}"))
+                    .collect::<Vec<_>>()
+                    .join(" → ")
+            );
+            lines[&name] = json!(values);
+            line_details[&name] = json!({
+                "root_mover": res.root_mover,
+                "steps": res.steps,
+                "final_winner": res.final_winner,
+            });
+        }
     }
     if let Some(path) = args.json {
-        let report = json!({"exam":exam["id"],"model_sha256":model_hash,"simulations":simulations,"worlds":worlds,
-            "seeds":args.seeds,"passes":passes,"runs":runs,"lines":lines});
+        let mut report = json!({
+            "exam": exam["id"],
+            "model_sha256": model_hash,
+            "simulations": simulations,
+            "worlds": worlds,
+            "seeds": args.seeds,
+            "passes": passes,
+            "runs": runs,
+            "lines": lines,
+        });
+        if use_adversary {
+            report["line_details"] = line_details;
+        }
         std::fs::write(path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
     }
 }

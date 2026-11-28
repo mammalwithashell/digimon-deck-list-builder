@@ -10,5 +10,5 @@
 # FastAPI 0.115's starlette<0.42 pin in requirements.txt. If you also run the
 # hosted API locally, install these into a SEPARATE virtualenv. See
 # docs/TRAINING_MCP.md §Install for the venv recipe.
-mcp>=1.0
+mcp>=1.0,<2.0
 tensorboard>=2.14
