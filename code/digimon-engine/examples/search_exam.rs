@@ -125,16 +125,29 @@ fn run() {
         &decks,
         &data,
         Rules::standard(),
-        Some(setup["game_seed"].as_u64().unwrap()),
+        Some(setup["game_seed"].as_u64().unwrap_or(0)),
     )
     .unwrap();
-    game.enable_belief_knowledge().unwrap();
-    game.turn_count = setup["turn_count_reset"].as_u64().unwrap_or(1) as _;
+    if let Some(staged) = setup.get("staged") {
+        while let Some(p) = game.mulligan_current_player() {
+            let _ = game.accept_mulligan(p, true);
+        }
+        game.apply_scenario(staged)
+            .expect("staged search exam fixture failed to apply");
+        let _ = game.enable_belief_knowledge();
+    } else {
+        game.enable_belief_knowledge().unwrap();
+        game.turn_count = setup["turn_count_reset"].as_u64().unwrap_or(1) as _;
+    }
     let profile = ObservationProfileId::StandardLiteV2;
     let mut eval =
         load_search_evaluator_for_profile(Path::new(&args.model), profile, true, 0).unwrap();
     eval.reset_episode();
-    for (i, a) in plan_of(&setup["actions"]).into_iter().enumerate() {
+    let prefix_actions = setup
+        .get("actions")
+        .map(plan_of)
+        .unwrap_or_default();
+    for (i, a) in prefix_actions.iter().copied().enumerate() {
         let pid = decision_player(&game);
         let mask = build_action_mask(&game, pid);
         assert!(
@@ -154,7 +167,7 @@ fn run() {
         viewer,
         "exam position belongs to a different seat on this engine"
     );
-    let decision = setup["actions"].as_array().unwrap().len() as u64;
+    let decision = prefix_actions.len() as u64;
 
     let closed = search["regime"] == "closed-list";
     let prior = closed.then(|| {

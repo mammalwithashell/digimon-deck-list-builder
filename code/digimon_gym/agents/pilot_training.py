@@ -463,18 +463,20 @@ def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
 
 def _make_onnx_mlp_opponent(weights_path: str) -> Callable[[DigimonEnv], int]:
     """ONNX-backed MLP opponent: obs -> logits via ORT (1 thread/subproc), masked
-    argmax. Exports the .zip to a sibling .onnx once (atomically, cached on disk),
-    then every subproc reuses it. Behaviourally identical to the torch path's
-    ``predict(deterministic=True)`` with action masks."""
+    argmax. Accepts either a pre-exported `.onnx` path directly or a `.zip`
+    checkpoint (which is exported once to a sibling `.opponent.onnx`)."""
     import re
     import onnxruntime as ort
 
-    onnx_path = re.sub(r"\.zip$", "", str(weights_path)) + ".opponent.onnx"
-    if not os.path.isfile(onnx_path):
-        model = MaskablePPO.load(weights_path, device="cpu")
-        validate_checkpoint(model)
-        _export_mlp_policy_onnx(model, onnx_path)
-        del model
+    if str(weights_path).endswith(".onnx") and os.path.isfile(weights_path):
+        onnx_path = str(weights_path)
+    else:
+        onnx_path = re.sub(r"\.zip$", "", str(weights_path)) + ".opponent.onnx"
+        if not os.path.isfile(onnx_path):
+            model = MaskablePPO.load(weights_path, device="cpu")
+            validate_checkpoint(model)
+            _export_mlp_policy_onnx(model, onnx_path)
+            del model
     so = ort.SessionOptions()
     so.intra_op_num_threads = 1   # one ORT thread per subproc -> no Nx oversubscription
     so.inter_op_num_threads = 1
@@ -491,6 +493,58 @@ def _make_onnx_mlp_opponent(weights_path: str) -> Callable[[DigimonEnv], int]:
         return int(np.argmax(masked))
 
     return _onnx_mlp_policy
+
+
+def _make_onnx_lstm_opponent(weights_path: str) -> Callable[[DigimonEnv], int]:
+    """ONNX-backed recurrent LSTM opponent (1 ORT thread/subproc, skips forced steps)."""
+    import onnxruntime as ort
+    from model_contract import validate_session
+
+    so = ort.SessionOptions()
+    so.intra_op_num_threads = 1
+    so.inter_op_num_threads = 1
+    sess = ort.InferenceSession(str(weights_path), sess_options=so, providers=["CPUExecutionProvider"])
+    contract = validate_session(sess)
+    hidden_size = 256
+    for inp in sess.get_inputs():
+        if inp.name == "h_in":
+            hidden_size = int(inp.shape[-1])
+            break
+    meta_path = f"{weights_path}.meta.json"
+    skip_forced = True
+    if os.path.isfile(meta_path):
+        try:
+            meta = json.loads(Path(meta_path).read_text(encoding="utf-8"))
+            if "skip_forced_steps" in meta:
+                skip_forced = bool(meta["skip_forced_steps"])
+        except Exception:
+            pass
+    hc: list = [None, None]
+
+    def _onnx_lstm_policy(env: DigimonEnv) -> int:
+        mask = np.asarray(env.action_mask())
+        if skip_forced:
+            valid = np.flatnonzero(mask > 0)
+            if len(valid) == 1:
+                return int(valid[0])
+        obs = np.asarray(env.runner.get_board_tensor(2), dtype=np.float32).reshape(1, -1)
+        _validate_opponent_inputs(contract, env, obs, mask)
+        if hc[0] is None or hc[1] is None:
+            hc[0] = np.zeros((1, 1, hidden_size), dtype=np.float32)
+            hc[1] = np.zeros((1, 1, hidden_size), dtype=np.float32)
+        logits, hc[0], hc[1] = sess.run(
+            ["logits", "h_out", "c_out"],
+            {"obs": obs, "h_in": hc[0], "c_in": hc[1]},
+        )
+        masked = np.where(mask > 0, logits[0], -np.inf)
+        return int(np.argmax(masked))
+
+    def _reset():
+        hc[0] = None
+        hc[1] = None
+
+    _onnx_lstm_policy.reset_state = _reset  # type: ignore[attr-defined]
+    return _onnx_lstm_policy
 
 
 def make_agent_opponent_fn(
@@ -512,6 +566,8 @@ def make_agent_opponent_fn(
         A callable ``(DigimonEnv) -> int`` that predicts Player 2 actions.
     """
     if algorithm == "lstm":
+        if str(weights_path).endswith(".onnx") and os.path.isfile(weights_path):
+            return _make_onnx_lstm_opponent(weights_path)
         # device="cpu" is REQUIRED, not incidental: this loader runs inside every
         # SubprocVecEnv worker (one per n_env), so without it SB3's device="auto"
         # puts each worker's LSTM opponent on the GPU. N concurrent CUDA
@@ -545,10 +601,12 @@ def make_agent_opponent_fn(
         _lstm_policy.reset_state = lambda: lstm_states.__setitem__(0, None)  # type: ignore[attr-defined]
         return _lstm_policy
     else:
-        if _onnx_opponent_enabled():
+        if (str(weights_path).endswith(".onnx") and os.path.isfile(weights_path)) or _onnx_opponent_enabled():
             try:
                 return _make_onnx_mlp_opponent(weights_path)
             except Exception as exc:  # robustness: never abort a run over this optimisation
+                if str(weights_path).endswith(".onnx"):
+                    raise
                 logger.warning(
                     "ONNX opponent for %s failed (%s); falling back to torch.",
                     weights_path, exc,

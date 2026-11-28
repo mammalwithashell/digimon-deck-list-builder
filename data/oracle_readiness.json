@@ -900,6 +900,29 @@
       "total_clauses": 1,
       "total_interactions": 0
     },
+    "BT1-008": {
+      "blocking": [
+        "BT1-008#inherited#0",
+        "probe:BT1-008#inherited#0:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 1
+    },
     "BT1-010": {
       "blocking": [
         "BT1-010#effect#0",
@@ -1424,6 +1447,28 @@
       "total_clauses": 2,
       "total_interactions": 4
     },
+    "BT10-002": {
+      "blocking": [
+        "BT10-002#inherited#0"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 0
+    },
     "BT10-003": {
       "blocking": [
         "BT10-003#inherited#0",
@@ -1915,6 +1960,33 @@
       "status": "not_ready",
       "total_clauses": 1,
       "total_interactions": 1
+    },
+    "BT10-038": {
+      "blocking": [
+        "BT10-038#effect#0",
+        "BT10-038#inherited#0",
+        "probe:BT10-038#effect#0:granted_keyword",
+        "probe:BT10-038#effect#0:scope:neg",
+        "probe:BT10-038#inherited#0:granted_keyword",
+        "probe:BT10-038#inherited#0:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 4
     },
     "BT10-039": {
       "blocking": [
@@ -2680,6 +2752,34 @@
       "total_clauses": 5,
       "total_interactions": 7
     },
+    "BT10-078": {
+      "blocking": [
+        "BT10-078#effect#0",
+        "BT10-078#effect#1",
+        "BT10-078#effect#2",
+        "probe:BT10-078#effect#1:granted_keyword",
+        "probe:BT10-078#effect#1:scope:neg",
+        "probe:BT10-078#effect#2:leave_play",
+        "probe:BT10-078#effect#2:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 4
+    },
     "BT10-080": {
       "blocking": [
         "BT10-080#effect#0",
@@ -3212,6 +3312,32 @@
       "total_clauses": 2,
       "total_interactions": 3
     },
+    "BT10-109": {
+      "blocking": [
+        "BT10-109#effect#0",
+        "BT10-109#effect#1",
+        "BT10-109#security#0",
+        "probe:BT10-109#effect#0:optional_decline",
+        "probe:BT10-109#effect#1:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 2
+    },
     "BT10-110": {
       "blocking": [
         "BT10-110#effect#0",
@@ -3718,6 +3844,26 @@
       "status": "not_ready",
       "total_clauses": 2,
       "total_interactions": 2
+    },
+    "BT11-026": {
+      "blocking": [],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "status": "ready",
+      "total_clauses": 0,
+      "total_interactions": 0
     },
     "BT11-027": {
       "blocking": [
@@ -4587,6 +4733,31 @@
       "status": "not_ready",
       "total_clauses": 4,
       "total_interactions": 5
+    },
+    "BT11-078": {
+      "blocking": [
+        "BT11-078#effect#0",
+        "BT11-078#effect#1",
+        "probe:BT11-078#effect#0:leave_play",
+        "probe:BT11-078#effect#1:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 2
     },
     "BT11-079": {
       "blocking": [
@@ -8906,6 +9077,33 @@
       "total_clauses": 3,
       "total_interactions": 2
     },
+    "BT13-082": {
+      "blocking": [
+        "BT13-082#effect#0",
+        "BT13-082#inherited#0",
+        "probe:BT13-082#effect#0:optional_decline",
+        "probe:BT13-082#inherited#0:leave_play",
+        "qa:Q2326",
+        "qa:Q2327"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 4
+    },
     "BT13-083": {
       "blocking": [
         "BT13-083#effect#0",
@@ -8965,6 +9163,34 @@
       "status": "not_ready",
       "total_clauses": 2,
       "total_interactions": 3
+    },
+    "BT13-085": {
+      "blocking": [
+        "BT13-085#effect#0",
+        "BT13-085#inherited#0",
+        "probe:BT13-085#effect#0:optional_decline",
+        "probe:BT13-085#effect#0:scope:neg",
+        "probe:BT13-085#inherited#0:leave_play",
+        "probe:BT13-085#inherited#0:optional_decline",
+        "qa:Q2331"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 5
     },
     "BT13-086": {
       "blocking": [
@@ -9050,6 +9276,35 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 3
+    },
+    "BT13-089": {
+      "blocking": [
+        "BT13-089#effect#0",
+        "BT13-089#effect#1",
+        "probe:BT13-089#effect#0:optional_decline",
+        "probe:BT13-089#effect#0:scope:neg",
+        "probe:BT13-089#effect#1:leave_play",
+        "probe:BT13-089#effect#1:optional_decline",
+        "qa:Q2334",
+        "qa:Q2335"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 6
     },
     "BT13-090": {
       "blocking": [
@@ -9944,6 +10199,36 @@
       "total_clauses": 3,
       "total_interactions": 8
     },
+    "BT14-018": {
+      "blocking": [
+        "BT14-018#effect#0",
+        "BT14-018#effect#1",
+        "probe:BT14-018#effect#1:leave_play",
+        "probe:BT14-018#effect#1:scope:neg",
+        "qa:Q2385",
+        "qa:Q2386",
+        "qa:Q2387",
+        "qa:Q2388",
+        "qa:Q2389"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 7,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 7
+    },
     "BT14-020": {
       "blocking": [
         "BT14-020#effect#0",
@@ -10359,6 +10644,29 @@
       "total_clauses": 2,
       "total_interactions": 3
     },
+    "BT14-055": {
+      "blocking": [
+        "BT14-055#inherited#0",
+        "probe:BT14-055#inherited#0:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 1
+    },
     "BT14-056": {
       "blocking": [
         "BT14-056#effect#0",
@@ -10472,6 +10780,30 @@
       "status": "not_ready",
       "total_clauses": 2,
       "total_interactions": 7
+    },
+    "BT14-062": {
+      "blocking": [
+        "BT14-062#effect#0",
+        "probe:BT14-062#effect#0:scope:neg",
+        "qa:Q2433"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 2
     },
     "BT14-063": {
       "blocking": [
@@ -13871,6 +14203,36 @@
       "status": "not_ready",
       "total_clauses": 6,
       "total_interactions": 11
+    },
+    "BT16-014": {
+      "blocking": [
+        "BT16-014#effect#0",
+        "BT16-014#effect#1",
+        "BT16-014#effect#2",
+        "BT16-014#effect#3",
+        "probe:BT16-014#effect#1:optional_decline",
+        "probe:BT16-014#effect#2:optional_decline",
+        "probe:BT16-014#effect#3:scope:neg",
+        "qa:Q2612",
+        "qa:Q2613"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 4,
+      "total_interactions": 5
     },
     "BT16-015": {
       "blocking": [
@@ -17475,6 +17837,34 @@
       "total_clauses": 3,
       "total_interactions": 2
     },
+    "BT17-063": {
+      "blocking": [
+        "BT17-063#effect#0",
+        "BT17-063#effect#1",
+        "BT17-063#effect#2",
+        "BT17-063#effect#3",
+        "BT17-063#inherited#0",
+        "probe:BT17-063#effect#1:leave_play",
+        "probe:BT17-063#inherited#0:leave_play"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 5,
+      "total_interactions": 2
+    },
     "BT17-064": {
       "blocking": [
         "BT17-064#effect#0",
@@ -17535,6 +17925,34 @@
       "status": "not_ready",
       "total_clauses": 5,
       "total_interactions": 6
+    },
+    "BT17-066": {
+      "blocking": [
+        "BT17-066#effect#0",
+        "BT17-066#effect#1",
+        "BT17-066#effect#2",
+        "BT17-066#inherited#0",
+        "probe:BT17-066#effect#1:optional_decline",
+        "probe:BT17-066#effect#2:optional_decline",
+        "probe:BT17-066#inherited#0:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 4,
+      "total_interactions": 3
     },
     "BT17-067": {
       "blocking": [
@@ -17667,6 +18085,61 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 6
+    },
+    "BT17-071": {
+      "blocking": [
+        "BT17-071#effect#0",
+        "BT17-071#effect#1",
+        "BT17-071#effect#2",
+        "probe:BT17-071#effect#1:optional_decline",
+        "probe:BT17-071#effect#1:scope:neg",
+        "probe:BT17-071#effect#2:leave_play",
+        "probe:BT17-071#effect#2:scope:neg",
+        "qa:Q2837"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 5
+    },
+    "BT17-072": {
+      "blocking": [
+        "BT17-072#effect#0",
+        "BT17-072#effect#1",
+        "probe:BT17-072#effect#0:scope:neg",
+        "probe:BT17-072#effect#1:granted_keyword",
+        "probe:BT17-072#effect#1:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 3
     },
     "BT17-073": {
       "blocking": [
@@ -19577,6 +20050,30 @@
       },
       "status": "not_ready",
       "total_clauses": 2,
+      "total_interactions": 2
+    },
+    "BT18-059": {
+      "blocking": [
+        "BT18-059#effect#0",
+        "qa:Q2990",
+        "qa:Q2991"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
       "total_interactions": 2
     },
     "BT18-060": {
@@ -26596,6 +27093,32 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 4
+    },
+    "BT20-092": {
+      "blocking": [
+        "BT20-092#effect#0",
+        "BT20-092#effect#1",
+        "BT20-092#effect#2",
+        "BT20-092#security#0",
+        "probe:BT20-092#effect#1:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 4,
+      "total_interactions": 1
     },
     "BT20-093": {
       "blocking": [
@@ -43072,6 +43595,35 @@
       "total_clauses": 3,
       "total_interactions": 2
     },
+    "BT26-040": {
+      "blocking": [
+        "BT26-040#effect#0",
+        "BT26-040#effect#1",
+        "BT26-040#effect#2",
+        "BT26-040#effect#3",
+        "BT26-040#inherited#0",
+        "probe:BT26-040#effect#1:optional_decline",
+        "probe:BT26-040#effect#3:optional_decline",
+        "probe:BT26-040#effect#3:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 5,
+      "total_interactions": 3
+    },
     "BT26-041": {
       "blocking": [
         "BT26-041#effect#0",
@@ -43627,6 +44179,44 @@
       "total_clauses": 8,
       "total_interactions": 13
     },
+    "BT26-058": {
+      "blocking": [
+        "BT26-058#effect#0",
+        "BT26-058#effect#1",
+        "BT26-058#effect#2",
+        "BT26-058#effect#3",
+        "BT26-058#effect#4",
+        "BT26-058#inherited#0",
+        "probe:BT26-058#effect#2:optional_decline",
+        "probe:BT26-058#effect#3:scope:neg",
+        "probe:BT26-058#effect#4:optional_decline",
+        "probe:BT26-058#effect#4:scope:neg",
+        "qa:Q7067",
+        "qa:Q7068",
+        "qa:Q7069",
+        "qa:Q7070",
+        "qa:Q7071",
+        "qa:Q7072",
+        "qa:Q7073"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 11,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 6,
+      "total_interactions": 11
+    },
     "BT26-059": {
       "blocking": [
         "BT26-059#effect#0",
@@ -43979,6 +44569,33 @@
       "total_clauses": 5,
       "total_interactions": 5
     },
+    "BT26-071": {
+      "blocking": [
+        "BT26-071#effect#0",
+        "BT26-071#effect#1",
+        "BT26-071#inherited#0",
+        "probe:BT26-071#effect#1:optional_decline",
+        "probe:BT26-071#effect#1:scope:neg",
+        "probe:BT26-071#inherited#0:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 3
+    },
     "BT26-072": {
       "blocking": [
         "BT26-072#effect#0",
@@ -44142,6 +44759,39 @@
       "status": "not_ready",
       "total_clauses": 4,
       "total_interactions": 7
+    },
+    "BT26-077": {
+      "blocking": [
+        "BT26-077#effect#0",
+        "BT26-077#effect#1",
+        "BT26-077#effect#2",
+        "BT26-077#effect#3",
+        "BT26-077#effect#4",
+        "BT26-077#effect#5",
+        "probe:BT26-077#effect#2:optional_decline",
+        "probe:BT26-077#effect#3:optional_decline",
+        "probe:BT26-077#effect#4:optional_decline",
+        "probe:BT26-077#effect#4:scope:neg",
+        "probe:BT26-077#effect#5:leave_play",
+        "probe:BT26-077#effect#5:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 6,
+      "total_interactions": 6
     },
     "BT26-078": {
       "blocking": [
@@ -45023,6 +45673,133 @@
       "total_clauses": 5,
       "total_interactions": 2
     },
+    "BT27-022": {
+      "blocking": [
+        "BT27-022#effect#0",
+        "BT27-022#inherited#0",
+        "BT27-022#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 0
+    },
+    "BT27-027": {
+      "blocking": [
+        "BT27-027#effect#0",
+        "BT27-027#effect#1",
+        "BT27-027#inherited#0",
+        "BT27-027#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 0
+    },
+    "BT27-029": {
+      "blocking": [
+        "BT27-029#effect#0",
+        "BT27-029#effect#1",
+        "BT27-029#inherited#0",
+        "BT27-029#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 0
+    },
+    "BT27-033": {
+      "blocking": [
+        "BT27-033#effect#0",
+        "BT27-033#effect#1",
+        "BT27-033#effect#2",
+        "BT27-033#effect#3",
+        "BT27-033#effect#4",
+        "BT27-033#effect#5",
+        "BT27-033#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 6,
+      "total_interactions": 0
+    },
+    "BT27-088": {
+      "blocking": [
+        "BT27-088#effect#0",
+        "BT27-088#effect#1",
+        "BT27-088#security#0",
+        "BT27-088#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 0
+    },
     "BT3-002": {
       "blocking": [
         "BT3-002#inherited#0",
@@ -45373,6 +46150,30 @@
       "total_clauses": 1,
       "total_interactions": 3
     },
+    "BT3-063": {
+      "blocking": [
+        "BT3-063#effect#0",
+        "probe:BT3-063#effect#0:leave_play",
+        "probe:BT3-063#effect#0:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 2
+    },
     "BT3-067": {
       "blocking": [],
       "by_interaction_verdict": {
@@ -45415,6 +46216,30 @@
       "status": "not_ready",
       "total_clauses": 1,
       "total_interactions": 1
+    },
+    "BT3-075": {
+      "blocking": [
+        "BT3-075#effect#0",
+        "probe:BT3-075#effect#0:optional_decline",
+        "qa:Q1096"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 2
     },
     "BT3-076": {
       "blocking": [],
@@ -46484,6 +47309,34 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 2
+    },
+    "BT4-094": {
+      "blocking": [
+        "BT4-094#effect#0",
+        "BT4-094#effect#1",
+        "BT4-094#security#0",
+        "probe:BT4-094#effect#0:scope:neg",
+        "probe:BT4-094#effect#1:leave_play",
+        "probe:BT4-094#effect#1:optional_decline",
+        "qa:Q1246"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 4
     },
     "BT4-096": {
       "blocking": [
@@ -47751,6 +48604,58 @@
       "total_clauses": 3,
       "total_interactions": 2
     },
+    "BT5-094": {
+      "blocking": [
+        "BT5-094#effect#0",
+        "BT5-094#security#0",
+        "probe:BT5-094#effect#0:optional_decline",
+        "probe:BT5-094#effect#0:scope:neg",
+        "qa:Q1371",
+        "qa:Q1372"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 4
+    },
+    "BT5-103": {
+      "blocking": [
+        "BT5-103#effect#0",
+        "BT5-103#security#0",
+        "probe:BT5-103#effect#0:scope:neg",
+        "qa:Q1376"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 2
+    },
     "BT5-104": {
       "blocking": [
         "BT5-104#effect#0",
@@ -48527,6 +49432,34 @@
       "total_clauses": 2,
       "total_interactions": 3
     },
+    "BT6-065": {
+      "blocking": [
+        "BT6-065#effect#0",
+        "BT6-065#effect#1",
+        "probe:BT6-065#effect#0:optional_decline",
+        "probe:BT6-065#effect#1:optional_decline",
+        "probe:BT6-065#effect#1:scope:neg",
+        "qa:Q1458",
+        "qa:Q1459"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 5
+    },
     "BT6-068": {
       "blocking": [
         "BT6-068#effect#0",
@@ -48576,6 +49509,30 @@
       "status": "not_ready",
       "total_clauses": 2,
       "total_interactions": 3
+    },
+    "BT6-080": {
+      "blocking": [
+        "BT6-080#effect#0",
+        "BT6-080#effect#1",
+        "probe:BT6-080#effect#1:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 1
     },
     "BT6-081": {
       "blocking": [
@@ -50796,6 +51753,30 @@
       "total_clauses": 1,
       "total_interactions": 1
     },
+    "BT8-006": {
+      "blocking": [
+        "BT8-006#inherited#0",
+        "qa:Q1696",
+        "qa:Q1697"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 2
+    },
     "BT8-008": {
       "blocking": [
         "BT8-008#effect#0",
@@ -51584,6 +52565,35 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 1
+    },
+    "BT8-068": {
+      "blocking": [
+        "BT8-068#effect#0",
+        "BT8-068#effect#1",
+        "probe:BT8-068#effect#0:optional_decline",
+        "probe:BT8-068#effect#0:scope:neg",
+        "probe:BT8-068#effect#1:granted_keyword",
+        "probe:BT8-068#effect#1:scope:neg",
+        "qa:Q1749",
+        "qa:Q1750"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 6
     },
     "BT8-069": {
       "blocking": [
@@ -53085,6 +54095,26 @@
       "total_clauses": 3,
       "total_interactions": 8
     },
+    "BT9-045": {
+      "blocking": [],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "status": "ready",
+      "total_clauses": 0,
+      "total_interactions": 0
+    },
     "BT9-046": {
       "blocking": [
         "BT9-046#effect#0",
@@ -53995,6 +55025,35 @@
       "status": "not_ready",
       "total_clauses": 2,
       "total_interactions": 2
+    },
+    "BT9-100": {
+      "blocking": [
+        "BT9-100#effect#0",
+        "BT9-100#security#0",
+        "probe:BT9-100#effect#0:optional_decline",
+        "probe:BT9-100#effect#0:scope:neg",
+        "probe:BT9-100#security#0:scope:neg",
+        "qa:Q1903",
+        "qa:Q1904",
+        "qa:Q1905"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 6
     },
     "BT9-101": {
       "blocking": [
@@ -58830,6 +59889,33 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 1
+    },
+    "EX11-048": {
+      "blocking": [
+        "EX11-048#effect#0",
+        "EX11-048#effect#1",
+        "EX11-048#inherited#0",
+        "probe:EX11-048#effect#1:granted_keyword",
+        "probe:EX11-048#effect#1:scope:neg",
+        "probe:EX11-048#inherited#0:leave_play"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 3
     },
     "EX11-049": {
       "blocking": [
@@ -66939,6 +68025,58 @@
       "total_clauses": 2,
       "total_interactions": 1
     },
+    "EX3-068": {
+      "blocking": [
+        "EX3-068#effect#0",
+        "EX3-068#security#0",
+        "probe:EX3-068#effect#0:optional_decline",
+        "probe:EX3-068#effect#0:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 2
+    },
+    "EX3-070": {
+      "blocking": [
+        "EX3-070#effect#0",
+        "EX3-070#security#0",
+        "probe:EX3-070#effect#0:granted_keyword",
+        "probe:EX3-070#effect#0:scope:neg",
+        "probe:EX3-070#security#0:scope:neg",
+        "qa:Q3435"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 4
+    },
     "EX3-071": {
       "blocking": [
         "EX3-071#effect#0",
@@ -68182,6 +69320,32 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 1
+    },
+    "EX4-055": {
+      "blocking": [
+        "EX4-055#effect#0",
+        "EX4-055#inherited#0",
+        "probe:EX4-055#effect#0:optional_decline",
+        "probe:EX4-055#inherited#0:leave_play",
+        "qa:Q3497"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 3
     },
     "EX4-057": {
       "blocking": [
@@ -78472,6 +79636,59 @@
       "total_clauses": 6,
       "total_interactions": 5
     },
+    "LM-002": {
+      "blocking": [
+        "LM-002#effect#0",
+        "LM-002#inherited#0",
+        "qa:Q3989",
+        "qa:Q3990"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 2
+    },
+    "LM-003": {
+      "blocking": [
+        "LM-003#effect#0",
+        "LM-003#inherited#0",
+        "probe:LM-003#effect#0:optional_decline",
+        "probe:LM-003#effect#0:scope:neg",
+        "qa:Q3991",
+        "qa:Q3992",
+        "qa:Q3993"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 5
+    },
     "LM-005": {
       "blocking": [
         "LM-005#effect#0",
@@ -79881,6 +81098,60 @@
       "total_clauses": 4,
       "total_interactions": 2
     },
+    "LM-063": {
+      "blocking": [
+        "LM-063#effect#0",
+        "LM-063#effect#1",
+        "LM-063#effect#2",
+        "LM-063#security#0",
+        "probe:LM-063#effect#2:optional_decline",
+        "probe:LM-063#effect#2:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 4,
+      "total_interactions": 2
+    },
+    "LM-064": {
+      "blocking": [
+        "LM-064#effect#0",
+        "LM-064#effect#1",
+        "LM-064#effect#2",
+        "LM-064#security#0",
+        "probe:LM-064#effect#2:optional_decline",
+        "probe:LM-064#effect#2:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 4,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 4,
+      "total_interactions": 2
+    },
     "LM-065": {
       "blocking": [
         "LM-065#effect#0",
@@ -79907,6 +81178,110 @@
       "status": "not_ready",
       "total_clauses": 4,
       "total_interactions": 2
+    },
+    "LM-066": {
+      "blocking": [
+        "LM-066#effect#0",
+        "LM-066#effect#1",
+        "LM-066#effect#2",
+        "LM-066#effect#3",
+        "LM-066#effect#4",
+        "LM-066#effect#5",
+        "LM-066#effect#6",
+        "LM-066#effect#7",
+        "LM-066#effect#8",
+        "probe:LM-066#effect#1:optional_decline",
+        "probe:LM-066#effect#2:optional_decline",
+        "probe:LM-066#effect#3:optional_decline",
+        "probe:LM-066#effect#3:scope:neg",
+        "probe:LM-066#effect#4:optional_decline",
+        "probe:LM-066#effect#4:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 9,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 9,
+      "total_interactions": 6
+    },
+    "LM-067": {
+      "blocking": [
+        "LM-067#effect#0",
+        "LM-067#effect#1",
+        "LM-067#effect#2",
+        "LM-067#effect#3",
+        "LM-067#effect#4",
+        "LM-067#effect#5",
+        "LM-067#effect#6",
+        "LM-067#effect#7",
+        "LM-067#effect#8",
+        "LM-067#effect#9",
+        "probe:LM-067#effect#1:optional_decline",
+        "probe:LM-067#effect#2:optional_decline",
+        "probe:LM-067#effect#3:optional_decline",
+        "probe:LM-067#effect#4:optional_decline",
+        "probe:LM-067#effect#4:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 5,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 10,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 10,
+      "total_interactions": 5
+    },
+    "LM-068": {
+      "blocking": [
+        "LM-068#effect#0",
+        "LM-068#effect#1",
+        "LM-068#effect#2",
+        "LM-068#effect#3",
+        "LM-068#effect#4",
+        "LM-068#effect#5",
+        "LM-068#effect#6",
+        "LM-068#effect#7",
+        "probe:LM-068#effect#1:optional_decline",
+        "probe:LM-068#effect#2:leave_play",
+        "probe:LM-068#effect#2:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 8,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 8,
+      "total_interactions": 3
     },
     "P-007": {
       "blocking": [
@@ -80482,6 +81857,32 @@
       "status": "not_ready",
       "total_clauses": 1,
       "total_interactions": 0
+    },
+    "P-043": {
+      "blocking": [
+        "P-043#effect#0",
+        "P-043#inherited#0",
+        "probe:P-043#effect#0:optional_decline",
+        "probe:P-043#inherited#0:leave_play",
+        "probe:P-043#inherited#0:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 3
     },
     "P-045": {
       "blocking": [
@@ -84934,6 +86335,57 @@
       "total_clauses": 2,
       "total_interactions": 3
     },
+    "RB1-006": {
+      "blocking": [
+        "RB1-006#effect#0",
+        "probe:RB1-006#effect#0:optional_decline",
+        "probe:RB1-006#effect#0:scope:neg",
+        "qa:Q4078"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 3
+    },
+    "RB1-008": {
+      "blocking": [
+        "RB1-008#effect#0",
+        "RB1-008#effect#1",
+        "RB1-008#effect#2",
+        "probe:RB1-008#effect#1:optional_decline",
+        "probe:RB1-008#effect#2:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 2
+    },
     "RB1-009": {
       "blocking": [
         "RB1-009#effect#0",
@@ -84998,6 +86450,138 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 7
+    },
+    "RB1-011": {
+      "blocking": [
+        "RB1-011#effect#0",
+        "RB1-011#inherited#0",
+        "probe:RB1-011#inherited#0:scope:neg",
+        "qa:Q4087"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 2
+    },
+    "RB1-012": {
+      "blocking": [
+        "RB1-012#effect#0",
+        "RB1-012#effect#1",
+        "probe:RB1-012#effect#1:optional_decline"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 1
+    },
+    "RB1-013": {
+      "blocking": [
+        "RB1-013#effect#0",
+        "RB1-013#inherited#0",
+        "probe:RB1-013#effect#0:optional_decline",
+        "probe:RB1-013#inherited#0:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 2
+    },
+    "RB1-014": {
+      "blocking": [
+        "RB1-014#effect#0",
+        "RB1-014#inherited#0",
+        "probe:RB1-014#effect#0:optional_decline",
+        "probe:RB1-014#effect#0:scope:neg",
+        "probe:RB1-014#inherited#0:optional_decline",
+        "probe:RB1-014#inherited#0:scope:neg",
+        "qa:Q4088",
+        "qa:Q4089"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 6
+    },
+    "RB1-016": {
+      "blocking": [
+        "RB1-016#effect#0",
+        "RB1-016#effect#1",
+        "probe:RB1-016#effect#0:optional_decline",
+        "probe:RB1-016#effect#0:scope:neg",
+        "probe:RB1-016#effect#1:optional_decline",
+        "probe:RB1-016#effect#1:scope:neg",
+        "qa:Q4093",
+        "qa:Q4094"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 6,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 6
     },
     "RB1-017": {
       "blocking": [
@@ -85281,6 +86865,32 @@
       "status": "not_ready",
       "total_clauses": 3,
       "total_interactions": 4
+    },
+    "RB1-033": {
+      "blocking": [
+        "RB1-033#effect#0",
+        "RB1-033#effect#1",
+        "RB1-033#security#0",
+        "probe:RB1-033#effect#0:optional_decline",
+        "probe:RB1-033#effect#0:scope:neg"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 2
     },
     "RB1-034": {
       "blocking": [
@@ -90713,6 +92323,132 @@
       "total_clauses": 4,
       "total_interactions": 7
     },
+    "ST26-01": {
+      "blocking": [
+        "ST26-01#inherited#0",
+        "ST26-01#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 1,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 1,
+      "total_interactions": 0
+    },
+    "ST26-02": {
+      "blocking": [
+        "ST26-02#effect#0",
+        "ST26-02#effect#1",
+        "ST26-02#inherited#0",
+        "ST26-02#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 0
+    },
+    "ST26-03": {
+      "blocking": [
+        "ST26-03#effect#0",
+        "ST26-03#inherited#0",
+        "ST26-03#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 2,
+      "total_interactions": 0
+    },
+    "ST26-05": {
+      "blocking": [
+        "ST26-05#effect#0",
+        "ST26-05#effect#1",
+        "ST26-05#effect#2",
+        "ST26-05#effect#3",
+        "ST26-05#effect#4",
+        "ST26-05#effect#5",
+        "ST26-05#effect#6",
+        "ST26-05#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 7,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 7,
+      "total_interactions": 0
+    },
+    "ST26-06": {
+      "blocking": [
+        "ST26-06#effect#0",
+        "ST26-06#effect#1",
+        "ST26-06#security#0",
+        "ST26-06#denominator#missing"
+      ],
+      "by_interaction_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+        "unreachable": 0
+      },
+      "by_verdict": {
+        "confirmed": 0,
+        "diverged": 0,
+        "unavailable": 0,
+        "unmeasured": 3,
+        "unreachable": 0
+      },
+      "status": "not_ready",
+      "total_clauses": 3,
+      "total_interactions": 0
+    },
     "ST3-01": {
       "blocking": [
         "ST3-01#inherited#0",
@@ -92812,7 +94548,7 @@
   },
   "decklists": {
     "oracle_ready": 0,
-    "total": 6816
+    "total": 7794
   },
   "gating": [
     "clauses",
@@ -92823,14 +94559,14 @@
       "confirmed": 0,
       "diverged": 0,
       "unavailable": 0,
-      "unmeasured": 14518,
+      "unmeasured": 14698,
       "unreachable": 0
     },
-    "gating_total": 14518
+    "gating_total": 14698
   },
   "summary": {
-    "not_ready": 3192,
-    "ready": 40
+    "not_ready": 3255,
+    "ready": 42
   },
   "version": 2
 }

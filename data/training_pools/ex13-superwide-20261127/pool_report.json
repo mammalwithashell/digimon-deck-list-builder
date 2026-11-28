@@ -1,0 +1,407 @@
+{
+  "schema": "ex13-superwide-pool-v1",
+  "generated_utc": "2026-11-27T10:15:20.739354+00:00",
+  "admissible_cards_total": 1922,
+  "implemented_cards_total": 2031,
+  "archetypes_count": 26,
+  "distinct_train_lists": 102,
+  "cli_train_slots": 104,
+  "slots_per_archetype": 4,
+  "heldout_lists": 51,
+  "heldout_archetypes": 26,
+  "holdout_contamination": 0,
+  "new_archetypes_subset_count": 13,
+  "pinned_owner_dcgo_lists": [
+    {
+      "archetype": "TS Jupitermon",
+      "deck_id": "sha256:6fc92b96689e12af7f23194795a0652c23a1030f7ab59ddc2b44aaff7c37f607",
+      "games_played_by_owner": 3,
+      "latest_source": "raw-20261119T182111Z.jsonl#g14"
+    },
+    {
+      "archetype": "TS Jupitermon",
+      "deck_id": "sha256:9a123b2a336f4703dc334665999a815dff64c337af3dc56a8cda04efa1b1ac0a",
+      "games_played_by_owner": 3,
+      "latest_source": "raw-20261124T071011Z.jsonl#g21"
+    },
+    {
+      "archetype": "Medusamon",
+      "deck_id": "sha256:260178fcfd3acb2af2239548d6f0d1dc1fab2b3f35591cd4cc25f233751ec32a",
+      "games_played_by_owner": 2,
+      "latest_source": "raw-20261113T025510Z.jsonl#g10"
+    },
+    {
+      "archetype": "Royal Knights",
+      "deck_id": "sha256:27df0f3b3eeb6d3ec2046bd5fbb1effdeba9fdadd80bae9896be8f7b7449f7ff",
+      "games_played_by_owner": 3,
+      "latest_source": "raw-20261124T071011Z.jsonl#g37"
+    },
+    {
+      "archetype": "Royal Knights",
+      "deck_id": "sha256:833adf32135a5c5f50de716934ffcc1e87112a0dbba4927dbbfa90a7661ef319",
+      "games_played_by_owner": 1,
+      "latest_source": "raw-20261119T182111Z.jsonl#g5"
+    },
+    {
+      "archetype": "ShineGreymon Data Squad",
+      "deck_id": "sha256:5285960e45ca4232f9affedf8ac471ba25459b80bc74f17f58a621dff2a695a1",
+      "games_played_by_owner": 8,
+      "latest_source": "raw-20261119T182111Z.jsonl#g13"
+    },
+    {
+      "archetype": "ShineGreymon Data Squad",
+      "deck_id": "sha256:ccb27b666d509445763ef7aa1c00b647dedb50a83a2d8f1d75e9a6fcf52b5e83",
+      "games_played_by_owner": 4,
+      "latest_source": "raw-20261124T071011Z.jsonl#g33"
+    },
+    {
+      "archetype": "ShineGreymon Data Squad",
+      "deck_id": "sha256:e271e41d1b8984ef2d17a4f8c5cfb8d7134b24c35649509adc5c9119fc1116ff",
+      "games_played_by_owner": 3,
+      "latest_source": "raw-20261116T164448Z.jsonl#g6"
+    },
+    {
+      "archetype": "Virus Busters",
+      "deck_id": "sha256:5f47ea0fddfcd3b14ae2bedef0a557c9ff6b8c2ee9f72fe57bd892a5a99569c3",
+      "games_played_by_owner": 5,
+      "latest_source": "raw-20261113T025510Z.jsonl#g5"
+    },
+    {
+      "archetype": "Virus Busters",
+      "deck_id": "sha256:b0359eebb5df9c1cde8773250f04bb130255ef3c7436a8eed3a67e0d2bb41501",
+      "games_played_by_owner": 5,
+      "latest_source": "raw-20261116T164448Z.jsonl#g11"
+    },
+    {
+      "archetype": "SW",
+      "deck_id": "sha256:00db597468dfac5f9383d9a8993d221884c482692577dc3a2a70bb0c566b27c1",
+      "games_played_by_owner": 6,
+      "latest_source": "raw-20261123T023100Z.jsonl#g4"
+    },
+    {
+      "archetype": "SW",
+      "deck_id": "sha256:2339c9dc2f00487b0f28c19c51f1c61eb3acc71f89bb46cd2758fafe2232caf1",
+      "games_played_by_owner": 6,
+      "latest_source": "raw-20261124T071011Z.jsonl#g22"
+    },
+    {
+      "archetype": "SW",
+      "deck_id": "sha256:fce3b1209b98542abfc8ed72508e1a7b7037811d4d3311efc7b7e23b623bbba7",
+      "games_played_by_owner": 5,
+      "latest_source": "raw-20261124T071011Z.jsonl#g35"
+    },
+    {
+      "archetype": "Light Hybrid",
+      "deck_id": "sha256:bee889918b03279bbae119ae6fc82066bcd4b595bcf8316faf69e296aec65cd4",
+      "games_played_by_owner": 12,
+      "latest_source": "raw-20261124T071011Z.jsonl#g9"
+    },
+    {
+      "archetype": "Light Hybrid",
+      "deck_id": "sha256:cc871b81870dabc48b5a92c31c4911cc38f11b458882645cd814f4479b327f4f",
+      "games_played_by_owner": 4,
+      "latest_source": "raw-20261113T025510Z.jsonl#g13"
+    },
+    {
+      "archetype": "Adventure Omni",
+      "deck_id": "sha256:4f903abfb6a897135b750e548a83f84b054b1d9607384f83058b884954bc9d00",
+      "games_played_by_owner": 7,
+      "latest_source": "raw-20261124T071011Z.jsonl#g29"
+    }
+  ],
+  "by_archetype": {
+    "Examon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 219,
+      "total_lib_admissible": 236,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": false
+    },
+    "TS Jupitermon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 2,
+      "ex13_lib_admissible": 176,
+      "total_lib_admissible": 286,
+      "sources_train": {
+        "owner_dcgo": 2,
+        "digilab_api": 2
+      },
+      "is_new_archetype": false
+    },
+    "Glowing Dawn": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 106,
+      "total_lib_admissible": 232,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": false
+    },
+    "Three Musketeers": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 113,
+      "total_lib_admissible": 215,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": false
+    },
+    "TS Mervamon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 144,
+      "total_lib_admissible": 147,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": false
+    },
+    "Chronicle": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 60,
+      "total_lib_admissible": 60,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": false
+    },
+    "Toho Braves": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 109,
+      "total_lib_admissible": 221,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": false
+    },
+    "Chronomon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 54,
+      "total_lib_admissible": 68,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": false
+    },
+    "Medusamon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 1,
+      "ex13_lib_admissible": 30,
+      "total_lib_admissible": 177,
+      "sources_train": {
+        "owner_dcgo": 1,
+        "digilab_api": 3
+      },
+      "is_new_archetype": false
+    },
+    "Royal Knights": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 2,
+      "ex13_lib_admissible": 24,
+      "total_lib_admissible": 103,
+      "sources_train": {
+        "owner_dcgo": 2,
+        "digilab_api": 2
+      },
+      "is_new_archetype": false
+    },
+    "ShineGreymon Data Squad": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 3,
+      "ex13_lib_admissible": 22,
+      "total_lib_admissible": 54,
+      "sources_train": {
+        "owner_dcgo": 3,
+        "digilab_api": 1
+      },
+      "is_new_archetype": false
+    },
+    "Virus Busters": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 2,
+      "ex13_lib_admissible": 8,
+      "total_lib_admissible": 27,
+      "sources_train": {
+        "owner_dcgo": 2,
+        "digilab_api": 2
+      },
+      "is_new_archetype": false
+    },
+    "SW": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 3,
+      "ex13_lib_admissible": 28,
+      "total_lib_admissible": 74,
+      "sources_train": {
+        "owner_dcgo": 3,
+        "digilab_api": 1
+      },
+      "is_new_archetype": false
+    },
+    "Light Hybrid": {
+      "train_distinct": 2,
+      "heldout_distinct": 1,
+      "owner_pinned": 2,
+      "ex13_lib_admissible": 0,
+      "total_lib_admissible": 0,
+      "sources_train": {
+        "owner_dcgo": 2
+      },
+      "is_new_archetype": false
+    },
+    "Rose Rave": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 101,
+      "total_lib_admissible": 103,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "Adventure Omni": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 1,
+      "ex13_lib_admissible": 39,
+      "total_lib_admissible": 77,
+      "sources_train": {
+        "owner_dcgo": 1,
+        "digilab_api": 3
+      },
+      "is_new_archetype": true
+    },
+    "Galacticmon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 14,
+      "total_lib_admissible": 72,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "UlforceVeedramon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 64,
+      "total_lib_admissible": 68,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "Gallantmon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 34,
+      "total_lib_admissible": 150,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "Imperialdramon (UG)": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 41,
+      "total_lib_admissible": 135,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "Metal Empire": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 24,
+      "total_lib_admissible": 52,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "Jesmon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 25,
+      "total_lib_admissible": 142,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "TS Gear Forest": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 46,
+      "total_lib_admissible": 46,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "TS Vulcanusmon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 43,
+      "total_lib_admissible": 101,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "Dynasmon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 37,
+      "total_lib_admissible": 38,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    },
+    "TS Plutomon": {
+      "train_distinct": 4,
+      "heldout_distinct": 2,
+      "owner_pinned": 0,
+      "ex13_lib_admissible": 68,
+      "total_lib_admissible": 70,
+      "sources_train": {
+        "digilab_api": 4
+      },
+      "is_new_archetype": true
+    }
+  }
+}

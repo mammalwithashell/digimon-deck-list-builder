@@ -15,12 +15,14 @@ import random
 import time
 
 TEACHERS = ("greedy", "development_v1")
-ARMS = ("greedy", "development", "mixed", "mixed_v2")
+TEACHERS_V2 = ("greedy_v2", "development_v2")
+ARMS = ("greedy", "development", "mixed", "mixed_v2", "mixed_v3")
 PROFILE = "standard_lite_v2"
-# mixed_v2 additions. Random seats broaden value coverage only: their rows are
+# mixed_v2/v3 additions. Random seats broaden value coverage only: their rows are
 # saved with policy_weight 0, so imitation never learns to play randomly.
 RANDOM_TEACHER = "random_v1"
 TAMER_FIRST = {"greedy": "greedy_tamer_first_v1", "development_v1": "development_tamer_first_v1"}
+HYBRID_V2 = {"greedy_v2": "greedy_hybrid_v2", "development_v2": "development_hybrid_v2"}
 
 
 def digest(value):
@@ -46,8 +48,8 @@ def make_schedule(archetypes, *, seed, arm="mixed", rounds=32, tamer_first_arche
     uniform-random teacher with probability ``random_fraction``. Both are
     deterministic in (seed, game, seat), so the schedule stays reproducible.
     """
-    if arm != "mixed_v2" and (tamer_first_archetypes or random_fraction):
-        raise ValueError("Tamer-first and random seats are mixed_v2 options")
+    if arm not in ("mixed_v2", "mixed_v3") and (tamer_first_archetypes or random_fraction):
+        raise ValueError("Tamer-first and random seats are mixed_v2/mixed_v3 options")
     if not 0.0 <= random_fraction < 1.0:
         raise ValueError("random_fraction must be in [0, 1)")
     unknown = set(tamer_first_archetypes) - set(archetypes)
@@ -61,21 +63,23 @@ def make_schedule(archetypes, *, seed, arm="mixed", rounds=32, tamer_first_arche
     assignment = random.Random(seed ^ 0xD3E10)
     assignment.shuffle(names)
     pairings = ((0, 0), (1, 1), (0, 1), (1, 0))
+    base_teachers = TEACHERS_V2 if arm == "mixed_v3" else TEACHERS
+    hybrid_map = HYBRID_V2 if arm == "mixed_v3" else TAMER_FIRST
     schedule = []
     for round_id in range(rounds):
         offset = 1 + (round_id // 8) % max(1, len(names) - 1)
-        teachers = (pairings[round_id % 4] if arm in ("mixed", "mixed_v2")
+        teachers = (pairings[round_id % 4] if arm in ("mixed", "mixed_v2", "mixed_v3")
                     else ((0, 0) if arm == "greedy" else (1, 1)))
         for index, first in enumerate(names):
             second = names[(index + offset) % len(names)]
             game_id = len(schedule)
-            seat_teachers = [TEACHERS[t] for t in teachers]
-            if arm == "mixed_v2":
+            seat_teachers = [base_teachers[t] for t in teachers]
+            if arm in ("mixed_v2", "mixed_v3"):
                 for seat, archetype in enumerate((first, second)):
-                    if random.Random(f"mixed_v2:{seed}:{game_id}:{seat}").random() < random_fraction:
+                    if random.Random(f"{arm}:{seed}:{game_id}:{seat}").random() < random_fraction:
                         seat_teachers[seat] = RANDOM_TEACHER
                     elif archetype in tamer_first_archetypes:
-                        seat_teachers[seat] = TAMER_FIRST[seat_teachers[seat]]
+                        seat_teachers[seat] = hybrid_map[seat_teachers[seat]]
             schedule.append(dict(game_id=game_id, seed=2 * (seed + game_id) + (round_id // 4) % 2,
                 opening_seat=(round_id // 4) % 2, archetypes=[first, second],
                 decks=[sorted(set(archetypes[first]))[(round_id + round_id // 8) % len(set(archetypes[first]))],
@@ -167,10 +171,10 @@ def collect(snapshot, output, *, arm, seed, rounds=32, rows_per_seat=64, decisio
         schedule_sha256=digest(schedule), decks_sha256=digest(cards),
         contract=contract, rows_per_player_game=rows_per_seat,
         row_sampling="uniform with replacement within each player-game; equal rows per player-game",
-        teachers=list(TEACHERS) if arm != "mixed_v2" else sorted({t for g in schedule for t in g["teachers"]}),
+        teachers=list(TEACHERS) if arm not in ("mixed_v2", "mixed_v3") else sorted({t for g in schedule for t in g["teachers"]}),
         tensor_action_contract_changed=False)
-    if arm == "mixed_v2":
-        provenance["mixed_v2"] = dict(tamer_first_archetypes=sorted(tamer_first_archetypes),
+    if arm in ("mixed_v2", "mixed_v3"):
+        provenance[arm] = dict(tamer_first_archetypes=sorted(tamer_first_archetypes),
             random_fraction=random_fraction, random_rows="policy_weight 0 (value targets only)",
             random_rng="numpy default_rng([seed, game_id]) uniform over legal actions")
     provenance["dna_capable_lists"] = {deck: targets for deck, targets in dna_lists.items() if targets}

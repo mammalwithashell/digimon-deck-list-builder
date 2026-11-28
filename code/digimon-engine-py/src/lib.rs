@@ -978,6 +978,39 @@ impl RustHeadlessGame {
                 value["tamer_priority_applied"]=(!routes.is_empty()).into();value["direct_tamer_routes"]=serde_json::json!(routes);
                 Ok(value.to_string())
             }
+            "greedy_v2" => Ok(serde_json::json!({
+                "version": "greedy_v2",
+                "player": player,
+                "action": ::digimon_engine::policies::tamer_first::greedy_v2_action(&self.inner.game, &mask),
+            }).to_string()),
+            "development_v2" => {
+                let decision = self.development_teachers[player as usize].decide_v2(&self.inner.game, &mask)
+                    .map_err(PyValueError::new_err)?;
+                serde_json::to_string(&decision).map_err(|e| PyValueError::new_err(e.to_string()))
+            }
+            "greedy_hybrid_v2" => {
+                let routes = ::digimon_engine::policies::tamer_first::legal_tamer_digivolutions(&self.inner.game, &mask);
+                let tamer_plays = ::digimon_engine::policies::tamer_first::legal_tamer_plays(&self.inner.game, &mask);
+                Ok(serde_json::json!({
+                    "version": teacher,
+                    "player": player,
+                    "action": ::digimon_engine::policies::tamer_first::greedy_hybrid_v2_action(&self.inner.game, &mask),
+                    "direct_tamer_routes": routes,
+                    "tamer_plays": tamer_plays,
+                    "tamer_priority_applied": !routes.is_empty() || !tamer_plays.is_empty(),
+                }).to_string())
+            }
+            "development_hybrid_v2" => {
+                let routes = ::digimon_engine::policies::tamer_first::legal_tamer_digivolutions(&self.inner.game, &mask);
+                let tamer_plays = ::digimon_engine::policies::tamer_first::legal_tamer_plays(&self.inner.game, &mask);
+                let decision = self.development_tamer_teachers[player as usize].decide_hybrid_v2(&self.inner.game, &mask)
+                    .map_err(PyValueError::new_err)?;
+                let mut value = serde_json::to_value(decision).map_err(|e| PyValueError::new_err(e.to_string()))?;
+                value["tamer_priority_applied"] = (!routes.is_empty() || !tamer_plays.is_empty()).into();
+                value["direct_tamer_routes"] = serde_json::json!(routes);
+                value["tamer_plays"] = serde_json::json!(tamer_plays);
+                Ok(value.to_string())
+            }
             _ => Err(PyValueError::new_err(format!("unknown bootstrap teacher: {teacher}"))),
         }
     }

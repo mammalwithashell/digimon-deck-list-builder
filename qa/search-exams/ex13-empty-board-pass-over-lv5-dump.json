@@ -1,0 +1,201 @@
+{
+  "schema": "search-exam-v1",
+  "id": "ex13-empty-board-pass-over-lv5-dump",
+  "title": "Examon: Pass (choke to 3) instead of hard-playing Lv.5/Lv.6 into empty TS Jupitermon board",
+  "why": "Examon faces a completely empty TS Jupitermon battle area at 0 memory with ONLY unreduced Lv.5/Lv.6 hard-plays (giving opponent 6-12 memory) and Pass available. Passing chokes the opponent to 3 memory and keeps the high-level cards in hand; hard-playing Lv.5/Lv.6 into an empty board is a major memory-dump blunder.",
+  "source": {
+    "kind": "natural-ex13-seed",
+    "matchup": "Examon vs TS Jupitermon",
+    "seed": 44,
+    "turn_count": 1
+  },
+  "model": {
+    "name": "generalist-benchmark",
+    "sha256": ""
+  },
+  "setup": {
+    "decks": [
+      [
+        "EX13-005",
+        "EX13-005",
+        "EX13-005",
+        "EX13-005",
+        "BT20-007",
+        "BT20-007",
+        "BT20-093",
+        "BT20-093",
+        "BT21-046",
+        "BT21-046",
+        "BT21-046",
+        "BT21-046",
+        "BT23-047",
+        "BT23-047",
+        "BT3-093",
+        "BT3-093",
+        "EX13-008",
+        "EX13-008",
+        "EX13-008",
+        "EX13-008",
+        "EX13-018",
+        "EX13-018",
+        "EX13-018",
+        "EX13-018",
+        "EX13-021",
+        "EX13-021",
+        "EX13-021",
+        "EX13-021",
+        "EX13-024",
+        "EX13-024",
+        "EX13-024",
+        "EX13-039",
+        "EX13-039",
+        "EX13-039",
+        "EX13-039",
+        "EX13-041",
+        "EX13-041",
+        "EX13-041",
+        "EX13-041",
+        "EX13-044",
+        "EX13-044",
+        "EX13-045",
+        "EX13-045",
+        "EX13-045",
+        "EX13-045",
+        "EX3-037",
+        "EX3-037",
+        "EX3-037",
+        "EX3-041",
+        "LM-051",
+        "LM-051",
+        "LM-051",
+        "LM-051",
+        "LM-057"
+      ],
+      [
+        "BT24-003",
+        "BT24-003",
+        "BT24-003",
+        "BT24-003",
+        "BT24-031",
+        "BT24-031",
+        "BT24-031",
+        "BT24-031",
+        "BT24-034",
+        "BT24-034",
+        "BT24-034",
+        "BT24-034",
+        "BT24-083",
+        "BT24-083",
+        "BT24-083",
+        "BT24-084",
+        "BT24-084",
+        "BT24-084",
+        "BT24-084",
+        "BT24-085",
+        "BT24-088",
+        "BT24-088",
+        "BT24-101",
+        "BT24-101",
+        "BT24-101",
+        "BT24-101",
+        "BT24-102",
+        "BT25-022",
+        "BT25-022",
+        "BT25-022",
+        "BT25-025",
+        "BT25-025",
+        "BT25-030",
+        "BT25-030",
+        "BT25-030",
+        "BT25-030",
+        "BT25-033",
+        "BT25-033",
+        "BT25-033",
+        "BT25-033",
+        "BT25-044",
+        "BT26-029",
+        "BT26-029",
+        "BT26-029",
+        "BT26-029",
+        "BT26-033",
+        "BT26-033",
+        "BT26-073",
+        "BT26-092",
+        "BT26-103",
+        "BT26-103",
+        "BT26-103",
+        "BT4-104",
+        "P-213"
+      ]
+    ],
+    "game_seed": 44,
+    "turn_count_reset": 1,
+    "actions": [
+      0,
+      0,
+      60
+    ]
+  },
+  "search": {
+    "viewer": 0,
+    "regime": "open-list",
+    "simulations": 320,
+    "worlds": 4,
+    "batch": 4,
+    "search_seed": 2001
+  },
+  "expectations": [
+    {
+      "kind": "not_chosen",
+      "plan": [
+        0
+      ],
+      "label": "Do NOT hard-play Lv.5 Wingdramon (EX13-021, cost 7, gives opp 7 mem)"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        1
+      ],
+      "label": "Do NOT hard-play Lv.5 Groundramon (EX13-041, cost 7, gives opp 7 mem)"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        3
+      ],
+      "label": "Do NOT hard-play Lv.5 Wingdramon (EX13-021, cost 7, gives opp 7 mem)"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        4
+      ],
+      "label": "Do NOT hard-play Lv.5 Groundramon (EX13-041, cost 7, gives opp 7 mem)"
+    },
+    {
+      "kind": "chosen",
+      "plan": [
+        62
+      ],
+      "label": "Pass turn (choke opp to 3 memory instead of dumping 6+ memory onto empty board)"
+    }
+  ],
+  "lines": {
+    "pass_choke": [
+      62
+    ],
+    "dump_lv5_EX13-021_a0": [
+      0
+    ],
+    "dump_lv5_EX13-041_a1": [
+      1
+    ],
+    "dump_lv5_EX13-021_a3": [
+      3
+    ],
+    "dump_lv5_EX13-041_a4": [
+      4
+    ]
+  }
+}

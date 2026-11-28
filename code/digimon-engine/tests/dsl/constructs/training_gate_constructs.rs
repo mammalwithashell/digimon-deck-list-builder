@@ -684,3 +684,170 @@ fn trashed_hand_card_matching_gates_bonus_on_trashed_card_traits() {
         );
     }
 }
+
+// ---------------------------------------------------------------------------
+// 8. predicate:event_target_has_inherited
+// ---------------------------------------------------------------------------
+
+const EVENT_TARGET_HAS_INH_YAML: &str = r#"
+card: TGC-EVT-HAS-INH
+name: InheritedWatcher
+kind: digimon
+color: [red]
+level: 3
+cost: 3
+dp: 2000
+effects:
+  - when: on_ally_played
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_has_inherited: true
+    process:
+      - gain_memory: 2
+"#;
+
+#[test]
+fn event_target_has_inherited_filters_played_tamers_by_inherited_text() {
+    let mut tamer_with_inh = make_test_card("TGC-TAMER-INH", "SpiritTamer");
+    tamer_with_inh.card_kind = digimon_engine::enums::CardKind::Tamer;
+    tamer_with_inh.play_cost = 3;
+    tamer_with_inh.level = None;
+    tamer_with_inh.dp = None;
+    tamer_with_inh.inherited_text = "[Your Turn] +1000 DP.".to_string();
+
+    let mut plain_tamer = make_test_card("TGC-TAMER-PLAIN", "PlainTamer");
+    plain_tamer.card_kind = digimon_engine::enums::CardKind::Tamer;
+    plain_tamer.play_cost = 3;
+    plain_tamer.level = None;
+    plain_tamer.dp = None;
+    plain_tamer.inherited_text = String::new();
+
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(EVENT_TARGET_HAS_INH_YAML)
+        .unwrap()
+        .add_card(tamer_with_inh)
+        .add_card(plain_tamer)
+        .hand(0, &["TGC-TAMER-PLAIN", "TGC-TAMER-INH"])
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+    r.game.enter_main_phase();
+    r.game.memory = 10;
+    r.place_on_field(0, "TGC-EVT-HAS-INH", Some(0));
+
+    // Playing plain Tamer (no inherited text) must NOT trigger +2 memory.
+    let mem_before_plain = r.game.memory;
+    let plain_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "TGC-TAMER-PLAIN")
+        .unwrap();
+    assert!(r.play(0, plain_idx).is_some(), "plain tamer playable");
+    r.auto_resolve().ok();
+    assert_eq!(
+        r.game.memory,
+        mem_before_plain - 3,
+        "plain tamer must not satisfy event_target_has_inherited"
+    );
+
+    // Playing Tamer with inherited text MUST trigger +2 memory.
+    let mem_before_inh = r.game.memory;
+    let inh_idx = r.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&r.game.card_data) == "TGC-TAMER-INH")
+        .unwrap();
+    assert!(r.play(0, inh_idx).is_some(), "inherited tamer playable");
+    r.auto_resolve().ok();
+    assert_eq!(
+        r.game.memory,
+        mem_before_inh - 3 + 2,
+        "tamer with inherited text must satisfy event_target_has_inherited"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// 9. predicate:event_target_digivolved_from_kind
+// ---------------------------------------------------------------------------
+
+const EVENT_DIGIVOLVED_FROM_TAMER_YAML: &str = r#"
+card: TGC-FROM-TAMER-WATCH
+name: TamerEvoWatcher
+kind: digimon
+color: [white]
+level: 3
+cost: 3
+dp: 2000
+effects:
+  - when: on_digivolve
+    active_when: { your_turn: true }
+    trigger_if:
+      all_of:
+        - event_target_owner: you
+        - event_target_digivolved_from_kind: tamer
+    process:
+      - gain_memory: 2
+"#;
+
+#[test]
+fn event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer() {
+    let mut blue_tamer = make_test_card("TGC-BLUE-TAMER", "BlueTamer");
+    blue_tamer.card_kind = digimon_engine::enums::CardKind::Tamer;
+    blue_tamer.colors = vec![CardColor::Blue];
+    blue_tamer.level = None;
+    blue_tamer.dp = None;
+
+    let mut blue_lv3 = make_test_card("TGC-BLUE-LV3", "BlueLv3");
+    blue_lv3.colors = vec![CardColor::Blue];
+    blue_lv3.level = Some(3);
+    blue_lv3.dp = Some(2000);
+
+    let evo = make_test_card("TGC-EVO", "EvoTarget");
+
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(EVENT_DIGIVOLVED_FROM_TAMER_YAML)
+        .unwrap()
+        .add_card(blue_tamer)
+        .add_card(blue_lv3)
+        .add_card(evo)
+        .hand(0, &["TGC-EVO", "TGC-EVO"])
+        .deck(0, &["TGC-BLUE-LV3", "TGC-BLUE-LV3", "TGC-BLUE-LV3"])
+        .start();
+    r.skip_mulligan();
+    r.set_first_player(0);
+    r.game.memory = 3;
+    r.place_on_field(0, "TGC-FROM-TAMER-WATCH", Some(0));
+    let lv3_perm = r.place_on_field(0, "TGC-BLUE-LV3", Some(0));
+    let tamer_perm = r.place_on_field(0, "TGC-BLUE-TAMER", Some(0));
+
+    // Negative: digivolving onto Lv.3 Digimon does NOT trigger +2 memory.
+    assert!(r.game.effect_initiated_digivolve_ignore_requirements(
+        0,
+        0,
+        lv3_perm,
+        digimon_engine::enums::CostDelta::Free,
+        PlaySource::ByEffect,
+    ));
+    r.auto_resolve().ok();
+    assert_eq!(
+        r.game.memory, 3,
+        "digivolving onto a Digimon must not trigger event_target_digivolved_from_kind: tamer"
+    );
+
+    // Positive: digivolving onto a Tamer triggers +2 memory (3 -> 5).
+    assert!(r.game.effect_initiated_digivolve_ignore_requirements(
+        0,
+        0,
+        tamer_perm,
+        digimon_engine::enums::CostDelta::Free,
+        PlaySource::ByEffect,
+    ));
+    r.auto_resolve().ok();
+    assert_eq!(
+        r.game.memory, 5,
+        "digivolving onto a Tamer must trigger +2 memory"
+    );
+}

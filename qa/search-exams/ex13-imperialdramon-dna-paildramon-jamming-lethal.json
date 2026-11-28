@@ -1,0 +1,370 @@
+{
+  "schema": "search-exam-v1",
+  "id": "ex13-imperialdramon-dna-paildramon-jamming-lethal",
+  "title": "Imperialdramon (UG): DNA BT12 ExVeemon + Stingmon into BT16 Paildramon to suspend Blocker, swing with Jamming, unsuspend, and win",
+  "why": "Imperialdramon (UG) has BT12-022 ExVeemon (1 digivolution card, inherited Jamming, +1 memory on DNA) and BT12-050 Stingmon (0 digivolution cards, +1 memory on DNA) on field with BT16-025 Paildramon in hand at 2 memory. Opponent has 1 non-bomb security (EX13-044 Breakdramon, 12000 DP) and an unsuspended 2-source Blocker (EX13-024 Slayerdramon, 12000 DP). Normal digivolving Paildramon costs 4 and passes turn; attacking with ExVeemon or Stingmon gets blocked by Slayerdramon. DNA digivolving BT16-025 Paildramon costs 0 (+2 memory to 4), yields 3 digivolution cards (> Blocker's 2 sources) so [When Digivolving] suspends the Blocker, then Paildramon swings at security with Jamming, unsuspends via [When Attacking] (no unsuspended opponent Digimon), and swings again for lethal.",
+  "source": {
+    "kind": "composed",
+    "matchup": "Imperialdramon (UG) vs Examon",
+    "turn_count": 4
+  },
+  "model": {
+    "name": "generalist-benchmark",
+    "sha256": ""
+  },
+  "setup": {
+    "decks": [
+      [
+        "BT12-002",
+        "BT12-002",
+        "BT12-002",
+        "BT12-002",
+        "AD1-011",
+        "AD1-011",
+        "AD1-011",
+        "AD1-011",
+        "AD1-024",
+        "AD1-024",
+        "AD1-024",
+        "BT12-021",
+        "BT12-021",
+        "BT12-021",
+        "BT12-021",
+        "BT12-022",
+        "BT12-022",
+        "BT12-022",
+        "BT12-022",
+        "BT12-047",
+        "BT12-047",
+        "BT12-047",
+        "BT12-047",
+        "BT12-050",
+        "BT12-050",
+        "BT12-050",
+        "BT12-050",
+        "BT16-025",
+        "BT16-025",
+        "BT16-025",
+        "BT16-040",
+        "BT16-085",
+        "BT16-085",
+        "BT16-085",
+        "BT16-085",
+        "BT17-097",
+        "BT17-097",
+        "BT21-037",
+        "BT21-037",
+        "EX13-070",
+        "EX13-070",
+        "EX13-076",
+        "EX13-076",
+        "LM-058",
+        "LM-058",
+        "P-117",
+        "P-117",
+        "P-117",
+        "P-117",
+        "ST9-06",
+        "ST9-06",
+        "ST9-06",
+        "ST9-06",
+        "ST9-09"
+      ],
+      [
+        "EX13-005",
+        "EX13-005",
+        "EX13-005",
+        "EX13-005",
+        "BT20-007",
+        "BT20-007",
+        "BT20-025",
+        "BT20-042",
+        "BT20-042",
+        "BT20-042",
+        "BT20-042",
+        "BT20-093",
+        "BT20-093",
+        "BT20-093",
+        "BT21-046",
+        "BT21-046",
+        "BT21-046",
+        "BT21-046",
+        "BT23-047",
+        "BT23-047",
+        "BT23-047",
+        "BT3-093",
+        "BT3-093",
+        "EX13-008",
+        "EX13-008",
+        "EX13-008",
+        "EX13-008",
+        "EX13-018",
+        "EX13-018",
+        "EX13-018",
+        "EX13-018",
+        "EX13-021",
+        "EX13-021",
+        "EX13-021",
+        "EX13-021",
+        "EX13-024",
+        "EX13-024",
+        "EX13-024",
+        "EX13-039",
+        "EX13-039",
+        "EX13-039",
+        "EX13-039",
+        "EX13-041",
+        "EX13-044",
+        "EX13-044",
+        "EX13-045",
+        "EX13-045",
+        "EX13-045",
+        "EX3-037",
+        "EX3-037",
+        "LM-051",
+        "LM-051",
+        "LM-051",
+        "LM-051"
+      ]
+    ],
+    "game_seed": 0,
+    "actions": [],
+    "staged": {
+      "state": {
+        "memory": 2,
+        "phase": "Main",
+        "turn": 4,
+        "first_player": 1
+      },
+      "zones": {
+        "1": {
+          "breeding": null,
+          "deck_top": [
+            "BT12-021",
+            "AD1-011",
+            "AD1-011",
+            "AD1-011",
+            "AD1-011",
+            "AD1-024",
+            "AD1-024",
+            "AD1-024",
+            "BT12-021",
+            "BT12-021",
+            "BT12-022",
+            "BT12-022",
+            "BT12-022",
+            "BT12-047",
+            "BT12-047",
+            "BT12-047",
+            "BT12-047",
+            "BT12-050",
+            "BT12-050",
+            "BT12-050",
+            "BT16-025",
+            "BT16-025",
+            "BT16-040",
+            "BT16-085",
+            "BT16-085",
+            "BT16-085",
+            "BT16-085",
+            "BT17-097",
+            "BT17-097",
+            "BT21-037",
+            "BT21-037",
+            "EX13-070",
+            "EX13-070",
+            "EX13-076",
+            "EX13-076",
+            "LM-058",
+            "LM-058",
+            "P-117",
+            "P-117",
+            "P-117",
+            "P-117",
+            "ST9-06",
+            "ST9-06"
+          ],
+          "egg_deck": [
+            "BT12-002",
+            "BT12-002",
+            "BT12-002",
+            "BT12-002"
+          ],
+          "field": [
+            {
+              "is_suspended": false,
+              "stack": [
+                "BT12-021",
+                "BT12-022"
+              ],
+              "turn_played": 2
+            },
+            {
+              "is_suspended": false,
+              "stack": [
+                "BT12-050"
+              ],
+              "turn_played": 2
+            }
+          ],
+          "hand": [
+            "BT16-025"
+          ],
+          "security": [
+            "ST9-06",
+            "ST9-06",
+            "ST9-09"
+          ],
+          "trash": []
+        },
+        "2": {
+          "breeding": null,
+          "deck_top": [
+            "BT20-007",
+            "BT20-007",
+            "BT20-025",
+            "BT20-042",
+            "BT20-042",
+            "BT20-042",
+            "BT20-042",
+            "BT20-093",
+            "BT20-093",
+            "BT20-093",
+            "BT21-046",
+            "BT21-046",
+            "BT21-046",
+            "BT21-046",
+            "BT23-047",
+            "BT23-047",
+            "BT23-047",
+            "BT3-093",
+            "BT3-093",
+            "EX13-008",
+            "EX13-008",
+            "EX13-008",
+            "EX13-018",
+            "EX13-018",
+            "EX13-018",
+            "EX13-021",
+            "EX13-021",
+            "EX13-021",
+            "EX13-021",
+            "EX13-024",
+            "EX13-024",
+            "EX13-039",
+            "EX13-039",
+            "EX13-039",
+            "EX13-039",
+            "EX13-041",
+            "EX13-044",
+            "EX13-045",
+            "EX13-045",
+            "EX13-045",
+            "EX3-037",
+            "EX3-037",
+            "LM-051",
+            "LM-051",
+            "LM-051",
+            "LM-051"
+          ],
+          "egg_deck": [
+            "EX13-005",
+            "EX13-005",
+            "EX13-005",
+            "EX13-005"
+          ],
+          "field": [
+            {
+              "is_suspended": false,
+              "stack": [
+                "EX13-008",
+                "EX13-018",
+                "EX13-024"
+              ],
+              "turn_played": 1
+            }
+          ],
+          "hand": [],
+          "security": [
+            "EX13-044"
+          ],
+          "trash": []
+        }
+      }
+    }
+  },
+  "search": {
+    "viewer": 0,
+    "regime": "open-list",
+    "simulations": 320,
+    "worlds": 4,
+    "batch": 4,
+    "search_seed": 2026
+  },
+  "expectations": [
+    {
+      "kind": "chosen",
+      "plan": [
+        63
+      ],
+      "label": "Start DNA digivolve with BT16-025 Paildramon from hand 0 (root action 63)"
+    },
+    {
+      "kind": "visit_share_at_least",
+      "plan": [
+        63
+      ],
+      "share": 0.5,
+      "label": "DNA Paildramon lethal line receives at least 50% of root search visits"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        400
+      ],
+      "label": "Do NOT normal-digivolve Paildramon onto ExVeemon (costs 4, passes turn)"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        401
+      ],
+      "label": "Do NOT normal-digivolve Paildramon onto Stingmon (costs 4, passes turn)"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        114
+      ],
+      "label": "Do NOT swing ExVeemon directly into 12000 DP Blocker"
+    },
+    {
+      "kind": "not_chosen",
+      "plan": [
+        129
+      ],
+      "label": "Do NOT swing Stingmon directly into 12000 DP Blocker"
+    }
+  ],
+  "lines": {
+    "dna_paildramon_jamming_lethal": [
+      63,
+      0,
+      1,
+      114,
+      114
+    ],
+    "normal_digivolve_exveemon_pass": [
+      400
+    ],
+    "normal_digivolve_stingmon_pass": [
+      401
+    ],
+    "attack_exveemon_into_blocker": [
+      114
+    ],
+    "attack_stingmon_into_blocker": [
+      129
+    ]
+  }
+}

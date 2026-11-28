@@ -14627,7 +14627,7 @@
    "untested_constructs": []
   },
   "BT21-091": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 3,
    "constructs": [
     "verb:add_this_option_to_hand",
@@ -14660,12 +14660,10 @@
    ],
    "effect_clause_count": 3,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_target_has_inherited"
-   ]
+   "untested_constructs": []
   },
   "BT21-092": {
    "behaviourally_covered": true,
@@ -33622,7 +33620,7 @@
    "untested_constructs": []
   },
   "BT7-081": {
-   "behaviourally_covered": false,
+   "behaviourally_covered": true,
    "clause_count": 2,
    "constructs": [
     "verb:add_to_hand_from_reveal",
@@ -33642,12 +33640,10 @@
    ],
    "effect_clause_count": 2,
    "has_card_test": true,
-   "lowering_covered": false,
+   "lowering_covered": true,
    "parsed_only_constructs": [],
    "protection_constructs": [],
-   "untested_constructs": [
-    "predicate:event_target_digivolved_from_kind"
-   ]
+   "untested_constructs": []
   },
   "BT7-082": {
    "behaviourally_covered": true,
@@ -56418,6 +56414,12 @@
     "dsl::constructs/training_gate_constructs.rs::card_in_zone_restricts_multi_zone_selection_to_specified_zone": [
      "yaml_key"
     ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer": [
+     "yaml_key"
+    ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text": [
+     "yaml_key"
+    ],
     "dsl::constructs/training_gate_constructs.rs::on_add_to_hand_fires_only_for_matching_event_add_to_hand_player": [
      "yaml_key"
     ],
@@ -57126,6 +57128,8 @@
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_does_not_fire_on_standard_digivolve",
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_fires_on_matching_dna_and_skips_normal_digivolve",
     "dsl::constructs/training_gate_constructs.rs::card_in_zone_restricts_multi_zone_selection_to_specified_zone",
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer",
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text",
     "dsl::constructs/training_gate_constructs.rs::on_add_to_hand_fires_only_for_matching_event_add_to_hand_player",
     "dsl::constructs/training_gate_constructs.rs::play_to_breeding_from_trash_places_card_in_empty_breeding_and_skips_when_occupied",
     "dsl::constructs/training_gate_constructs.rs::rules_text_contains_matches_effect_text_only",
@@ -62853,14 +62857,17 @@
   "predicate:event_target_digivolved_from_kind": {
    "kind": "predicate",
    "name": "event_target_digivolved_from_kind",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer"
+   ]
   },
   "predicate:event_target_dp": {
    "kind": "predicate",
@@ -62962,14 +62969,17 @@
   "predicate:event_target_has_inherited": {
    "kind": "predicate",
    "name": "event_target_has_inherited",
-   "near_miss_files": [
-    "src/dsl_cards/predicate.rs"
-   ],
    "parsed_only": false,
-   "signals": {},
-   "tested": false,
-   "tested_behaviourally": false,
-   "tests": []
+   "signals": {
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text": [
+     "yaml_key"
+    ]
+   },
+   "tested": true,
+   "tested_behaviourally": true,
+   "tests": [
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text"
+   ]
   },
   "predicate:event_target_has_same_level_source": {
    "kind": "predicate",
@@ -63058,6 +63068,9 @@
    "parsed_only": false,
    "signals": {
     "dsl::alysion_primitives.rs::event_target_materials_count_lte_gates_deletion_observer": [
+     "yaml_key"
+    ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text": [
      "yaml_key"
     ],
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound": [
@@ -63200,6 +63213,7 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::alysion_primitives.rs::event_target_materials_count_lte_gates_deletion_observer",
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text",
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound",
     "dsl::constructs/zone_moves.rs::count_below_minimum_and_optional_zero_do_not_move_cards",
     "dsl::constructs/zone_moves.rs::count_top_return_keeps_first_pick_topmost",
@@ -63541,6 +63555,12 @@
     "dsl::constructs/play_digivolve_link.rs::would_link_window_before_payment_accept_decline_and_floor": [
      "yaml_key"
     ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer": [
+     "yaml_key"
+    ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text": [
+     "yaml_key"
+    ],
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound": [
      "yaml_key"
     ],
@@ -63772,6 +63792,8 @@
     "dsl::constructs/play_digivolve_link.rs::would_link_different_host_no_prompt",
     "dsl::constructs/play_digivolve_link.rs::would_link_trait_any_of_and_case_sensitive",
     "dsl::constructs/play_digivolve_link.rs::would_link_window_before_payment_accept_decline_and_floor",
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer",
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text",
     "dsl::constructs/zone_moves.rs::budget_recomputes_legal_choices_and_pass_leaves_binding_unbound",
     "dsl::constructs/zone_moves.rs::count_below_minimum_and_optional_zero_do_not_move_cards",
     "dsl::constructs/zone_moves.rs::count_top_return_keeps_first_pick_topmost",
@@ -75010,6 +75032,12 @@
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_fires_on_matching_dna_and_skips_normal_digivolve": [
      "yaml_key"
     ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer": [
+     "yaml_key"
+    ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text": [
+     "yaml_key"
+    ],
     "dsl::early_sets_lowering.rs::attack_target_binding_ref_deletes_attacked_digimon_with_no_sources": [
      "yaml_key"
     ],
@@ -75204,6 +75232,8 @@
     "dsl::constructs/plural_security_prevention.rs::plural_security_permits_subject_source_global_and_literal_predicates",
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_does_not_fire_on_standard_digivolve",
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_fires_on_matching_dna_and_skips_normal_digivolve",
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer",
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text",
     "dsl::early_sets_lowering.rs::attack_target_binding_ref_deletes_attacked_digimon_with_no_sources",
     "dsl::early_sets_lowering.rs::aura_modifier_colors_adds_color_for_rules_during_your_turn",
     "dsl::early_sets_lowering.rs::cannot_be_blocked_by_no_sources_skips_sourceless_blockers_only",
@@ -77717,6 +77747,9 @@
     "dsl::constructs/meta_event_color.rs::played_event_without_requested_color_does_not_borrow_observer_color": [
      "yaml_key"
     ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text": [
+     "yaml_key"
+    ],
     "dsl::early_sets_lowering.rs::event_played_from_trash_grants_rush_only_to_trash_played_digimon": [
      "yaml_key"
     ],
@@ -77739,6 +77772,7 @@
     "dsl::constructs/meta_event_color.rs::matching_played_event_choice_can_be_declined",
     "dsl::constructs/meta_event_color.rs::played_event_color_intersection_uses_event_subject_and_exposes_choices",
     "dsl::constructs/meta_event_color.rs::played_event_without_requested_color_does_not_borrow_observer_color",
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text",
     "dsl::early_sets_lowering.rs::event_played_from_trash_grants_rush_only_to_trash_played_digimon",
     "dsl::early_sets_lowering.rs::event_target_name_matches_source_triggers_only_on_same_name_ally_play",
     "dsl::phase2a_triggered.rs::compiled_timing_mapping_covers_common_triggered_timings",
@@ -78795,6 +78829,9 @@
     "dsl::constructs/meta_effect_payment.rs::security_digivolution_draw_precedes_when_digivolving_and_empty_deck_still_evolves": [
      "yaml_key"
     ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer": [
+     "yaml_key"
+    ],
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free": [
      "yaml_key"
     ],
@@ -78845,6 +78882,7 @@
    "tested_behaviourally": true,
    "tests": [
     "dsl::constructs/meta_effect_payment.rs::security_digivolution_draw_precedes_when_digivolving_and_empty_deck_still_evolves",
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer",
     "dsl::digivolve_as_tamer.rs::bio_hybrid_effect_can_offer_and_digivolve_the_tamer_from_trash_for_free",
     "dsl::digivolve_as_tamer.rs::legacy_named_tamer_route_still_dispatches_ordinary_digivolution_triggers",
     "dsl::digivolve_as_tamer.rs::printed_thunderbirdmon_route_stacks_draws_and_fires_when_digivolving",
@@ -88904,6 +88942,12 @@
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_fires_on_matching_dna_and_skips_normal_digivolve": [
      "yaml_key"
     ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer": [
+     "yaml_key"
+    ],
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text": [
+     "yaml_key"
+    ],
     "dsl::constructs/training_gate_constructs.rs::on_add_to_hand_fires_only_for_matching_event_add_to_hand_player": [
      "yaml_key"
     ],
@@ -90487,6 +90531,8 @@
     "dsl::constructs/tamer_color_predicates.rs::distinct_tamer_colors_gte_compiles_from_yaml",
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_does_not_fire_on_standard_digivolve",
     "dsl::constructs/training_gate_constructs.rs::before_pay_cost_observe_fires_on_matching_dna_and_skips_normal_digivolve",
+    "dsl::constructs/training_gate_constructs.rs::event_target_digivolved_from_kind_fires_only_when_digivolving_onto_tamer",
+    "dsl::constructs/training_gate_constructs.rs::event_target_has_inherited_filters_played_tamers_by_inherited_text",
     "dsl::constructs/training_gate_constructs.rs::on_add_to_hand_fires_only_for_matching_event_add_to_hand_player",
     "dsl::constructs/training_gate_constructs.rs::self_stack_same_level_count_gte_distinguishes_same_vs_different_levels",
     "dsl::constructs/training_gate_constructs.rs::trashed_hand_card_matching_gates_bonus_on_trashed_card_traits",
@@ -102080,11 +102126,11 @@
  ],
  "schema_version": 1,
  "summary": {
-  "behavioural_tests": 2377,
+  "behavioural_tests": 2379,
   "cards": {
-   "behaviourally_covered": 1969,
-   "lowering_covered": 1971,
-   "not_covered": 26,
+   "behaviourally_covered": 1971,
+   "lowering_covered": 1973,
+   "not_covered": 24,
    "total": 1997
   },
   "constructs": {
@@ -102099,12 +102145,12 @@
    },
    "predicate": {
     "parsed_only": 4,
-    "tested": 228,
-    "tested_behaviourally": 224,
+    "tested": 230,
+    "tested_behaviourally": 226,
     "total": 248,
-    "untested": 20,
+    "untested": 18,
     "used_by_cards": 225,
-    "used_untested": 14
+    "used_untested": 12
    },
    "timing": {
     "parsed_only": 1,
@@ -102125,7 +102171,7 @@
     "used_untested": 3
    }
   },
-  "ex13_lists": 1552,
+  "ex13_lists": 2532,
   "parse_only_files": [
    "src/dsl_cards/binding_ref.rs",
    "src/dsl_cards/construction_facts.rs",
@@ -102244,42 +102290,37 @@
    "tests/rules_conformance/support.rs"
   ],
   "scanned_files": 433,
-  "scanned_tests": 2803,
+  "scanned_tests": 2805,
   "top_untested": [
    {
     "cards_blocked": 4,
     "construct": "predicate:has_alt_path",
-    "ex13_lists_blocked": 15
+    "ex13_lists_blocked": 20
    },
    {
     "cards_blocked": 5,
     "construct": "predicate:event_card_name_is",
-    "ex13_lists_blocked": 7
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_batch_card_trait_has",
-    "ex13_lists_blocked": 6
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_target_has_inherited",
-    "ex13_lists_blocked": 6
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:color_matches_returned_card",
-    "ex13_lists_blocked": 5
+    "ex13_lists_blocked": 16
    },
    {
     "cards_blocked": 1,
     "construct": "predicate:has_security_attack_change",
-    "ex13_lists_blocked": 5
+    "ex13_lists_blocked": 13
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:event_batch_card_trait_has",
+    "ex13_lists_blocked": 11
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "predicate:color_matches_returned_card",
+    "ex13_lists_blocked": 9
    },
    {
     "cards_blocked": 1,
     "construct": "predicate:effect_trashed_any_hand_card",
-    "ex13_lists_blocked": 3
+    "ex13_lists_blocked": 4
    },
    {
     "cards_blocked": 2,
@@ -102294,16 +102335,21 @@
    {
     "cards_blocked": 1,
     "construct": "predicate:event_card_face_up_in_security",
-    "ex13_lists_blocked": 1
+    "ex13_lists_blocked": 2
    },
    {
     "cards_blocked": 1,
-    "construct": "timing:on_option_trashed",
-    "ex13_lists_blocked": 1
+    "construct": "predicate:event_target_has_same_level_source",
+    "ex13_lists_blocked": 2
    },
    {
     "cards_blocked": 1,
     "construct": "verb:add_top_face_down_security_to_hand",
+    "ex13_lists_blocked": 2
+   },
+   {
+    "cards_blocked": 1,
+    "construct": "timing:on_option_trashed",
     "ex13_lists_blocked": 1
    },
    {
@@ -102319,16 +102365,6 @@
    {
     "cards_blocked": 1,
     "construct": "predicate:event_card_color_only",
-    "ex13_lists_blocked": 0
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_target_digivolved_from_kind",
-    "ex13_lists_blocked": 0
-   },
-   {
-    "cards_blocked": 1,
-    "construct": "predicate:event_target_has_same_level_source",
     "ex13_lists_blocked": 0
    },
    {

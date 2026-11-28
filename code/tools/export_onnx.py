@@ -316,7 +316,15 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
 
     observation_layout = observation_layout or get_tensor_profile()
     tensor_size = observation_layout.tensor_size
-    model = MaskableRecurrentPPO.load(sb3_zip_path, device="cpu")
+    model = MaskableRecurrentPPO.load(
+        sb3_zip_path,
+        device="cpu",
+        custom_objects={
+            "learning_rate": 0.0,
+            "lr_schedule": lambda _: 0.0,
+            "clip_range": lambda _: 0.2,
+        },
+    )
     validate_checkpoint_observation_profile(model, observation_layout)
     policy = model.policy
     policy.eval()

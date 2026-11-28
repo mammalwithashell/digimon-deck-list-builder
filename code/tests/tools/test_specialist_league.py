@@ -216,3 +216,52 @@ def test_coordinator_picks_eligible_gates_from_the_end(tmp_path):
     assert {"gates/gen1/b.json", "specialists/b/generation/gen0/model.onnx",
             "specialists/b/generation/gen2/model.onnx", "inputs/opponents/base.onnx"} <= set(rels)
     assert not any("/gen1/" in r for r in rels if r.startswith("specialists"))
+
+
+def test_extra_anchors_pin_small3_and_exclude_learner(tmp_path):
+    inputs = tmp_path / "inputs"
+    model(inputs / "opponents/cp8.onnx", "cp8")
+    model(inputs / "opponents/base.onnx", "base")
+    model(inputs / "opponents/gen6_hybrid.onnx", "gen6")
+    plan = dict(
+        archetypes=["Examon", "TS Jupitermon", "Royal Knights"],
+        cp8_archetypes=["Examon", "TS Jupitermon"],
+        extra_anchors=[dict(
+            id="gen6-hybrid", file="opponents/gen6_hybrid.onnx",
+            archetypes=["Examon", "TS Jupitermon"], gen1_weight=0.10, later_weight=0.05,
+        )],
+        mixture=dict(gen1=dict(base_selfplay=0.7, cp8=0.2),
+                     later=dict(champions=0.7, base=0.15, cp8=0.10)),
+    )
+    gen1_examon = league.opponent_pool(tmp_path, plan, "Examon", 1)
+    assert gen1_examon["learner_decks"] == ["Examon"]
+    assert gen1_examon["selfplay_probability"] == pytest.approx(0.7)
+    assert {e["id"]: e["decks"] for e in gen1_examon["opponents"]} == {
+        "cp8": ["TS Jupitermon"], "gen6-hybrid": ["TS Jupitermon"],
+    }
+    assert sum(e["weight"] for e in gen1_examon["opponents"]) == pytest.approx(1.0)
+    gen1_rk = league.opponent_pool(tmp_path, plan, "Royal Knights", 1)
+    assert {e["id"]: e["decks"] for e in gen1_rk["opponents"]} == {
+        "cp8": ["Examon", "TS Jupitermon"], "gen6-hybrid": ["Examon", "TS Jupitermon"],
+    }
+
+
+def test_lstm_specialist_generation_command_and_suffixes(tmp_path):
+    assert ".value.onnx" in league.model_suffixes("lstm")
+    assert ".value.onnx" not in league.model_suffixes("mlp")
+    plan = dict(
+        cli_bin="/opt/cli", cards_json="/opt/cards.json",
+        games=600, workers=16, seed=42, replay_window=3,
+        training=dict(
+            trainer_kind="lstm", epochs=4, lr=1e-4, batch_size=512, seq_batch_size=16,
+            value_holdout_fraction=0.2, value_activation="tanh",
+            macro_substeps=16, macro_substep_min_prior=0.85,
+            weight_decay=1e-4, value_label_smoothing=0.05, train_device="cuda",
+        ),
+    )
+    cmd = league.generation_command(tmp_path, plan, "Examon", tmp_path / "pool.json", 0)
+    assert "--trainer-kind" in cmd and cmd[cmd.index("--trainer-kind") + 1] == "lstm"
+    assert "--value-activation" not in cmd
+    assert "--macro-substeps" in cmd and cmd[cmd.index("--macro-substeps") + 1] == "16"
+    assert "--macro-substep-min-prior" in cmd and cmd[cmd.index("--macro-substep-min-prior") + 1] == "0.85"
+    assert "--train-device" in cmd and cmd[cmd.index("--train-device") + 1] == "cuda"
