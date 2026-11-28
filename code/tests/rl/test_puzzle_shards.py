@@ -164,8 +164,15 @@ def test_emit_puzzle_shards_on_imperialdramon_search_exam(tmp_path: Path):
 
     ds = azero_trainer.load_shards([shard_out])
     seq_ds = azero_lstm_distill.load_sequence_shards([shard_out])
+    seq_ds_incl = azero_lstm_distill.load_sequence_shards(
+        [shard_out], include_forced_selection=True
+    )
+    forced_rows = int((ds.forced_selection != 0).sum())
+    assert forced_rows == manifest["forced_selection_rows"]
+    assert forced_rows >= 9
     assert len(ds) == manifest["rows"]
-    assert seq_ds.total_rows == manifest["rows"]
+    assert seq_ds.total_rows == manifest["rows"] - forced_rows
+    assert seq_ds_incl.total_rows == manifest["rows"]
     assert len(seq_ds.sequences) == 9
     assert np.all(ds.z == 1.0)
     assert np.all(ds.terminated)

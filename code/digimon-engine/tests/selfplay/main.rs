@@ -82,6 +82,7 @@ fn run_test() {
         reduced_simulations: None,
         full_search_fraction: 1.0,
         cheap_simulations: 64,
+        include_forced_selection_value: false,
         search: DeterminizedConfig::default(),
     };
     config.search.worlds = 2;
@@ -306,6 +307,7 @@ fn run_budget_test() {
         reduced_simulations: Some(4),
         full_search_fraction: 0.5,
         cheap_simulations: 2,
+        include_forced_selection_value: false,
         search: DeterminizedConfig::default(),
     };
     config.search.worlds = 2;

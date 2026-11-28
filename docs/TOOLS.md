@@ -913,25 +913,42 @@ Old pilots still work — their saved model checkpoint contains the `nn.Embeddin
 
 ---
 
-## 9. Tactical Puzzle Lab, Dual-MCP & Warm-Start Shards
+## 9. Tactical Puzzle Lab, Dual-MCP, Auto-Curriculum & Local Tactician GRPO
 
-**Scripts & Modules:** `code/tools/emit_puzzle_shards.py`, `code/tools/puzzle_lab/` (`mine-replays`, `synthesize-archetype`, `compose-boss-matrix`), `code/digimon-engine-mcp/`, `code/digimon-training-mcp/`
+**Scripts & Modules:** `code/tools/emit_puzzle_shards.py`, `code/tools/puzzle_lab/` (`mine-replays`, `synthesize-archetype`, `compose-boss-matrix`, `compile-play-in`, `fuzz-tensor`, `audit-set`, `auto-curriculum`), `code/tools/tactician_grpo/`, `code/digimon-engine-mcp/`, `code/digimon-training-mcp/`
 
-Full operator guide and `.mcp.json` configuration: [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md).
+Operator guides:
+- Dual-MCP, Play-In Compiler, Belief Puzzles, Tensor Fuzzer & Auto-Curriculum: [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md)
+- RunPod `TRL` SFT + Verifiable-Reward GRPO -> Local RTX 4070 `Qwen3-8B` `Ollama`: [`docs/TACTICIAN_GRPO_RUNBOOK.md`](TACTICIAN_GRPO_RUNBOOK.md)
 
 ```bash
-# Emit slot/hand-permuted selfplay-shards-v1 (+ contrastive avoid edges) from Studio puzzles
+# Emit slot/hand-permuted + multi-world belief selfplay-shards-v1 (with forced_selection & chain_anchor_idx)
 python code/tools/emit_puzzle_shards.py \
   --inputs qa/puzzles qa/search-exams/ex13-imperialdramon-dna-paildramon-jamming-lethal.json \
   --out runs/puzzle_shards/ex13_drills \
-  --permutations-per-puzzle 32
+  --permutations-per-puzzle 32 \
+  --belief-worlds 16
 
-# Sweep a parameterized Boss-Board template across Challenger archetypes & security/memory knobs
-PYTHONPATH=code python -m tools.puzzle_lab compose-boss-matrix \
-  --boss-template ex12-erlangmon-invitation \
-  --archetypes "Imperialdramon (UG),Examon" \
-  --security-counts 1,2 --memories 2,4 \
-  --provider ollama
+# Compile a staged puzzle into a legal Turn-1 replay_prefix + symbolic dcgo-harness YAML
+PYTHONPATH=code python -m tools.puzzle_lab compile-play-in \
+  qa/puzzles/ex12-erlangmon-saneiketsu-invitation-trap.json \
+  --out-puzzle runs/playin/erlangmon_prefix.json \
+  --out-dcgo-yaml runs/playin/erlangmon.yaml
+
+# Run read-only differential observation-tensor completeness fuzzing across 5 core rule families
+PYTHONPATH=code python -m tools.puzzle_lab fuzz-tensor \
+  --profile standard_lite_v2 \
+  --checkpoint-zip models/gen1/final.zip
+
+# Air-gapped Auto-Curriculum sidecar (Dual Gate: verify_puzzle + plasticity_probe -> <=10% extra shards)
+PYTHONPATH=code python -m tools.puzzle_lab auto-curriculum \
+  runs/gen1/anchored_eval.json \
+  --out-dir runs/gen1/curriculum \
+  --checkpoint-zip models/gen1/final.zip \
+  --provider ollama --author-model digimon-tactician:8b
+
+# Export SFT + GRPO datasets for Qwen3-8B Digimon Tactician training
+PYTHONPATH=code python -m tools.tactician_grpo export-dataset --out-dir runs/tactician_data
 ```
 
 ---

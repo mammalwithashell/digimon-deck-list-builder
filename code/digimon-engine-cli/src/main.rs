@@ -246,6 +246,10 @@ enum Command {
         /// --full-search-fraction < 1.
         #[arg(long, default_value_t = 64)]
         cheap_sims: u32,
+        /// Emit value-only rows (`policy_weight = 0.0`, `forced_selection = 1`)
+        /// at choiceless (`legal.len() == 1`) `PendingSelection` decisions.
+        #[arg(long)]
+        include_forced_selection_value: bool,
         /// Root Dirichlet noise weight for every searched decision (both
         /// seats). Omit for the search default; 0 for evaluation games.
         #[arg(long)]
@@ -397,6 +401,7 @@ fn run() -> ExitCode {
             reduced_sims,
             full_search_fraction,
             cheap_sims,
+            include_forced_selection_value,
             root_noise_epsilon,
             macro_substeps,
             macro_substep_min_prior,
@@ -429,6 +434,7 @@ fn run() -> ExitCode {
                 reduced_sims,
                 full_search_fraction,
                 cheap_sims,
+                include_forced_selection_value,
                 root_noise_epsilon,
                 macro_substeps,
                 macro_substep_min_prior,

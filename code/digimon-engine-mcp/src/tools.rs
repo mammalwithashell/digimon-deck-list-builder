@@ -20,6 +20,9 @@ use digimon_engine::action::build_action_mask;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::dcgo_recording::parse_jsonl;
+use digimon_engine::inference::inspector::{
+    parse_prior_from_json, verify_belief_puzzle_with_evaluator, VerifyBeliefParams,
+};
 use digimon_engine::inference::{
     inspect_position_with_evaluator, score_line_with_evaluator, InspectPositionParams,
     RefutationTrigger, ScoreLineParams,
@@ -29,6 +32,9 @@ use digimon_engine::observation::{
     build_observation_tensor_with_mask, parse_observation_profile, ObservationProfileId,
 };
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::playin::{
+    compile_play_in, upgrade_puzzle_to_replay_prefix, PlayInConfig,
+};
 use digimon_engine::policies::greedy_action;
 use digimon_engine::search::{
     decision_player, determinized_search_batched, DeterminizedConfig, EvalRequest, PolicyValueFn,
@@ -616,6 +622,39 @@ pub fn list() -> Vec<Value> {
             }
         }),
     ));
+    all.push(tool(
+        "compile_play_in",
+        "Compile a staged studio-puzzle-v1 document into stacked opening decks + a legal Turn-1 action prefix under functional (or strict_zones) equivalence, remapping target/avoid lines and exporting symbolic dcgo-harness YAML.",
+        json!({
+            "type": "object",
+            "properties": {
+                "puzzle_path": { "type": ["string", "null"] },
+                "puzzle_json": { "description": "Inline studio-puzzle-v1 object or JSON string." },
+                "beam_width": { "type": "integer", "minimum": 1, "default": 32 },
+                "max_turns": { "type": "integer", "minimum": 1, "default": 5 },
+                "strict_zones": { "type": "boolean", "default": false },
+                "out_puzzle_path": { "type": ["string", "null"] },
+                "out_dcgo_yaml_path": { "type": ["string", "null"] },
+                "rest_deck_p0": { "type": "string", "default": "custom" },
+                "rest_deck_p1": { "type": "string", "default": "custom" }
+            }
+        }),
+    ));
+    all.push(tool(
+        "verify_belief_puzzle",
+        "Evaluate an imperfect-information puzzle (studio-puzzle-v1 or search-exam-v1 with Turn-1 prefix and top-level prior) across closed-list PIMC worlds conditioned on KnowledgeLedger + WeightedDeckPrior vs open-list worlds, reporting closed_value_mean, open_value_mean, information_gap, closed_visit_shares, and expectation_results.",
+        json!({
+            "type": "object",
+            "properties": {
+                "puzzle_path": { "type": ["string", "null"] },
+                "puzzle_json": { "description": "Inline studio-puzzle-v1 / search-exam-v1 object or JSON string." },
+                "model_id": { "type": ["string", "null"] },
+                "simulations": { "type": "integer", "minimum": 1, "default": 128 },
+                "worlds": { "type": "integer", "minimum": 1, "default": 16 },
+                "seeds": { "type": "integer", "minimum": 1, "default": 4 }
+            }
+        }),
+    ));
 
     all
 }
@@ -687,6 +726,8 @@ pub fn dispatch(
         "load_puzzle" => tool_load_puzzle(args, registry, card_data),
         "save_puzzle" => tool_save_puzzle(args, registry),
         "verify_puzzle" => tool_verify_puzzle(args, registry, card_data),
+        "compile_play_in" => tool_compile_play_in(args, card_data),
+        "verify_belief_puzzle" => tool_verify_belief_puzzle(args, registry, card_data),
 
         other => Err(format!("unknown tool: {}", other)),
     }
@@ -2042,6 +2083,8 @@ fn build_puzzle_live_game(
                     while let Some(p) = lg.game.mulligan_current_player() {
                         let _ = lg.game.accept_mulligan(p, true);
                     }
+                } else if lg.game.turn_count == 0 {
+                    lg.game.turn_count = 1;
                 }
             }
 
@@ -2926,6 +2969,348 @@ fn tool_verify_puzzle(
     }))
 }
 
+fn tool_compile_play_in(
+    args: Value,
+    card_data: &HashMap<String, CardData>,
+) -> Result<Value, String> {
+    let doc = match read_puzzle_document(&args) {
+        Ok(d) => d,
+        Err(e) => return Ok(err_value(e)),
+    };
+    let beam_width = args
+        .get("beam_width")
+        .and_then(Value::as_u64)
+        .unwrap_or(32)
+        .max(1) as usize;
+    let max_turns = args
+        .get("max_turns")
+        .and_then(Value::as_u64)
+        .unwrap_or(5)
+        .max(1) as u16;
+    let strict_zones = args
+        .get("strict_zones")
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    let rest_deck_p0 = args
+        .get("rest_deck_p0")
+        .and_then(Value::as_str)
+        .unwrap_or("custom")
+        .to_string();
+    let rest_deck_p1 = args
+        .get("rest_deck_p1")
+        .and_then(Value::as_str)
+        .unwrap_or("custom")
+        .to_string();
+
+    let cfg = PlayInConfig {
+        beam_width,
+        max_turns,
+        strict_zones,
+        rest_deck_p0,
+        rest_deck_p1,
+    };
+
+    let res = match compile_play_in(&doc, card_data, &cfg) {
+        Ok(r) => r,
+        Err(e) => return Ok(err_value(e)),
+    };
+
+    let mut out_puzzle_written: Option<String> = None;
+    let mut out_yaml_written: Option<String> = None;
+
+    if res.matched {
+        if let Some(raw_out_puzzle) = args
+            .get("out_puzzle_path")
+            .and_then(Value::as_str)
+            .filter(|s| !s.trim().is_empty())
+        {
+            let dest = match resolve_safe_output_path(raw_out_puzzle, "qa/puzzles") {
+                Ok(p) => p,
+                Err(e) => return Ok(err_value(e)),
+            };
+            if let Some(parent) = dest.parent() {
+                if let Err(e) = std::fs::create_dir_all(parent) {
+                    return Ok(err_value(format!("creating {}: {e}", parent.display())));
+                }
+            }
+            let upgraded = upgrade_puzzle_to_replay_prefix(&doc, &res);
+            let pretty = serde_json::to_string_pretty(&upgraded)
+                .map_err(|e| format!("serializing upgraded puzzle: {e}"))?;
+            if let Err(e) = std::fs::write(&dest, format!("{pretty}\n")) {
+                return Ok(err_value(format!("writing {}: {e}", dest.display())));
+            }
+            out_puzzle_written = Some(dest.to_string_lossy().replace('\\', "/"));
+        }
+
+        if let Some(raw_out_yaml) = args
+            .get("out_dcgo_yaml_path")
+            .and_then(Value::as_str)
+            .filter(|s| !s.trim().is_empty())
+        {
+            if let Some(ref yaml_text) = res.dcgo_yaml {
+                let dest = match resolve_safe_output_path(raw_out_yaml, "qa/dcgo-exams") {
+                    Ok(p) => p,
+                    Err(e) => return Ok(err_value(e)),
+                };
+                if let Some(parent) = dest.parent() {
+                    if let Err(e) = std::fs::create_dir_all(parent) {
+                        return Ok(err_value(format!("creating {}: {e}", parent.display())));
+                    }
+                }
+                if let Err(e) = std::fs::write(&dest, yaml_text) {
+                    return Ok(err_value(format!("writing {}: {e}", dest.display())));
+                }
+                out_yaml_written = Some(dest.to_string_lossy().replace('\\', "/"));
+            }
+        }
+    }
+
+    let mut out = json!({
+        "ok": res.ok,
+        "matched": res.matched,
+        "strict_zones": res.strict_zones,
+        "prefix_actions": res.prefix_actions,
+        "stacked_decks": res.stacked_decks,
+        "remapped_lines": res.remapped_lines,
+        "distance_score": res.distance_score,
+    });
+    if let Some(yaml) = res.dcgo_yaml {
+        out["dcgo_yaml"] = json!(yaml);
+    }
+    if let Some(pp) = out_puzzle_written {
+        out["out_puzzle_path"] = json!(pp);
+    }
+    if let Some(yp) = out_yaml_written {
+        out["out_dcgo_yaml_path"] = json!(yp);
+    }
+    if let Some(err) = res.error {
+        out["error"] = json!(err);
+    }
+    Ok(out)
+}
+
+fn warm_recurrent_eval_on_puzzle_prefix(
+    doc: &Value,
+    card_data: &HashMap<String, CardData>,
+    creg: &CardRegistry,
+    eval: &mut dyn PolicyValueFn,
+    profile: ObservationProfileId,
+) -> Result<(), String> {
+    if !eval.is_recurrent() {
+        return Ok(());
+    }
+    eval.reset_episode();
+    let schema = doc.get("schema").and_then(Value::as_str).unwrap_or("");
+    let (d1, d2, seed, actions, turn_reset) = match schema {
+        "studio-puzzle-v1" => {
+            let decks_obj = doc
+                .get("decks")
+                .and_then(Value::as_object)
+                .ok_or_else(|| "missing decks".to_string())?;
+            let d1 = parse_deck_vec(
+                decks_obj.get("1").ok_or_else(|| "missing decks.1".to_string())?,
+                "decks.1",
+            )?;
+            let d2 = parse_deck_vec(
+                decks_obj.get("2").ok_or_else(|| "missing decks.2".to_string())?,
+                "decks.2",
+            )?;
+            let seed = doc.get("seed").and_then(Value::as_u64).unwrap_or(0);
+            let acts = parse_u16_array(
+                doc.get("setup").and_then(|s| s.get("prefix_actions")),
+                "setup.prefix_actions",
+            )?;
+            (d1, d2, seed, acts, 1u16)
+        }
+        "search-exam-v1" => {
+            let setup = doc.get("setup").ok_or_else(|| "missing setup".to_string())?;
+            let dv = setup.get("decks").ok_or_else(|| "missing setup.decks".to_string())?;
+            let (d1, d2) = if let Some(arr) = dv.as_array() {
+                (
+                    parse_deck_vec(&arr[0], "setup.decks[0]")?,
+                    parse_deck_vec(&arr[1], "setup.decks[1]")?,
+                )
+            } else if let Some(obj) = dv.as_object() {
+                (
+                    parse_deck_vec(
+                        obj.get("1").ok_or_else(|| "missing setup.decks.1".to_string())?,
+                        "setup.decks.1",
+                    )?,
+                    parse_deck_vec(
+                        obj.get("2").ok_or_else(|| "missing setup.decks.2".to_string())?,
+                        "setup.decks.2",
+                    )?,
+                )
+            } else {
+                return Err("invalid setup.decks".to_string());
+            };
+            let seed = setup.get("game_seed").and_then(Value::as_u64).unwrap_or(0);
+            let acts = parse_u16_array(setup.get("actions"), "setup.actions")?;
+            let tr = setup.get("turn_count_reset").and_then(Value::as_u64).unwrap_or(1) as u16;
+            (d1, d2, seed, acts, tr)
+        }
+        _ => return Ok(()),
+    };
+    if actions.is_empty() {
+        return Ok(());
+    }
+    let mut lg = LiveGame::from_decks(d1, d2, Some(seed), card_data).map_err(|e| e.to_string())?;
+    let _ = lg.game.enable_belief_knowledge();
+    lg.game.turn_count = turn_reset;
+    for aid in actions {
+        if lg.game.game_over {
+            break;
+        }
+        let pid = decision_player(&lg.game);
+        let mask = build_action_mask(&lg.game, pid);
+        if mask.iter().filter(|&&m| m > 0.5).count() > 1 {
+            let obs = build_observation_tensor_with_mask(&lg.game, pid, creg, profile, &mask);
+            eval.observe_committed_step(pid, &obs, &mask);
+        }
+        lg.game.decode_action(aid, pid);
+    }
+    Ok(())
+}
+
+fn tool_verify_belief_puzzle(
+    args: Value,
+    registry: &mut GameRegistry,
+    card_data: &HashMap<String, CardData>,
+) -> Result<Value, String> {
+    let doc = match read_puzzle_document(&args) {
+        Ok(d) => d,
+        Err(e) => return Ok(err_value(e)),
+    };
+    let model_id = args
+        .get("model_id")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .map(String::from);
+    let simulations = args
+        .get("simulations")
+        .and_then(Value::as_u64)
+        .or_else(|| {
+            doc.get("search")
+                .and_then(|s| s.get("simulations"))
+                .and_then(Value::as_u64)
+        })
+        .unwrap_or(128)
+        .max(1) as u32;
+    let worlds = args
+        .get("worlds")
+        .and_then(Value::as_u64)
+        .or_else(|| {
+            doc.get("search")
+                .and_then(|s| s.get("worlds"))
+                .and_then(Value::as_u64)
+        })
+        .unwrap_or(16)
+        .max(1) as u32;
+    let seeds = args
+        .get("seeds")
+        .and_then(Value::as_u64)
+        .unwrap_or(4)
+        .max(1);
+
+    let spec = match build_puzzle_live_game(&doc, card_data) {
+        Ok(s) => s,
+        Err(e) => return Ok(err_value(e)),
+    };
+
+    let Some(prior_val) = doc.get("prior").filter(|v| !v.is_null()) else {
+        return Ok(err_value(
+            "verify_belief_puzzle requires a top-level 'prior' snapshot object",
+        ));
+    };
+    let prior = match parse_prior_from_json(prior_val, &format!("belief puzzle {}", spec.puzzle_id))
+    {
+        Ok(p) => p,
+        Err(e) => return Ok(err_value(e)),
+    };
+
+    let mut expectations = doc
+        .get("expectations")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+    if expectations.is_empty() {
+        if let Ok(lines) = extract_puzzle_lines(&doc) {
+            for ln in &lines {
+                if let Some(&first_aid) = ln.actions.first() {
+                    if ln.role == "target" {
+                        expectations.push(json!({
+                            "kind": "choose",
+                            "plan": [first_aid],
+                            "label": ln.name,
+                        }));
+                    } else if ln.role == "avoid" {
+                        expectations.push(json!({
+                            "kind": "avoid",
+                            "plan": [first_aid],
+                            "label": ln.name,
+                        }));
+                    }
+                }
+            }
+        }
+    }
+
+    let base_seed = doc
+        .get("search")
+        .and_then(|s| s.get("search_seed"))
+        .and_then(Value::as_u64)
+        .or_else(|| doc.get("seed").and_then(Value::as_u64))
+        .unwrap_or(0);
+    let batch = doc
+        .get("search")
+        .and_then(|s| s.get("batch"))
+        .and_then(Value::as_u64)
+        .unwrap_or(4)
+        .max(1) as usize;
+
+    registry.ensure_card_registry(card_data);
+    let creg = CardRegistry::from_cards(card_data);
+
+    let mut uniform_eval = UniformEvaluator;
+    let (eval_ref, profile): (&mut dyn PolicyValueFn, ObservationProfileId) =
+        match model_id.as_deref() {
+            Some(mid) => {
+                let Some(cached) = registry.models.get_mut(mid) else {
+                    return Ok(err_value(format!("unknown model_id: {mid}")));
+                };
+                (cached.evaluator.as_mut(), cached.info.profile)
+            }
+            None => (&mut uniform_eval, ObservationProfileId::StandardLiteV2),
+        };
+
+    if let Err(e) = warm_recurrent_eval_on_puzzle_prefix(&doc, card_data, &creg, eval_ref, profile)
+    {
+        return Ok(err_value(e));
+    }
+
+    let params = VerifyBeliefParams {
+        profile,
+        simulations,
+        worlds,
+        seeds,
+        base_seed,
+        batch,
+        expectations,
+    };
+
+    match verify_belief_puzzle_with_evaluator(
+        &spec.live_game.game,
+        &creg,
+        eval_ref,
+        spec.seat,
+        &prior,
+        &params,
+    ) {
+        Ok(val) => Ok(val),
+        Err(e) => Ok(err_value(e)),
+    }
+}
+
 // ── tests ────────────────────────────────────────────────────────────────
 
 #[cfg(test)]
@@ -2933,12 +3318,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_includes_42_tools() {
+    fn list_includes_44_tools() {
         let tools = list();
-        // Expected count: 33 baseline tools + 9 Phase 1A/1B tools
-        // (load_model, unload_model, list_models, inspect_position,
-        // score_line, inspect_stack, load_puzzle, save_puzzle, verify_puzzle) = 42.
-        assert_eq!(tools.len(), 42, "tool count drifted");
+        // Expected count: 33 baseline tools + 9 Phase 1A/1B tools + 2 next-wave
+        // tools (compile_play_in, verify_belief_puzzle) = 44.
+        assert_eq!(tools.len(), 44, "tool count drifted");
     }
 
     #[test]
@@ -2949,6 +3333,8 @@ mod tests {
             .collect();
         assert!(names.iter().any(|n| n == "deck_cards"));
         assert!(names.iter().any(|n| n == "recorded_actions"));
+        assert!(names.iter().any(|n| n == "compile_play_in"));
+        assert!(names.iter().any(|n| n == "verify_belief_puzzle"));
     }
 
     #[test]

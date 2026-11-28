@@ -62,19 +62,20 @@ class ShardDataset:
     offsets: np.ndarray  # (N+1,) i64 into actions/visits
     actions: np.ndarray  # (nnz,) i32
     visits: np.ndarray  # (nnz,) f32 raw root visit counts
-    z: np.ndarray  # (N,) f32 in {-1, 0, +1}
+    z: np.ndarray  # (N,) f32 in [-1, +1]
     action_dim: int
     observation_profile: str
     terminated: np.ndarray
     game_ids: np.ndarray
     # (N,) f32 per-row policy-loss weight: 1 for a full search, 0 for a cheap
-    # value-only search (playout-cap randomization). Shards without a
-    # policy_weight.npy array are full searches throughout.
+    # value-only search (playout-cap randomization) or forced PendingSelection.
     policy_weight: np.ndarray
     manifests: list[dict] = field(default_factory=list)
     exclusions: list[dict] = field(default_factory=list)
     avoid_offsets: np.ndarray = field(default_factory=lambda: np.zeros(1, dtype=np.int64))
     avoid_actions: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.int32))
+    forced_selection: np.ndarray = field(default_factory=lambda: np.zeros(0, dtype=np.uint8))
+    chain_anchor_idx: np.ndarray = field(default_factory=lambda: np.full(0, -1, dtype=np.int64))
     # Own the temporary backing file for as long as the dataset is alive.
     _observation_storage: object | None = field(default=None, repr=False)
 
@@ -82,15 +83,157 @@ class ShardDataset:
         return self.obs.shape[0]
 
 
-def load_shards(dirs: list[Path]) -> ShardDataset:
-    """Load validated shards, honoring manifest-bound per-game quarantine files.
+def _filter_shard_dataset_rows(ds: ShardDataset, keep_mask: np.ndarray) -> ShardDataset:
+    """Filter a ShardDataset by a boolean row mask, rebasing sparse offsets and chain anchors."""
+    keep = np.asarray(keep_mask, dtype=bool)
+    n_orig = len(ds)
+    if keep.shape != (n_orig,):
+        raise ValueError(f"keep_mask shape {keep.shape} != ({n_orig},)")
+    if keep.all():
+        return ds
 
-    Optional training_exclusions.json removes whole games before either loss.
-    Original committed shard files remain untouched for replay and auditing.
-    """
+    old_to_new = np.full(n_orig, -1, dtype=np.int64)
+    n_new = int(keep.sum())
+    old_to_new[keep] = np.arange(n_new, dtype=np.int64)
+
+    lengths = np.diff(ds.offsets)
+    edges = np.repeat(keep, lengths)
+    new_act = ds.actions[edges].astype(np.int32, copy=False)
+    new_vis = ds.visits[edges].astype(np.float32, copy=False)
+    new_off = np.concatenate(([0], np.cumsum(lengths[keep], dtype=np.int64)))
+
+    av_lengths = np.diff(ds.avoid_offsets)
+    av_edges = np.repeat(keep, av_lengths)
+    new_av_act = ds.avoid_actions[av_edges].astype(np.int32, copy=False)
+    new_av_off = np.concatenate(([0], np.cumsum(av_lengths[keep], dtype=np.int64)))
+
+    anchor_kept = ds.chain_anchor_idx[keep]
+    new_anchor = np.where(anchor_kept >= 0, old_to_new[np.maximum(anchor_kept, 0)], -1).astype(np.int64)
+
+    obs_storage = tempfile.TemporaryFile(prefix="digimon-replay-sub-")
+    if n_new > 0:
+        obs_storage.write(np.asarray(ds.obs[keep], dtype=np.float32).tobytes(order="C"))
+        obs_storage.flush()
+        new_obs = np.memmap(obs_storage, dtype=np.float32, mode="r+", shape=(n_new, ds.obs.shape[1]))
+    else:
+        new_obs = np.empty((0, ds.obs.shape[1]), dtype=np.float32)
+
+    return ShardDataset(
+        obs=new_obs,
+        offsets=new_off,
+        actions=new_act,
+        visits=new_vis,
+        z=ds.z[keep].astype(np.float32, copy=False),
+        action_dim=ds.action_dim,
+        observation_profile=ds.observation_profile,
+        terminated=ds.terminated[keep].astype(bool, copy=False),
+        game_ids=ds.game_ids[keep].astype(np.int64, copy=False),
+        policy_weight=ds.policy_weight[keep].astype(np.float32, copy=False),
+        manifests=list(ds.manifests),
+        exclusions=list(ds.exclusions),
+        avoid_offsets=new_av_off,
+        avoid_actions=new_av_act,
+        forced_selection=ds.forced_selection[keep].astype(np.uint8, copy=False),
+        chain_anchor_idx=new_anchor,
+        _observation_storage=obs_storage,
+    )
+
+
+def _subsample_extra_dataset(
+    extra_ds: ShardDataset,
+    max_rows: int,
+    seed: int,
+) -> ShardDataset:
+    """Deterministically subsample whole games from extra_ds down to <= max_rows."""
+    if len(extra_ds) <= max_rows:
+        return extra_ds
+    rng = np.random.default_rng(seed)
+    unique_games = np.unique(extra_ds.game_ids)
+    perm_games = rng.permutation(unique_games)
+
+    selected_games: list[int] = []
+    selected_rows = 0
+    for gid in perm_games.tolist():
+        cnt = int(np.sum(extra_ds.game_ids == gid))
+        if selected_rows + cnt <= max_rows:
+            selected_games.append(int(gid))
+            selected_rows += cnt
+
+    if selected_games:
+        keep_mask = np.isin(extra_ds.game_ids, selected_games)
+    else:
+        first_gid = int(perm_games[0])
+        game_rows = np.flatnonzero(extra_ds.game_ids == first_gid)[:max_rows]
+        keep_mask = np.zeros(len(extra_ds), dtype=bool)
+        keep_mask[game_rows] = True
+
+    return _filter_shard_dataset_rows(extra_ds, keep_mask)
+
+
+def _concat_shard_datasets(primary_ds: ShardDataset, extra_ds: ShardDataset) -> ShardDataset:
+    """Pool primary_ds with (already capped) extra_ds while preserving primary manifests."""
+    if extra_ds.obs.shape[1] != primary_ds.obs.shape[1] or extra_ds.action_dim != primary_ds.action_dim:
+        raise ValueError("extra_shards dimensions disagree with primary shards")
+    if extra_ds.observation_profile != primary_ds.observation_profile:
+        raise ValueError(
+            f"extra_shards observation_profile {extra_ds.observation_profile!r} "
+            f"!= primary {primary_ds.observation_profile!r}"
+        )
+    if len(extra_ds) == 0:
+        return primary_ds
+
+    n_primary = len(primary_ds)
+    n_total = n_primary + len(extra_ds)
+    obs_dim = primary_ds.obs.shape[1]
+
+    obs_storage = tempfile.TemporaryFile(prefix="digimon-replay-pooled-")
+    if n_primary > 0:
+        obs_storage.write(np.asarray(primary_ds.obs, dtype=np.float32).tobytes(order="C"))
+    obs_storage.write(np.asarray(extra_ds.obs, dtype=np.float32).tobytes(order="C"))
+    obs_storage.flush()
+    pooled_obs = np.memmap(obs_storage, dtype=np.float32, mode="r+", shape=(n_total, obs_dim))
+
+    act_base = len(primary_ds.actions)
+    pooled_offsets = np.concatenate(
+        [primary_ds.offsets, extra_ds.offsets[1:].astype(np.int64) + act_base]
+    )
+    av_base = len(primary_ds.avoid_actions)
+    pooled_av_offsets = np.concatenate(
+        [primary_ds.avoid_offsets, extra_ds.avoid_offsets[1:].astype(np.int64) + av_base]
+    )
+    game_shift = (int(primary_ds.game_ids.max()) + 1) if n_primary > 0 else 0
+    extra_anchor_rebased = np.where(
+        extra_ds.chain_anchor_idx >= 0,
+        extra_ds.chain_anchor_idx + n_primary,
+        -1,
+    ).astype(np.int64)
+
+    return ShardDataset(
+        obs=pooled_obs,
+        offsets=pooled_offsets,
+        actions=np.concatenate([primary_ds.actions, extra_ds.actions]).astype(np.int32),
+        visits=np.concatenate([primary_ds.visits, extra_ds.visits]).astype(np.float32),
+        z=np.concatenate([primary_ds.z, extra_ds.z]).astype(np.float32),
+        action_dim=primary_ds.action_dim,
+        observation_profile=primary_ds.observation_profile,
+        terminated=np.concatenate([primary_ds.terminated, extra_ds.terminated]).astype(bool),
+        game_ids=np.concatenate([primary_ds.game_ids, extra_ds.game_ids + game_shift]).astype(np.int64),
+        policy_weight=np.concatenate([primary_ds.policy_weight, extra_ds.policy_weight]).astype(np.float32),
+        manifests=list(primary_ds.manifests),
+        exclusions=list(primary_ds.exclusions) + list(extra_ds.exclusions),
+        avoid_offsets=pooled_av_offsets,
+        avoid_actions=np.concatenate([primary_ds.avoid_actions, extra_ds.avoid_actions]).astype(np.int32),
+        forced_selection=np.concatenate([primary_ds.forced_selection, extra_ds.forced_selection]).astype(np.uint8),
+        chain_anchor_idx=np.concatenate([primary_ds.chain_anchor_idx, extra_anchor_rebased]).astype(np.int64),
+        _observation_storage=obs_storage,
+    )
+
+
+def _load_shards_single_pool(dirs: list[Path], *, enforce_same_info: bool = True) -> ShardDataset:
     off_parts, act_parts, vis_parts, z_parts, end_parts, game_parts = [], [], [], [], [], []
     weight_parts = []
     av_off_parts, av_act_parts = [], []
+    forced_parts, anchor_parts = [], []
     observation_storage = tempfile.TemporaryFile(prefix="digimon-replay-")
     observation_rows = 0
     manifests: list[dict] = []
@@ -142,8 +285,11 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                     f"{manifest_path}: observation_profile {manifest['observation_profile']!r} "
                     f"!= {profile!r} — refusing to mix profiles in one buffer"
                 )
-        from digimon_gym.agents.belief_contract import require_same_information
-        require_same_information(manifests + [manifest])
+        from digimon_gym.agents.belief_contract import information_contract, require_same_information
+        if enforce_same_info:
+            require_same_information(manifests + [manifest])
+        else:
+            information_contract(manifest)
         manifests.append(manifest)
         max_game = -1
         for shard in manifest["shards"]:
@@ -158,7 +304,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             rows = obs.shape[0]
             if rows != shard["rows"] or off.shape[0] != rows + 1 or z.shape[0] != rows or terminated.shape != (rows,) or games.shape != (rows,):
                 raise ValueError(f"{s}: row bookkeeping inconsistent")
-            if not np.all(np.isin(z, [-1., 0., 1.])) or not np.all(np.isin(terminated, [0, 1])):
+            if not np.isfinite(z).all() or np.any(z < -1.0) or np.any(z > 1.0) or not np.all(np.isin(terminated, [0, 1])):
                 raise ValueError(f"{s}: invalid terminal targets")
             if off[0] != 0 or off[-1] != len(act) or len(act) != len(vis) or not np.all(np.diff(off) > 0):
                 raise ValueError(f"{s}: invalid sparse policy offsets")
@@ -171,6 +317,27 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                     raise ValueError(f"{s}: invalid policy_weight array")
             else:
                 weight = np.ones(rows, np.float32)
+
+            forced_path = s / "forced_selection.npy"
+            if forced_path.exists():
+                forced = np.load(forced_path)
+                if forced.shape != (rows,) or not np.all(np.isin(forced, [0, 1])):
+                    raise ValueError(f"{s}: invalid forced_selection array")
+                forced = forced.astype(np.uint8, copy=False)
+                weight = np.where(forced != 0, 0.0, weight).astype(np.float32, copy=False)
+            else:
+                forced = np.zeros(rows, dtype=np.uint8)
+
+            anchor_path = s / "chain_anchor_idx.npy"
+            if anchor_path.exists():
+                anchor = np.load(anchor_path)
+                if anchor.shape != (rows,) or not np.issubdtype(anchor.dtype, np.integer):
+                    raise ValueError(f"{s}: invalid chain_anchor_idx array")
+                anchor = anchor.astype(np.int64, copy=True)
+                if np.any((anchor != -1) & ((anchor < 0) | (anchor >= rows))):
+                    raise ValueError(f"{s}: chain_anchor_idx out of bounds")
+            else:
+                anchor = np.full(rows, -1, dtype=np.int64)
 
             av_off_path = s / "avoid_offsets.npy"
             av_act_path = s / "avoid_actions.npy"
@@ -198,10 +365,15 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
                 seen_ids.update(int(g) for g in np.unique(games))
                 keep = ~np.isin(games, list(excluded_ids))
                 excluded_rows += int((~keep).sum())
+                old_to_new = np.full(rows, -1, dtype=np.int64)
+                old_to_new[keep] = np.arange(int(keep.sum()), dtype=np.int64)
                 lengths = np.diff(off)
                 edges = np.repeat(keep, lengths)
                 obs, z, terminated, games = obs[keep], z[keep], terminated[keep], games[keep]
                 weight = weight[keep]
+                forced = forced[keep]
+                anchor_kept = anchor[keep]
+                anchor = np.where(anchor_kept >= 0, old_to_new[np.maximum(anchor_kept, 0)], -1)
                 act, vis = act[edges], vis[edges]
                 off = np.concatenate(([0], np.cumsum(lengths[keep], dtype=np.int64)))
 
@@ -217,6 +389,7 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             off_parts.append((off if not off_parts else off[1:]).astype(np.int64) + base)
             av_base = sum(a.shape[0] for a in av_act_parts)
             av_off_parts.append((av_off if not av_off_parts else av_off[1:]).astype(np.int64) + av_base)
+            row_base = observation_rows
             # Stream each validated shard once. Retaining every dense array and
             # then concatenating it doubles peak RAM for multi-generation replay.
             # The mapping preserves row order/float bits and supports the same
@@ -230,6 +403,8 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
             game_parts.append(games.astype(np.int64) + game_base)
             weight_parts.append(weight.astype(np.float32, copy=False))
             av_act_parts.append(av_act.astype(np.int32, copy=False))
+            forced_parts.append(forced.astype(np.uint8, copy=False))
+            anchor_parts.append(np.where(anchor >= 0, anchor + row_base, -1).astype(np.int64))
         if excluded_ids - seen_ids:
             raise ValueError(f"{quarantine_path}: exclusion refers to absent game IDs {sorted(excluded_ids - seen_ids)}")
         if quarantine is not None:
@@ -259,8 +434,33 @@ def load_shards(dirs: list[Path]) -> ShardDataset:
         exclusions=exclusions,
         avoid_offsets=np.concatenate(av_off_parts),
         avoid_actions=np.concatenate(av_act_parts).astype(np.int32),
+        forced_selection=np.concatenate(forced_parts).astype(np.uint8) if forced_parts else np.zeros(0, dtype=np.uint8),
+        chain_anchor_idx=np.concatenate(anchor_parts).astype(np.int64) if anchor_parts else np.zeros(0, dtype=np.int64),
         _observation_storage=observation_storage,
     )
+
+
+def load_shards(
+    dirs: list[Path],
+    extra_shards: list[Path] | None = None,
+    *,
+    max_extra_shard_share: float = 0.10,
+    seed: int = 0,
+) -> ShardDataset:
+    """Load validated shards, honoring manifest-bound per-game quarantine files and optional capped extra_shards."""
+    if not (0.0 < max_extra_shard_share < 1.0):
+        raise ValueError(f"max_extra_shard_share must lie in (0, 1), got {max_extra_shard_share}")
+    primary_ds = _load_shards_single_pool(list(dirs), enforce_same_info=True)
+    extra_list = [Path(p) for p in (extra_shards or [])]
+    if not extra_list:
+        return primary_ds
+    extra_ds = _load_shards_single_pool(extra_list, enforce_same_info=False)
+    n_primary = len(primary_ds)
+    if n_primary > 0 and len(extra_ds) > 0:
+        max_rows = max(1, int(n_primary * max_extra_shard_share / (1.0 - max_extra_shard_share)))
+        if len(extra_ds) > max_rows:
+            extra_ds = _subsample_extra_dataset(extra_ds, max_rows=max_rows, seed=seed)
+    return _concat_shard_datasets(primary_ds, extra_ds)
 
 
 def _avoid_margin_loss(
@@ -441,6 +641,9 @@ def train(
     value_label_smoothing: float = 0.0,
     avoid_margin_coef: float | None = None,
     avoid_margin: float = 1.0,
+    consistency_coef: float = 0.25,
+    extra_shards: list[Path] | None = None,
+    max_extra_shard_share: float = 0.10,
 ) -> dict:
     """Run the AZ update and save the new checkpoint. Returns a summary dict.
 
@@ -466,9 +669,28 @@ def train(
         raise ValueError(f"avoid_margin_coef must be >= 0.0, got {avoid_margin_coef}")
     if avoid_margin < 0.0:
         raise ValueError(f"avoid_margin must be >= 0.0, got {avoid_margin}")
+    if consistency_coef < 0.0:
+        raise ValueError(f"consistency_coef must be >= 0.0, got {consistency_coef}")
+    if not (0.0 < max_extra_shard_share < 1.0):
+        raise ValueError(f"max_extra_shard_share must lie in (0, 1), got {max_extra_shard_share}")
 
     torch.manual_seed(seed)
-    ds = load_shards(shard_dirs)
+    primary_ds = _load_shards_single_pool(list(shard_dirs), enforce_same_info=True)
+    extra_list = [Path(p) for p in (extra_shards or [])]
+    extra_rows_loaded = 0
+    extra_rows_used = 0
+    if extra_list:
+        raw_extra_ds = _load_shards_single_pool(extra_list, enforce_same_info=False)
+        extra_rows_loaded = len(raw_extra_ds)
+        if len(primary_ds) > 0 and extra_rows_loaded > 0:
+            max_rows = max(1, int(len(primary_ds) * max_extra_shard_share / (1.0 - max_extra_shard_share)))
+            if extra_rows_loaded > max_rows:
+                raw_extra_ds = _subsample_extra_dataset(raw_extra_ds, max_rows=max_rows, seed=seed)
+        extra_rows_used = len(raw_extra_ds)
+        ds = _concat_shard_datasets(primary_ds, raw_extra_ds)
+    else:
+        ds = primary_ds
+
     eff_avoid_coef = (
         (0.2 if len(ds.avoid_actions) > 0 else 0.0)
         if avoid_margin_coef is None
@@ -502,10 +724,11 @@ def train(
     if policy_rows == 0:
         raise ValueError("No policy-target rows (every row has policy_weight 0); refusing to train the actor on nothing")
     print(
-        f"azero_trainer: {len(ds)} rows from {len(shard_dirs)} dir(s), "
-        f"obs_dim {ds.obs.shape[1]}, profile {ds.observation_profile}, "
+        f"azero_trainer: {len(ds)} rows from {len(shard_dirs)} dir(s)"
+        + (f" (+{extra_rows_used}/{extra_rows_loaded} extra rows)" if extra_list else "")
+        + f", obs_dim {ds.obs.shape[1]}, profile {ds.observation_profile}, "
         f"{truncated} truncated-game rows (z=0), "
-        f"{len(ds) - policy_rows} cheap value-only rows excluded from the policy loss, "
+        f"{len(ds) - policy_rows} cheap/forced value-only rows excluded from the policy loss, "
         f"{sum(q['excluded_rows'] for q in ds.exclusions)} quarantined rows excluded from both losses, "
         f"{len(heldout_rows)} held-out rows from {len(np.unique(ds.game_ids[heldout]))} whole games, "
         f"value activation {activation}",
@@ -533,7 +756,7 @@ def train(
     history: list[dict] = []
     for epoch in range(epochs):
         order = rng.permutation(fit_rows)
-        pol_sum = val_sum = av_sum = 0.0
+        pol_sum = val_sum = av_sum = cc_sum = 0.0
         batches = 0
         for start in range(0, len(order), batch_size):
             idx = order[start : start + batch_size]
@@ -552,8 +775,8 @@ def train(
             # evaluator (illegal mass exactly excluded from the CE).
             masked_logits = logits.masked_fill(~mask_t, torch.finfo(logits.dtype).min)
             logp = torch.log_softmax(masked_logits, dim=-1)
-            # Cheap (value-only) rows carry policy_weight 0 and drop out of
-            # the actor loss; the mean runs over the policy-target rows only.
+            # Cheap / forced-selection (value-only) rows carry policy_weight 0
+            # and drop out of the actor loss; the mean runs over policy-target rows only.
             row_ce = -(pi_t * logp.masked_fill(~mask_t, 0.0)).sum(dim=-1)
             weight_t = torch.as_tensor(ds.policy_weight[idx], device=dev)
             weight_total = weight_t.sum()
@@ -561,6 +784,26 @@ def train(
             terminal = torch.as_tensor(ds.terminated[idx], device=dev)
             value_loss = torch.nn.functional.mse_loss(values[terminal], z_t[terminal]) if terminal.any() else values.sum() * 0.0
             loss = policy_loss + value_coef * value_loss
+
+            if consistency_coef > 0.0 and len(ds.chain_anchor_idx) > 0:
+                anchors = ds.chain_anchor_idx[idx]
+                has_anchor = (anchors >= 0) & (anchors < len(ds))
+                if np.any(has_anchor):
+                    mid_pos = np.flatnonzero(has_anchor)
+                    anchor_ds_idx = anchors[mid_pos]
+                    with torch.no_grad():
+                        obs_anchor_t = torch.as_tensor(ds.obs[anchor_ds_idx], device=dev)
+                        _, raw_anchor = _forward(policy, obs_anchor_t)
+                        v_anchor = value_activation.apply(activation, raw_anchor).detach()
+                    mid_pos_t = torch.as_tensor(mid_pos, dtype=torch.long, device=dev)
+                    v_mid = values[mid_pos_t]
+                    consistency_loss = torch.mean((v_mid - v_anchor) ** 2)
+                    loss = loss + float(consistency_coef) * consistency_loss
+                else:
+                    consistency_loss = values.sum() * 0.0
+            else:
+                consistency_loss = values.sum() * 0.0
+
             if eff_avoid_coef > 0.0:
                 avoid_loss = _avoid_margin_loss(logits, pi_np, ds, idx, avoid_margin)
                 loss = loss + eff_avoid_coef * avoid_loss
@@ -573,11 +816,13 @@ def train(
             pol_sum += float(policy_loss.detach())
             val_sum += float(value_loss.detach())
             av_sum += float(avoid_loss.detach())
+            cc_sum += float(consistency_loss.detach())
             batches += 1
         epoch_stats = {
             "epoch": epoch,
             "policy_loss": pol_sum / max(batches, 1),
             "value_loss": val_sum / max(batches, 1),
+            "consistency_loss": cc_sum / max(batches, 1),
         }
         if eff_avoid_coef > 0.0:
             epoch_stats["avoid_loss"] = av_sum / max(batches, 1)
@@ -590,7 +835,8 @@ def train(
         history.append(epoch_stats)
         print(
             f"  epoch {epoch}: policy_loss {epoch_stats['policy_loss']:.4f} "
-            f"value_loss {epoch_stats['value_loss']:.4f}"
+            f"value_loss {epoch_stats['value_loss']:.4f} "
+            f"consistency_loss {epoch_stats['consistency_loss']:.4f}"
             + (f" avoid_loss {epoch_stats['avoid_loss']:.4f}" if "avoid_loss" in epoch_stats else "")
             + (f" | held-out value_mse {heldout_stats['value_mse']} vs constant "
                f"{heldout_stats['constant_mse']}, policy_ce {heldout_stats['policy_ce']}"
@@ -637,6 +883,10 @@ def train(
     return {
         "information": getattr(model,"digimon_information", {"regime":"legacy_exact"}),
         "rows": len(ds),
+        "extra_rows_loaded": int(extra_rows_loaded),
+        "extra_rows_used": int(extra_rows_used),
+        "forced_selection_rows": int((ds.forced_selection != 0).sum()),
+        "consistency_coef": float(consistency_coef),
         "truncated_rows": truncated,
         "excluded_rows": sum(q["excluded_rows"] for q in ds.exclusions),
         "excluded_games": sum(len(q["games"]) for q in ds.exclusions),
@@ -657,7 +907,9 @@ def calibrate_value(init_from: Path, shard_dirs: list[Path], out: Path,
                     epochs: int = 8, batch_size: int = 256, lr: float = 1e-3,
                     device: str = "auto", seed: int = 0,
                     value_activation_name: str | None = None,
-                    select_best: bool = False) -> dict:
+                    select_best: bool = False,
+                    extra_shards: list[Path] | None = None,
+                    max_extra_shard_share: float = 0.10) -> dict:
     """Refit only the critic on completed games, keeping the actor bitwise fixed.
 
     Split by complete game, never by individual decision. This changes the
@@ -672,7 +924,12 @@ def calibrate_value(init_from: Path, shard_dirs: list[Path], out: Path,
     from sb3_contrib import MaskablePPO
     from digimon_gym.agents import value_activation
     torch.manual_seed(seed)
-    ds = load_shards(shard_dirs)
+    ds = load_shards(
+        shard_dirs,
+        extra_shards=extra_shards,
+        max_extra_shard_share=max_extra_shard_share,
+        seed=seed,
+    )
     model = MaskablePPO.load(str(init_from), device=device)
     validate_checkpoint(model, ds.observation_profile)
     activation = value_activation.resolve(model, value_activation_name)
@@ -757,11 +1014,30 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="selfplay-shards-v1 directories (pass several for a sliding window)",
     )
+    p.add_argument(
+        "--extra-shards",
+        type=Path,
+        nargs="*",
+        default=[],
+        help="auxiliary puzzle/curriculum shard directories (capped by --max-extra-shard-share)",
+    )
+    p.add_argument(
+        "--max-extra-shard-share",
+        type=float,
+        default=0.10,
+        help="maximum row share in (0, 1) permitted for --extra-shards relative to total rows",
+    )
     p.add_argument("--out", type=Path, required=True, help="output SB3 .zip")
     p.add_argument("--epochs", type=int, default=4)
     p.add_argument("--batch-size", type=int, default=512)
     p.add_argument("--lr", type=float, default=2e-4)
     p.add_argument("--value-coef", type=float, default=1.0)
+    p.add_argument(
+        "--consistency-coef",
+        type=float,
+        default=0.25,
+        help="continuation-consistent critic loss coefficient on PendingSelection chains (0.0 disables)",
+    )
     p.add_argument("--device", default="auto")
     p.add_argument("--seed", type=int, default=0)
     p.add_argument(
@@ -793,7 +1069,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.calibrate_value_only:
         calibrate_value(args.init_from, args.shards, args.out, epochs=args.epochs,
                         batch_size=args.batch_size, lr=args.lr, device=args.device, seed=args.seed,
-                        value_activation_name=args.value_activation, select_best=True)
+                        value_activation_name=args.value_activation, select_best=True,
+                        extra_shards=list(args.extra_shards),
+                        max_extra_shard_share=args.max_extra_shard_share)
         if args.export_onnx is not None:
             from digimon_gym.tensor_profiles import get_tensor_profile
             from tools.export_onnx import export_mlp
@@ -817,6 +1095,9 @@ def main(argv: list[str] | None = None) -> int:
         value_label_smoothing=args.value_label_smoothing,
         avoid_margin_coef=args.avoid_margin_coef,
         avoid_margin=args.avoid_margin,
+        consistency_coef=args.consistency_coef,
+        extra_shards=list(args.extra_shards),
+        max_extra_shard_share=args.max_extra_shard_share,
     )
     return 0
 

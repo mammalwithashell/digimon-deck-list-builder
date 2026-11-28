@@ -219,3 +219,92 @@ PYTHONPATH=code python -m tools.puzzle_lab compose-boss-matrix \
   --export-search-exams \
   --provider gemini --allow-closed-models --pin-rules-cache
 ```
+
+#### 4. Guided Play-In Compiler & Symbolic DCGO YAML Export (`compile-play-in` / MCP `compile_play_in`)
+Compiles a mid-game staged `studio-puzzle-v1` board into a 100% legal Turn-1 stacked-deck + `prefix_actions` setup via Rust goal-directed beam search (`digimon_engine::playin`) with optional `Role.AUTHOR` LLM macro-turn fallback, preserving `KnowledgeLedger` (`closed-list` belief compatibility), pre-warming LSTM `(h, c)` hidden states, remapping solver lines, and exporting symbolic `dcgo-harness` YAML:
+
+```bash
+PYTHONPATH=code python -m tools.puzzle_lab compile-play-in \
+  qa/puzzles/ex12-erlangmon-saneiketsu-invitation-trap.json \
+  --beam-width 32 --max-turns 5 \
+  --out-puzzle runs/playin/erlangmon_replay_prefix.json \
+  --out-dcgo-yaml runs/playin/erlangmon_exam.yaml
+```
+
+*(Pass `--strict-zones` when exact `hand` and `trash` multisets are required instead of default functional equivalence.)*
+
+#### 5. Observation-Tensor Completeness & Card-Fidelity Fuzzer (`fuzz-tensor` & `audit-set`)
+Strictly read-only over active tensor contracts (`standard_lite_v2` / `standard_lite_deck_v2`):
+- `fuzz-tensor` runs deterministic zero-LLM state-pair fuzzing across 5 core rule families (`opt_spent_vs_unspent`, `delay_armed_vs_placing_turn`, `modifier_active_vs_absent`, `facedown_vs_faceup_source`, `linked_vs_unlinked`), attributing `|obs_A - obs_B|` across `get_observation_layout(profile)` sections and optionally running `plasticity_probe`.
+- `audit-set` prompts `Role.AUTHOR` with printed card text to probe `GameEvent` fidelity on implemented cards in a set:
+
+```bash
+# Zero-LLM tensor completeness fuzzing + white-box plasticity check
+PYTHONPATH=code python -m tools.puzzle_lab fuzz-tensor \
+  --profile standard_lite_v2 \
+  --checkpoint-zip models/gen1/final.zip \
+  --json-out runs/fuzz/tensor_fuzz.json \
+  --markdown-out runs/fuzz/tensor_fuzz.md
+
+# Read-only LLM card-set fidelity audit
+PYTHONPATH=code python -m tools.puzzle_lab audit-set \
+  --set EX12 --max-cards 10 \
+  --provider ollama --author-model digimon-tactician:8b \
+  --out-dir runs/fuzz/ex12_audit
+```
+
+#### 6. Air-Gapped Auto-Curriculum Sidecar (`auto-curriculum`)
+Reads an `anchored_eval` summary or Specialist League `gates/gen<g>/*.json` directory (`specialist-gate-v1`), selects bottom-$K$ matchups (`--win-rate-threshold 0.45`), harvests drills, enforces the Mandatory Dual Gate (`verify_puzzle` + `plasticity_probe`), quarantines `observation_blindness` cases to `tensor_blindness_quarantine.json`, and emits a SHA256-stamped `selfplay-shards-v1` bundle (`curriculum_manifest.json`) for `--extra-shards` (`<= 10%` batch share):
+
+```bash
+PYTHONPATH=code python -m tools.puzzle_lab auto-curriculum \
+  runs/league/gates/gen1 \
+  --recordings runs/league/recordings \
+  --checkpoint-zip models/gen1/final.zip \
+  --out-dir runs/league/curriculum_gen1 \
+  --provider ollama --author-model digimon-tactician:8b
+```
+
+---
+
+## 6. Imperfect-Information Belief Puzzles & Mid-Prompt Critic Consistency
+
+### 6.1 Belief Puzzles (`verify_belief_puzzle` & `--belief-worlds`)
+Evaluate probabilistic hand-trap discipline (`closed-list` PIMC conditioned on `KnowledgeLedger` + `WeightedDeckPrior` vs. omniscient `open-list`) and emit multi-world Bayes-averaged root targets $(\pi_{\text{belief}}, \bar{z} \in [-1, +1])$:
+
+```bash
+# Grade closed-list PIMC + report Open-vs-Closed Information Gap
+cargo run --release -p digimon-engine --example search_exam -- \
+  qa/search-exams/ex13-belief-hand-trap-discipline.json \
+  --model models/gen1/policy.onnx \
+  --seeds 4 --belief-gap
+
+# Emit multi-world belief shards
+python code/tools/emit_puzzle_shards.py \
+  --inputs qa/puzzles/ex13-belief-hand-trap-discipline.json \
+  --out runs/puzzle_shards/belief_drills \
+  --belief-worlds 16
+```
+
+### 6.2 Forced-Selection Value Rows, Critic Consistency & `--extra-shards` Cap
+Cure intermediate `PendingSelection` value-head cliffs (`<Training>`, DNA material selection, `<Delay>`) without misaligning LSTM step clocks:
+- `emit_puzzle_shards.py` (default on) and `digimon-engine-cli selfplay --include-forced-selection-value` emit value-only rows (`policy_weight = 0.0`, `forced_selection.npy`) plus `chain_anchor_idx.npy` across non-RNG single-mover resolution chains.
+- `azero_trainer.py`, `azero_lstm_distill.py` (which filters `forced_selection == 1` out by default unless `--include-forced-selection` is passed), `run_selfplay_generation.py`, and `specialist_league.py` support `--consistency-coef 0.25` and `--extra-shards` capped at `--max-extra-shard-share 0.10`:
+
+```bash
+python -m digimon_gym.agents.azero_trainer \
+  --init-from models/generalist_base/final.zip \
+  --shards runs/selfplay/gen1 \
+  --extra-shards runs/league/curriculum_gen1/extra_shards runs/puzzle_shards/belief_drills \
+  --max-extra-shard-share 0.10 \
+  --consistency-coef 0.25 \
+  --avoid-margin-coef 0.2 \
+  --out models/generalist_gen2/final.zip
+```
+
+---
+
+## 7. Local RTX 4070 `Qwen3-8B` Digimon Tactician (`tools.tactician_grpo`)
+
+Distill verified Digimon puzzle-solving and counter-staging reasoning into an Apache-2.0 `Qwen/Qwen3-8B` model (`~5.2 GB` `Q4_K_M` GGUF co-residing cleanly in 12 GB VRAM on an RTX 4070 alongside PPO/Studio) using RunPod `TRL` `SFTTrainer` + 5-stage verifiable-reward `GRPOTrainer`. See [`docs/TACTICIAN_GRPO_RUNBOOK.md`](TACTICIAN_GRPO_RUNBOOK.md) for the end-to-end RunPod -> local `Ollama` deployment runbook.
+

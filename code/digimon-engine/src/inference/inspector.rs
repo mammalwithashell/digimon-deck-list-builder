@@ -7,6 +7,7 @@
 //! [`crate::search::load_search_evaluator_for_profile`], or an already-loaded
 //! `&mut dyn PolicyValueFn` from a cached model registry.
 
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
 use ort::session::Session;
@@ -17,6 +18,10 @@ use crate::action::build_action_mask;
 use crate::action::explain::{explain_action, legal_decoded_actions, ActionExplanation};
 use crate::action::space::PASS;
 use crate::card_registry::CardRegistry;
+use crate::determinize::{
+    beliefs::{CandidateDeck, PriorSnapshot, WeightedDeckPrior},
+    closed::materialize_closed_with_diagnostics,
+};
 use crate::enums::PlayerId;
 use crate::events::GameEvent;
 use crate::game::Game;
@@ -25,8 +30,9 @@ use crate::observation::{
 };
 use crate::policies::greedy_action;
 use crate::search::{
-    decision_player, determinized_search_batched, load_search_evaluator_for_profile,
-    DeterminizedConfig, EvalRequest, Mcts, PolicyValueFn, SearchConfig,
+    decision_player, determinized_search_batched, determinized_search_sampled,
+    load_search_evaluator_for_profile, DeterminizedConfig, EvalRequest, Mcts, PolicyValueFn,
+    SearchConfig,
 };
 
 use super::InferenceError;
@@ -526,6 +532,265 @@ pub fn evaluate_expectations(
         }));
     }
     expectation_results
+}
+
+/// Parameters for [`verify_belief_puzzle_with_evaluator`].
+#[derive(Debug, Clone)]
+pub struct VerifyBeliefParams {
+    pub profile: ObservationProfileId,
+    pub simulations: u32,
+    pub worlds: u32,
+    pub seeds: u64,
+    pub base_seed: u64,
+    pub batch: usize,
+    pub expectations: Vec<Value>,
+}
+
+impl Default for VerifyBeliefParams {
+    fn default() -> Self {
+        Self {
+            profile: ObservationProfileId::StandardLiteV2,
+            simulations: 128,
+            worlds: 16,
+            seeds: 4,
+            base_seed: 0,
+            batch: 4,
+            expectations: Vec::new(),
+        }
+    }
+}
+
+/// Parse a `"prior"` JSON object (`format_id`, `population`, `candidates`,
+/// `unseen_mass`, `fallback_attempts`) into a validated [`WeightedDeckPrior`].
+pub fn parse_prior_from_json(
+    prior_val: &Value,
+    provenance: &str,
+) -> Result<WeightedDeckPrior, String> {
+    let obj = prior_val
+        .as_object()
+        .ok_or_else(|| "puzzle 'prior' must be a JSON object".to_string())?;
+    let format_id = obj
+        .get("format_id")
+        .and_then(Value::as_str)
+        .unwrap_or("standard");
+    let pop_val = obj
+        .get("population")
+        .ok_or_else(|| "prior missing 'population' array".to_string())?;
+    let population: BTreeSet<String> = serde_json::from_value(pop_val.clone())
+        .map_err(|e| format!("invalid prior.population: {e}"))?;
+    let cand_val = obj
+        .get("candidates")
+        .ok_or_else(|| "prior missing 'candidates' array".to_string())?;
+    let candidates: Vec<CandidateDeck> = serde_json::from_value(cand_val.clone())
+        .map_err(|e| format!("invalid prior.candidates: {e}"))?;
+    let unseen_mass = obj
+        .get("unseen_mass")
+        .and_then(Value::as_f64)
+        .unwrap_or(0.02);
+    let fallback_attempts = obj
+        .get("fallback_attempts")
+        .and_then(Value::as_u64)
+        .unwrap_or(16) as usize;
+    let snapshot = PriorSnapshot::new(
+        format_id,
+        provenance,
+        population,
+        candidates,
+        unseen_mass,
+        fallback_attempts,
+    )?;
+    WeightedDeckPrior::new(snapshot)
+}
+
+fn format_plan_label(game: &Game, viewer: PlayerId, plan: &[u16]) -> String {
+    if plan.is_empty() {
+        return String::new();
+    }
+    if plan.len() == 1 {
+        return explain_action(game, viewer, plan[0]).label;
+    }
+    let mut labels = Vec::with_capacity(plan.len());
+    for (idx, &aid) in plan.iter().enumerate() {
+        if idx == 0 {
+            labels.push(explain_action(game, viewer, aid).label);
+        } else {
+            labels.push(format!("Action {aid}"));
+        }
+    }
+    labels.join(" -> ")
+}
+
+/// Evaluate an imperfect-information position under both `closed-list` PIMC
+/// (`KnowledgeLedger` + [`WeightedDeckPrior`] via [`materialize_closed_with_diagnostics`])
+/// and `open-list` PIMC across `params.seeds` seeds and `params.worlds` worlds,
+/// reporting `closed_value_mean`, `open_value_mean`, `information_gap = open_value_mean - closed_value_mean`,
+/// `closed_visit_shares`, and `expectation_results`.
+pub fn verify_belief_puzzle_with_evaluator(
+    game: &Game,
+    registry: &CardRegistry,
+    eval: &mut dyn PolicyValueFn,
+    viewer: PlayerId,
+    prior: &WeightedDeckPrior,
+    params: &VerifyBeliefParams,
+) -> Result<Value, String> {
+    if game.game_over {
+        return Err("Game is already over".to_string());
+    }
+    if decision_player(game) != viewer {
+        return Err(format!(
+            "decision_player ({}) does not match belief puzzle viewer ({viewer})",
+            decision_player(game)
+        ));
+    }
+    let memory = game.belief_knowledge(viewer).map_err(|e| {
+        format!(
+            "belief_knowledge unavailable for viewer {viewer} (requires Turn-1 legal action prefix with enable_belief_knowledge()): {e}"
+        )
+    })?;
+
+    let seeds = params.seeds.max(1);
+    let worlds = params.worlds.max(1);
+    let simulations = params.simulations.max(1);
+    let batch = params.batch.max(1);
+
+    let mut closed_val_sum = 0.0f64;
+    let mut open_val_sum = 0.0f64;
+    let mut plan_stats: BTreeMap<Vec<u16>, (f64, f64, u64)> = BTreeMap::new();
+    let mut exp_pass_counts = vec![0u64; params.expectations.len()];
+    let mut exp_obs_share_sum = vec![0.0f64; params.expectations.len()];
+    let mut exp_first_detail = vec![String::new(); params.expectations.len()];
+
+    for k in 0..seeds {
+        let mut config = DeterminizedConfig::default();
+        config.worlds = worlds;
+        config.search.simulations = simulations;
+        config.search.dirichlet_epsilon = 0.0;
+        config.search.observation_profile = params.profile;
+        config.search.seed = params.base_seed.wrapping_add(k.wrapping_mul(0x5851f42d4c957f2d));
+
+        let closed_res = determinized_search_sampled(
+            registry,
+            game,
+            viewer,
+            eval,
+            &config,
+            batch,
+            &mut |w_seed| {
+                materialize_closed_with_diagnostics(game, viewer, memory, prior, w_seed)
+                    .map(|(w, _)| w)
+            },
+        )?;
+        let open_res = determinized_search_batched(registry, game, viewer, eval, &config, batch);
+
+        closed_val_sum += closed_res.root_value as f64;
+        open_val_sum += open_res.root_value as f64;
+
+        let total_visits: u32 = closed_res.root_plans.iter().map(|p| p.1).sum();
+        let mut seed_plan_shares = Vec::with_capacity(closed_res.root_plans.len());
+        for (plan, visits, q_val) in &closed_res.root_plans {
+            let share = if total_visits == 0 {
+                0.0
+            } else {
+                *visits as f64 / total_visits as f64
+            };
+            seed_plan_shares.push((plan.clone(), share));
+            let entry = plan_stats.entry(plan.clone()).or_insert((0.0, 0.0, 0));
+            entry.0 += share;
+            entry.1 += *q_val as f64;
+            entry.2 += 1;
+        }
+
+        let chosen_plan: Vec<u16> = closed_res
+            .best_plan()
+            .map(|p| p.to_vec())
+            .unwrap_or_default();
+        let chosen_action_id = chosen_plan.first().copied().unwrap_or(0);
+        let seed_evals = evaluate_expectations(
+            &params.expectations,
+            &seed_plan_shares,
+            &chosen_plan,
+            chosen_action_id,
+        );
+        for (i, er) in seed_evals.iter().enumerate() {
+            if er.get("passed").and_then(Value::as_bool) == Some(true) {
+                exp_pass_counts[i] += 1;
+            }
+            exp_obs_share_sum[i] += er
+                .get("observed_share")
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0);
+            if k == 0 {
+                exp_first_detail[i] = er
+                    .get("detail")
+                    .and_then(Value::as_str)
+                    .unwrap_or("")
+                    .to_string();
+            }
+        }
+    }
+
+    let closed_value_mean = (closed_val_sum / seeds as f64) as f32;
+    let open_value_mean = (open_val_sum / seeds as f64) as f32;
+    let information_gap = open_value_mean - closed_value_mean;
+
+    let mut closed_visit_shares_vec: Vec<(Vec<u16>, f64, f32)> = plan_stats
+        .into_iter()
+        .map(|(plan, (share_sum, q_sum, q_cnt))| {
+            let mean_share = share_sum / seeds as f64;
+            let mean_q = if q_cnt > 0 {
+                (q_sum / q_cnt as f64) as f32
+            } else {
+                0.0
+            };
+            (plan, mean_share, mean_q)
+        })
+        .collect();
+    closed_visit_shares_vec.sort_by(|a, b| {
+        b.1.partial_cmp(&a.1)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.0.cmp(&b.0))
+    });
+
+    let closed_visit_shares: Vec<Value> = closed_visit_shares_vec
+        .into_iter()
+        .map(|(plan, mean_share, mean_q)| {
+            let label = format_plan_label(game, viewer, &plan);
+            json!({
+                "plan": plan,
+                "label": label,
+                "mean_share": mean_share,
+                "mean_q": mean_q,
+            })
+        })
+        .collect();
+
+    let mut expectation_results = Vec::with_capacity(params.expectations.len());
+    for (i, exp) in params.expectations.iter().enumerate() {
+        expectation_results.push(json!({
+            "kind": exp.get("kind").and_then(Value::as_str).unwrap_or(""),
+            "plan": exp.get("plan").cloned().unwrap_or_else(|| json!([])),
+            "label": exp.get("label").and_then(Value::as_str).unwrap_or(""),
+            "passed": exp_pass_counts[i] == seeds,
+            "passed_seeds": exp_pass_counts[i],
+            "total_seeds": seeds,
+            "observed_share": exp_obs_share_sum[i] / seeds as f64,
+            "detail": exp_first_detail[i],
+        }));
+    }
+
+    let passed = expectation_results
+        .iter()
+        .all(|r| r.get("passed").and_then(Value::as_bool) == Some(true));
+
+    Ok(json!({
+        "ok": true,
+        "passed": passed,
+        "closed_value_mean": closed_value_mean,
+        "open_value_mean": open_value_mean,
+        "information_gap": information_gap,
+        "closed_visit_shares": closed_visit_shares,
+        "expectation_results": expectation_results,
+    }))
 }
 
 /// Match `refutation_triggers` at an opponent interrupt / decision node (`decision_player != solver`).

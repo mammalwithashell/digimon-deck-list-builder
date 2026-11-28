@@ -50,6 +50,7 @@ pub mod permanent;
 pub mod phases;
 pub mod player;
 pub mod player_cost_reducer;
+pub mod playin;
 pub mod policies;
 pub mod recorder;
 pub mod replacement;

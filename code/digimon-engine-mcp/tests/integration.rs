@@ -156,10 +156,12 @@ fn tools_list_includes_lifecycle_state_action() {
         "load_puzzle",
         "save_puzzle",
         "verify_puzzle",
+        "compile_play_in",
+        "verify_belief_puzzle",
     ] {
         assert!(names.contains(n), "tools/list missing {}", n);
     }
-    assert_eq!(names.len(), 42);
+    assert_eq!(names.len(), 44);
 }
 
 /// Build a small ST1 deck of 5 ST1-01 + 45 ST1-03 as a Vec<Value>.

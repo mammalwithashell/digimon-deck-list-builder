@@ -17,10 +17,13 @@ from .llm_router import (
     OpenAICompatProvider,
     Role,
 )
+from .auto_curriculum import run_auto_curriculum
 from .boss_matrix import compose_boss_matrix
 from .mcp_client import StdioMcpClient
 from .mine_replays import mine_replays
+from .play_in import compile_play_in_with_fallback
 from .synthesize_archetype import synthesize_archetype
+from .tensor_fuzzer import audit_card_set_fidelity, run_tensor_completeness_fuzz
 
 
 def _add_llm_args(parser: argparse.ArgumentParser) -> None:
@@ -235,6 +238,99 @@ def build_parser() -> argparse.ArgumentParser:
     p_matrix.add_argument("--adversary-sims", type=int, default=64)
     p_matrix.add_argument("--seeds", type=int, default=4)
     _add_llm_args(p_matrix)
+
+    # 5. compile-play-in
+    p_playin = sub.add_parser(
+        "compile-play-in",
+        help="Compile a staged studio-puzzle-v1 into a legal Turn-1 replay_prefix (+ optional DCGO YAML).",
+    )
+    p_playin.add_argument("puzzle", type=Path, help="Input studio-puzzle-v1 JSON path.")
+    p_playin.add_argument("--beam-width", type=int, default=32)
+    p_playin.add_argument("--max-turns", type=int, default=5)
+    p_playin.add_argument("--strict-zones", action="store_true")
+    p_playin.add_argument("--max-llm-attempts", type=int, default=3)
+    p_playin.add_argument("--max-tool-turns", type=int, default=6)
+    p_playin.add_argument("--no-llm-fallback", action="store_true")
+    p_playin.add_argument("--out-puzzle", type=Path, default=None, help="Output path for upgraded replay_prefix puzzle.")
+    p_playin.add_argument("--out-dcgo-yaml", type=Path, default=None, help="Output path for symbolic DCGO scenario YAML.")
+    p_playin.add_argument("--rest-deck-p0", default="custom")
+    p_playin.add_argument("--rest-deck-p1", default="custom")
+    p_playin.add_argument("--adversary-sims", type=int, default=64)
+    p_playin.add_argument("--seeds", type=int, default=4)
+    _add_llm_args(p_playin)
+
+    # 6. fuzz-tensor
+    p_fuzz = sub.add_parser(
+        "fuzz-tensor",
+        help="Run zero-LLM deterministic observation-tensor completeness differential fuzzer.",
+    )
+    p_fuzz.add_argument("--profile", default="standard_lite_v2", help="Observation profile (default: standard_lite_v2).")
+    p_fuzz.add_argument("--families", default=None, help="Optional comma-separated rule family names.")
+    p_fuzz.add_argument("--viewer", type=int, default=1, choices=[1, 2], help="Observer seat (1 or 2).")
+    p_fuzz.add_argument("--checkpoint-zip", type=Path, default=None, help="Optional SB3 .zip checkpoint for plasticity_probe.")
+    p_fuzz.add_argument("--plasticity-steps", type=int, default=10)
+    p_fuzz.add_argument("--plasticity-lr", type=float, default=1e-3)
+    p_fuzz.add_argument("--json-out", type=Path, default=None, help="Optional JSON report path.")
+    p_fuzz.add_argument("--markdown-out", type=Path, default=None, help="Optional Markdown report path.")
+    p_fuzz.add_argument("--fail-on-collision", action="store_true", help="Exit 1 if any family has l1_diff == 0.0.")
+
+    # 7. audit-set
+    p_audit = sub.add_parser(
+        "audit-set",
+        help="Run read-only LLM card-fidelity audit over implemented cards in a set.",
+    )
+    p_audit.add_argument("--set", dest="card_set", default=None, help="Card set prefix (e.g. EX12, BT24, ST23).")
+    p_audit.add_argument("--card-ids", default=None, help="Optional comma-separated explicit card IDs.")
+    p_audit.add_argument("--max-cards", type=int, default=25)
+    p_audit.add_argument("--max-tool-turns", type=int, default=6)
+    p_audit.add_argument("--cards-json", type=Path, default=None)
+    p_audit.add_argument("--json-out", type=Path, default=None, help="Optional JSON audit report path.")
+    p_audit.add_argument("--markdown-out", type=Path, default=None, help="Optional Markdown audit report path.")
+    _add_llm_args(p_audit)
+
+    # 8. auto-curriculum
+    p_curr = sub.add_parser(
+        "auto-curriculum",
+        help="Air-gapped sidecar ingesting eval summaries, dual-gating drills, and emitting selfplay-shards-v1.",
+    )
+    p_curr.add_argument(
+        "--eval-input",
+        type=Path,
+        required=True,
+        help="Path to anchored_eval JSON report or Specialist League gates/gen<g> directory.",
+    )
+    p_curr.add_argument(
+        "--out-dir",
+        type=Path,
+        required=True,
+        help="Output bundle directory (verified_puzzles/, extra_shards/, curriculum_manifest.json).",
+    )
+    p_curr.add_argument("--recordings", nargs="*", type=Path, default=None, help="Optional recordings files or directories.")
+    p_curr.add_argument(
+        "--candidate-puzzles",
+        nargs="*",
+        type=Path,
+        default=None,
+        help="Optional pre-authored studio-puzzle-v1 files or directories to dual-gate.",
+    )
+    p_curr.add_argument("--checkpoint-zip", type=Path, default=None, help="Optional SB3 .zip checkpoint for plasticity_probe.")
+    p_curr.add_argument("--onnx-model", type=Path, default=None)
+    p_curr.add_argument("--threshold", type=float, default=0.45, help="Weak matchup win-rate threshold (default: 0.45).")
+    p_curr.add_argument("--bottom-k", type=int, default=3, help="Number of worst matchups to target (default: 3).")
+    p_curr.add_argument("--min-games", type=int, default=1)
+    p_curr.add_argument("--no-synthesis", action="store_true", help="Disable LLM archetype/boss synthesis.")
+    p_curr.add_argument("--no-llm", action="store_true", help="Run purely over --candidate-puzzles without LLM calls.")
+    p_curr.add_argument("--boss-template", default=None)
+    p_curr.add_argument("--deck-library", type=Path, default=None)
+    p_curr.add_argument("--permutations-per-puzzle", type=int, default=16)
+    p_curr.add_argument("--observation-profile", default="standard_lite_v2")
+    p_curr.add_argument("--seed", type=int, default=0)
+    p_curr.add_argument("--adversary-sims", type=int, default=64)
+    p_curr.add_argument("--seeds", type=int, default=4)
+    p_curr.add_argument("--plasticity-steps", type=int, default=10)
+    p_curr.add_argument("--plasticity-lr", type=float, default=1e-3)
+    p_curr.add_argument("--allow-unadmitted", action="store_true")
+    _add_llm_args(p_curr)
 
     return parser
 
@@ -472,6 +568,113 @@ def _cmd_compose_boss_matrix(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_compile_play_in(args: argparse.Namespace) -> int:
+    with ExitStack() as stack:
+        router = (
+            None
+            if bool(args.no_llm_fallback)
+            else stack.enter_context(_build_router_from_args(args))
+        )
+        engine_mcp, _, _ = _open_mcp_sessions(stack, onnx_model=None, checkpoint_zip=None)
+        res = compile_play_in_with_fallback(
+            args.puzzle,
+            engine_mcp=engine_mcp,
+            router=router,
+            beam_width=args.beam_width,
+            max_turns=args.max_turns,
+            strict_zones=bool(args.strict_zones),
+            max_llm_attempts=args.max_llm_attempts,
+            max_tool_turns=args.max_tool_turns,
+            out_puzzle_path=args.out_puzzle,
+            out_dcgo_yaml_path=args.out_dcgo_yaml,
+            rest_deck_p0=args.rest_deck_p0,
+            rest_deck_p1=args.rest_deck_p1,
+            adversary_sims=args.adversary_sims,
+            verify_seeds=args.seeds,
+        )
+    print(json.dumps(res.to_dict(), indent=2))
+    return 0 if res.matched else 1
+
+
+def _cmd_fuzz_tensor(args: argparse.Namespace) -> int:
+    families = _parse_csv_strs(args.families)
+    report = run_tensor_completeness_fuzz(
+        profile=args.profile,
+        families=families,
+        viewer=args.viewer,
+        checkpoint_zip=args.checkpoint_zip,
+        plasticity_steps=args.plasticity_steps,
+        plasticity_lr=args.plasticity_lr,
+        json_out_path=args.json_out,
+        markdown_out_path=args.markdown_out,
+    )
+    print(json.dumps(report.to_dict(), indent=2))
+    if args.fail_on_collision and report.collisions:
+        return 1
+    return 0
+
+
+def _cmd_audit_set(args: argparse.Namespace) -> int:
+    card_ids = _parse_csv_strs(args.card_ids)
+    with ExitStack() as stack:
+        router = stack.enter_context(_build_router_from_args(args))
+        engine_mcp, _, _ = _open_mcp_sessions(stack, onnx_model=None, checkpoint_zip=None)
+        report = audit_card_set_fidelity(
+            router=router,
+            engine_mcp=engine_mcp,
+            card_set=args.card_set,
+            card_ids=card_ids,
+            max_cards=args.max_cards,
+            max_tool_turns=args.max_tool_turns,
+            cards_json_path=args.cards_json,
+            json_out_path=args.json_out,
+            markdown_out_path=args.markdown_out,
+        )
+    print(json.dumps(report.to_dict(), indent=2))
+    return 0
+
+
+def _cmd_auto_curriculum(args: argparse.Namespace) -> int:
+    with ExitStack() as stack:
+        router = (
+            None
+            if bool(args.no_llm)
+            else stack.enter_context(_build_router_from_args(args))
+        )
+        engine_mcp, training_mcp, model_id = _open_mcp_sessions(
+            stack,
+            onnx_model=args.onnx_model,
+            checkpoint_zip=args.checkpoint_zip,
+        )
+        report = run_auto_curriculum(
+            args.eval_input,
+            out_dir=args.out_dir,
+            engine_mcp=engine_mcp,
+            training_mcp=training_mcp,
+            router=router,
+            recordings_paths=args.recordings,
+            candidate_puzzles=args.candidate_puzzles,
+            checkpoint_zip=args.checkpoint_zip,
+            model_id=model_id,
+            win_rate_threshold=args.threshold,
+            bottom_k=args.bottom_k,
+            min_games=args.min_games,
+            enable_synthesis=not bool(args.no_synthesis),
+            boss_template=args.boss_template,
+            deck_library_path=args.deck_library,
+            permutations_per_puzzle=args.permutations_per_puzzle,
+            observation_profile=args.observation_profile,
+            seed=args.seed,
+            adversary_sims=args.adversary_sims,
+            verify_seeds=args.seeds,
+            plasticity_steps=args.plasticity_steps,
+            plasticity_lr=args.plasticity_lr,
+            require_admissible=not bool(args.allow_unadmitted),
+        )
+    print(json.dumps(report.manifest_dict, indent=2))
+    return 0
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -484,6 +687,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             return _cmd_synthesize_archetype(args)
         if args.subcommand == "compose-boss-matrix":
             return _cmd_compose_boss_matrix(args)
+        if args.subcommand == "compile-play-in":
+            return _cmd_compile_play_in(args)
+        if args.subcommand == "fuzz-tensor":
+            return _cmd_fuzz_tensor(args)
+        if args.subcommand == "audit-set":
+            return _cmd_audit_set(args)
+        if args.subcommand == "auto-curriculum":
+            return _cmd_auto_curriculum(args)
     except PermissionError as exc:
         print(f"PermissionError: {exc}", file=sys.stderr)
         return 2

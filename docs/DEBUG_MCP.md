@@ -143,7 +143,7 @@ emitted by the last forward step, a memory/zone `delta`, and `card_ids_in_play`
 - `move_from_breeding(game_id, player)`
 - `step(game_id, action_id)` — universal action gate; submit a raw `action_id` from `legal_actions`
 
-**ModelPilot ONNX, Stack & Studio Puzzle Tools (9 — 42 total):**
+**ModelPilot ONNX, Stack, Play-In & Studio Puzzle Tools (11 — 44 total):**
 - `load_model(model_id, onnx_path, profile?)` / `unload_model(model_id)` / `list_models()` — manage cached MLP & LSTM (+ `.value.onnx`) ONNX evaluators in memory
 - `inspect_position(game_id, model_id?, simulations?, worlds?, regime?, seed?, top_k?, expectations?)` — non-mutating policy priors, `policy_value`, `policy_entropy`, MCTS `root_plans` / `root_q`, and `expectation_results`
 - `score_line(game_id, model_id?, actions, adversary_sims?, refutation_triggers?)` — clone game/recurrent state, step a multi-action line (resolving `[All Turns]` opponent interrupts), and report per-step value/prior telemetry
@@ -151,8 +151,10 @@ emitted by the last forward step, a memory/zone `delta`, and `card_ids_in_play`
 - `load_puzzle(puzzle_path | puzzle_json, mode="author"|"play", opponent_driver?)` — load `studio-puzzle-v1` or `search-exam-v1`; `"play"` mode locks views to `Perspective::Player(seat)` (blocking `view="god"` and mutators) and auto-steps opponent turns via `opponent_driver` (`greedy`, `onnx:<id>`, `mcts:<id>:<sims>`)
 - `save_puzzle(game_id, puzzle_path, ...)` — save canonical `studio-puzzle-v1` under `qa/puzzles/` (plus optional `qa/search-exams/` export)
 - `verify_puzzle(puzzle_path | puzzle_json, model_id?, adversary_sims?, seeds?)` — verify `target` lines achieve win/`win_assertions` against adversary `[All Turns]` interrupts while `avoid` lines are refuted
+- `compile_play_in(puzzle_path | puzzle_json, beam_width?, max_turns?, strict_zones?, out_puzzle_path?, out_dcgo_yaml_path?)` — compile a mid-game staged `studio-puzzle-v1` board into a legal Turn-1 stacked-deck + `prefix_actions` setup (preserving `KnowledgeLedger`, pre-warming LSTM `(h, c)`, remapping lines, and exporting symbolic `dcgo-harness` YAML)
+- `verify_belief_puzzle(puzzle_path | puzzle_json, model_id?, simulations?, worlds?, seeds?)` — grade `closed-list` PIMC conditioned on `KnowledgeLedger` + `WeightedDeckPrior` against an omniscient `open-list` baseline and report `information_gap`
 
-See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md) for end-to-end recipes pairing `digimon-engine-mcp` with `digimon-training-mcp` and `tools.puzzle_lab`.
+See [`docs/PUZZLE_LAB_AND_MCP.md`](PUZZLE_LAB_AND_MCP.md) for end-to-end recipes pairing `digimon-engine-mcp` with `digimon-training-mcp`, `tools.puzzle_lab`, and `tools.tactician_grpo`.
 
 ### Result envelope
 
